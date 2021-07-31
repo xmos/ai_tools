@@ -34,19 +34,6 @@ def TFL_FullyConnectedOptionsWeightFormatAttr
     : StrEnumAttr<"FullyConnectedOptionsWeightsFormat",
                   "fully connected options weights format",
                   [TFL_FCWO_Default, TFL_FCWO_Shuffled4x16i8]>;
-
-// A type attribute containing OpaqueElementsAttr and bytes.
-def OpaqueBytesAttr
-    : ElementsAttrBase<And<[
-                         CPred<"$_self.isa<OpaqueElementsAttr>() ">,
-                         CPred<"$_self.cast<OpaqueElementsAttr>().getType()"
-                               ".getElementType().isInteger(8)">,
-                       ]>,
-                       "opaque bytes attribute"> {
-  let storageType = [{OpaqueElementsAttr}];
-  let returnType = [{OpaqueElementsAttr}];
-  let convertFromStorage = "$_self";
-}
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -98,10 +85,12 @@ def XC_Conv2DV2Op : XC_Op<"conv2dv2", [NoSideEffect]> {
   let arguments = (ins
     TensorOf<[QI8]>:$input,
 
-    OpaqueBytesAttr:$abstract_kernel_params,
-    OpaqueBytesAttr:$memcpy_fn_params,
-    OpaqueBytesAttr:$aggregate_fn_params,
-    OpaqueBytesAttr:$output_transform_fn_params,
+    I32Attr:$thread_count,
+    I32ArrayAttr:$scratch_bytes,
+    StrArrayAttr:$abstract_kernel_params,
+    StrArrayAttr:$memcpy_fn_params,
+    StrArrayAttr:$aggregate_fn_params,
+    StrArrayAttr:$output_transform_fn_params,
     XC_Conv2D_TypeAttr:$conv2d_type
   );
 

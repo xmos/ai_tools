@@ -3,6 +3,7 @@
 
 #include "IR/XCoreOps.h"
 
+#include "lib_nn/api/Conv2d.hpp"
 #include "flatbuffers/flexbuffers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -24,17 +25,56 @@ std::vector<uint8_t> PadOp::buildCustomOptions() {
 
 std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
   flexbuffers::Builder fbb;
-  fbb.Map([&]() {
-    fbb.String("abstract_kernel_params",
-               abstract_kernel_params().getValue().str());
-    fbb.String("memcpy_fn_params", memcpy_fn_params().getValue().str());
-    fbb.String("aggregate_fn_params", aggregate_fn_params().getValue().str());
-    fbb.String("output_transform_fn_params",
-               output_transform_fn_params().getValue().str());
-    fbb.Int("conv2d_type",
-            (int32_t)(symbolizeConv2DType(conv2d_type()).getValue()));
-  });
+  auto rootVec = fbb.StartVector();
+  int threadCount = (int32_t)thread_count();
+
+  for (int i = 0; i < threadCount; ++i) {
+    auto vec = fbb.StartVector();
+    fbb.Int((int32_t)scratch_bytes()
+                .cast<ArrayAttr>()[i]
+                .cast<IntegerAttr>()
+                .getInt());
+    fbb.String(abstract_kernel_params()
+                   .cast<ArrayAttr>()[i]
+                   .cast<StringAttr>()
+                   .getValue()
+                   .str());
+    fbb.String(memcpy_fn_params()
+                   .cast<ArrayAttr>()[i]
+                   .cast<StringAttr>()
+                   .getValue()
+                   .str());
+    fbb.String(aggregate_fn_params()
+                   .cast<ArrayAttr>()[i]
+                   .cast<StringAttr>()
+                   .getValue()
+                   .str());
+    fbb.String(output_transform_fn_params()
+                   .cast<ArrayAttr>()[i]
+                   .cast<StringAttr>()
+                   .getValue()
+                   .str());
+    fbb.Int((int32_t)(symbolizeConv2DType(conv2d_type()).getValue()));
+    fbb.EndVector(vec, false, false);
+  }
+
+  fbb.EndVector(rootVec, false, false);
   fbb.Finish();
+
+  // Test flatbuffer deserialization
+  std::vector<uint8_t> test = fbb.GetBuffer();
+  flexbuffers::Vector threads = flexbuffers::GetRoot(test).AsVector();
+  auto thread_count = threads.size();
+  flexbuffers::Vector params = threads[0].AsVector();
+  auto param_count = params.size();
+  int32_t scratch = params[0].AsInt32();
+  std::string akp_str = params[1].As<std::string>();
+  const nn::Filter2D::Params *newakp =
+      reinterpret_cast<const nn::Filter2D::Params *>(akp_str.c_str());
+  std::string ot_str = params[4].As<std::string>();
+  const nn::OT_int8::Params *newot =
+      reinterpret_cast<const nn::OT_int8::Params *>(ot_str.c_str());
+
   return fbb.GetBuffer();
 }
 

@@ -60,10 +60,12 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
       return failure();
     }
 
-    llvm::SmallVector<llvm::StringRef> params;
+    llvm::SmallVector<llvm::StringRef> abstractKernelParams, memcpyFnParams,
+        aggregateFnParams, outputTransformFnParams;
+    llvm::SmallVector<int32_t> scratchBytes;
     // TODO: Get thread count as command-line option
     // Currently thread count is one
-    int threadCount = 1;
+    int threadCount = 2;
 
     // TODO: Multithread analysis to determine how to split up the data between
     // threads.
@@ -159,15 +161,20 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
 
         nn::Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
 
-        const char *test = reinterpret_cast<const char *>(&akp);
-        std::string str(test, sizeof(akp));
+        // TODO: This method of serializing by casting can only work when the
+        // param structs don't have pointer members. Otherwise, we would need to
+        // use a proper serialize method which returns a serialized string.
+        llvm::StringRef akpStr(reinterpret_cast<const char *>(&akp),
+                               sizeof(akp));
+        llvm::StringRef otStr(reinterpret_cast<const char *>(&ot_params),
+                              sizeof(ot_params));
 
-        params.push_back(str);
-
-        std::string str2 = str;
-        const char *akp_str = str2.c_str();
-
-        const nn::Filter2D::Params *newakp = reinterpret_cast<const nn::Filter2D::Params*>(akp_str);
+        // Store the param vector for each thread
+        scratchBytes.push_back(scratch_bytes);
+        abstractKernelParams.push_back(akpStr);
+        memcpyFnParams.push_back(akpStr);
+        aggregateFnParams.push_back(akpStr);
+        outputTransformFnParams.push_back(otStr);
 
         nn::Conv2dValidDirect conv2d(&akp, &memcpy, &aggregator, &ot);
       }
@@ -178,20 +185,14 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     }
 
     // Create the Conv2DV2 Op with the params and kernel type
-    std::vector<uint8_t> dummy(10, 100);
-
-    auto data = dummy;
-    auto type = RankedTensorType::get({static_cast<int64_t>(data.size())},
-                                      rewriter.getIntegerType(8));
-    std::string options_bytes(data.begin(), data.end());
-    auto attr = OpaqueElementsAttr::get(
-        Identifier::get(XCoreDialect::getDialectNamespace(),
-                        rewriter.getContext()),
-        type, params[0] /*options_bytes*/);
-
     auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
-        conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(), attr, attr,
-        attr, attr,
+        conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(),
+        rewriter.getI32IntegerAttr(threadCount),
+        rewriter.getI32ArrayAttr(scratchBytes),
+        rewriter.getStrArrayAttr(abstractKernelParams),
+        rewriter.getStrArrayAttr(memcpyFnParams),
+        rewriter.getStrArrayAttr(aggregateFnParams),
+        rewriter.getStrArrayAttr(outputTransformFnParams),
         rewriter.getStringAttr(stringifyConv2DType(Conv2DType::ValidInDirect)));
     rewriter.replaceOp(conv2DOp, newConv2DV2Op.output());
 

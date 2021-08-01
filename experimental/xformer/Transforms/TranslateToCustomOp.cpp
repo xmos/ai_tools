@@ -34,6 +34,12 @@ std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
                 .cast<ArrayAttr>()[i]
                 .cast<IntegerAttr>()
                 .getInt());
+    fbb.Int((int32_t)(symbolizeConv2DType(conv2d_kernel_type()
+                                              .cast<ArrayAttr>()[i]
+                                              .cast<StringAttr>()
+                                              .getValue()
+                                              .str())
+                          .getValue()));
     fbb.String(abstract_kernel_params()
                    .cast<ArrayAttr>()[i]
                    .cast<StringAttr>()
@@ -54,7 +60,6 @@ std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
                    .cast<StringAttr>()
                    .getValue()
                    .str());
-    fbb.Int((int32_t)(symbolizeConv2DType(conv2d_type()).getValue()));
     fbb.EndVector(vec, false, false);
   }
 
@@ -68,10 +73,11 @@ std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
   flexbuffers::Vector params = threads[0].AsVector();
   auto param_count = params.size();
   int32_t scratch = params[0].AsInt32();
-  std::string akp_str = params[1].As<std::string>();
+  int32_t kernelType = params[1].AsInt32();
+  std::string akp_str = params[2].As<std::string>();
   const nn::Filter2D::Params *newakp =
       reinterpret_cast<const nn::Filter2D::Params *>(akp_str.c_str());
-  std::string ot_str = params[4].As<std::string>();
+  std::string ot_str = params[5].As<std::string>();
   const nn::OT_int8::Params *newot =
       reinterpret_cast<const nn::OT_int8::Params *>(ot_str.c_str());
 

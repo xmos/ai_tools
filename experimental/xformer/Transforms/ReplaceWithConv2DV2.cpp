@@ -187,7 +187,7 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
                        .padValue = kernel_pad_val};
 
     llvm::SmallVector<std::string> abstractKernelParams, memcpyFnParams,
-        aggregateFnParams, outputTransformFnParams;
+        aggregateFnParams, outputTransformFnParams, kernelTypeEnumParams;
     llvm::SmallVector<int32_t> scratchByteParams;
 
     // TODO: Get thread count as command-line option
@@ -196,11 +196,15 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
 
     // TODO: Multithread analysis to determine how to split up the data between
     // threads.
-    // Also to determine which kernel type for each thread.
     // Might be better to do this as an analysis pass and access the analysis
     // results here
     for (int i = 0; i < threadCount; ++i) {
       llvm::SmallVector<std::string> conv2DParams;
+
+      // TODO: Determine which kernel type for each thread.
+      // Set to Conv2DType::ValidDirect for now
+      Conv2DType kernelType = Conv2DType::ValidDirect;
+      kernelTypeEnumParams.push_back(stringifyConv2DType(kernelType).str());
 
       // Call the kernel type function which returns a vector of four strings
       // for the four Conv2D params
@@ -236,7 +240,7 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
         getStringArrayAttr(memcpyFnParams),
         getStringArrayAttr(aggregateFnParams),
         getStringArrayAttr(outputTransformFnParams),
-        rewriter.getStringAttr(stringifyConv2DType(Conv2DType::ValidInDirect)));
+        getStringArrayAttr(kernelTypeEnumParams));
     rewriter.replaceOp(conv2DOp, newConv2DV2Op.output());
 
     return success();

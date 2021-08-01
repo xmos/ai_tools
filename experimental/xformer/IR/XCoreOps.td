@@ -91,7 +91,7 @@ def XC_Conv2DV2Op : XC_Op<"conv2dv2", [NoSideEffect]> {
     StrArrayAttr:$memcpy_fn_params,
     StrArrayAttr:$aggregate_fn_params,
     StrArrayAttr:$output_transform_fn_params,
-    XC_Conv2D_TypeAttr:$conv2d_type
+    StrArrayAttr:$conv2d_kernel_type
   );
 
   let results = (outs TensorOf<[QI8]> : $output);

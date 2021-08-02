@@ -339,6 +339,8 @@ def apply_interpreter_to_tdnn_examples(
     interpreter.allocate_tensors()
     if interpreter_input_ind is None:
         interpreter_input_ind = interpreter.get_input_details()[0]["index"]
+    if interpreter_output_ind is None:
+        interpreter_output_ind = interpreter.get_output_details()[0]["index"]
 
     outputs = []
     for x in examples:
@@ -352,12 +354,11 @@ def apply_interpreter_to_tdnn_examples(
             else:
                 y=np.concatenate((y,ycol), axis=1)
         # checks if time dim has been lost, from a reshape for example
-        if len(np.squeeze(y).shape) == 1:
+        if len(np.squeeze(y).shape) <= 1:
             outputs.append(ycol)
         else:
-            max_ringbuffer_delay = 2#depends on network, need a way to handle delay
+            max_ringbuffer_delay = 8#depends on network, need a way to handle delay
             outputs.append(y[:,max_ringbuffer_delay:,:,:])
-
     return np.vstack(outputs) if isinstance(examples, np.ndarray) else outputs
 
 

@@ -123,5 +123,6 @@ from .tdnn_passes import (
     TdnnReshapePass,
     TdnnShallowinConv2dPass,
     TdnnTensorPass,
-    TdnnCleanup
+    TdnnCleanup,
+    PersistentBufferSize
 )

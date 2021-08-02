@@ -13,18 +13,28 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
     TensorType,
     BuiltinOpCodes,
+    Subgraph,
 )
 from .pooling_passes import (
     ReplaceAveragePool2DPass,
     ReplaceGlobalAveragePool2DPass,
 )
 
+def find_largest_address_in_persistent_buffer(subgraph: Subgraph) -> int:
+    largest_address = 0
+    for operator in subgraph.operators:
+        if 'start_address' in operator.custom_options:
+            start_address = operator.custom_options.get("start_address")
+            prev_data_size = operator.custom_options.get("prev_data_size")
+            if (start_address+prev_data_size+1) > largest_address:
+                largest_address = start_address+prev_data_size+1
+    return largest_address
 
 def insert_ringbuffer(ringbuffer_time_dim: int, new_op: Operator) -> Operator:
+    subgraph = new_op.subgraph
+    start_address = find_largest_address_in_persistent_buffer(subgraph)
     ringbuffer_shape = list(new_op.inputs[0].shape)
     ringbuffer_shape[1] = ringbuffer_time_dim
-
-    subgraph = new_op.subgraph
 
     ringbuffer_tensor = subgraph.create_tensor(
         f"{new_op.name}/ringbuffer",
@@ -35,45 +45,40 @@ def insert_ringbuffer(ringbuffer_time_dim: int, new_op: Operator) -> Operator:
         custom_options={"tdnn":True},
     )
 
-    old_data_shape = ringbuffer_shape
-    old_data_shape[1] = old_data_shape[1] - 1
-    old_data_tensor = subgraph.create_tensor(
-        f"{new_op.name}/old_data",
+    prev_data_shape = ringbuffer_shape
+    prev_data_shape[1] = prev_data_shape[1] - 1
+    prev_data_tensor = subgraph.create_tensor(
+        f"{new_op.name}/prev_data",
         TensorType.INT8,
-        shape=old_data_shape,
+        shape=prev_data_shape,
         custom_options={"tdnn":True},
     )
+    prev_data_size = np.prod(prev_data_shape)
 
     persistent_buffer_number = subgraph.create_tensor(
         f"{new_op.name}/persistent_buffer_number", 
         TensorType.INT8,
-        consumers=[new_op],
-        shape=[1],
+        shape=(2,),
         custom_options={"tdnn":True},
     )
-    breakpoint()
-    #converts unique part of string name to int
-    unique_part = new_op.name[new_op.name.find('_')+1:]
-    print(unique_part)
-    persistent_buffer_count = int(unique_part)
 
     # disconnect input from op
     new_op.inputs[0].consumers.pop(0)
-
     # create and connect ring buffer op
-    subgraph.create_operator(
+    ringbuffer_op = subgraph.create_operator(
         OperatorCode(XCOREOpCodes.XC_ringbuffer),
-        inputs=[new_op.inputs[0], old_data_tensor, persistent_buffer_number],
+        inputs=[new_op.inputs[0], prev_data_tensor, persistent_buffer_number],
         outputs=[ringbuffer_tensor],
-        custom_options={"old_data_shape":np.prod(old_data_shape)},
+        custom_options={"start_address":start_address,"prev_data_size":prev_data_size},
     )
     # connect op to ring buffer
     new_op.inputs[0] = ringbuffer_tensor
 
     for input_tensor in new_op.inputs:
         input_tensor.add_custom_options(tdnn=True)
-        
-    new_op.inputs[2].buffer.data = persistent_buffer_count
+
+    params = np.int32([start_address,prev_data_size])
+    ringbuffer_op.inputs[2].buffer.data = params
 
     return new_op
 
@@ -94,7 +99,6 @@ class TdnnShallowinConv2dPass(QuantizedOperatorMatchingPass):
 
         # kernel_size[0]
         ringbuffer_time_dim = op.inputs[1].shape[1]
-
         new_op = insert_ringbuffer(ringbuffer_time_dim, op)
 
         return op
@@ -177,6 +181,21 @@ class TdnnCleanup(OperatorMatchingPass):
 
     def mutate(self, op: Operator) -> bool:
         op.custom_options.pop('tdnn')
+        op.custom_options.pop('start_address', None)
+        op.custom_options.pop('prev_data_size', None)
+        return op
+
+class PersistentBufferSize(OperatorMatchingPass):
+    def match(self, op: Operator) -> bool:
+        return (
+            super().match(op)
+            and op.operator_code.code is XCOREOpCodes.XC_ringbuffer
+            and "persistent_buffer_size" not in op.custom_options
+        )
+
+    def mutate(self, op: Operator) -> bool:
+        largest_address = find_largest_address_in_persistent_buffer(op.subgraph)
+        op.add_custom_options(persistent_buffer_size=largest_address)
         return op
 
 # class TdnnGlobalAveragePool2DPass(ReplaceGlobalAveragePool2DPass):

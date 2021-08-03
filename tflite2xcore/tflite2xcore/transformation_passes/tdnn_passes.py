@@ -92,6 +92,7 @@ def insert_ringbuffer(ringbuffer_time_dim: int, new_op: Operator) -> Operator:
         input_tensor.add_custom_options(tdnn=True)
         
     new_op.inputs[2].buffer.data = persistent_buffer_count
+    return new_op
 
 class TdnnShallowinConv2dPass(QuantizedOperatorMatchingPass):
     @property

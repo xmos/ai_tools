@@ -61,30 +61,6 @@ def insert_ringbuffer(ringbuffer_time_dim: int, new_op: Operator) -> Operator:
         shape=(2,),
         custom_options={"tdnn":True},
     )
-    prev_data_size = np.prod(prev_data_shape)
-
-    persistent_buffer_number = subgraph.create_tensor(
-        f"{new_op.name}/persistent_buffer_number", 
-        TensorType.INT8,
-        shape=(2,),
-        custom_options={"tdnn":True},
-    )
-    prev_data_size = np.prod(prev_data_shape)
-
-    persistent_buffer_number = subgraph.create_tensor(
-        f"{new_op.name}/persistent_buffer_number", 
-        TensorType.INT8,
-        shape=(2,),
-        custom_options={"tdnn":True},
-    )
-    prev_data_size = np.prod(prev_data_shape)
-
-    persistent_buffer_number = subgraph.create_tensor(
-        f"{new_op.name}/persistent_buffer_number", 
-        TensorType.INT8,
-        shape=(2,),
-        custom_options={"tdnn":True},
-    )
 
     # disconnect input from op
     new_op.inputs[0].consumers.pop(0)

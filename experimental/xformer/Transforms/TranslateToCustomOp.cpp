@@ -26,7 +26,7 @@ std::vector<uint8_t> PadOp::buildCustomOptions() {
 std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootVec = fbb.StartVector();
-  int threadCount = (int32_t)thread_count();
+  int threadCount = (int)thread_count();
 
   for (int i = 0; i < threadCount; ++i) {
     auto vec = fbb.StartVector();

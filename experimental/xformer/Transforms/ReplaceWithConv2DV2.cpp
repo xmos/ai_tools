@@ -11,6 +11,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+#include "tensorflow/core/framework/kernel_shape_util.h"
 #include <numeric>
 
 namespace mlir {
@@ -43,6 +44,114 @@ struct Conv2DArgs {
 struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
   using OpRewritePattern<TFL::Conv2DOp>::OpRewritePattern;
 
+  //
+  llvm::SmallVector<std::string>
+  getConv2DPaddedIndirectParams(const Conv2DArgs &args) const {
+    llvm::SmallVector<std::string> conv2DParams;
+
+    nn::padding_t padding = {args.topPad, args.leftPad, args.bottomPad,
+                             args.rightPad};
+    nn::ImageGeometry Y(args.outputHeight, args.outputWidth, args.filterDepth);
+    nn::ImageGeometry X(args.inputHeight, args.inputWidth, args.inputDepth);
+    nn::WindowGeometry K(args.filterHeight, args.filterWidth, args.filterDepth,
+                         -padding.top, -padding.left, args.strideH,
+                         args.strideW, 1, args.dilationH, args.dilationW);
+    nn::Filter2dGeometry geom(X, Y, K);
+
+    nn::ImToColPadded::Params imToColParams(X, K, padding, args.inputDepth,
+                                            args.inputZeroPoint);
+
+    int inputBytes = args.filterHeight * args.filterWidth * args.inputDepth;
+    std::array<int, 4> shape = {args.filterDepth, args.filterHeight,
+                                args.filterWidth, args.inputDepth};
+    nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
+        (int8_t *)args.filter.data(), shape, 8, args.padValue);
+    nn::MatMulInt8::Params afParams(args.filterDepth, inputBytes,
+                                    rw.weights.data());
+
+    nn::OutputTransformFnInt8::CanonicalMulAndBias canonical_values =
+        nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
+            args.effectiveMultiplier, args.bias, args.filter,
+            args.inputZeroPoint, args.outputZeroPoint, args.filterDepth);
+    nn::QuantisationParams qp = nn::OutputTransformFnInt8::quantise_activation(
+        canonical_values.f_multipliers, canonical_values.f_biases,
+        canonical_values.accu_min, canonical_values.accu_max);
+    nn::OT_int8::Params otParams((int32_t)args.filterDepth, &qp.otv, qp.biases,
+                                 qp.multipliers);
+
+    auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
+    nn::Filter2D::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
+
+    // TODO: Check serialization
+    std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
+    std::string mfStr = imToColParams.serialise<nn::ImToColPadded::Params>();
+    std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
+    std::string otStr = otParams.serialise<nn::OT_int8::Params>();
+
+    conv2DParams.push_back(akpStr);
+    conv2DParams.push_back(mfStr);
+    conv2DParams.push_back(afStr);
+    conv2DParams.push_back(otStr);
+
+    return conv2DParams;
+  }
+
+  //
+  llvm::SmallVector<std::string>
+  getConv2DValidIndirectParams(const Conv2DArgs &args) const {
+    llvm::SmallVector<std::string> conv2DParams;
+
+    nn::padding_t padding = {args.topPad, args.leftPad, args.bottomPad,
+                             args.rightPad};
+    nn::ImageGeometry Y(args.outputHeight, args.outputWidth, args.filterDepth);
+    nn::ImageGeometry X(args.inputHeight, args.inputWidth, args.inputDepth);
+    nn::WindowGeometry K(args.filterHeight, args.filterWidth, args.filterDepth,
+                         -padding.top, -padding.left, args.strideH,
+                         args.strideW, 1, args.dilationH, args.dilationW);
+    nn::Filter2dGeometry geom(X, Y, K);
+
+    nn::ImToColValid::Params imToColParams(X, K, args.inputDepth);
+
+    // TODO: What is overread bytes for?
+    // int overread_bytes = memcpy.get_overread_bytes();
+    // input.resize(input.size() + overread_bytes / sizeof(int8_t), 0);
+
+    std::array<int, 4> shape = {args.filterDepth, args.filterHeight,
+                                args.filterWidth, args.inputDepth};
+    nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
+        (int8_t *)args.filter.data(), shape, 8, args.padValue);
+    int inputBytes = args.filterHeight * args.filterWidth * args.inputDepth;
+    nn::MatMulInt8::Params afParams(args.filterDepth, inputBytes,
+                                    rw.weights.data());
+
+    nn::OutputTransformFnInt8::CanonicalMulAndBias canonicalValues =
+        nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
+            args.effectiveMultiplier, args.bias, args.filter,
+            args.inputZeroPoint, args.outputZeroPoint, args.filterDepth);
+    nn::QuantisationParams qp = nn::OutputTransformFnInt8::quantise_activation(
+        canonicalValues.f_multipliers, canonicalValues.f_biases,
+        canonicalValues.accu_min, canonicalValues.accu_max);
+    nn::OT_int8::Params otParams((int32_t)args.filterDepth, &qp.otv, qp.biases,
+                                 qp.multipliers);
+
+    auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
+    nn::Filter2D::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
+
+    // TODO: Check serialization
+    std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
+    std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
+    std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
+    std::string otStr = otParams.serialise<nn::OT_int8::Params>();
+
+    conv2DParams.push_back(akpStr);
+    conv2DParams.push_back(mfStr);
+    conv2DParams.push_back(afStr);
+    conv2DParams.push_back(otStr);
+
+    return conv2DParams;
+  }
+
+  //
   llvm::SmallVector<std::string>
   getConv2DValidDirectParams(const Conv2DArgs &args) const {
     llvm::SmallVector<std::string> conv2DParams;
@@ -61,8 +170,8 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
                                 args.filterWidth, args.inputDepth};
     nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
         (int8_t *)args.filter.data(), shape, 8, args.padValue);
-    nn::MatMulDirectFn::Params afParams(X, K, args.inputDepth,
-                                        rw.weights.data());
+    nn::MatMulDirectFn::Params afParams(
+        X, K, args.inputDepth, rw.weights.data(), (int)rw.weights.size());
 
     nn::OutputTransformFnInt8::CanonicalMulAndBias canonicalValues =
         nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
@@ -173,9 +282,10 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
         conv2DOp.filter().getType().cast<ShapedType>().getDimSize(1);
     auto filterWidth =
         conv2DOp.filter().getType().cast<ShapedType>().getDimSize(2);
+
     // TODO: With multithreading support, we could have multiple kernel types
     // per thread
-    Conv2DType kernelType = Conv2DType::PaddedIndirect;
+    Conv2DType kernelType;
     if (symbolizePadding(conv2DOp.padding()) == Padding::VALID &&
         inputDepth % 4 == 0) {
       kernelType = Conv2DType::ValidIndirect;
@@ -183,6 +293,8 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
                (symbolizePadding(conv2DOp.padding()) == Padding::VALID ||
                 (filterHeight == 1 && filterWidth == 1))) {
       kernelType = Conv2DType::ValidDirect;
+    } else {
+      kernelType = Conv2DType::PaddedIndirect;
     }
 
     // Retrieve the remaining args
@@ -243,10 +355,34 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
                        .dyn_cast<mlir::quant::UniformQuantizedPerAxisType>()) {
       isPerChannelQuantized = true;
       filterScales = filterQType.getScales();
+    } else {
+      return failure();
     }
     for (int i = 0; i < filterDepth; ++i) {
       auto scale = isPerChannelQuantized ? filterScales[i] : filterScale;
+      assert(outputScale != 0 && "outputScale should not be zero!");
       effectiveOutputScaleVector[i] = inputScale * scale / outputScale;
+    }
+
+    // Find padding values when the kernel type is PaddedIndirect
+    // For the other two cases, padding values are set to zero
+    tensorflow::int64 newHeight, newWidth;
+    tensorflow::int64 padTop, padBottom, padLeft, padRight;
+    if (kernelType == Conv2DType::PaddedIndirect) {
+      if (tensorflow::GetWindowedOutputSizeVerboseV2(
+              inputHeight, filterHeight, conv2DOp.dilation_h_factor(),
+              conv2DOp.stride_h(), tensorflow::Padding::SAME, &newHeight,
+              &padTop, &padBottom) != tensorflow::Status::OK()) {
+        return failure();
+      }
+      if (tensorflow::GetWindowedOutputSizeVerboseV2(
+              inputWidth, filterWidth, conv2DOp.dilation_w_factor(),
+              conv2DOp.stride_w(), tensorflow::Padding::SAME, &newWidth,
+              &padLeft, &padRight) != tensorflow::Status::OK()) {
+        return failure();
+      }
+    } else {
+      padTop = padBottom = padLeft = padRight = 0;
     }
 
     // Create a struct of Conv2DArgs to pass in parameters
@@ -268,12 +404,10 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
         .filter = filterVector,
         .bias = biasVector,
         .effectiveMultiplier = effectiveOutputScaleVector,
-        // TODO: For PaddedIndirect kernels, get the correct padding
-        // values
-        .topPad = 0,
-        .leftPad = 0,
-        .bottomPad = 0,
-        .rightPad = 0,
+        .topPad = static_cast<int16_t>(padTop),
+        .leftPad = static_cast<int16_t>(padLeft),
+        .bottomPad = static_cast<int16_t>(padBottom),
+        .rightPad = static_cast<int16_t>(padRight),
         // TODO: For BNNs, pad value cannot be zero
         // We should be ideally using a different Conv2D operator for BNNs
         .padValue = 0};
@@ -293,13 +427,22 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     for (int i = 0; i < threadCount; ++i) {
       llvm::SmallVector<std::string> conv2DParams;
       // TODO: Determine which kernel type for each thread.
-      // Only one kernel type available now
       kernelTypeEnumParams.push_back(stringifyConv2DType(kernelType).str());
 
       // TODO: Call the right kernel type function
       // Call the kernel type function which returns a vector of four strings
       // for the four Conv2D params
-      conv2DParams = getConv2DValidDirectParams(args);
+      switch (kernelType) {
+      case Conv2DType::ValidDirect:
+        conv2DParams = getConv2DValidDirectParams(args);
+        break;
+      case Conv2DType::ValidIndirect:
+        conv2DParams = getConv2DValidIndirectParams(args);
+        break;
+      case Conv2DType::PaddedIndirect:
+        conv2DParams = getConv2DPaddedIndirectParams(args);
+        break;
+      }
 
       abstractKernelParams.push_back(conv2DParams[0]);
       memcpyFnParams.push_back(conv2DParams[1]);
@@ -307,7 +450,7 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
       outputTransformFnParams.push_back(conv2DParams[3]);
 
       // Find out the scratch size needed
-      int inputBytes = args.filterHeight * args.filterWidth * args.filterDepth;
+      int inputBytes = args.filterHeight * args.filterWidth * args.inputDepth;
       int scratchBytes =
           nn::MatMulInt8::get_scratch_mem_bytes(inputBytes) + 32; //[asj] FIXME
       scratchByteParams.push_back(scratchBytes);

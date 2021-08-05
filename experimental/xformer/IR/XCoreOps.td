@@ -70,8 +70,8 @@ class XC_Op<string mnemonic, list<OpTrait> traits = []>
 // Conv2D
 
 def XC_Conv2D_ValidDirect : StrEnumAttrCase<"ValidDirect">;
-def XC_Conv2D_ValidInDirect : StrEnumAttrCase<"ValidInDirect">;
-def XC_Conv2D_PaddedInDirect : StrEnumAttrCase<"PaddedInDirect">;
+def XC_Conv2D_ValidInDirect : StrEnumAttrCase<"ValidIndirect">;
+def XC_Conv2D_PaddedInDirect : StrEnumAttrCase<"PaddedIndirect">;
 
 def XC_Conv2D_TypeAttr : StrEnumAttr<"Conv2DType", "conv2d type enum", [
   XC_Conv2D_ValidDirect, XC_Conv2D_ValidInDirect, XC_Conv2D_PaddedInDirect

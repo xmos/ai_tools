@@ -27,7 +27,6 @@ struct ReplaceWithConv2DV2
   void runOnFunction() override;
 };
 
-// TODO
 struct Conv2DArgs {
   int outputHeight, outputWidth, outputZeroPoint;
   int inputHeight, inputWidth, inputDepth, inputZeroPoint;
@@ -44,7 +43,6 @@ struct Conv2DArgs {
 struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
   using OpRewritePattern<TFL::Conv2DOp>::OpRewritePattern;
 
-  // TODO
   llvm::SmallVector<std::string>
   getConv2DValidDirectParams(const Conv2DArgs &args) const {
     llvm::SmallVector<std::string> conv2DParams;
@@ -58,7 +56,6 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
                          args.strideW, 1, args.dilationH, args.dilationW);
 
     nn::DerefInputFn::Params imToColParams(X, K);
-    nn::DerefInputFn memcpyFn(&imToColParams);
 
     std::array<int, 4> shape = {args.filterDepth, args.filterHeight,
                                 args.filterWidth, args.inputDepth};
@@ -66,7 +63,6 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
         (int8_t *)args.filter.data(), shape, 8, args.padValue);
     nn::MatMulDirectFn::Params afParams(X, K, args.inputDepth,
                                         rw.weights.data());
-    nn::MatMulDirectFn aggregateFn(&afParams);
 
     nn::OutputTransformFnInt8::CanonicalMulAndBias canonicalValues =
         nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
@@ -75,27 +71,21 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     nn::QuantisationParams qp = nn::OutputTransformFnInt8::quantise_activation(
         canonicalValues.f_multipliers, canonicalValues.f_biases,
         canonicalValues.accu_min, canonicalValues.accu_max);
-    nn::OT_int8::Params otParams((int32_t)args.filterDepth, &qp.otv,
-                                 qp.biases.data(), qp.multipliers.data());
-    nn::OT_int8 otFn(&otParams);
+    nn::OT_int8::Params otParams((int32_t)args.filterDepth, &qp.otv, qp.biases,
+                                 qp.multipliers);
 
     auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
     nn::Filter2D::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
 
-    // TODO: This method of serializing by casting can only work when the
-    // param structs don't have pointer members.
-    // Otherwise, we would need to use a proper serialize method which returns a
-    // serialized string.
-    std::string akpStr(reinterpret_cast<const char *>(&akParams),
-                       sizeof(akParams));
-    std::string otStr(reinterpret_cast<const char *>(&otParams),
-                      sizeof(otParams));
-
-    nn::Conv2dValidDirect conv2d(&akParams, &memcpyFn, &aggregateFn, &otFn);
+    // TODO: Check serialization
+    std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
+    std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
+    std::string afStr = afParams.serialise<nn::MatMulDirectFn::Params>();
+    std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
     conv2DParams.push_back(akpStr);
-    conv2DParams.push_back(akpStr);
-    conv2DParams.push_back(akpStr);
+    conv2DParams.push_back(mfStr);
+    conv2DParams.push_back(afStr);
     conv2DParams.push_back(otStr);
 
     return conv2DParams;
@@ -125,66 +115,168 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
       return failure();
     }
 
-    // Check if not fitting the three kernel types, then return
-    // Output channel must be a multiple of four
-    if (conv2DOp.output().getType().cast<ShapedType>().getDimSize(3) % 4 != 0) {
+    // Filter type must be QI8
+    if (!(conv2DOp.filter()
+              .getType()
+              .cast<ShapedType>()
+              .getElementType()
+              .isa<quant::QuantizedType>() &&
+          conv2DOp.filter()
+              .getType()
+              .cast<ShapedType>()
+              .getElementType()
+              .cast<quant::QuantizedType>()
+              .isSigned() &&
+          conv2DOp.filter()
+                  .getType()
+                  .cast<ShapedType>()
+                  .getElementType()
+                  .cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
       return failure();
     }
 
-    // TODO: For Conv2D for padding type = "SAME", get the correct padding
-    // values
-    int16_t top_pad, left_pad, bottom_pad, right_pad;
-    top_pad = left_pad = bottom_pad = right_pad = 0;
+    // TODO: What to do if no bias?
+    // Bias type must be QI32
+    if (!(conv2DOp.bias()
+              .getType()
+              .cast<ShapedType>()
+              .getElementType()
+              .isa<quant::QuantizedType>() &&
+          conv2DOp.bias()
+              .getType()
+              .cast<ShapedType>()
+              .getElementType()
+              .cast<quant::QuantizedType>()
+              .isSigned() &&
+          conv2DOp.bias()
+                  .getType()
+                  .cast<ShapedType>()
+                  .getElementType()
+                  .cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 32)) {
+      return failure();
+    }
 
-    // TODO: For BNNs, pad value cannot be zero
-    // We should be ideally using a different Conv2D operator for BNNs
-    int8_t kernel_pad_val = 0;
+    // Output depth must be a multiple of four
+    // If this is not the case, we return to the reference
+    // implementation
+    auto outputDepth =
+        conv2DOp.output().getType().cast<ShapedType>().getDimSize(3);
+    if (outputDepth % 4 != 0) {
+      return failure();
+    }
 
-    // Retrieve these
-    int output_height = 1;
-    int output_width = 1;
+    auto inputDepth =
+        conv2DOp.input().getType().cast<ShapedType>().getDimSize(3);
+    auto filterHeight =
+        conv2DOp.filter().getType().cast<ShapedType>().getDimSize(1);
+    auto filterWidth =
+        conv2DOp.filter().getType().cast<ShapedType>().getDimSize(2);
+    // TODO: With multithreading support, we could have multiple kernel types
+    // per thread
+    Conv2DType kernelType = Conv2DType::PaddedIndirect;
+    if (symbolizePadding(conv2DOp.padding()) == Padding::VALID &&
+        inputDepth % 4 == 0) {
+      kernelType = Conv2DType::ValidIndirect;
+    } else if (inputDepth % 32 == 0 && outputDepth % 16 == 0 &&
+               (symbolizePadding(conv2DOp.padding()) == Padding::VALID ||
+                (filterHeight == 1 && filterWidth == 1))) {
+      kernelType = Conv2DType::ValidDirect;
+    }
 
-    int k_height = 1;
-    int k_width = 1;
-    int k_depth = 16;
+    // Retrieve the remaining args
+    auto outputHeight =
+        conv2DOp.output().getType().cast<ShapedType>().getDimSize(1);
+    auto outputWidth =
+        conv2DOp.output().getType().cast<ShapedType>().getDimSize(2);
 
-    int x_height = 1;
-    int x_width = 1;
-    int x_channels = 32;
+    auto inputHeight =
+        conv2DOp.input().getType().cast<ShapedType>().getDimSize(1);
+    auto inputWidth =
+        conv2DOp.input().getType().cast<ShapedType>().getDimSize(2);
 
-    int k_v_stride = 1;
-    int k_h_stride = 1;
-    int k_v_dilation = 1;
-    int k_h_dilation = 1;
+    auto filterDepth =
+        conv2DOp.filter().getType().cast<ShapedType>().getDimSize(3);
 
-    std::vector<int8_t> weights(k_height * k_width * k_depth * x_channels, 1);
-    std::vector<int32_t> bias(k_depth, 1);
-    std::vector<float> eff_mult(k_depth, 1);
-    int input_zero_point = 1;
-    int output_zero_point = 1;
+    // Get output zero point
+    RankedTensorType outputType =
+        conv2DOp.output().getType().dyn_cast<RankedTensorType>();
+    auto outputQType = outputType.getElementType()
+                           .dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto outputScale = outputQType.getScale();
+    auto outputZeroPoint = outputQType.getZeroPoint();
 
-    Conv2DArgs args = {.outputHeight = output_height,
-                       .outputWidth = output_width,
-                       .outputZeroPoint = output_zero_point,
-                       .inputHeight = x_height,
-                       .inputWidth = x_width,
-                       .inputDepth = x_channels,
-                       .inputZeroPoint = input_zero_point,
-                       .filterHeight = k_height,
-                       .filterWidth = k_width,
-                       .filterDepth = k_depth,
-                       .strideH = k_v_stride,
-                       .strideW = k_h_stride,
-                       .dilationH = k_v_dilation,
-                       .dilationW = k_h_dilation,
-                       .filter = weights,
-                       .bias = bias,
-                       .effectiveMultiplier = eff_mult,
-                       .topPad = top_pad,
-                       .leftPad = left_pad,
-                       .bottomPad = bottom_pad,
-                       .rightPad = right_pad,
-                       .padValue = kernel_pad_val};
+    // Get input zero point
+    RankedTensorType inputType =
+        conv2DOp.output().getType().dyn_cast<RankedTensorType>();
+    auto inputQType = inputType.getElementType()
+                          .dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto inputScale = inputQType.getScale();
+    auto inputZeroPoint = inputQType.getZeroPoint();
+
+    // Get filter values
+    auto filterQConstOp =
+        dyn_cast<TFL::QConstOp>(conv2DOp.filter().getDefiningOp());
+    auto filter = filterQConstOp.value().cast<DenseElementsAttr>();
+    auto filterVector = std::vector<int8_t>{filter.getValues<int8_t>().begin(),
+                                            filter.getValues<int8_t>().end()};
+
+    // Get bias values
+    auto biasQConstOp =
+        dyn_cast<TFL::QConstOp>(conv2DOp.bias().getDefiningOp());
+    auto biases = biasQConstOp.value().cast<DenseElementsAttr>();
+    auto biasVector = std::vector<int32_t>{biases.getValues<int32_t>().begin(),
+                                           biases.getValues<int32_t>().end()};
+
+    // Calculate effectiveOutputScale
+    std::vector<float> effectiveOutputScaleVector(filterDepth);
+    auto filterType = filterQConstOp.qtype().cast<RankedTensorType>();
+    bool isPerChannelQuantized = false;
+    double filterScale;
+    ArrayRef<double> filterScales;
+    if (auto filterQType = filterType.getElementType()
+                               .dyn_cast<mlir::quant::UniformQuantizedType>()) {
+      filterScale = filterQType.getScale();
+    } else if (auto filterQType =
+                   filterType.getElementType()
+                       .dyn_cast<mlir::quant::UniformQuantizedPerAxisType>()) {
+      isPerChannelQuantized = true;
+      filterScales = filterQType.getScales();
+    }
+    for (int i = 0; i < filterDepth; ++i) {
+      auto scale = isPerChannelQuantized ? filterScales[i] : filterScale;
+      effectiveOutputScaleVector[i] = inputScale * scale / outputScale;
+    }
+
+    // Create a struct of Conv2DArgs to pass in parameters
+    Conv2DArgs args = {
+        .outputHeight = static_cast<int>(outputHeight),
+        .outputWidth = static_cast<int>(outputWidth),
+        .outputZeroPoint = static_cast<int>(outputZeroPoint),
+        .inputHeight = static_cast<int>(inputHeight),
+        .inputWidth = static_cast<int>(inputWidth),
+        .inputDepth = static_cast<int>(inputDepth),
+        .inputZeroPoint = static_cast<int>(inputZeroPoint),
+        .filterHeight = static_cast<int>(filterHeight),
+        .filterWidth = static_cast<int>(filterWidth),
+        .filterDepth = static_cast<int>(filterDepth),
+        .strideH = static_cast<int>(conv2DOp.stride_h()),
+        .strideW = static_cast<int>(conv2DOp.stride_w()),
+        .dilationH = static_cast<int>(conv2DOp.dilation_h_factor()),
+        .dilationW = static_cast<int>(conv2DOp.dilation_w_factor()),
+        .filter = filterVector,
+        .bias = biasVector,
+        .effectiveMultiplier = effectiveOutputScaleVector,
+        // TODO: For PaddedIndirect kernels, get the correct padding
+        // values
+        .topPad = 0,
+        .leftPad = 0,
+        .bottomPad = 0,
+        .rightPad = 0,
+        // TODO: For BNNs, pad value cannot be zero
+        // We should be ideally using a different Conv2D operator for BNNs
+        .padValue = 0};
 
     llvm::SmallVector<std::string> abstractKernelParams, memcpyFnParams,
         aggregateFnParams, outputTransformFnParams, kernelTypeEnumParams;
@@ -192,7 +284,7 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
 
     // TODO: Get thread count as command-line option
     // Currently thread count is one
-    int threadCount = 2;
+    const int threadCount = 1;
 
     // TODO: Multithread analysis to determine how to split up the data between
     // threads.
@@ -200,12 +292,11 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     // results here
     for (int i = 0; i < threadCount; ++i) {
       llvm::SmallVector<std::string> conv2DParams;
-
       // TODO: Determine which kernel type for each thread.
-      // Set to Conv2DType::ValidDirect for now
-      Conv2DType kernelType = Conv2DType::ValidDirect;
+      // Only one kernel type available now
       kernelTypeEnumParams.push_back(stringifyConv2DType(kernelType).str());
 
+      // TODO: Call the right kernel type function
       // Call the kernel type function which returns a vector of four strings
       // for the four Conv2D params
       conv2DParams = getConv2DValidDirectParams(args);

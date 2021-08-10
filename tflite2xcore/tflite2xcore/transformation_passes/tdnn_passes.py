@@ -61,22 +61,6 @@ def insert_ringbuffer(ringbuffer_time_dim: int, new_op: Operator) -> Operator:
         shape=(2,),
         custom_options={"tdnn":True},
     )
-    prev_data_size = np.prod(prev_data_shape)
-
-    persistent_buffer_number = subgraph.create_tensor(
-        f"{new_op.name}/persistent_buffer_number", 
-        TensorType.INT8,
-        shape=(2,),
-        custom_options={"tdnn":True},
-    )
-    prev_data_size = np.prod(prev_data_shape)
-
-    persistent_buffer_number = subgraph.create_tensor(
-        f"{new_op.name}/persistent_buffer_number", 
-        TensorType.INT8,
-        shape=(2,),
-        custom_options={"tdnn":True},
-    )
 
     # disconnect input from op
     new_op.inputs[0].consumers.pop(0)
@@ -95,11 +79,6 @@ def insert_ringbuffer(ringbuffer_time_dim: int, new_op: Operator) -> Operator:
 
     params = np.int32([start_address,prev_data_size])
     ringbuffer_op.inputs[2].buffer.data = params
-
-    for input_tensor in new_op.inputs:
-        input_tensor.add_custom_options(tdnn=True)
-        
-    new_op.inputs[2].buffer.data = persistent_buffer_count
 
 class TdnnShallowinConv2dPass(QuantizedOperatorMatchingPass):
     @property
@@ -215,84 +194,6 @@ class PersistentBufferSize(OperatorMatchingPass):
     def mutate(self, op: Operator) -> bool:
         largest_address = find_largest_address_in_persistent_buffer(op.subgraph)
         op.add_custom_options(persistent_buffer_size=largest_address)
-        return op
-
-# class TdnnGlobalAveragePool2DPass(ReplaceGlobalAveragePool2DPass):
-#     def mutate(self, op: Operator) -> Operator:
-#         new_op = super().mutate(op)
-
-#         ringbuffer_time_dim = new_op.inputs[0].shape[1]
-
-#         new_op = insert_ringbuffer(ringbuffer_time_dim, new_op)
-
-#         return new_op
-
-class TdnnTensorPass(TensorMatchingPass):
-    def match(self, tensor: Tensor) -> bool:
-        return (
-            super().match(tensor) 
-            and "tdnn" not in tensor.custom_options
-            #checks if tensor is 4d
-            and len(tensor.shape) == 4
-        )
-
-    def mutate(self, tensor: Tensor) -> Tensor:
-        tensor.add_custom_options(tdnn=True)
-
-        shape = list(tensor.shape)
-        shape[1] = 1
-        tensor.shape = tuple(shape)
-
-        return tensor
-    
-class TdnnCleanup(OperatorMatchingPass):
-    def match(self, op: Operator) -> bool:
-        return (
-            super().match(op)
-            and "tdnn" in op.custom_options
-        )
-
-    def mutate(self, op: Operator) -> bool:
-        op.custom_options.pop('tdnn')
-        return op
-
-# class TdnnGlobalAveragePool2DPass(ReplaceGlobalAveragePool2DPass):
-#     def mutate(self, op: Operator) -> Operator:
-#         new_op = super().mutate(op)
-
-#         ringbuffer_time_dim = new_op.inputs[0].shape[1]
-
-#         new_op = insert_ringbuffer(ringbuffer_time_dim, new_op)
-
-#         return new_op
-
-class TdnnTensorPass(TensorMatchingPass):
-    def match(self, tensor: Tensor) -> bool:
-        return (
-            super().match(tensor) 
-            and "tdnn" not in tensor.custom_options
-            #checks if tensor is 4d
-            and len(tensor.shape) == 4
-        )
-
-    def mutate(self, tensor: Tensor) -> Tensor:
-        tensor.add_custom_options(tdnn=True)
-
-        shape = list(tensor.shape)
-        shape[1] = 1
-        tensor.shape = tuple(shape)
-
-        return tensor
-    
-class TdnnCleanup(OperatorMatchingPass):
-    def match(self, op: Operator) -> bool:
-        return (
-            super().match(op)
-            and "tdnn" in op.custom_options
-        )
-
-    def mutate(self, op: Operator) -> bool:
-        op.custom_options.pop('tdnn')
         return op
 
 # class TdnnGlobalAveragePool2DPass(ReplaceGlobalAveragePool2DPass):

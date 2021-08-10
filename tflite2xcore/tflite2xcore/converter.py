@@ -311,6 +311,7 @@ def optimize_for_xcore(
     # lowering to the xcore ops
     pass_mgr.register_passes(ActivationLoweringManager(experimental_xformer2=experimental_xformer2))
     pass_mgr.register_passes(PoolingLoweringManager())
+    pass_mgr.register_passes(ParametricOperatorLoweringManager())
     pass_mgr.register_passes(BinarizedOperatorLoweringManager())
 
     if experimental_xformer2:

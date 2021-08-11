@@ -64,6 +64,12 @@ if __name__ == "__main__":
         default=False,
         help="Use MLIR-based xformer 2.0 for part of the optimization pipeline. Experimental.",
     )
+    parser.add_argument(
+        "--only-experimental-xformer2",
+        action="store_true",
+        default=False,
+        help="Use only MLIR-based xformer 2.0. Experimental.",
+    )
 
     args = parser.parse_args()
 
@@ -81,6 +87,7 @@ if __name__ == "__main__":
         remove_input_alignment_pad=args.remove_input_alignment_pad,
         external_memory=args.ext_mem,
         experimental_xformer2=args.experimental_xformer2,
+        only_experimental_xformer2=args.only_experimental_xformer2
     )
 
     print(f"Conversion successful, output: {tflite_output_path}")

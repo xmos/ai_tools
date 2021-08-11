@@ -77,7 +77,7 @@ def XC_Conv2D_TypeAttr : StrEnumAttr<"Conv2DType", "conv2d type enum", [
   XC_Conv2D_ValidDirect, XC_Conv2D_ValidIndirect, XC_Conv2D_PaddedIndirect
 ]>;
 
-def XC_Conv2DV2Op : XC_Op<"conv2dv2", [NoSideEffect]> {
+def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
   let summary = "Conv2D V2 op";
 
   let description = [{Conv2D V2 op.}];

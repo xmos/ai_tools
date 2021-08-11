@@ -24,10 +24,11 @@ std::vector<uint8_t> PadOp::buildCustomOptions() {
 }
 
 std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
-  flexbuffers::Builder fbb;
-  auto rootVec = fbb.StartVector();
   int threadCount = (int)thread_count();
 
+  flexbuffers::Builder fbb;
+  auto rootMap = fbb.StartMap();
+  auto threadsVec = fbb.StartVector("threads");
   for (int i = 0; i < threadCount; ++i) {
     auto vec = fbb.StartVector();
     fbb.Int((int32_t)scratch_bytes()
@@ -62,8 +63,9 @@ std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
                    .str());
     fbb.EndVector(vec, false, false);
   }
+  fbb.EndVector(threadsVec, false, false);
 
-  fbb.EndVector(rootVec, false, false);
+  fbb.EndMap(rootMap);
   fbb.Finish();
   return fbb.GetBuffer();
 }

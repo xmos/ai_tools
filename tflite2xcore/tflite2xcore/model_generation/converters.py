@@ -118,16 +118,11 @@ class XCoreConverter(Converter):
                 with open(pathlib.Path(input_path).resolve(), "wb") as fd:
                     fd.write(model)
 
-                from shutil import copyfile
-                copyfile(input_path, "/Users/deepakpanickal/code/ai_tools/experimental/xformer/xformer_input.tflite")
-
                 output_path = pathlib.Path(dirname) / "output.tflite"
                 cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path)]
                 p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
                 logger = logging.getLogger()
                 logger.debug(p.stdout)
-
-                copyfile(output_path, "/Users/deepakpanickal/code/ai_tools/experimental/xformer/xformer_output.tflite")
 
                 with open(pathlib.Path(output_path).resolve(), "rb") as fd:
                     bits = bytes(fd.read())

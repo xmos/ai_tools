@@ -70,6 +70,12 @@ def pytest_addoption(parser: _pytest.config.argparsing.Parser) -> None:
         help="Use MLIR-based xformer 2.0 for part of the optimization pipeline. Experimental.",
     )
 
+    parser.addoption(
+        "--only-experimental-xformer2",
+        action="store_true",
+        help="Use MLIR-based xformer 2.0 for part of the optimization pipeline. Experimental.",
+    )
+
 
 def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
     if "run" in metafunc.fixturenames:
@@ -114,7 +120,7 @@ def pytest_collection_modifyitems(
     config: _pytest.config.Config, items: List[pytest.Item]
 ) -> None:
     use_device = config.getoption("--use-device")
-    use_xformer2 = config.getoption("--experimental-xformer2")
+    use_xformer2 = config.getoption("--experimental-xformer2") or config.getoption("--only-experimental-xformer2")
     skip_on_device = pytest.mark.skip(reason="Test skipped on device")
     skip_on_xformer2 = pytest.mark.skip(reason="Test skipped when using xformer2")
     for item in items:
@@ -143,6 +149,9 @@ def use_device(request: _pytest.fixtures.SubRequest) -> bool:
 def experimental_xformer2(request: _pytest.fixtures.SubRequest) -> bool:
     return bool(request.config.getoption("--experimental-xformer2"))
 
+@pytest.fixture
+def only_experimental_xformer2(request: _pytest.fixtures.SubRequest) -> bool:
+    return bool(request.config.getoption("--only-experimental-xformer2"))
 
 _WORKER_CACHE: Dict[Path, IntegrationTestRunner] = {}
 
@@ -170,6 +179,7 @@ def run(
         GENERATOR,
         use_device=use_device,
         experimental_xformer2=pytest_config.getoption("--experimental-xformer2"),
+        only_experimental_xformer2=pytest_config.getoption("--only-experimental-xformer2"),
     )
     runner.set_config(**request.param)
 

@@ -11,6 +11,8 @@
 #include "IR/XCoreDialect.h.inc"
 // clang-format on
 
+#include "IR/XCoreEnumOps.h.inc"
+
 #define GET_OP_CLASSES
 #include "IR/XCoreOps.h.inc"
 

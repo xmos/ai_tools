@@ -89,7 +89,7 @@ pipeline {
                 // This step collects these files for display in Jenkins UI
                 junit "**/*_junit.xml"
                 sh """. activate ./ai_tools_venv &&
-                      make xformer2_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
+                      make integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
                 """
             }
         }

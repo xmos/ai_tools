@@ -170,7 +170,7 @@ def run(
     runner = RUNNER(
         GENERATOR,
         use_device=use_device,
-        experimental_xformer2=pytest_config.getoption("--experimental-xformer2"),
+        # experimental_xformer2=pytest_config.getoption("--experimental-xformer2"),
     )
     runner.set_config(**request.param)
 

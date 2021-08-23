@@ -67,11 +67,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tdnn", action="store_true", default=False, help="Experimental flag - Convert network to tdnn",
     )
-    parser.add_argument(
-        "--tdnn", action="store_true", default=False, help="Experimental flag - Convert network to tdnn",
-    )
-    parser.add_argument(
-        "--tdnn", action="store_true", default=False, help="Experimental flag - Convert network to tdnn",
     )
 
     args = parser.parse_args()
@@ -91,6 +86,7 @@ if __name__ == "__main__":
         external_memory=args.ext_mem,
         experimental_xformer2=args.experimental_xformer2,
         tdnn=args.tdnn,
+        only_experimental_xformer2=args.only_experimental_xformer2
     )
 
     print(f"Conversion successful, output: {tflite_output_path}")

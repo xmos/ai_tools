@@ -67,6 +67,36 @@ class XC_Op<string mnemonic, list<OpTrait> traits = []>
   let extraClassDeclaration = [{ std::vector<uint8_t> buildCustomOptions(); }];
 }
 
+// Conv2D
+
+def XC_Conv2D_ValidDirect : StrEnumAttrCase<"ValidDirect">;
+def XC_Conv2D_ValidIndirect : StrEnumAttrCase<"ValidIndirect">;
+def XC_Conv2D_PaddedIndirect : StrEnumAttrCase<"PaddedIndirect">;
+
+def XC_Conv2D_TypeAttr : StrEnumAttr<"Conv2DType", "conv2d type enum", [
+  XC_Conv2D_ValidDirect, XC_Conv2D_ValidIndirect, XC_Conv2D_PaddedIndirect
+]>;
+
+def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
+  let summary = "Conv2D V2 op";
+
+  let description = [{Conv2D V2 op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+
+    I32Attr:$thread_count,
+    I32ArrayAttr:$scratch_bytes,
+    StrArrayAttr:$abstract_kernel_params,
+    StrArrayAttr:$memcpy_fn_params,
+    StrArrayAttr:$aggregate_fn_params,
+    StrArrayAttr:$output_transform_fn_params,
+    StrArrayAttr:$conv2d_kernel_type
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_FullyConnectedOp : XC_Op<"fc", [NoSideEffect]> {
   let summary = "Fully connected op";
 

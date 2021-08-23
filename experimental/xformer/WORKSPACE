@@ -74,6 +74,14 @@ load("@org_tensorflow//tensorflow:workspace0.bzl", "tf_workspace0")
 tf_workspace0()
 
 ###############################################################################
+##### lib_nn
+new_local_repository(
+    name = "lib_nn",
+    path = "../../utils/adf/lib_nn",
+    build_file = "lib_nn.BUILD",
+)
+
+###############################################################################
 
 ##### gRPC Rules for Bazel
 ##### See https://github.com/grpc/grpc/blob/master/src/cpp/README.md#make

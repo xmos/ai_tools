@@ -6,6 +6,8 @@
 #define GET_OP_CLASSES
 #include "IR/XCoreOps.cpp.inc"
 
+#include "IR/XCoreEnumOps.cpp.inc"
+
 namespace mlir {
 namespace xcore {
 

@@ -306,8 +306,10 @@ class TdnnTestRunner(IntegrationTestRunner):
         generator: Type["IntegrationTestModelGenerator"],
         *,
         use_device: bool = False,
+        experimental_xformer2: bool = False,
+        only_experimental_xformer2: bool = False,
     ) -> None:
-        super().__init__(generator, use_device=use_device)
+        super().__init__(generator, use_device=use_device,experimental_xformer2=experimental_xformer2,only_experimental_xformer2=only_experimental_xformer2)
 
         # floating point reference
         self._reference_float_converter = TFLiteFloatConverter(
@@ -447,6 +449,7 @@ def _compare_batched_arrays(
     per_bits: bool = False,
 ) -> BatchedArrayComparison:
     assert tolerance >= 0
+    breakpoint()
     assert predicted.shape == expected.shape
 
     output_type = predicted.dtype

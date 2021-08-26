@@ -357,7 +357,8 @@ def apply_interpreter_to_tdnn_examples(
         if len(np.squeeze(y).shape) <= 1:
             outputs.append(ycol)
         else:
-            max_ringbuffer_delay = 8#depends on network, need a way to handle delay
+            max_ringbuffer_delay = 1#depends on network, need a way to handle delay
+            # max_ringbuffer_delay = 8#depends on network, need a way to handle delay
             outputs.append(y[:,max_ringbuffer_delay:,:,:])
     return np.vstack(outputs) if isinstance(examples, np.ndarray) else outputs
 

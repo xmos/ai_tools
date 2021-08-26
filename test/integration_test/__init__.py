@@ -449,7 +449,6 @@ def _compare_batched_arrays(
     per_bits: bool = False,
 ) -> BatchedArrayComparison:
     assert tolerance >= 0
-    breakpoint()
     assert predicted.shape == expected.shape
 
     output_type = predicted.dtype

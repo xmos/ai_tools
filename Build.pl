@@ -32,6 +32,16 @@ sub main
   my $xmosArg = XmosArg::new(\@ARGV);
   SetupEnv::SetupPaths();
 
+  if ($^O eq "linux") {
+    $ENV{"JAVA_HOME"} = "/usr/lib/jvm/java-1.8.0";
+    $ENV{"CC"} = "/opt/xmos/gcc/4.9.2/bin/gcc";
+  } elsif ($^O eq "darwin") {
+    ;
+  } elsif ($^O eq "MSWin32") {
+    ;
+  } else {
+    die "Os $^O not recognised";
+  }
   my @targets =
     sort { XmosBuildLib::ByTarget($a, $b) }
       (@{ $xmosArg->GetTargets() });
@@ -82,16 +92,18 @@ sub ListTargets
 
 sub DoBuild
 {
-  system("make submodule_update") == 0
-    or die "Failed to configure submodules";
-  chdir("experimental/xformer");
-  system("bazel build //:xcore-opt") == 0
-    or die "Failed to build xformer-2.0";
+  chdir("${XMOS_ROOT}${SLASH}ai_tools");
+  #system("make submodule_update") == 0                                         or die "Failed to configure submodules";
+  chdir("experimental${SLASH}xformer");
+  system("python3 -m venv .venv") == 0                                         or die "Python -m venv failed";
+  system(". .venv/bin/activate && pip install -r ..${SLASH}..${SLASH}requirements.txt") == 0 or die "Python requirement install failed";
+  system(". .venv/bin/activate && bazel build //:xcore-opt") == 0              or die "Failed to build xformer-2.0";
 }
 
 sub DoClean
 {
-  chdir("experimental/xformer");
+  chdir("${XMOS_ROOT}${SLASH}ai_tools");
+  chdir("experimental${SLASH}xformer");
   File::Path::rmtree('bazel-bin');
   File::Path::rmtree('bazel-out');
   File::Path::rmtree('bazel-testlogs');
@@ -100,6 +112,7 @@ sub DoClean
 
 sub DoInstall
 {
+  chdir("${XMOS_ROOT}${SLASH}ai_tools");
   XmosBuildLib::InstallReleaseDirectory($DOMAIN, "experimental/xformer/bazel-bin", "xcore-opt");
 }
 

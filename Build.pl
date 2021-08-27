@@ -32,6 +32,8 @@ sub main
   my $xmosArg = XmosArg::new(\@ARGV);
   SetupEnv::SetupPaths();
 
+  $ENV{"JAVA_HOME"} = "/usr/lib/jvm/java-1.8.0";
+  $ENV{"CC"} = "/opt/xmos/gcc/4.9.2/bin/gcc";
   my @targets =
     sort { XmosBuildLib::ByTarget($a, $b) }
       (@{ $xmosArg->GetTargets() });
@@ -82,15 +84,18 @@ sub ListTargets
 
 sub DoBuild
 {
+  chdir("${XMOS_ROOT}${SLASH}ai_tools");
   system("make submodule_update") == 0
     or die "Failed to configure submodules";
   chdir("experimental/xformer");
+  #system(". ../../.venv/bin/activate && bazel build //:xcore-opt") == 0
   system("bazel build //:xcore-opt") == 0
     or die "Failed to build xformer-2.0";
 }
 
 sub DoClean
 {
+  chdir("${XMOS_ROOT}${SLASH}ai_tools");
   chdir("experimental/xformer");
   File::Path::rmtree('bazel-bin');
   File::Path::rmtree('bazel-out');
@@ -100,6 +105,7 @@ sub DoClean
 
 sub DoInstall
 {
+  chdir("${XMOS_ROOT}${SLASH}ai_tools");
   XmosBuildLib::InstallReleaseDirectory($DOMAIN, "experimental/xformer/bazel-bin", "xcore-opt");
 }
 

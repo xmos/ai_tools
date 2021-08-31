@@ -166,7 +166,7 @@ class TdnnTensorPass(TensorMatchingPass):
 
         return tensor
     
-class TdnnCleanup(OperatorMatchingPass):
+class TdnnCleanupPass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
         return (
             super().match(op)
@@ -179,7 +179,7 @@ class TdnnCleanup(OperatorMatchingPass):
         op.custom_options.pop('prev_data_size', None)
         return op
 
-class PersistentBufferSize(OperatorMatchingPass):
+class TdnnPersistentBufferSizePass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
         return (
             super().match(op)
@@ -201,32 +201,3 @@ class PersistentBufferSize(OperatorMatchingPass):
 #         new_op = insert_ringbuffer(ringbuffer_time_dim, new_op)
 
 #         return new_op
-
-class TdnnTensorPass(TensorMatchingPass):
-    def match(self, tensor: Tensor) -> bool:
-        return (
-            super().match(tensor) 
-            and "tdnn" not in tensor.custom_options
-            #checks if tensor is 4d
-            and len(tensor.shape) == 4
-        )
-
-    def mutate(self, tensor: Tensor) -> Tensor:
-        tensor.add_custom_options(tdnn=True)
-
-        shape = list(tensor.shape)
-        shape[1] = 1
-        tensor.shape = tuple(shape)
-
-        return tensor
-    
-class TdnnCleanup(OperatorMatchingPass):
-    def match(self, op: Operator) -> bool:
-        return (
-            super().match(op)
-            and "tdnn" in op.custom_options
-        )
-
-    def mutate(self, op: Operator) -> bool:
-        op.custom_options.pop('tdnn')
-        return op

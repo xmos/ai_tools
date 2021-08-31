@@ -350,8 +350,8 @@ def optimize_for_xcore(
         )
     )
     pass_mgr.register_passes(ParallelizationManager(num_threads=num_threads))
-    # if external_memory:
-    #     pass_mgr.register_passes(ExternalMemoryOptimizationManager())
+    if external_memory:
+        pass_mgr.register_passes(ExternalMemoryOptimizationManager())
 
     # finalize (cleanup, minification, renaming, etc.)
     pass_mgr.register_passes(

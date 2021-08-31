@@ -42,8 +42,8 @@ class TdnnManager(PassManager):
         self.register_pass(passes.TdnnMaxPool2DPass())
         self.register_pass(passes.TdnnShallowinConv2dPass())
         self.register_pass(passes.TdnnTensorPass())
-        self.register_pass(passes.PersistentBufferSize())
-        self.register_pass(passes.TdnnCleanup())
+        self.register_pass(passes.TdnnPersistentBufferSizePass())
+        self.register_pass(passes.TdnnCleanupPass())
 
 class BasicCanonicalizationManager(PassManager):
     def __init__(

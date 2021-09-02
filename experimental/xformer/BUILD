@@ -7,6 +7,8 @@ package(
 gentbl(
     name = "xc_ops_inc_gen",
     tbl_outs = [
+        ("-gen-enum-decls", "IR/XCoreEnumOps.h.inc"),
+        ("-gen-enum-defs", "IR/XCoreEnumOps.cpp.inc"),
         ("-gen-op-decls", "IR/XCoreOps.h.inc"),
         ("-gen-op-defs", "IR/XCoreOps.cpp.inc"),
         ("-gen-dialect-decls -dialect=xc", "IR/XCoreDialect.h.inc"),
@@ -41,6 +43,8 @@ gentbl(
 cc_library(
     name = "xcore_passes",
     srcs = glob(["Transforms/*.cpp"]) + [
+        "IR/XCoreEnumOps.h.inc",
+        "IR/XCoreEnumOps.cpp.inc",
         "IR/XCoreOps.cpp",
         "IR/XCoreDialect.h.inc",
         "IR/XCoreOps.cpp.inc",
@@ -58,7 +62,9 @@ cc_library(
         "@llvm-project//mlir:QuantOps",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+        "@lib_nn//:libnn_lib",
     ],
+    copts = ["-DNN_USE_REF -Iexternal/lib_nn/lib_nn/api"],
     alwayslink = 1,
 ) 
 

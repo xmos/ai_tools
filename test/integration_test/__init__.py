@@ -63,6 +63,7 @@ class IntegrationTestRunner(Runner):
         *,
         use_device: bool = False,
         experimental_xformer2: bool = False,
+        only_experimental_xformer2: bool = False,
     ) -> None:
         super().__init__(generator)
         self._use_device = use_device
@@ -74,6 +75,7 @@ class IntegrationTestRunner(Runner):
             self,
             self.get_xcore_reference_model,
             experimental_xformer2=experimental_xformer2,
+            only_experimental_xformer2=only_experimental_xformer2,
         )
         self.register_converter(self._xcore_converter)
 
@@ -81,6 +83,7 @@ class IntegrationTestRunner(Runner):
             self,
             self._xcore_converter.get_converted_model,
             experimental_xformer2=experimental_xformer2,
+            only_experimental_xformer2=only_experimental_xformer2,
         )
         self.register_converter(self._identity_converter)
 

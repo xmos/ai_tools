@@ -30,18 +30,18 @@ def find_largest_address_in_persistent_buffer(subgraph: Subgraph) -> int:
                 largest_address = prev_data_address+prev_data_size+1
     return largest_address
 
-def insert_ringbuffer(ringbuffer_time_dim: int, new_op: Operator) -> Operator:
-    subgraph = new_op.subgraph
+def insert_ringbuffer(ringbuffer_time_dim: int, op: Operator) -> Operator:
+    subgraph = op.subgraph
 
-    ringbuffer_shape = list(new_op.inputs[0].shape)
+    ringbuffer_shape = list(op.inputs[0].shape)
     ringbuffer_shape[1] = ringbuffer_time_dim
 
     ringbuffer_tensor = subgraph.create_tensor(
-        f"{new_op.name}/ringbuffer",
+        f"{op.name}/ringbuffer",
         TensorType.INT8,
-        consumers=[new_op],
+        consumers=[op],
         shape=ringbuffer_shape,
-        quantization=new_op.inputs[0].quantization,
+        quantization=op.inputs[0].quantization,
         custom_options={"tdnn":True},
     )
 
@@ -51,30 +51,32 @@ def insert_ringbuffer(ringbuffer_time_dim: int, new_op: Operator) -> Operator:
     prev_data_size = np.prod(prev_data_shape)
 
     prev_data_address_size = subgraph.create_tensor(
-        f"{new_op.name}/prev_data_address_size", 
+        f"{op.name}/prev_data_address_size", 
         TensorType.INT8,
         shape=(2,),
         custom_options={"tdnn":True},
     )
 
     # disconnect input from op
-    new_op.inputs[0].consumers.pop(0)
+    op.inputs[0].consumers.pop(0)
     # create and connect ring buffer op
     ringbuffer_op = subgraph.create_operator(
         OperatorCode(XCOREOpCodes.XC_ringbuffer),
-        # inputs=[new_op.inputs[0], prev_data_tensor, persistent_buffer_number],
-        inputs=[new_op.inputs[0],  prev_data_address_size],
+        # inputs=[op.inputs[0], prev_data_tensor, persistent_buffer_number],
+        inputs=[op.inputs[0],  prev_data_address_size],
         outputs=[ringbuffer_tensor],
         custom_options={"prev_data_address":prev_data_address,"prev_data_size":prev_data_size},
     )
     # connect op to ring buffer
-    new_op.inputs[0] = ringbuffer_tensor
+    op.inputs[0] = ringbuffer_tensor
 
-    for input_tensor in new_op.inputs:
+    for input_tensor in op.inputs:
         input_tensor.add_custom_options(tdnn=True)
 
     params = np.int32([prev_data_address,prev_data_size])
     ringbuffer_op.inputs[1].buffer.data = params
+
+    return op
 
 class TdnnShallowinConv2dPass(QuantizedOperatorMatchingPass):
     @property
@@ -93,7 +95,7 @@ class TdnnShallowinConv2dPass(QuantizedOperatorMatchingPass):
 
         # kernel_size[0]
         ringbuffer_time_dim = op.inputs[1].shape[1]
-        new_op = insert_ringbuffer(ringbuffer_time_dim, op)
+        op = insert_ringbuffer(ringbuffer_time_dim, op)
 
         return op
 

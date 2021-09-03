@@ -115,6 +115,9 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
   } else if (isa<TFL::LogisticOp>(op)) {
     std::for_each(dequantizedVector.begin(), dequantizedVector.end(),
                   [](double &x) { x = 1.0 / (1.0 + exp(-x)); });
+  }else if (isa<TFL::LeakyReluOp>(op)) {
+      std::for_each(dequantizedVector.begin(), dequantizedVector.end(),
+                  [](double &x) { x = x > 0.0 ? x : x * (TFL::LeakyReluOp)op->getAlpha(); });
   } else {
     llvm_unreachable("Unsupported op!");
   }

@@ -91,6 +91,10 @@ pipeline {
                 sh """. activate ./ai_tools_venv &&
                       make integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
                 """
+                // xformer2 integration tests
+                sh """. activate ./ai_tools_venv &&
+                      make xformer2_integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
+                """
             }
         }
     }

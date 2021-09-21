@@ -267,17 +267,17 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
       return failure();
     }
 
-    // Output depth must be a multiple of four
+    // Output depth and input depth must be a multiple of four
     // If this is not the case, we return to the reference
     // implementation
     auto outputDepth =
         conv2DOp.output().getType().cast<ShapedType>().getDimSize(3);
-    if (outputDepth % 4 != 0) {
+    auto inputDepth =
+        conv2DOp.input().getType().cast<ShapedType>().getDimSize(3);
+    if (outputDepth % 4 != 0 || inputDepth % 4 != 0) {
       return failure();
     }
 
-    auto inputDepth =
-        conv2DOp.input().getType().cast<ShapedType>().getDimSize(3);
     auto filterHeight =
         conv2DOp.filter().getType().cast<ShapedType>().getDimSize(1);
     auto filterWidth =

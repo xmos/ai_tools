@@ -120,6 +120,7 @@ class FilterOpTestModelGenerator(ImageInputOpTestModelGenerator):
 
 
 @pytest.mark.skip_on_device
+@pytest.mark.skip_on_xformer2
 def test_converted_single_op_model(
     xcore_model: XCOREModel, converted_op_code: XCOREOpCodes
 ) -> None:

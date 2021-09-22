@@ -11,6 +11,8 @@ namespace xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createApplyPatternsPass());
+  pm.addPass(createPad3to4Conv2DPass());
+  pm.addPass(createReplaceWithConv2DV2Pass());
   pm.addPass(createLegalizeFullyConnectedPass());
   pm.addPass(createTranslateToCustomOpPass());
 }

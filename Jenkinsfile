@@ -52,7 +52,7 @@ pipeline {
                 sh "conda env create -q -p ai_tools_venv -f ./utils/adf/environment.yml"
                 sh """. activate ./ai_tools_venv &&
                       pip install -e "./utils/adf/xcore_interpreters[test]" &&
-                      pip install -e "./tflite2xcore[test,examples,dev]"
+                      pip install -e "./tflite2xcore[test,examples]"
                 """
                 // Install xmos tools version
                 sh "/XMOS/get_tools.py " + params.TOOLS_VERSION
@@ -76,7 +76,7 @@ pipeline {
                 """
                 sh ". activate ./ai_tools_venv && make tflite2xcore_dist"
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt
+                      bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
                 """
             }
         }
@@ -89,7 +89,11 @@ pipeline {
                 // This step collects these files for display in Jenkins UI
                 junit "**/*_junit.xml"
                 sh """. activate ./ai_tools_venv &&
-                      make xformer2_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
+                      make integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
+                """
+                // xformer2 integration tests
+                sh """. activate ./ai_tools_venv &&
+                      make xformer2_integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
                 """
             }
         }

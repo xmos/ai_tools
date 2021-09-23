@@ -383,10 +383,12 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     // Output depth and input depth must be a multiple of four
     // If this is not the case, we return to the reference
     // implementation
-    auto outputDepth =
-        conv2DOp.output().getType().template cast<ShapedType>().getDimSize(3);
-    auto inputDepth =
-        conv2DOp.input().getType().template cast<ShapedType>().getDimSize(3);
+    auto outputType =
+        conv2DOp.output().getType().template dyn_cast<RankedTensorType>();
+    auto inputType =
+        conv2DOp.input().getType().template dyn_cast<RankedTensorType>();
+    auto outputDepth = outputType.getDimSize(3);
+    auto inputDepth = inputType.getDimSize(3);
     if (outputDepth % 4 != 0 || inputDepth % 4 != 0) {
       return failure();
     }
@@ -394,10 +396,10 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     // Is it a DepthwiseConv2D?
     bool isDepthwise = std::is_same<TFLOp, TFL::DepthwiseConv2DOp>::value;
 
-    auto filterHeight =
-        conv2DOp.filter().getType().template cast<ShapedType>().getDimSize(1);
-    auto filterWidth =
-        conv2DOp.filter().getType().template cast<ShapedType>().getDimSize(2);
+    auto filterType =
+        conv2DOp.filter().getType().template dyn_cast<RankedTensorType>();
+    auto filterHeight = filterType.getDimSize(1);
+    auto filterWidth = filterType.getDimSize(2);
 
     // TODO: With multithreading support, we could have a different kernel type
     // for each thread
@@ -421,22 +423,13 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     }
 
     // Retrieve the remaining args
-    auto outputHeight =
-        conv2DOp.output().getType().template cast<ShapedType>().getDimSize(1);
-    auto outputWidth =
-        conv2DOp.output().getType().template cast<ShapedType>().getDimSize(2);
-
-    auto inputHeight =
-        conv2DOp.input().getType().template cast<ShapedType>().getDimSize(1);
-    auto inputWidth =
-        conv2DOp.input().getType().template cast<ShapedType>().getDimSize(2);
-
-    auto filterDepth =
-        conv2DOp.filter().getType().template cast<ShapedType>().getDimSize(3);
+    auto outputHeight = outputType.getDimSize(1);
+    auto outputWidth = outputType.getDimSize(2);
+    auto inputHeight = inputType.getDimSize(1);
+    auto inputWidth = inputType.getDimSize(2);
+    auto filterDepth = filterType.getDimSize(3);
 
     // Get output zero point
-    RankedTensorType outputType =
-        conv2DOp.output().getType().template dyn_cast<RankedTensorType>();
     auto outputQType =
         outputType.getElementType()
             .template dyn_cast<mlir::quant::UniformQuantizedType>();
@@ -444,8 +437,6 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     auto outputZeroPoint = outputQType.getZeroPoint();
 
     // Get input zero point
-    RankedTensorType inputType =
-        conv2DOp.input().getType().template dyn_cast<RankedTensorType>();
     auto inputQType =
         inputType.getElementType()
             .template dyn_cast<mlir::quant::UniformQuantizedType>();
@@ -470,16 +461,17 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
 
     // Calculate effectiveOutputScale
     std::vector<float> effectiveOutputScaleVector;
-    auto filterType = filterQConstOp.qtype().template cast<RankedTensorType>();
+    auto filterQConstOpType =
+        filterQConstOp.qtype().template cast<RankedTensorType>();
     bool isPerChannelQuantized = false;
     double filterScale;
     ArrayRef<double> filterScales;
     if (auto filterQType =
-            filterType.getElementType()
+            filterQConstOpType.getElementType()
                 .template dyn_cast<mlir::quant::UniformQuantizedType>()) {
       filterScale = filterQType.getScale();
     } else if (auto filterQType =
-                   filterType.getElementType()
+                   filterQConstOpType.getElementType()
                        .template dyn_cast<
                            mlir::quant::UniformQuantizedPerAxisType>()) {
       isPerChannelQuantized = true;
@@ -491,14 +483,8 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     // Conv is quantized along dimension 0
     // DepthwiseConv is quantized along dimension 3
     // https://www.tensorflow.org/lite/performance/quantization_spec
-    auto numOutputChannels = isDepthwise ? conv2DOp.filter()
-                                               .getType()
-                                               .template cast<ShapedType>()
-                                               .getDimSize(3)
-                                         : conv2DOp.filter()
-                                               .getType()
-                                               .template cast<ShapedType>()
-                                               .getDimSize(0);
+    auto numOutputChannels =
+        isDepthwise ? filterType.getDimSize(3) : filterType.getDimSize(0);
     for (int i = 0; i < numOutputChannels; ++i) {
       auto scale = isPerChannelQuantized ? filterScales[i] : filterScale;
       assert(outputScale != 0 && "outputScale should not be zero!");

@@ -18,7 +18,7 @@ namespace mlir {
 namespace xcore {
 
 namespace {
-// Replace TFL Conv2D with XC Conv2DV2 ops.
+// Replace TFL Conv2D and DepthwiseConv2D with XC Conv2DV2 ops.
 struct ReplaceWithConv2DV2
     : public PassWrapper<ReplaceWithConv2DV2, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
@@ -41,8 +41,121 @@ struct Conv2DArgs {
   int8_t padValue;
 };
 
-struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
-  using OpRewritePattern<TFL::Conv2DOp>::OpRewritePattern;
+template <typename TFLOp>
+struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
+  using OpRewritePattern<TFLOp>::OpRewritePattern;
+
+  //
+  llvm::SmallVector<std::string>
+  getDepthwiseConv2DValidDirectParams(const Conv2DArgs &args) const {
+    llvm::SmallVector<std::string> conv2DParams;
+
+    nn::padding_t padding = {args.topPad, args.leftPad, args.bottomPad,
+                             args.rightPad};
+    nn::ImageGeometry Y(args.outputHeight, args.outputWidth, args.outputDepth);
+    nn::ImageGeometry X(args.inputHeight, args.inputWidth, args.inputDepth);
+    nn::WindowGeometry K(args.filterHeight, args.filterWidth, args.filterDepth,
+                         -padding.top, -padding.left, args.strideH,
+                         args.strideW, 1, args.dilationH, args.dilationW);
+    nn::Filter2dGeometry geom(X, Y, K);
+
+    nn::DerefInputFn::Params imToColParams(X, K);
+
+    std::array<int, 4> weightsShape = {1, args.filterHeight, args.filterWidth,
+                                       args.inputDepth};
+    nn::Conv2dReorderedWeights rw =
+        nn::MatMulDirectFn_DW::reorder_kernel_weights(
+            (int8_t *)args.filter.data(), weightsShape, args.padValue);
+    nn::MatMulDirectFn_DW::Params afParams(X, K, rw.weights.data(),
+                                           rw.weights.size());
+
+    nn::OutputTransformFnInt8::CanonicalMulAndBias canonical_values =
+        nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
+            args.effectiveMultiplier, args.bias, args.filter, weightsShape,
+            args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
+    nn::QuantisationParams qp = nn::OutputTransformFnInt8::quantise_activation(
+        canonical_values.f_multipliers, canonical_values.f_biases,
+        canonical_values.accu_min, canonical_values.accu_max);
+    nn::OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
+                               (int16_t)args.padValue);
+    nn::OutputTransformFn::pad(qp.multipliers, VPU_INT16_EPV,
+                               (int16_t)args.padValue);
+    nn::OT_int8::Params otParams((int32_t)args.outputDepth, &qp.otv, qp.biases,
+                                 qp.multipliers);
+
+    auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
+    nn::Filter2D_DW::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
+
+    // TODO: Check serialization
+    std::string akpStr = akParams.serialise<nn::Filter2D_DW::Params>();
+    std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
+    std::string afStr = afParams.serialise<nn::MatMulDirectFn_DW::Params>();
+    std::string otStr = otParams.serialise<nn::OT_int8::Params>();
+
+    conv2DParams.push_back(akpStr);
+    conv2DParams.push_back(mfStr);
+    conv2DParams.push_back(afStr);
+    conv2DParams.push_back(otStr);
+
+    return conv2DParams;
+  }
+
+  //
+  llvm::SmallVector<std::string>
+  getDepthwiseConv2DPaddedIndirectParams(const Conv2DArgs &args) const {
+    llvm::SmallVector<std::string> conv2DParams;
+
+    nn::padding_t padding = {args.topPad, args.leftPad, args.bottomPad,
+                             args.rightPad};
+    nn::ImageGeometry Y(args.outputHeight, args.outputWidth, args.outputDepth);
+    nn::ImageGeometry X(args.inputHeight, args.inputWidth, args.inputDepth);
+    nn::WindowGeometry K(args.filterHeight, args.filterWidth, args.filterDepth,
+                         -padding.top, -padding.left, args.strideH,
+                         args.strideW, 1, args.dilationH, args.dilationW);
+    nn::Filter2dGeometry geom(X, Y, K);
+
+    nn::ImToColPadded::Params imToColParams(X, K, padding, 16,
+                                            args.inputZeroPoint);
+
+    std::array<int, 4> weightsShape = {1, args.filterHeight, args.filterWidth,
+                                       args.inputDepth};
+    nn::Conv2dReorderedWeights rw =
+        nn::MatMulDirectFn_DW::reorder_kernel_weights(
+            (int8_t *)args.filter.data(), weightsShape, args.padValue);
+    nn::MatMulDirectFn_DW::Params afParams(K, rw.weights.data(),
+                                           rw.weights.size());
+
+    nn::OutputTransformFnInt8::CanonicalMulAndBias canonical_values =
+        nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
+            args.effectiveMultiplier, args.bias, args.filter, weightsShape,
+            args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
+    nn::QuantisationParams qp = nn::OutputTransformFnInt8::quantise_activation(
+        canonical_values.f_multipliers, canonical_values.f_biases,
+        canonical_values.accu_min, canonical_values.accu_max);
+    // change
+    nn::OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
+                               (int16_t)args.padValue);
+    nn::OutputTransformFn::pad(qp.multipliers, VPU_INT16_EPV,
+                               (int16_t)args.padValue);
+    nn::OT_int8::Params otParams((int32_t)args.outputDepth, &qp.otv, qp.biases,
+                                 qp.multipliers);
+
+    auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
+    nn::Filter2D_DW::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
+
+    // TODO: Check serialization
+    std::string akpStr = akParams.serialise<nn::Filter2D_DW::Params>();
+    std::string mfStr = imToColParams.serialise<nn::ImToColPadded::Params>();
+    std::string afStr = afParams.serialise<nn::MatMulDirectFn_DW::Params>();
+    std::string otStr = otParams.serialise<nn::OT_int8::Params>();
+
+    conv2DParams.push_back(akpStr);
+    conv2DParams.push_back(mfStr);
+    conv2DParams.push_back(afStr);
+    conv2DParams.push_back(otStr);
+
+    return conv2DParams;
+  }
 
   //
   llvm::SmallVector<std::string>
@@ -200,26 +313,26 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     return conv2DParams;
   }
 
-  LogicalResult matchAndRewrite(TFL::Conv2DOp conv2DOp,
+  LogicalResult matchAndRewrite(TFLOp conv2DOp,
                                 PatternRewriter &rewriter) const override {
     // Check for invalid types and return
     // Input type must be QI8
     if (!(conv2DOp.input()
               .getType()
-              .cast<ShapedType>()
+              .template cast<ShapedType>()
               .getElementType()
-              .isa<quant::QuantizedType>() &&
+              .template isa<quant::QuantizedType>() &&
           conv2DOp.input()
               .getType()
-              .cast<ShapedType>()
+              .template cast<ShapedType>()
               .getElementType()
-              .cast<quant::QuantizedType>()
+              .template cast<quant::QuantizedType>()
               .isSigned() &&
           conv2DOp.input()
                   .getType()
-                  .cast<ShapedType>()
+                  .template cast<ShapedType>()
                   .getElementType()
-                  .cast<quant::QuantizedType>()
+                  .template cast<quant::QuantizedType>()
                   .getStorageTypeIntegralWidth() == 8)) {
       return failure();
     }
@@ -227,20 +340,20 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     // Filter type must be QI8
     if (!(conv2DOp.filter()
               .getType()
-              .cast<ShapedType>()
+              .template cast<ShapedType>()
               .getElementType()
-              .isa<quant::QuantizedType>() &&
+              .template isa<quant::QuantizedType>() &&
           conv2DOp.filter()
               .getType()
-              .cast<ShapedType>()
+              .template cast<ShapedType>()
               .getElementType()
-              .cast<quant::QuantizedType>()
+              .template cast<quant::QuantizedType>()
               .isSigned() &&
           conv2DOp.filter()
                   .getType()
-                  .cast<ShapedType>()
+                  .template cast<ShapedType>()
                   .getElementType()
-                  .cast<quant::QuantizedType>()
+                  .template cast<quant::QuantizedType>()
                   .getStorageTypeIntegralWidth() == 8)) {
       return failure();
     }
@@ -249,20 +362,20 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     // Bias type must be QI32
     if (!(conv2DOp.bias()
               .getType()
-              .cast<ShapedType>()
+              .template cast<ShapedType>()
               .getElementType()
-              .isa<quant::QuantizedType>() &&
+              .template isa<quant::QuantizedType>() &&
           conv2DOp.bias()
               .getType()
-              .cast<ShapedType>()
+              .template cast<ShapedType>()
               .getElementType()
-              .cast<quant::QuantizedType>()
+              .template cast<quant::QuantizedType>()
               .isSigned() &&
           conv2DOp.bias()
                   .getType()
-                  .cast<ShapedType>()
+                  .template cast<ShapedType>()
                   .getElementType()
-                  .cast<quant::QuantizedType>()
+                  .template cast<quant::QuantizedType>()
                   .getStorageTypeIntegralWidth() == 32)) {
       return failure();
     }
@@ -270,99 +383,108 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     // Output depth and input depth must be a multiple of four
     // If this is not the case, we return to the reference
     // implementation
-    auto outputDepth =
-        conv2DOp.output().getType().cast<ShapedType>().getDimSize(3);
-    auto inputDepth =
-        conv2DOp.input().getType().cast<ShapedType>().getDimSize(3);
+    auto outputType =
+        conv2DOp.output().getType().template dyn_cast<RankedTensorType>();
+    auto inputType =
+        conv2DOp.input().getType().template dyn_cast<RankedTensorType>();
+    auto outputDepth = outputType.getDimSize(3);
+    auto inputDepth = inputType.getDimSize(3);
     if (outputDepth % 4 != 0 || inputDepth % 4 != 0) {
       return failure();
     }
 
-    auto filterHeight =
-        conv2DOp.filter().getType().cast<ShapedType>().getDimSize(1);
-    auto filterWidth =
-        conv2DOp.filter().getType().cast<ShapedType>().getDimSize(2);
+    // Is it a DepthwiseConv2D?
+    bool isDepthwise = std::is_same<TFLOp, TFL::DepthwiseConv2DOp>::value;
 
-    // TODO: With multithreading support, we could have multiple kernel types
-    // per thread
+    auto filterType =
+        conv2DOp.filter().getType().template dyn_cast<RankedTensorType>();
+    auto filterHeight = filterType.getDimSize(1);
+    auto filterWidth = filterType.getDimSize(2);
+
+    // TODO: With multithreading support, we could have a different kernel type
+    // for each thread
     Conv2DType kernelType;
-    if (inputDepth % 32 == 0 && outputDepth % 16 == 0 &&
-        (symbolizePadding(conv2DOp.padding()) == Padding::VALID ||
-         (filterHeight == 1 && filterWidth == 1))) {
-      kernelType = Conv2DType::ValidDirect;
-    } else if (symbolizePadding(conv2DOp.padding()) == Padding::VALID &&
-               inputDepth % 4 == 0) {
-      kernelType = Conv2DType::ValidIndirect;
+    if (isDepthwise) {
+      if (symbolizePadding(conv2DOp.padding()) == Padding::VALID) {
+        kernelType = Conv2DType::DepthwiseValidDirect;
+      } else {
+        kernelType = Conv2DType::DepthwisePaddedIndirect;
+      }
     } else {
-      kernelType = Conv2DType::PaddedIndirect;
+      if (inputDepth % 32 == 0 && outputDepth % 16 == 0 &&
+          (symbolizePadding(conv2DOp.padding()) == Padding::VALID ||
+           (filterHeight == 1 && filterWidth == 1))) {
+        kernelType = Conv2DType::ValidDirect;
+      } else if (symbolizePadding(conv2DOp.padding()) == Padding::VALID) {
+        kernelType = Conv2DType::ValidIndirect;
+      } else {
+        kernelType = Conv2DType::PaddedIndirect;
+      }
     }
 
     // Retrieve the remaining args
-    auto outputHeight =
-        conv2DOp.output().getType().cast<ShapedType>().getDimSize(1);
-    auto outputWidth =
-        conv2DOp.output().getType().cast<ShapedType>().getDimSize(2);
-
-    auto inputHeight =
-        conv2DOp.input().getType().cast<ShapedType>().getDimSize(1);
-    auto inputWidth =
-        conv2DOp.input().getType().cast<ShapedType>().getDimSize(2);
-
-    auto filterDepth =
-        conv2DOp.filter().getType().cast<ShapedType>().getDimSize(3);
+    auto outputHeight = outputType.getDimSize(1);
+    auto outputWidth = outputType.getDimSize(2);
+    auto inputHeight = inputType.getDimSize(1);
+    auto inputWidth = inputType.getDimSize(2);
+    auto filterDepth = filterType.getDimSize(3);
 
     // Get output zero point
-    RankedTensorType outputType =
-        conv2DOp.output().getType().dyn_cast<RankedTensorType>();
-    auto outputQType = outputType.getElementType()
-                           .dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto outputQType =
+        outputType.getElementType()
+            .template dyn_cast<mlir::quant::UniformQuantizedType>();
     auto outputScale = outputQType.getScale();
     auto outputZeroPoint = outputQType.getZeroPoint();
 
     // Get input zero point
-    RankedTensorType inputType =
-        conv2DOp.input().getType().dyn_cast<RankedTensorType>();
-    auto inputQType = inputType.getElementType()
-                          .dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto inputQType =
+        inputType.getElementType()
+            .template dyn_cast<mlir::quant::UniformQuantizedType>();
     auto inputScale = inputQType.getScale();
     auto inputZeroPoint = inputQType.getZeroPoint();
 
     // Get filter values
     auto filterQConstOp =
         dyn_cast<TFL::QConstOp>(conv2DOp.filter().getDefiningOp());
-    auto filter = filterQConstOp.value().cast<DenseElementsAttr>();
-    auto filterVector = std::vector<int8_t>{filter.getValues<int8_t>().begin(),
-                                            filter.getValues<int8_t>().end()};
+    auto filter = filterQConstOp.value().template cast<DenseElementsAttr>();
+    auto filterVector =
+        std::vector<int8_t>{filter.template getValues<int8_t>().begin(),
+                            filter.template getValues<int8_t>().end()};
 
     // Get bias values
     auto biasQConstOp =
         dyn_cast<TFL::QConstOp>(conv2DOp.bias().getDefiningOp());
-    auto biases = biasQConstOp.value().cast<DenseElementsAttr>();
-    auto biasVector = std::vector<int32_t>{biases.getValues<int32_t>().begin(),
-                                           biases.getValues<int32_t>().end()};
+    auto biases = biasQConstOp.value().template cast<DenseElementsAttr>();
+    auto biasVector =
+        std::vector<int32_t>{biases.template getValues<int32_t>().begin(),
+                             biases.template getValues<int32_t>().end()};
 
     // Calculate effectiveOutputScale
     std::vector<float> effectiveOutputScaleVector;
-    auto filterType = filterQConstOp.qtype().cast<RankedTensorType>();
+    auto filterQConstOpType =
+        filterQConstOp.qtype().template cast<RankedTensorType>();
     bool isPerChannelQuantized = false;
     double filterScale;
     ArrayRef<double> filterScales;
-    if (auto filterQType = filterType.getElementType()
-                               .dyn_cast<mlir::quant::UniformQuantizedType>()) {
+    if (auto filterQType =
+            filterQConstOpType.getElementType()
+                .template dyn_cast<mlir::quant::UniformQuantizedType>()) {
       filterScale = filterQType.getScale();
     } else if (auto filterQType =
-                   filterType.getElementType()
-                       .dyn_cast<mlir::quant::UniformQuantizedPerAxisType>()) {
+                   filterQConstOpType.getElementType()
+                       .template dyn_cast<
+                           mlir::quant::UniformQuantizedPerAxisType>()) {
       isPerChannelQuantized = true;
       filterScales = filterQType.getScales();
     } else {
       return failure();
     }
 
-    // Conv is quantized along dimension 0:
+    // Conv is quantized along dimension 0
+    // DepthwiseConv is quantized along dimension 3
     // https://www.tensorflow.org/lite/performance/quantization_spec
     auto numOutputChannels =
-        conv2DOp.filter().getType().cast<ShapedType>().getDimSize(0);
+        isDepthwise ? filterType.getDimSize(3) : filterType.getDimSize(0);
     for (int i = 0; i < numOutputChannels; ++i) {
       auto scale = isPerChannelQuantized ? filterScales[i] : filterScale;
       assert(outputScale != 0 && "outputScale should not be zero!");
@@ -370,10 +492,11 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     }
 
     // Find padding values when the kernel type is PaddedIndirect
-    // For the other two cases, padding values are set to zero
+    // For the other cases, padding values are set to zero
     tensorflow::int64 newHeight, newWidth;
     tensorflow::int64 padTop, padBottom, padLeft, padRight;
-    if (kernelType == Conv2DType::PaddedIndirect) {
+    if (kernelType == Conv2DType::PaddedIndirect ||
+        kernelType == Conv2DType::DepthwisePaddedIndirect) {
       if (tensorflow::GetWindowedOutputSizeVerboseV2(
               inputHeight, filterHeight, conv2DOp.dilation_h_factor(),
               conv2DOp.stride_h(), tensorflow::Padding::SAME, &newHeight,
@@ -434,6 +557,10 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
       // TODO: Determine which kernel type for each thread.
       kernelTypeEnumParams.push_back(stringifyConv2DType(kernelType).str());
 
+      // The scratch size needed is zero for ValidDirect kernel types
+      // For other types, we calculate it below
+      int scratchBytes = 0;
+
       // TODO: Call the right kernel type function
       // Call the kernel type function which returns a vector of four strings
       // for the four Conv2D params
@@ -443,9 +570,27 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
         break;
       case Conv2DType::ValidIndirect:
         conv2DParams = getConv2DValidIndirectParams(args);
+        scratchBytes =
+            nn::MatMulInt8::get_scratch_mem_bytes(
+                args.filterHeight * args.filterWidth * args.inputDepth) +
+            32; //[asj] FIXME
         break;
       case Conv2DType::PaddedIndirect:
         conv2DParams = getConv2DPaddedIndirectParams(args);
+        scratchBytes =
+            nn::MatMulInt8::get_scratch_mem_bytes(
+                args.filterHeight * args.filterWidth * args.inputDepth) +
+            32; //[asj] FIXME
+        break;
+      case Conv2DType::DepthwiseValidDirect:
+        conv2DParams = getDepthwiseConv2DValidDirectParams(args);
+        break;
+      case Conv2DType::DepthwisePaddedIndirect:
+        conv2DParams = getDepthwiseConv2DPaddedIndirectParams(args);
+        auto weightsShape = std::array<int, 4>(
+            {1, args.filterHeight, args.filterWidth, args.inputDepth});
+        scratchBytes =
+            nn::MatMulDirectFn_DW::get_scratch_mem_bytes(weightsShape);
         break;
       }
 
@@ -453,11 +598,6 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
       memcpyFnParams.push_back(conv2DParams[1]);
       aggregateFnParams.push_back(conv2DParams[2]);
       outputTransformFnParams.push_back(conv2DParams[3]);
-
-      // Find out the scratch size needed
-      int inputBytes = args.filterHeight * args.filterWidth * args.inputDepth;
-      int scratchBytes =
-          nn::MatMulInt8::get_scratch_mem_bytes(inputBytes) + 32; //[asj] FIXME
       scratchByteParams.push_back(scratchBytes);
     }
 
@@ -491,7 +631,8 @@ void ReplaceWithConv2DV2::runOnFunction() {
   auto func = getFunction();
 
   OwningRewritePatternList patterns(ctx);
-  patterns.insert<ReplaceWithConv2DV2Pattern>(ctx);
+  patterns.insert<ReplaceWithConv2DV2Pattern<TFL::Conv2DOp>>(ctx);
+  patterns.insert<ReplaceWithConv2DV2Pattern<TFL::DepthwiseConv2DOp>>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
@@ -503,7 +644,7 @@ std::unique_ptr<OperationPass<FuncOp>> createReplaceWithConv2DV2Pass() {
 
 static PassRegistration<ReplaceWithConv2DV2>
     pass("xcore-replace-with-conv2dv2",
-         "Replace TFL Conv2D with XC Conv2DV2 operations.");
+         "Replace TFL Conv2D and DepthwiseConv2D with XC Conv2DV2 operations.");
 
 } // namespace xcore
 } // namespace mlir

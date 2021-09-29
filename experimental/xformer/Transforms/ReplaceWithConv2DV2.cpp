@@ -400,33 +400,53 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
         conv2DOp.filter().getType().template dyn_cast<RankedTensorType>();
     auto filterHeight = filterType.getDimSize(1);
     auto filterWidth = filterType.getDimSize(2);
+    auto inputHeight = inputType.getDimSize(1);
+    auto inputWidth = inputType.getDimSize(2);
+
+    // Find padding values
+    tensorflow::int64 newHeight, newWidth;
+    tensorflow::int64 padTop, padBottom, padLeft, padRight;
+    tensorflow::Padding opPadding =
+        symbolizePadding(conv2DOp.padding()) == Padding::VALID
+            ? tensorflow::Padding::VALID
+            : tensorflow::Padding::SAME;
+    if (tensorflow::GetWindowedOutputSizeVerboseV2(
+            inputHeight, filterHeight, conv2DOp.dilation_h_factor(),
+            conv2DOp.stride_h(), opPadding, &newHeight, &padTop,
+            &padBottom) != tensorflow::Status::OK()) {
+      return failure();
+    }
+    if (tensorflow::GetWindowedOutputSizeVerboseV2(
+            inputWidth, filterWidth, conv2DOp.dilation_w_factor(),
+            conv2DOp.stride_w(), opPadding, &newWidth, &padLeft,
+            &padRight) != tensorflow::Status::OK()) {
+      return failure();
+    }
+    bool toBePadded =
+        padTop != 0 || padBottom != 0 || padLeft != 0 || padRight != 0;
 
     // TODO: With multithreading support, we could have a different kernel type
     // for each thread
     Conv2DType kernelType;
     if (isDepthwise) {
-      if (symbolizePadding(conv2DOp.padding()) == Padding::VALID) {
-        kernelType = Conv2DType::DepthwiseValidDirect;
-      } else {
+      if (toBePadded) {
         kernelType = Conv2DType::DepthwisePaddedIndirect;
+      } else {
+        kernelType = Conv2DType::DepthwiseValidDirect;
       }
     } else {
-      if (inputDepth % 32 == 0 && outputDepth % 16 == 0 &&
-          (symbolizePadding(conv2DOp.padding()) == Padding::VALID ||
-           (filterHeight == 1 && filterWidth == 1))) {
-        kernelType = Conv2DType::ValidDirect;
-      } else if (symbolizePadding(conv2DOp.padding()) == Padding::VALID) {
-        kernelType = Conv2DType::ValidIndirect;
-      } else {
+      if (toBePadded) {
         kernelType = Conv2DType::PaddedIndirect;
+      } else if (inputDepth % 32 == 0 && outputDepth % 16 == 0) {
+        kernelType = Conv2DType::ValidDirect;
+      } else {
+        kernelType = Conv2DType::ValidIndirect;
       }
     }
 
     // Retrieve the remaining args
     auto outputHeight = outputType.getDimSize(1);
     auto outputWidth = outputType.getDimSize(2);
-    auto inputHeight = inputType.getDimSize(1);
-    auto inputWidth = inputType.getDimSize(2);
     auto filterDepth = filterType.getDimSize(3);
 
     // Get output zero point
@@ -489,28 +509,6 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
       auto scale = isPerChannelQuantized ? filterScales[i] : filterScale;
       assert(outputScale != 0 && "outputScale should not be zero!");
       effectiveOutputScaleVector.push_back(inputScale * scale / outputScale);
-    }
-
-    // Find padding values when the kernel type is PaddedIndirect
-    // For the other cases, padding values are set to zero
-    tensorflow::int64 newHeight, newWidth;
-    tensorflow::int64 padTop, padBottom, padLeft, padRight;
-    if (kernelType == Conv2DType::PaddedIndirect ||
-        kernelType == Conv2DType::DepthwisePaddedIndirect) {
-      if (tensorflow::GetWindowedOutputSizeVerboseV2(
-              inputHeight, filterHeight, conv2DOp.dilation_h_factor(),
-              conv2DOp.stride_h(), tensorflow::Padding::SAME, &newHeight,
-              &padTop, &padBottom) != tensorflow::Status::OK()) {
-        return failure();
-      }
-      if (tensorflow::GetWindowedOutputSizeVerboseV2(
-              inputWidth, filterWidth, conv2DOp.dilation_w_factor(),
-              conv2DOp.stride_w(), tensorflow::Padding::SAME, &newWidth,
-              &padLeft, &padRight) != tensorflow::Status::OK()) {
-        return failure();
-      }
-    } else {
-      padTop = padBottom = padLeft = padRight = 0;
     }
 
     // Create a struct of Conv2DArgs to pass in parameters

@@ -4,6 +4,10 @@ Build instructions
 `Bazel` is used to build this program. The choice of build system is
 driven by the most complex dependency (Tensorflow). 
 
+Note before the first step ensure that you have installed the 
+`xcore_interpreters` and `tflite2xcore` python packages using 
+`pip`. This will ensure that the python requirements are installed.
+
 With Bazel installed (check `.bazelversion` for current version),
 you can build with the following command:
 

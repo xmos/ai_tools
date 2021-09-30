@@ -34,7 +34,7 @@ sub main
 
   if ($^O eq "linux") {
     $ENV{"JAVA_HOME"} = "/usr/lib/jvm/java-1.8.0";
-    $ENV{"CC"} = "/opt/xmos/gcc/4.9.2/bin/gcc";
+    $ENV{"CC"} = "/opt/xmos/gcc/11.2.0/bin/gcc";
   } elsif ($^O eq "darwin") {
     ;
   } elsif ($^O eq "MSWin32") {
@@ -94,10 +94,11 @@ sub DoBuild
 {
   chdir("${XMOS_ROOT}${SLASH}ai_tools");
   #system("make submodule_update") == 0                                         or die "Failed to configure submodules";
-  chdir("experimental${SLASH}xformer");
   system("python3 -m venv .venv") == 0                                         or die "Python -m venv failed";
-  system(". .venv/bin/activate && pip install -r ..${SLASH}..${SLASH}requirements.txt") == 0 or die "Python requirement install failed";
-  system(". .venv/bin/activate && bazel build //:xcore-opt") == 0              or die "Failed to build xformer-2.0";
+  system(". .venv/bin/activate && pip install -r requirements.txt") == 0 or die "Python requirement install failed";
+  system(". .venv/bin/activate && cd experimental${SLASH}xformer && bazel clean") == 0              or die "Failed to build xformer-2.0";
+  system(". .venv/bin/activate && cd experimental${SLASH}xformer && bazel build --config=clang_config  //:xcore-opt") == 0              or die "Failed to build xformer-2.0";
+  #system(". .venv/bin/activate && cd experimental${SLASH}xformer && bazel build --features static_linking_mode --verbose_failures //:xcore-opt") == 0              or die "Failed to build xformer-2.0";
 }
 
 sub DoClean

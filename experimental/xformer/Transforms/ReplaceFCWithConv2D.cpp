@@ -98,9 +98,13 @@ struct ReplaceFCWithConv2DPattern
       return failure();
     }
 
-    // TODO: check fc weights format
-    // check fc output number
-    // check fc keep dims
+    if (fcOp.weights_format() != "DEFAULT") {
+      return failure();
+    }
+
+    if (fcOp.keep_num_dims() != false) {
+      return failure();
+    }
 
     // Add a ReshapeOp before Conv2D for expanding input to 4 dims
     std::vector<int64_t> expandedShapeVector = {1, 1, 1, 1};

@@ -18,7 +18,7 @@ namespace mlir {
 namespace xcore {
 
 namespace {
-// Replace TFL Conv2D and DepthwiseConv2D with XC Conv2D ops.
+// Replace TFL AveragePool2D with TFL DepthwiseConv2D.
 struct ReplaceAvgPoolWithConv2D
     : public PassWrapper<ReplaceAvgPoolWithConv2D, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
@@ -33,6 +33,7 @@ struct ReplaceAvgPoolWithConv2DPattern
 
   LogicalResult matchAndRewrite(TFL::AveragePool2DOp avgPoolOp,
                                 PatternRewriter &rewriter) const override {
+
     auto input_elemental_type = avgPoolOp.input()
                   .getType()
                   .template cast<ShapedType>()
@@ -109,7 +110,7 @@ struct ReplaceAvgPoolWithConv2DPattern
         avgPoolOp.getType(), 
         avgPoolOp.input(),
         filter, 
-        bias,
+        bias, //TODO [asj]how do we drop the bias?
         /*dilation_h_factor=*/rewriter.getI32IntegerAttr(1),
         /*dilation_w_factor=*/rewriter.getI32IntegerAttr(1),
         /*fused_activation_function=*/rewriter.getStringAttr(avgPoolOp.fused_activation_function()),
@@ -141,7 +142,7 @@ std::unique_ptr<OperationPass<FuncOp>> createReplaceAvgPoolWithConv2DPass() {
 
 static PassRegistration<ReplaceAvgPoolWithConv2D> pass(
     "xcore-replace-avgpool-with-conv2d",
-    "Replace TFL Avgpool withConv2D operations.");
+    "Replace TFL Avgpool with Conv2D operations.");
 
 }  // namespace xcore
 }  // namespace mlir

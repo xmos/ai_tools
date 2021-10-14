@@ -603,11 +603,34 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
       return rewriter.getArrayAttr(attrs);
     };
 
+    std::array<int, 4> shape = {args.outputDepth, args.filterHeight,
+                                args.filterWidth, args.inputDepth};
+    nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
+        (int8_t *)args.filter.data(), shape, 8, args.padValue);
+
+    // llvm::SmallVector<int8_t> weightsVec{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
+    ShapedType newWeightType =
+        RankedTensorType::get({static_cast<long long>(rw.weights.size())},
+                              rewriter.getIntegerType(8));
+    auto newWeightAttr =
+        DenseElementsAttr::get<int8_t>(newWeightType, rw.weights);
+    auto newWeightConstantOp =
+        rewriter.create<mlir::ConstantOp>(conv2DOp.getLoc(), newWeightAttr);
+
+    llvm::SmallVector<int16_t> biasesVec{11, 12, 13, 14, 15,
+                                         16, 17, 18, 19, 10};
+    ShapedType newBiasType =
+        RankedTensorType::get({1, (10)}, rewriter.getIntegerType(16));
+    auto newBiasAttr = DenseElementsAttr::get<int16_t>(newBiasType, biasesVec);
+    auto newBiasConstantOp =
+        rewriter.create<mlir::ConstantOp>(conv2DOp.getLoc(), newBiasAttr);
+
     // Create the Conv2DV2 Op with the params and kernel type
     auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
         conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(),
         rewriter.getI32IntegerAttr(threadCount),
-        rewriter.getI32ArrayAttr(scratchByteParams),
+        rewriter.getI32ArrayAttr(scratchByteParams), newWeightConstantOp,
+        newBiasConstantOp, newBiasConstantOp,
         getStringArrayAttr(abstractKernelParams),
         getStringArrayAttr(memcpyFnParams),
         getStringArrayAttr(aggregateFnParams),

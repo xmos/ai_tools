@@ -96,14 +96,13 @@ struct ReplaceAvgPoolWithConv2DPattern
     auto conv2dOp = rewriter.create<TFL::DepthwiseConv2DOp>(
         avgPoolOp.getLoc(), avgPoolOp.getType(), avgPoolOp.input(), filter,
         bias, // TODO [asj]how do we drop the bias?
-        /*dilation_h_factor=*/rewriter.getI32IntegerAttr(1),
-        /*dilation_w_factor=*/rewriter.getI32IntegerAttr(1),
-        /*fused_activation_function=*/
-        rewriter.getStringAttr(avgPoolOp.fused_activation_function()),
-        /*padding=*/rewriter.getStringAttr(avgPoolOp.padding()),
-        /*stride_h=*/rewriter.getI32IntegerAttr(avgPoolOp.stride_h()),
-        /*stride_w=*/rewriter.getI32IntegerAttr(avgPoolOp.stride_w()),
-        /*depth_multiplier=*/rewriter.getI32IntegerAttr(1));
+        /*dilation_h_factor=*/1,
+        /*dilation_w_factor=*/1,
+        /*fused_activation_function=*/avgPoolOp.fused_activation_function(),
+        /*padding=*/avgPoolOp.padding(),
+        /*stride_h=*/avgPoolOp.stride_h(),
+        /*stride_w=*/avgPoolOp.stride_w(),
+        /*depth_multiplier=*/1);
 
     rewriter.replaceOp(avgPoolOp, conv2dOp.output());
 

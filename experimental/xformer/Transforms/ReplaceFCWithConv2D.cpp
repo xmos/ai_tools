@@ -1,18 +1,9 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include "IR/XCoreOps.h"
-
-#include "lib_nn/api/Conv2d.hpp"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
-#include "tensorflow/core/framework/kernel_shape_util.h"
-#include <numeric>
 
 namespace mlir {
 namespace xcore {

@@ -10,6 +10,7 @@
 **/*.eggs/*
 Pipfile.lock
 ai_tools_venv/*
+experimental/xformer/.venv
 
 # Build cruft
 **/.lock*

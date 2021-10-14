@@ -72,9 +72,15 @@ class XC_Op<string mnemonic, list<OpTrait> traits = []>
 def XC_Conv2D_ValidDirect : StrEnumAttrCase<"ValidDirect">;
 def XC_Conv2D_ValidIndirect : StrEnumAttrCase<"ValidIndirect">;
 def XC_Conv2D_PaddedIndirect : StrEnumAttrCase<"PaddedIndirect">;
+def XC_DW_Conv2D_ValidDirect : StrEnumAttrCase<"DepthwiseValidDirect">;
+def XC_DW_Conv2D_PaddedIndirect : StrEnumAttrCase<"DepthwisePaddedIndirect">;
 
 def XC_Conv2D_TypeAttr : StrEnumAttr<"Conv2DType", "conv2d type enum", [
-  XC_Conv2D_ValidDirect, XC_Conv2D_ValidIndirect, XC_Conv2D_PaddedIndirect
+  XC_Conv2D_ValidDirect,
+  XC_Conv2D_ValidIndirect,
+  XC_Conv2D_PaddedIndirect,
+  XC_DW_Conv2D_ValidDirect,
+  XC_DW_Conv2D_PaddedIndirect,
 ]>;
 
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {

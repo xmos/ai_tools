@@ -5,15 +5,20 @@
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
 
 namespace mlir {
 namespace xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createApplyPatternsPass());
+  pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());
+  pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceWithConv2DV2Pass());
   pm.addPass(createLegalizeFullyConnectedPass());
+  // Run canonicalization, which includes combining Reshapes
+  pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(createTranslateToCustomOpPass());
 }
 

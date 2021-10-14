@@ -1,18 +1,9 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include <numeric>
-
-#include "IR/XCoreOps.h"
-#include "lib_nn/api/Conv2d.hpp"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
-#include "tensorflow/core/framework/kernel_shape_util.h"
 
 namespace mlir {
 namespace xcore {
@@ -34,86 +25,81 @@ struct ReplaceAvgPoolWithConv2DPattern
   LogicalResult matchAndRewrite(TFL::AveragePool2DOp avgPoolOp,
                                 PatternRewriter &rewriter) const override {
 
-    auto input_elemental_type = avgPoolOp.input()
-                  .getType()
-                  .template cast<ShapedType>()
-                  .getElementType();
+    auto inputElementalType =
+        avgPoolOp.input().getType().cast<ShapedType>().getElementType();
 
     // Check for invalid types and return
     // Input type must be QI8
-    if (!(input_elemental_type.template isa<quant::QuantizedType>() &&
-          input_elemental_type.template cast<quant::QuantizedType>().isSigned() &&
-          input_elemental_type.template cast<quant::QuantizedType>()
+    if (!(inputElementalType.isa<quant::QuantizedType>() &&
+          inputElementalType.cast<quant::QuantizedType>().isSigned() &&
+          inputElementalType.cast<quant::QuantizedType>()
                   .getStorageTypeIntegralWidth() == 8)) {
-      avgPoolOp.emitOpError() << "incorrect input elemental type";     
       return failure();
     }
 
-    auto output_elemental_type = avgPoolOp.output()
-                  .getType()
-                  .template cast<ShapedType>()
-                  .getElementType();
+    auto outputElementalType =
+        avgPoolOp.output().getType().cast<ShapedType>().getElementType();
 
     // Output type must be QI8
-    if (!(output_elemental_type.template isa<quant::QuantizedType>() &&
-          output_elemental_type.template cast<quant::QuantizedType>().isSigned() &&
-          output_elemental_type.template cast<quant::QuantizedType>()
+    if (!(outputElementalType.isa<quant::QuantizedType>() &&
+          outputElementalType.cast<quant::QuantizedType>().isSigned() &&
+          outputElementalType.cast<quant::QuantizedType>()
                   .getStorageTypeIntegralWidth() == 8)) {
-      avgPoolOp.emitOpError() << "incorrect output elemental type";
       return failure();
     }
 
-    auto inputType =
-        avgPoolOp.input().getType().template dyn_cast<RankedTensorType>();
+    auto inputType = avgPoolOp.input().getType().dyn_cast<RankedTensorType>();
     auto inputDepth = inputType.getDimSize(3);
 
-    auto filter_height = avgPoolOp.filter_height();
-    auto filter_width = avgPoolOp.filter_width();
+    auto filterHeight = avgPoolOp.filter_height();
+    auto filterWidth = avgPoolOp.filter_width();
 
-    float scale_factor = 1./(filter_height* filter_width);
+    float scaleFactor = 1. / (filterHeight * filterWidth);
 
-    int64_t storage_type_min =
+    int64_t storageTypeMin =
         quant::QuantizedType::getDefaultMinimumForInteger(/*isSigned=*/true, 8);
-    int64_t storage_type_max =
+    int64_t storageTypeMax =
         quant::QuantizedType::getDefaultMaximumForInteger(/*isSigned=*/true, 8);
 
-    UniformQuantizedType int8_element_qtype =
+    /*
+    The quantisation stratergy we are using is to set all elements of the filter
+    to one and to control the scaling with the QTypes scalar. The zero point
+    will be 0. In order to achieve an AvgPool2D we simply sum all elements of
+    the receptive field then scale by 1./count(the receptive field).
+    */
+    UniformQuantizedType int8ElementQtype =
         mlir::quant::UniformQuantizedType::get(
-            true, rewriter.getIntegerType(8), rewriter.getF32Type(), scale_factor, 0,
-            storage_type_min, storage_type_max);
+            true, rewriter.getIntegerType(8), rewriter.getF32Type(),
+            scaleFactor, 0, storageTypeMin, storageTypeMax);
 
     auto filterResultType = RankedTensorType::get(
-        {1, filter_height, filter_width, inputDepth},
-        int8_element_qtype);
+        {1, filterHeight, filterWidth, inputDepth}, int8ElementQtype);
 
     RankedTensorType filterValueType = RankedTensorType::get(
-        {1, filter_height, filter_width, inputDepth},
-        rewriter.getIntegerType(8));
+        {1, filterHeight, filterWidth, inputDepth}, rewriter.getIntegerType(8));
 
-    std::vector<int8_t>filterVector(filter_height*filter_width*inputDepth, 1);
+    // These are the actual values that the quantised filter will hold.
+    std::vector<int8_t> filterVector(filterHeight * filterWidth * inputDepth,
+                                     1);
 
     Value filter = rewriter.create<TFL::QConstOp>(
-        avgPoolOp.getLoc(), 
-        mlir::TypeAttr::get(filterResultType),
-        DenseElementsAttr::get<int8_t>(filterValueType,
-                                       filterVector));
+        avgPoolOp.getLoc(), mlir::TypeAttr::get(filterResultType),
+        DenseElementsAttr::get<int8_t>(filterValueType, filterVector));
 
-    //[asj] This may need to be QI32 but I32 seems to work 
+    //[asj] This may need to be QI32 but I32 seems to work
     RankedTensorType biasType =
         RankedTensorType::get({inputDepth}, rewriter.getI32Type());
     std::vector<int32_t> biasValues(inputDepth, 0);
-    auto bias = rewriter.create<TFL::ConstOp>(avgPoolOp->getLoc(), 
-      DenseIntElementsAttr::get(biasType, biasValues));
+    auto bias = rewriter.create<TFL::ConstOp>(
+        avgPoolOp->getLoc(), DenseIntElementsAttr::get(biasType, biasValues));
 
-   auto conv2dOp = rewriter.create<TFL::DepthwiseConv2DOp>(
-        avgPoolOp.getLoc(), 
-        avgPoolOp.getType(), 
-        avgPoolOp.input(),
-        filter, 
-        bias, //TODO [asj]how do we drop the bias?
+    auto conv2dOp = rewriter.create<TFL::DepthwiseConv2DOp>(
+        avgPoolOp.getLoc(), avgPoolOp.getType(), avgPoolOp.input(), filter,
+        bias, // TODO [asj]how do we drop the bias?
         /*dilation_h_factor=*/rewriter.getI32IntegerAttr(1),
         /*dilation_w_factor=*/rewriter.getI32IntegerAttr(1),
-        /*fused_activation_function=*/rewriter.getStringAttr(avgPoolOp.fused_activation_function()),
+        /*fused_activation_function=*/
+        rewriter.getStringAttr(avgPoolOp.fused_activation_function()),
         /*padding=*/rewriter.getStringAttr(avgPoolOp.padding()),
         /*stride_h=*/rewriter.getI32IntegerAttr(avgPoolOp.stride_h()),
         /*stride_w=*/rewriter.getI32IntegerAttr(avgPoolOp.stride_w()),
@@ -133,16 +119,16 @@ void ReplaceAvgPoolWithConv2D::runOnFunction() {
   patterns.insert<ReplaceAvgPoolWithConv2DPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
-}  // namespace
+} // namespace
 
 // Creates an instance of the ReplaceAvgPoolWithConv2D pass.
 std::unique_ptr<OperationPass<FuncOp>> createReplaceAvgPoolWithConv2DPass() {
   return std::make_unique<ReplaceAvgPoolWithConv2D>();
 }
 
-static PassRegistration<ReplaceAvgPoolWithConv2D> pass(
-    "xcore-replace-avgpool-with-conv2d",
-    "Replace TFL Avgpool with Conv2D operations.");
+static PassRegistration<ReplaceAvgPoolWithConv2D>
+    pass("xcore-replace-avgpool-with-conv2d",
+         "Replace TFL Avgpool with Conv2D operations.");
 
-}  // namespace xcore
-}  // namespace mlir
+} // namespace xcore
+} // namespace mlir

@@ -8,9 +8,9 @@
 #include "mlir/IR/AsmState.h"
 #include "mlir/Parser.h"
 #include "mlir/Pass/PassManager.h"
+#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 using namespace llvm;
 using namespace mlir;

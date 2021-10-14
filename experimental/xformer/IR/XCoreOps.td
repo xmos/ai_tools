@@ -151,4 +151,14 @@ def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
   let results = (outs TensorOf<[F32, I32, QI8]> : $output);
 }
 
+def XC_LoadOp : XC_Op<"load", [NoSideEffect]> {
+  let summary = "Load op";
+
+  let description = [{Load op.}];
+
+  let arguments = (ins TensorOf<[I8, I16]> : $input);
+
+  let results = (outs TensorOf<[I8, I16]> : $output);
+}
+
 #endif // XCORE_DIALECT

@@ -12,11 +12,12 @@ namespace xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createApplyPatternsPass());
+  pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());
-  pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceWithConv2DV2Pass());
-  pm.addPass(createLegalizeFullyConnectedPass());
+  pm.addPass(createApplyPatterns2Pass());
+  // pm.addPass(createLegalizeFullyConnectedPass());
   // Run canonicalization, which includes combining Reshapes
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(createTranslateToCustomOpPass());

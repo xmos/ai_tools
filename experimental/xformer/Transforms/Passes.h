@@ -23,6 +23,7 @@ void buildXCorePassPipeline(OpPassManager &pm);
 
 std::unique_ptr<OperationPass<FuncOp>> createApplyPatternsPass();
 std::unique_ptr<OperationPass<FuncOp>> createReplaceAvgPoolWithConv2DPass();
+std::unique_ptr<OperationPass<FuncOp>> createReplaceFCWithConv2DPass();
 std::unique_ptr<OperationPass<FuncOp>> createPad3to4Conv2DPass();
 std::unique_ptr<OperationPass<FuncOp>> createReplaceWithConv2DV2Pass();
 std::unique_ptr<OperationPass<FuncOp>> createLegalizeFullyConnectedPass();
@@ -39,6 +40,7 @@ inline void registerAllPasses() {
 
   createApplyPatternsPass();
   createReplaceAvgPoolWithConv2DPass();
+  createReplaceFCWithConv2DPass();
   createPad3to4Conv2DPass();
   createReplaceWithConv2DV2Pass();
   createLegalizeFullyConnectedPass();

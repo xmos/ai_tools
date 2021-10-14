@@ -4,8 +4,6 @@
 #include "IR/XCoreOps.h"
 
 #include "flatbuffers/flexbuffers.h"
-#include "lib_nn/api/Conv2d.hpp"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"

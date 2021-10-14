@@ -5,20 +5,12 @@
 #include "Transforms/Passes.h"
 #include "Utils/FileIO.h"
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/OperationSupport.h"
 #include "mlir/Parser.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Support/FileUtilities.h"
-#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 using namespace llvm;
 using namespace mlir;

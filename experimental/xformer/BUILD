@@ -69,6 +69,7 @@ cc_library(
         "Transforms/GeneratedPatterns2.inc"
     ],
     hdrs = [
+        "Transforms/Options.h",
         "Transforms/Passes.h",
         "IR/XCoreOps.h",
         "IR/XCoreOps.md",

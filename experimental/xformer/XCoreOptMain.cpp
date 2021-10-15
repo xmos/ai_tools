@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "IR/XCoreOps.h"
+#include "Transforms/Options.h"
 #include "Transforms/Passes.h"
 #include "Utils/FileIO.h"
 
@@ -15,6 +16,18 @@
 using namespace llvm;
 using namespace mlir;
 
+// TODO:
+namespace mlir {
+namespace xcore {
+
+cl::opt<std::string> flashImageFilenameOption(
+    "xcore-flash-image-file",
+    cl::desc("The file to write the xcore flash image."),
+    cl::value_desc("filename"), cl::init(""));
+
+} // namespace xcore
+} // namespace mlir
+
 int main(int argc, char **argv) {
   llvm::InitLLVM y(argc, argv);
 
@@ -24,10 +37,6 @@ int main(int argc, char **argv) {
                                              cl::value_desc("filename"));
   static cl::opt<bool> mlirIOEnabled("mlir-io",
                                      cl::desc("Enable MLIR input and output"));
-  static cl::opt<std::string> flashImageFile(
-      "xcore-flash-image-file",
-      cl::desc("The file to write the xcore flash image."),
-      cl::value_desc("filename"), cl::init("INVALID_PATH"));
 
   // Register any command line options.
   registerAsmPrinterCLOptions();

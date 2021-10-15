@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "IR/XCoreOps.h"
+#include "Transforms/Options.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -18,6 +19,13 @@ struct ApplyPatterns2 : public PassWrapper<ApplyPatterns2, FunctionPass> {
   }
   void runOnFunction() override;
 };
+
+bool isFlashImageFileProvided() {
+  if (flashImageFilenameOption.empty()) {
+    return false;
+  }
+  return true;
+}
 
 #include "Transforms/GeneratedPatterns2.inc"
 

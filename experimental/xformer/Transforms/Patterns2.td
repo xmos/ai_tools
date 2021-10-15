@@ -7,6 +7,8 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 
 include "IR/XCoreOps.td"
 
+def isFlashImageFileProvided : Constraint<CPred<"isFlashImageFileProvided()">>;
+
 def : Pat<(XC_Conv2DV2Op
            : $output $input, $thread_count, $scratch_bytes,
              (ConstantOp
@@ -21,7 +23,8 @@ def : Pat<(XC_Conv2DV2Op
            (XC_LoadOp $weights_op), (XC_LoadOp $biases_op),
            (XC_LoadOp $multipliers_op), $abstract_kernel_params,
            $memcpy_fn_params, $aggregate_fn_params, $output_transform_fn_params,
-           $conv2d_kernel_type)>;
+           $conv2d_kernel_type),
+          [(isFlashImageFileProvided)]>;
 
 // TODO: DPK
 // // Fully connected pattern

@@ -151,7 +151,7 @@ def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
   let results = (outs TensorOf<[F32, I32, QI8]> : $output);
 }
 
-def XC_LoadOp : XC_Op<"load", [NoSideEffect]> {
+def XC_LoadOp : XC_Op<"load", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Load op";
 
   let description = [{Load op.}];

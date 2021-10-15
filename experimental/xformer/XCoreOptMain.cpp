@@ -24,6 +24,10 @@ int main(int argc, char **argv) {
                                              cl::value_desc("filename"));
   static cl::opt<bool> mlirIOEnabled("mlir-io",
                                      cl::desc("Enable MLIR input and output"));
+  static cl::opt<std::string> flashImageFile(
+      "xcore-flash-image-file",
+      cl::desc("The file to write the xcore flash image."),
+      cl::value_desc("filename"), cl::init("INVALID_PATH"));
 
   // Register any command line options.
   registerAsmPrinterCLOptions();

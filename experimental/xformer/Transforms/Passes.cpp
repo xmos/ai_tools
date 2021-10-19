@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "Transforms/Passes.h"
+#include "Transforms/Options.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -16,7 +17,10 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());
   pm.addPass(createReplaceWithConv2DV2Pass());
-  pm.addPass(createLoadOpPatternsPass());
+  // Add to pipeline only if flash image file option is provided
+  if (!flashImageFilenameOption.empty()) {
+    pm.addPass(createApplyLoadOpPatternsPass());
+  }
   // pm.addPass(createLegalizeFullyConnectedPass());
   // Run canonicalization, which includes combining Reshapes
   pm.addPass(mlir::createCanonicalizerPass());

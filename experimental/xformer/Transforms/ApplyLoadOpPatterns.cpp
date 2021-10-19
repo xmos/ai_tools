@@ -13,23 +13,20 @@ namespace xcore {
 
 namespace {
 // Apply generated patterns.
-struct LoadOpPatterns : public PassWrapper<LoadOpPatterns, FunctionPass> {
+struct ApplyLoadOpPatterns
+    : public PassWrapper<ApplyLoadOpPatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
   void runOnFunction() override;
 };
 
-bool isFlashImageFileProvided() {
-  if (flashImageFilenameOption.empty()) {
-    return false;
-  }
-  return true;
-}
-
 #include "Transforms/GeneratedLoadOpPatterns.inc"
 
-void LoadOpPatterns::runOnFunction() {
+void ApplyLoadOpPatterns::runOnFunction() {
+  assert(!flashImageFilenameOption.empty() &&
+         "Flash image file option should be provided to run this pass!");
+
   OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
 
@@ -38,12 +35,12 @@ void LoadOpPatterns::runOnFunction() {
 }
 } // namespace
 
-// Creates an instance of the LoadOpPatterns pass.
-std::unique_ptr<OperationPass<FuncOp>> createLoadOpPatternsPass() {
-  return std::make_unique<LoadOpPatterns>();
+// Creates an instance of the ApplyLoadOpPatterns pass.
+std::unique_ptr<OperationPass<FuncOp>> createApplyLoadOpPatternsPass() {
+  return std::make_unique<ApplyLoadOpPatterns>();
 }
 
-static PassRegistration<LoadOpPatterns>
+static PassRegistration<ApplyLoadOpPatterns>
     pass("xcore-apply-loadop-patterns", "Apply load op optimization patterns.");
 
 } // namespace xcore

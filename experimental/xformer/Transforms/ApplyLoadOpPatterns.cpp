@@ -13,7 +13,7 @@ namespace xcore {
 
 namespace {
 // Apply generated patterns.
-struct ApplyPatterns2 : public PassWrapper<ApplyPatterns2, FunctionPass> {
+struct LoadOpPatterns : public PassWrapper<LoadOpPatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
@@ -27,9 +27,9 @@ bool isFlashImageFileProvided() {
   return true;
 }
 
-#include "Transforms/GeneratedPatterns2.inc"
+#include "Transforms/GeneratedLoadOpPatterns.inc"
 
-void ApplyPatterns2::runOnFunction() {
+void LoadOpPatterns::runOnFunction() {
   OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
 
@@ -38,13 +38,13 @@ void ApplyPatterns2::runOnFunction() {
 }
 } // namespace
 
-// Creates an instance of the ApplyPatterns2 pass.
-std::unique_ptr<OperationPass<FuncOp>> createApplyPatterns2Pass() {
-  return std::make_unique<ApplyPatterns2>();
+// Creates an instance of the LoadOpPatterns pass.
+std::unique_ptr<OperationPass<FuncOp>> createLoadOpPatternsPass() {
+  return std::make_unique<LoadOpPatterns>();
 }
 
-static PassRegistration<ApplyPatterns2>
-    pass("xcore-apply-patterns2", "Apply generated optimization patterns2.");
+static PassRegistration<LoadOpPatterns>
+    pass("xcore-apply-loadop-patterns", "Apply load op optimization patterns.");
 
 } // namespace xcore
 } // namespace mlir

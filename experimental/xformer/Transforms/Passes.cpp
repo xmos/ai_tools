@@ -16,7 +16,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());
   pm.addPass(createReplaceWithConv2DV2Pass());
-  pm.addPass(createApplyPatterns2Pass());
+  pm.addPass(createLoadOpPatternsPass());
   // pm.addPass(createLegalizeFullyConnectedPass());
   // Run canonicalization, which includes combining Reshapes
   pm.addPass(mlir::createCanonicalizerPass());

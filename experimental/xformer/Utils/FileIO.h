@@ -11,6 +11,8 @@ namespace mlir {
 namespace xcore {
 namespace utils {
 
+LogicalResult writeDataToFile(std::string &filename, std::string &data);
+
 LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
                                         mlir::ModuleOp module);
 

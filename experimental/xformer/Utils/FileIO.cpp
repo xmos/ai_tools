@@ -13,6 +13,18 @@ namespace mlir {
 namespace xcore {
 namespace utils {
 
+LogicalResult writeDataToFile(std::string &filename, std::string &data) {
+  auto outputFile = openOutputFile(filename);
+  if (!outputFile) {
+    llvm::errs() << "Could not open output file: " << filename << "\n";
+    return failure();
+  }
+
+  outputFile->os() << data;
+  outputFile->keep();
+  return success();
+}
+
 LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
                                         mlir::ModuleOp module) {
   std::string serialized_flatbuffer;
@@ -23,15 +35,7 @@ LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
 
   if (tflite::MlirToFlatBufferTranslateFunction(module, options,
                                                 &serialized_flatbuffer)) {
-    auto outputFile = openOutputFile(filename);
-    if (!outputFile) {
-      llvm::errs() << "Could not open output file: " << filename << "\n";
-      return failure();
-    }
-
-    outputFile->os() << serialized_flatbuffer;
-    outputFile->keep();
-    return success();
+    return writeDataToFile(filename, serialized_flatbuffer);
   } else {
     llvm::errs() << "Error converting MLIR to flatbuffer, no file written"
                  << "\n";

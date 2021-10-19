@@ -3,6 +3,7 @@
 
 #include "IR/XCoreOps.h"
 #include "Transforms/Options.h"
+#include "Utils/FileIO.h"
 
 #include "flatbuffers/flexbuffers.h"
 #include "mlir/Pass/Pass.h"
@@ -58,16 +59,15 @@ private:
 };
 
 void WriteFlashImage::runOnFunction() {
+  assert(!flashImageFilenameOption.empty() &&
+         "Flash image file option should be provided to run this pass!");
+
   auto *ctx = &getContext();
   auto func = getFunction();
 
-  std::string error_msg;
-  auto output = mlir::openOutputFile("test.flash", &error_msg);
-  if (output == nullptr) {
-    llvm::errs() << error_msg << '\n';
-    return;
-  }
-
+  // Create flexbuffer of params
+  // For each LoadOp in the graph, we add a new flexbuffer blob
+  // and replace the LoadOp with a LoadFlashOp
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
   auto paramsVec = fbb.StartVector("params");
@@ -79,9 +79,12 @@ void WriteFlashImage::runOnFunction() {
   fbb.EndVector(paramsVec, false, false);
   fbb.EndMap(rootMap);
   fbb.Finish();
-  std::string options_bytes(fbb.GetBuffer().begin(), fbb.GetBuffer().end());
-  output->os() << options_bytes;
-  output->keep();
+
+  // Write flexbuffer data to flash image file
+  std::string fbbData(fbb.GetBuffer().begin(), fbb.GetBuffer().end());
+  if (failed(utils::writeDataToFile(flashImageFilenameOption, fbbData))) {
+    llvm::errs() << "Failed to write flash image!\n";
+  }
 }
 } // namespace
 

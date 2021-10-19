@@ -162,4 +162,19 @@ def XC_LoadConstantOp
   let results = (outs TensorOf<[I8, I16]> : $output);
 }
 
+def XC_LoadFlashOp
+    : XC_Op<"load_flash", [NoSideEffect, SameOperandsAndResultType]> {
+  let summary = "Load from flash op";
+
+  let description = [{Load from flash op.}];
+
+  let arguments = (ins
+    TensorOf<[I8, I16]> : $input,
+    I32Attr : $address,
+    I32Attr : $bytes
+    );
+
+  let results = (outs TensorOf<[I8, I16]> : $output);
+}
+
 #endif // XCORE_DIALECT

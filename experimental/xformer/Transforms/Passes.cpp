@@ -24,6 +24,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   // pm.addPass(createLegalizeFullyConnectedPass());
   // Run canonicalization, which includes combining Reshapes
   pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(createWriteFlashImagePass());
   pm.addPass(createTranslateToCustomOpPass());
 }
 

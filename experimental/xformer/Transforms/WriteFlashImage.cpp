@@ -5,7 +5,6 @@
 #include "Transforms/Options.h"
 #include "Utils/FileIO.h"
 
-#include "flatbuffers/flexbuffers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -25,37 +24,31 @@ struct WriteFlashImage : public PassWrapper<WriteFlashImage, FunctionPass> {
 };
 
 struct WriteFlashImagePattern : public OpRewritePattern<LoadOp> {
-  WriteFlashImagePattern(flexbuffers::Builder *fbb, MLIRContext *context)
-      : OpRewritePattern<LoadOp>(context), fbb_(fbb) {}
+  WriteFlashImagePattern(std::vector<std::vector<char>> *tensorsVec,
+                         MLIRContext *context)
+      : OpRewritePattern<LoadOp>(context), tensorsVec_(tensorsVec) {}
 
   LogicalResult matchAndRewrite(LoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
+    DenseElementsAttr attr;
+    if (!matchPattern(loadOp.input(), m_Constant(&attr))) {
+      return failure();
+    }
+    std::vector<char> tensorData = attr.getRawData().vec();
 
-    // check that we can open a file
-    // iterating through load op
-    // get op data which would be a vector
-    // getOffsetAndWriteToFlashImage(vector)
-    // create an ld flash op with offset and tensor size
+    // Create a LoadFlashOp with vector index and tensor size
+    auto loadFlashOp =
+        rewriter.create<LoadFlashOp>(loadOp.getLoc(), loadOp.getType(),
+                                     tensorsVec_->size(), tensorData.size());
+    tensorsVec_->push_back(tensorData);
 
-    std::vector<int8_t> weights = {1, 2, 3, 4, 5, 6, 7, 8};
-
-    fbb_->Blob(weights.data(), weights.size());
-
-    // write to file
-    // get the offset
-    // replace the load op with a load flash one
-
-    auto loadFlashOp = rewriter.create<LoadFlashOp>(
-        loadOp.getLoc(), loadOp.getType(), loadOp.input(), 0, 0);
-
-    // Replace the FC with the new ops
+    // Replace the LoadOp with the new LoadFlashOp
     rewriter.replaceOp(loadOp, loadFlashOp.output());
-
     return success();
   }
 
 private:
-  flexbuffers::Builder *fbb_;
+  std::vector<std::vector<char>> *tensorsVec_;
 };
 
 void WriteFlashImage::runOnFunction() {
@@ -64,25 +57,16 @@ void WriteFlashImage::runOnFunction() {
 
   auto *ctx = &getContext();
   auto func = getFunction();
-
-  // Create flexbuffer of params
-  // For each LoadOp in the graph, we add a new flexbuffer blob
-  // and replace the LoadOp with a LoadFlashOp
-  flexbuffers::Builder fbb;
-  auto rootMap = fbb.StartMap();
-  auto paramsVec = fbb.StartVector("params");
-
+  // For each LoadOp in the graph, save the tensor data, and replace the LoadOp
+  // with a LoadFlashOp
+  std::vector<std::vector<char>> tensorsVec;
   OwningRewritePatternList patterns(ctx);
-  patterns.insert<WriteFlashImagePattern>(&fbb, ctx);
+  patterns.insert<WriteFlashImagePattern>(&tensorsVec, ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 
-  fbb.EndVector(paramsVec, false, false);
-  fbb.EndMap(rootMap);
-  fbb.Finish();
-
-  // Write flexbuffer data to flash image file
-  std::string fbbData(fbb.GetBuffer().begin(), fbb.GetBuffer().end());
-  if (failed(utils::writeDataToFile(flashImageFilenameOption, fbbData))) {
+  // Write tensor data to flash image file
+  if (failed(
+          utils::writeFlashImageToFile(flashImageFilenameOption, tensorsVec))) {
     llvm::errs() << "Failed to write flash image!\n";
   }
 }

@@ -155,7 +155,7 @@ def XC_LoadConstantOp
     : XC_Op<"load_constant", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Load constant op";
 
-  let description = [{Load constant op.}];
+  let description = [{Load op.}];
 
   let arguments = (ins TensorOf<[I8, I16]> : $input);
 

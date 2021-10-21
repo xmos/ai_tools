@@ -603,17 +603,17 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
       return rewriter.getArrayAttr(attrs);
     };
 
-    std::array<int, 4> shape = {args.outputDepth, args.filterHeight,
-                                args.filterWidth, args.inputDepth};
-    nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
-        (int8_t *)args.filter.data(), shape, 8, args.padValue);
+    //std::array<int, 4> shape = {args.outputDepth, args.filterHeight,
+    //                            args.filterWidth, args.inputDepth};
+    //nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
+    //    (int8_t *)args.filter.data(), shape, 8, args.padValue);
 
-    // llvm::SmallVector<int8_t> weightsVec{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
+    llvm::SmallVector<int8_t> weightsVec{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
     ShapedType newWeightType =
-        RankedTensorType::get({static_cast<long long>(rw.weights.size())},
+        RankedTensorType::get({static_cast<long long>(weightsVec.size())},
                               rewriter.getIntegerType(8));
     auto newWeightAttr =
-        DenseElementsAttr::get<int8_t>(newWeightType, rw.weights);
+        DenseElementsAttr::get<int8_t>(newWeightType, weightsVec);
     auto newWeightConstantOp =
         rewriter.create<mlir::ConstantOp>(conv2DOp.getLoc(), newWeightAttr);
 

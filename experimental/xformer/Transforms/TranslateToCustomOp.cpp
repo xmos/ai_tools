@@ -17,7 +17,7 @@ std::vector<uint8_t> Lookup8Op::buildCustomOptions() { return {}; }
 std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
-    fbb.Int("address", (int32_t)address());
+    fbb.Int("addr", (int32_t)address());
     fbb.Int("size", (int32_t)size());
   });
   fbb.Finish();

@@ -151,9 +151,8 @@ def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
   let results = (outs TensorOf<[F32, I32, QI8]> : $output);
 }
 
-def XC_LoadConstantOp
-    : XC_Op<"load_constant", [NoSideEffect, SameOperandsAndResultType]> {
-  let summary = "Load constant op";
+def XC_LoadOp : XC_Op<"ld", [NoSideEffect, SameOperandsAndResultType]> {
+  let summary = "Load op";
 
   let description = [{Load op.}];
 
@@ -162,17 +161,12 @@ def XC_LoadConstantOp
   let results = (outs TensorOf<[I8, I16]> : $output);
 }
 
-def XC_LoadFlashOp
-    : XC_Op<"load_flash", [NoSideEffect, SameOperandsAndResultType]> {
+def XC_LoadFlashOp : XC_Op<"ld_flash", [NoSideEffect]> {
   let summary = "Load from flash op";
 
   let description = [{Load from flash op.}];
 
-  let arguments = (ins
-    TensorOf<[I8, I16]> : $input,
-    I32Attr : $address,
-    I32Attr : $bytes
-    );
+  let arguments = (ins I32Attr : $address, I32Attr : $size);
 
   let results = (outs TensorOf<[I8, I16]> : $output);
 }

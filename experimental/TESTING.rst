@@ -8,9 +8,17 @@ a long time to build we use three CI procedures:
 
   #. ai_tools CI involves:
 
-     * building xformer from scratch
+     * checkout
      
-     * On x86 build a test-interpreter from lib_tflite_micro with lib_nn
+       * ai_tools
+       
+       * lib_nn
+       
+       * lib_tflite_micro
+       
+     * building xformer in ai_tools
+     
+     * On x86 build a test-interpreter.dll in lib_tflite_micro=
 
      * foreach test in large-table-of-ai_tools-tests:
     
@@ -27,13 +35,23 @@ a long time to build we use three CI procedures:
      
      On merging, the new XFORMER artifact is uploaded, likely compiled for a variety of platforms.
      
+     Note: as the xformer depends on lib_nn this CI should also be ran on any change in lib_nn
+     
   #. lib_nn/lib_tflite_micro CI involves:
 
-     * building aiserver from scratch
+     * checkout
+     
+       * lib_nn
+       
+       * lib_tflite_micro
+       
+       * aisrv
+       
+     * build an aiserver
      
      * grab the latest xformer artifact that is compatible with lib_nn and lib_tflite_micro
      
-     After that we are going to run two sets of tests. One set of tests systematically tests 
+     After that we systematically test 
      lib_tflite_micro and lib_nn:
      
      * foreach test in large-table-of-lib_tflite_micro-and-lib_nn-tests:

@@ -3,8 +3,38 @@ Testing ai_tools, lib_nn, lib_tflite_micro, and aisrv
 
 [Work in progress - edit to your heart's content]
 
-This document describes the testing philosophy behind the repos above. Since ai_tools takes
-a long time to build we use three CI procedures:
+This document describes the testing philosophy behind the repos above. We perform three types of
+tests:
+
+  #. A test that the XFORMER is correct, CI leaves XFORMER artefacts around.
+     This test confirms that it produces an approriate graph and tests that graph
+     on the host. This test uses lib_tflite_micro and lib_nn in order to run programs on
+     a host.
+     
+  #. A test of the AI-server. This tests that the AI server protocols over USB
+     and SPI perform as expected. It requires lib_nn and lib_tflite_micro to be
+     compileable, but it will not test them; it assumes that they work.
+  
+  #. A test of the XCORE specific parts of lib_nn and lib_tflite_micro. Assuming
+     that the XFORMER artefacts are up-to-date, this test confirms that the 
+     assembly kernels in lib_nn performs as expected, and it confirms that any
+     XCORE specific part in lib_tflite_micro performs as expected. In particular,
+     this shows that the inference_engine.cc interface performs its duties.
+     
+     This test relies on an XFORMER artifact, and relies on the AI server being
+     functionally correct.
+
+This leads us to the following CI processes:
+
+  * If we change xformer: run XFORMER CI.
+
+  * If we change AI server: run AI server CI
+
+  * If we change lib_nn: run XCORE-specific parts CI, run XFORMER CI.
+
+  * If we change lib_tflite_micro: run XCORE-specific parts CI, run XFORMER CI.
+
+The details:
 
   #. ai_tools CI involves:
 

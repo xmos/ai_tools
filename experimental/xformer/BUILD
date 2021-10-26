@@ -40,6 +40,22 @@ gentbl(
     ],
 )
 
+gentbl(
+    name = "load_constant_op_patterns_inc_gen",
+    tbl_outs = [
+        ("-gen-rewriters", "Transforms/GeneratedLoadConstantOpPatterns.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "Transforms/LoadConstantOpPatterns.td",
+    td_includes = ["external/org_tensorflow"],
+    td_srcs = [
+        "IR/XCoreOps.td",
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
 cc_library(
     name = "xcore_passes",
     srcs = glob(["Transforms/*.cpp"]) + [
@@ -49,9 +65,11 @@ cc_library(
         "IR/XCoreDialect.h.inc",
         "IR/XCoreOps.cpp.inc",
         "IR/XCoreOps.h.inc",
-        "Transforms/GeneratedPatterns.inc"
+        "Transforms/GeneratedPatterns.inc",
+        "Transforms/GeneratedLoadConstantOpPatterns.inc"
     ],
     hdrs = [
+        "Transforms/Options.h",
         "Transforms/Passes.h",
         "IR/XCoreOps.h",
         "IR/XCoreOps.md",

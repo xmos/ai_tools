@@ -93,6 +93,9 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
 
     I32Attr:$thread_count,
     I32ArrayAttr:$scratch_bytes,
+    TensorOf<[I8]>:$weights,
+    TensorOf<[I16]>:$biases,
+    TensorOf<[I16]>:$multipliers,
     StrArrayAttr:$abstract_kernel_params,
     StrArrayAttr:$memcpy_fn_params,
     StrArrayAttr:$aggregate_fn_params,

@@ -45,8 +45,8 @@ inline void registerAllPasses() {
   createReplaceFCWithConv2DPass();
   createPad3to4Conv2DPass();
   createReplaceWithConv2DV2Pass();
-  createApplyLoadOpPatternsPass();
   // createLegalizeFullyConnectedPass();
+  createApplyLoadConstantOpPatternsPass();
   createWriteFlashImagePass();
   createTranslateToCustomOpPass();
 }

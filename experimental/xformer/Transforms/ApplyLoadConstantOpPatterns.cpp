@@ -28,6 +28,7 @@ void ApplyLoadConstantOpPatterns::runOnFunction() {
   if (flashImageFilenameOption.empty()) {
     f.emitError("Flash image file option should be provided to run this pass!");
     signalPassFailure();
+    return;
   }
 
   OwningRewritePatternList patterns(&getContext());

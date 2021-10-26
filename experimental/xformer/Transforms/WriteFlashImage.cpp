@@ -23,12 +23,12 @@ struct WriteFlashImage : public PassWrapper<WriteFlashImage, FunctionPass> {
   void runOnFunction() override;
 };
 
-struct WriteFlashImagePattern : public OpRewritePattern<LoadOp> {
+struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
   WriteFlashImagePattern(std::vector<std::vector<char>> *tensorsVec,
                          MLIRContext *context)
-      : OpRewritePattern<LoadOp>(context), tensorsVec_(tensorsVec) {}
+      : OpRewritePattern<LoadConstantOp>(context), tensorsVec_(tensorsVec) {}
 
-  LogicalResult matchAndRewrite(LoadOp loadOp,
+  LogicalResult matchAndRewrite(LoadConstantOp loadOp,
                                 PatternRewriter &rewriter) const override {
     DenseElementsAttr attr;
     if (!matchPattern(loadOp.input(), m_Constant(&attr))) {
@@ -52,8 +52,12 @@ private:
 };
 
 void WriteFlashImage::runOnFunction() {
-  assert(!flashImageFilenameOption.empty() &&
-         "Flash image file option should be provided to run this pass!");
+  auto f = getFunction();
+  if (flashImageFilenameOption.empty()) {
+    f.emitError("Flash image file option should be provided to run this pass!");
+    signalPassFailure();
+    return;
+  }
 
   auto *ctx = &getContext();
   auto func = getFunction();

@@ -26,7 +26,7 @@ std::unique_ptr<OperationPass<FuncOp>> createReplaceAvgPoolWithConv2DPass();
 std::unique_ptr<OperationPass<FuncOp>> createReplaceFCWithConv2DPass();
 std::unique_ptr<OperationPass<FuncOp>> createPad3to4Conv2DPass();
 std::unique_ptr<OperationPass<FuncOp>> createReplaceWithConv2DV2Pass();
-std::unique_ptr<OperationPass<FuncOp>> createApplyLoadOpPatternsPass();
+std::unique_ptr<OperationPass<FuncOp>> createApplyLoadConstantOpPatternsPass();
 // std::unique_ptr<OperationPass<FuncOp>> createLegalizeFullyConnectedPass();
 std::unique_ptr<OperationPass<FuncOp>> createTranslateToCustomOpPass();
 
@@ -44,7 +44,7 @@ inline void registerAllPasses() {
   createReplaceFCWithConv2DPass();
   createPad3to4Conv2DPass();
   createReplaceWithConv2DV2Pass();
-  createApplyLoadOpPatternsPass();
+  createApplyLoadConstantOpPatternsPass();
   // createLegalizeFullyConnectedPass();
   createTranslateToCustomOpPass();
 }

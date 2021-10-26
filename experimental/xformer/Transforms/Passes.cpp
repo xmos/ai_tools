@@ -19,7 +19,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceWithConv2DV2Pass());
   // Add to pipeline only if flash image file option is provided
   if (!flashImageFilenameOption.empty()) {
-    pm.addPass(createApplyLoadOpPatternsPass());
+    pm.addPass(createApplyLoadConstantOpPatternsPass());
   }
   // pm.addPass(createLegalizeFullyConnectedPass());
   // Run canonicalization, which includes combining Reshapes

@@ -603,9 +603,9 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
       return rewriter.getArrayAttr(attrs);
     };
 
-    //std::array<int, 4> shape = {args.outputDepth, args.filterHeight,
+    // std::array<int, 4> shape = {args.outputDepth, args.filterHeight,
     //                            args.filterWidth, args.inputDepth};
-    //nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
+    // nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
     //    (int8_t *)args.filter.data(), shape, 8, args.padValue);
 
     llvm::SmallVector<int8_t> weightsVec{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};

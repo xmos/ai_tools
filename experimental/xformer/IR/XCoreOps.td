@@ -151,10 +151,11 @@ def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
   let results = (outs TensorOf<[F32, I32, QI8]> : $output);
 }
 
-def XC_LoadOp : XC_Op<"load", [NoSideEffect, SameOperandsAndResultType]> {
-  let summary = "Load op";
+def XC_LoadConstantOp
+    : XC_Op<"load_constant", [NoSideEffect, SameOperandsAndResultType]> {
+  let summary = "Load constant op";
 
-  let description = [{Load op.}];
+  let description = [{Load constant op.}];
 
   let arguments = (ins TensorOf<[I8, I16]> : $input);
 

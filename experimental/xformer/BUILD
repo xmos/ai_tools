@@ -41,12 +41,12 @@ gentbl(
 )
 
 gentbl(
-    name = "load_op_patterns_inc_gen",
+    name = "load_constant_op_patterns_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "Transforms/GeneratedLoadOpPatterns.inc"),
+        ("-gen-rewriters", "Transforms/GeneratedLoadConstantOpPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "Transforms/LoadOpPatterns.td",
+    td_file = "Transforms/LoadConstantOpPatterns.td",
     td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "IR/XCoreOps.td",
@@ -66,7 +66,7 @@ cc_library(
         "IR/XCoreOps.cpp.inc",
         "IR/XCoreOps.h.inc",
         "Transforms/GeneratedPatterns.inc",
-        "Transforms/GeneratedLoadOpPatterns.inc"
+        "Transforms/GeneratedLoadConstantOpPatterns.inc"
     ],
     hdrs = [
         "Transforms/Options.h",

@@ -13,17 +13,17 @@ namespace xcore {
 
 namespace {
 // Apply generated patterns.
-struct ApplyLoadOpPatterns
-    : public PassWrapper<ApplyLoadOpPatterns, FunctionPass> {
+struct ApplyLoadConstantOpPatterns
+    : public PassWrapper<ApplyLoadConstantOpPatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
   void runOnFunction() override;
 };
 
-#include "Transforms/GeneratedLoadOpPatterns.inc"
+#include "Transforms/GeneratedLoadConstantOpPatterns.inc"
 
-void ApplyLoadOpPatterns::runOnFunction() {
+void ApplyLoadConstantOpPatterns::runOnFunction() {
   assert(!flashImageFilenameOption.empty() &&
          "Flash image file option should be provided to run this pass!");
 
@@ -35,13 +35,14 @@ void ApplyLoadOpPatterns::runOnFunction() {
 }
 } // namespace
 
-// Creates an instance of the ApplyLoadOpPatterns pass.
-std::unique_ptr<OperationPass<FuncOp>> createApplyLoadOpPatternsPass() {
-  return std::make_unique<ApplyLoadOpPatterns>();
+// Creates an instance of the ApplyLoadConstantOpPatterns pass.
+std::unique_ptr<OperationPass<FuncOp>> createApplyLoadConstantOpPatternsPass() {
+  return std::make_unique<ApplyLoadConstantOpPatterns>();
 }
 
-static PassRegistration<ApplyLoadOpPatterns>
-    pass("xcore-apply-loadop-patterns", "Apply load op optimization patterns.");
+static PassRegistration<ApplyLoadConstantOpPatterns>
+    pass("xcore-apply-loadconstantop-patterns",
+         "Apply load constant op optimization patterns.");
 
 } // namespace xcore
 } // namespace mlir

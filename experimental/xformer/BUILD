@@ -71,6 +71,7 @@ cc_library(
     hdrs = [
         "Transforms/Options.h",
         "Transforms/Passes.h",
+        "Utils/FileIO.h",
         "IR/XCoreOps.h",
         "IR/XCoreOps.md",
     ],

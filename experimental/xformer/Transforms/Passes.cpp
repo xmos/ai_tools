@@ -17,11 +17,12 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());
   pm.addPass(createReplaceWithConv2DV2Pass());
+  // pm.addPass(createLegalizeFullyConnectedPass());
   // Add to pipeline only if flash image file option is provided
   if (!flashImageFilenameOption.empty()) {
     pm.addPass(createApplyLoadConstantOpPatternsPass());
+    pm.addPass(createWriteFlashImagePass());
   }
-  // pm.addPass(createLegalizeFullyConnectedPass());
   // Run canonicalization, which includes combining Reshapes
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(createTranslateToCustomOpPass());

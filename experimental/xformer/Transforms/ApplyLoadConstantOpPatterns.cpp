@@ -24,8 +24,11 @@ struct ApplyLoadConstantOpPatterns
 #include "Transforms/GeneratedLoadConstantOpPatterns.inc"
 
 void ApplyLoadConstantOpPatterns::runOnFunction() {
-  assert(!flashImageFilenameOption.empty() &&
-         "Flash image file option should be provided to run this pass!");
+  auto f = getFunction();
+  if (flashImageFilenameOption.empty()) {
+    f.emitError("Flash image file option should be provided to run this pass!");
+    signalPassFailure();
+  }
 
   OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();

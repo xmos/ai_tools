@@ -89,7 +89,7 @@ pipeline {
                 //"""
                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                 // This step collects these files for display in Jenkins UI
-                junit "**/*_junit.xml"
+                // junit "**/*_junit.xml"
                 //sh """. activate ./ai_tools_venv &&
                       //make integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
                 //"""

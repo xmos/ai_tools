@@ -11,10 +11,6 @@ build --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
 build --linkopt=-pthread
 build --linkopt=-ldl
 build --linkopt=-lm
-build --linkopt=-framework
-build --linkopt=CoreFoundation
-build --linkopt=-framework
-build --linkopt=SystemConfiguration
 build --host_linkopt=-pthread
 build --host_linkopt=-ldl
 build --host_linkopt=-lm
@@ -58,5 +54,3 @@ build:clang_config --cpu=k8
 # build.
 #build:clang_config --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 build:clang_config --host_crosstool_top=//toolchain:clang_suite
-
-build --macos_sdk_version=11.3

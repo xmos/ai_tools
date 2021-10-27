@@ -51,7 +51,6 @@ pipeline {
                 // create venv and install pip packages
                 sh "conda env create -q -p ai_tools_venv -f ./utils/environment.yml"
                 sh """. activate ./ai_tools_venv &&
-                      pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]" &&
                       pip install -e "./tflite2xcore[test,examples]"
                 """
                 // Install xmos tools version
@@ -77,6 +76,9 @@ pipeline {
                 sh ". activate ./ai_tools_venv && make tflite2xcore_dist"
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
                       bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
+                """
+                sh """. activate ./ai_tools_venv &&
+                      pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]" &&
                 """
             }
         }

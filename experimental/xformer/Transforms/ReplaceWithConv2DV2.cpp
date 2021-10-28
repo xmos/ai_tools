@@ -27,13 +27,14 @@ struct Conv2DArgs {
   int outputHeight, outputWidth, outputDepth, outputZeroPoint;
   int inputHeight, inputWidth, inputDepth, inputZeroPoint;
   int filterHeight, filterWidth, filterDepth;
-  int strideH, strideW;
-  int dilationH, dilationW;
   std::vector<int8_t> filter;
   std::vector<int32_t> bias;
   std::vector<float> effectiveMultiplier;
-  int16_t topPad, leftPad, bottomPad, rightPad;
   int8_t padValue;
+  nn::padding_t padding;
+  nn::ImageGeometry Y;
+  nn::ImageGeometry X;
+  nn::WindowGeometry K;
 };
 
 template <typename TFLOp>
@@ -45,28 +46,19 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
   getDepthwiseConv2DValidDirectParams(const Conv2DArgs &args) const {
     llvm::SmallVector<std::string> conv2DParams;
 
-    nn::padding_t padding = {args.topPad, args.leftPad, args.bottomPad,
-                             args.rightPad};
-    nn::ImageGeometry Y(args.outputHeight, args.outputWidth, args.outputDepth);
-    nn::ImageGeometry X(args.inputHeight, args.inputWidth, args.inputDepth);
-    nn::WindowGeometry K(args.filterHeight, args.filterWidth, args.filterDepth,
-                         -padding.top, -padding.left, args.strideH,
-                         args.strideW, 1, args.dilationH, args.dilationW);
-    nn::Filter2dGeometry geom(X, Y, K);
+    nn::DerefInputFn::Params imToColParams(args.X, args.K);
 
-    nn::DerefInputFn::Params imToColParams(X, K);
-
-    std::array<int, 4> weightsShape = {1, args.filterHeight, args.filterWidth,
-                                       args.inputDepth};
+    std::array<int, 4> filterShape = {1, args.filterHeight, args.filterWidth,
+                                      args.inputDepth};
     nn::Conv2dReorderedWeights rw =
         nn::MatMulDirectFn_DW::reorder_kernel_weights(
-            (int8_t *)args.filter.data(), weightsShape, args.padValue);
-    nn::MatMulDirectFn_DW::Params afParams(X, K, rw.weights.data(),
+            (int8_t *)args.filter.data(), filterShape, args.padValue);
+    nn::MatMulDirectFn_DW::Params afParams(args.X, args.K, rw.weights.data(),
                                            rw.weights.size());
 
     nn::OutputTransformFnInt8::CanonicalMulAndBias canonical_values =
         nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
-            args.effectiveMultiplier, args.bias, args.filter, weightsShape,
+            args.effectiveMultiplier, args.bias, args.filter, filterShape,
             args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
     nn::QuantisationParams qp = nn::OutputTransformFnInt8::quantise_activation(
         canonical_values.f_multipliers, canonical_values.f_biases,
@@ -78,8 +70,9 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, &qp.otv, qp.biases,
                                  qp.multipliers);
 
-    auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
-    nn::Filter2D_DW::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
+    auto ir =
+        nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
+    nn::Filter2D_DW::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
     // TODO: Check serialization
     std::string akpStr = akParams.serialise<nn::Filter2D_DW::Params>();
@@ -100,29 +93,20 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
   getDepthwiseConv2DPaddedIndirectParams(const Conv2DArgs &args) const {
     llvm::SmallVector<std::string> conv2DParams;
 
-    nn::padding_t padding = {args.topPad, args.leftPad, args.bottomPad,
-                             args.rightPad};
-    nn::ImageGeometry Y(args.outputHeight, args.outputWidth, args.outputDepth);
-    nn::ImageGeometry X(args.inputHeight, args.inputWidth, args.inputDepth);
-    nn::WindowGeometry K(args.filterHeight, args.filterWidth, args.filterDepth,
-                         -padding.top, -padding.left, args.strideH,
-                         args.strideW, 1, args.dilationH, args.dilationW);
-    nn::Filter2dGeometry geom(X, Y, K);
-
-    nn::ImToColPadded::Params imToColParams(X, K, padding, 16,
+    nn::ImToColPadded::Params imToColParams(args.X, args.K, args.padding, 16,
                                             args.inputZeroPoint);
 
-    std::array<int, 4> weightsShape = {1, args.filterHeight, args.filterWidth,
-                                       args.inputDepth};
+    std::array<int, 4> filterShape = {1, args.filterHeight, args.filterWidth,
+                                      args.inputDepth};
     nn::Conv2dReorderedWeights rw =
         nn::MatMulDirectFn_DW::reorder_kernel_weights(
-            (int8_t *)args.filter.data(), weightsShape, args.padValue);
-    nn::MatMulDirectFn_DW::Params afParams(K, rw.weights.data(),
+            (int8_t *)args.filter.data(), filterShape, args.padValue);
+    nn::MatMulDirectFn_DW::Params afParams(args.K, rw.weights.data(),
                                            rw.weights.size());
 
     nn::OutputTransformFnInt8::CanonicalMulAndBias canonical_values =
         nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
-            args.effectiveMultiplier, args.bias, args.filter, weightsShape,
+            args.effectiveMultiplier, args.bias, args.filter, filterShape,
             args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
     nn::QuantisationParams qp = nn::OutputTransformFnInt8::quantise_activation(
         canonical_values.f_multipliers, canonical_values.f_biases,
@@ -135,8 +119,9 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, &qp.otv, qp.biases,
                                  qp.multipliers);
 
-    auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
-    nn::Filter2D_DW::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
+    auto ir =
+        nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
+    nn::Filter2D_DW::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
     // TODO: Check serialization
     std::string akpStr = akParams.serialise<nn::Filter2D_DW::Params>();
@@ -157,23 +142,14 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
   getConv2DPaddedIndirectParams(const Conv2DArgs &args) const {
     llvm::SmallVector<std::string> conv2DParams;
 
-    nn::padding_t padding = {args.topPad, args.leftPad, args.bottomPad,
-                             args.rightPad};
-    nn::ImageGeometry Y(args.outputHeight, args.outputWidth, args.outputDepth);
-    nn::ImageGeometry X(args.inputHeight, args.inputWidth, args.inputDepth);
-    nn::WindowGeometry K(args.filterHeight, args.filterWidth, args.filterDepth,
-                         -padding.top, -padding.left, args.strideH,
-                         args.strideW, 1, args.dilationH, args.dilationW);
-    nn::Filter2dGeometry geom(X, Y, K);
-
-    nn::ImToColPadded::Params imToColParams(X, K, padding, args.inputDepth,
-                                            args.inputZeroPoint);
+    nn::ImToColPadded::Params imToColParams(
+        args.X, args.K, args.padding, args.inputDepth, args.inputZeroPoint);
 
     int inputBytes = args.filterHeight * args.filterWidth * args.inputDepth;
-    std::array<int, 4> shape = {args.outputDepth, args.filterHeight,
-                                args.filterWidth, args.inputDepth};
+    std::array<int, 4> filterShape = {args.outputDepth, args.filterHeight,
+                                      args.filterWidth, args.inputDepth};
     nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
-        (int8_t *)args.filter.data(), shape, 8, args.padValue);
+        (int8_t *)args.filter.data(), filterShape, 8, args.padValue);
     nn::MatMulInt8::Params afParams(args.outputDepth, inputBytes,
                                     rw.weights.data());
 
@@ -187,8 +163,9 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, &qp.otv, qp.biases,
                                  qp.multipliers);
 
-    auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
-    nn::Filter2D::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
+    auto ir =
+        nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
+    nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
     // TODO: Check serialization
     std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
@@ -209,25 +186,12 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
   getConv2DValidIndirectParams(const Conv2DArgs &args) const {
     llvm::SmallVector<std::string> conv2DParams;
 
-    nn::padding_t padding = {args.topPad, args.leftPad, args.bottomPad,
-                             args.rightPad};
-    nn::ImageGeometry Y(args.outputHeight, args.outputWidth, args.outputDepth);
-    nn::ImageGeometry X(args.inputHeight, args.inputWidth, args.inputDepth);
-    nn::WindowGeometry K(args.filterHeight, args.filterWidth, args.filterDepth,
-                         -padding.top, -padding.left, args.strideH,
-                         args.strideW, 1, args.dilationH, args.dilationW);
-    nn::Filter2dGeometry geom(X, Y, K);
+    nn::ImToColValid::Params imToColParams(args.X, args.K, args.inputDepth);
 
-    nn::ImToColValid::Params imToColParams(X, K, args.inputDepth);
-
-    // TODO: What is overread bytes for?
-    // int overread_bytes = memcpy.get_overread_bytes();
-    // input.resize(input.size() + overread_bytes / sizeof(int8_t), 0);
-
-    std::array<int, 4> shape = {args.outputDepth, args.filterHeight,
-                                args.filterWidth, args.inputDepth};
+    std::array<int, 4> filterShape = {args.outputDepth, args.filterHeight,
+                                      args.filterWidth, args.inputDepth};
     nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
-        (int8_t *)args.filter.data(), shape, 8, args.padValue);
+        (int8_t *)args.filter.data(), filterShape, 8, args.padValue);
     int inputBytes = args.filterHeight * args.filterWidth * args.inputDepth;
     nn::MatMulInt8::Params afParams(args.outputDepth, inputBytes,
                                     rw.weights.data());
@@ -242,8 +206,9 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, &qp.otv, qp.biases,
                                  qp.multipliers);
 
-    auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
-    nn::Filter2D::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
+    auto ir =
+        nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
+    nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
     // TODO: Check serialization
     std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
@@ -264,22 +229,15 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
   getConv2DValidDirectParams(const Conv2DArgs &args) const {
     llvm::SmallVector<std::string> conv2DParams;
 
-    nn::padding_t padding = {args.topPad, args.leftPad, args.bottomPad,
-                             args.rightPad};
-    nn::ImageGeometry X(args.inputHeight, args.inputWidth, args.inputDepth);
-    nn::ImageGeometry Y(args.outputHeight, args.outputWidth, args.outputDepth);
-    nn::WindowGeometry K(args.filterHeight, args.filterWidth, args.filterDepth,
-                         -padding.top, -padding.left, args.strideH,
-                         args.strideW, 1, args.dilationH, args.dilationW);
+    nn::DerefInputFn::Params imToColParams(args.X, args.K);
 
-    nn::DerefInputFn::Params imToColParams(X, K);
-
-    std::array<int, 4> shape = {args.outputDepth, args.filterHeight,
-                                args.filterWidth, args.inputDepth};
+    std::array<int, 4> filterShape = {args.outputDepth, args.filterHeight,
+                                      args.filterWidth, args.inputDepth};
     nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
-        (int8_t *)args.filter.data(), shape, 8, args.padValue);
-    nn::MatMulDirectFn::Params afParams(
-        X, K, args.inputDepth, rw.weights.data(), (int)rw.weights.size());
+        (int8_t *)args.filter.data(), filterShape, 8, args.padValue);
+    nn::MatMulDirectFn::Params afParams(args.X, args.K, args.inputDepth,
+                                        rw.weights.data(),
+                                        (int)rw.weights.size());
 
     nn::OutputTransformFnInt8::CanonicalMulAndBias canonicalValues =
         nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
@@ -291,8 +249,9 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, &qp.otv, qp.biases,
                                  qp.multipliers);
 
-    auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
-    nn::Filter2D::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
+    auto ir =
+        nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
+    nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
     // TODO: Check serialization
     std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
@@ -506,6 +465,16 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
       effectiveOutputScaleVector.push_back(inputScale * scale / outputScale);
     }
 
+    nn::padding_t padding = {
+        static_cast<int16_t>(padTop), static_cast<int16_t>(padLeft),
+        static_cast<int16_t>(padBottom), static_cast<int16_t>(padRight)};
+    nn::ImageGeometry Y(outputHeight, outputWidth, outputDepth);
+    nn::ImageGeometry X(inputHeight, inputWidth, inputDepth);
+    nn::WindowGeometry K(filterHeight, filterWidth, filterDepth, -padding.top,
+                         -padding.left, conv2DOp.stride_h(),
+                         conv2DOp.stride_w(), 1, conv2DOp.dilation_h_factor(),
+                         conv2DOp.dilation_w_factor());
+
     // Create a struct of Conv2DArgs to pass in parameters
     Conv2DArgs args = {
         .outputHeight = static_cast<int>(outputHeight),
@@ -519,20 +488,16 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
         .filterHeight = static_cast<int>(filterHeight),
         .filterWidth = static_cast<int>(filterWidth),
         .filterDepth = static_cast<int>(filterDepth),
-        .strideH = static_cast<int>(conv2DOp.stride_h()),
-        .strideW = static_cast<int>(conv2DOp.stride_w()),
-        .dilationH = static_cast<int>(conv2DOp.dilation_h_factor()),
-        .dilationW = static_cast<int>(conv2DOp.dilation_w_factor()),
         .filter = filterVector,
         .bias = biasVector,
         .effectiveMultiplier = effectiveOutputScaleVector,
-        .topPad = static_cast<int16_t>(padTop),
-        .leftPad = static_cast<int16_t>(padLeft),
-        .bottomPad = static_cast<int16_t>(padBottom),
-        .rightPad = static_cast<int16_t>(padRight),
         // TODO: For BNNs, pad value cannot be zero
         // We should be ideally using a different Conv2D operator for BNNs
-        .padValue = 0};
+        .padValue = 0,
+        .padding = padding,
+        .X = X,
+        .Y = Y,
+        .K = K};
 
     llvm::SmallVector<std::string> abstractKernelParams, memcpyFnParams,
         aggregateFnParams, outputTransformFnParams, kernelTypeEnumParams;
@@ -580,10 +545,10 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
         break;
       case Conv2DType::DepthwisePaddedIndirect:
         conv2DParams = getDepthwiseConv2DPaddedIndirectParams(args);
-        auto weightsShape = std::array<int, 4>(
+        auto filterShape = std::array<int, 4>(
             {1, args.filterHeight, args.filterWidth, args.inputDepth});
         scratchBytes =
-            nn::MatMulDirectFn_DW::get_scratch_mem_bytes(weightsShape);
+            nn::MatMulDirectFn_DW::get_scratch_mem_bytes(filterShape);
         break;
       }
 

@@ -7,7 +7,7 @@ import larq_compute_engine as lce
 from abc import abstractmethod
 from typing import Union
 
-from xcore_interpreters import XCOREInterpreter, XCOREDeviceInterpreter
+from tflm_interpreter import TFLMInterpreter
 
 from tflite2xcore.utils import (
     quantize,
@@ -170,12 +170,10 @@ class XCoreEvaluator(TFLiteQuantEvaluator):
 
     def evaluate(self) -> None:
         if self._use_device:
-            self._interpreter = XCOREDeviceInterpreter(model_content=self._model_hook())
-        else:
-            self._interpreter = XCOREInterpreter(model_content=self._model_hook())
+            print('Warning: use device deprecated')
+        self._interpreter = TFLMInterpreter(model_content=self._model_hook())
 
         with self._interpreter:
-            self._interpreter.allocate_tensors()
             self.set_input_data()
             self.output_data = apply_interpreter_to_examples(
                 self._interpreter, self.input_data

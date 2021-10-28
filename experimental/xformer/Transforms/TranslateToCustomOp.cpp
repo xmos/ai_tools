@@ -14,6 +14,16 @@ namespace xcore {
 std::vector<uint8_t> FullyConnectedOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Lookup8Op::buildCustomOptions() { return {}; }
 
+std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() {
+    fbb.Int("addr", (int32_t)address());
+    fbb.Int("size", (int32_t)size());
+  });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> PadOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() { fbb.Int("pad_value", (int32_t)pad_value()); });
@@ -104,6 +114,7 @@ void TranslateToCustomOp::runOnFunction() {
   patterns.insert<RewriteToCustomOp<Lookup8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Conv2DV2Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

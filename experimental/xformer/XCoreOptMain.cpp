@@ -2,18 +2,59 @@
 // XMOS Public License: Version 1
 
 #include "IR/XCoreOps.h"
+#include "Transforms/Options.h"
 #include "Transforms/Passes.h"
 #include "Utils/FileIO.h"
 
 #include "mlir/IR/AsmState.h"
 #include "mlir/Parser.h"
 #include "mlir/Pass/PassManager.h"
+#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 using namespace llvm;
 using namespace mlir;
+
+// TODO:
+namespace mlir {
+namespace xcore {
+
+cl::opt<std::string> flashImageFilenameOption(
+    "xcore-flash-image-file",
+    cl::desc("The file to write the xcore flash image."),
+    cl::value_desc("filename"), cl::init(""));
+
+} // namespace xcore
+} // namespace mlir
+
+LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
+                              const OwningModuleRef &mod,
+                              MLIRContext *context) {
+  PassManager pm(context, mlir::OpPassManager::Nesting::Implicit);
+  applyPassManagerCLOptions(pm);
+
+  auto errorHandler = [&](const Twine &msg) {
+    return emitError(UnknownLoc::get(context)) << msg;
+  };
+
+  if (passPipeline.hasAnyOccurrences()) {
+    // Build the provided pipeline.
+    if (failed(passPipeline.addToPipeline(pm, errorHandler)))
+      return failure();
+
+    // Run the pipeline.
+    if (failed(pm.run(*mod)))
+      return failure();
+
+  } else {
+    xcore::buildXCorePassPipeline(pm);
+    if (failed(pm.run(*mod))) {
+      return failure();
+    }
+  }
+  return success();
+}
 
 int main(int argc, char **argv) {
   llvm::InitLLVM y(argc, argv);
@@ -24,6 +65,11 @@ int main(int argc, char **argv) {
                                              cl::value_desc("filename"));
   static cl::opt<bool> mlirIOEnabled("mlir-io",
                                      cl::desc("Enable MLIR input and output"));
+  static cl::opt<bool> verifyDiagnosticsEnabled(
+      "verify-diagnostics",
+      cl::desc("Check that emitted diagnostics match "
+               "expected-* lines on the corresponding line"),
+      cl::init(false));
 
   // Register any command line options.
   registerAsmPrinterCLOptions();
@@ -39,16 +85,21 @@ int main(int argc, char **argv) {
   context.loadDialect<quant::QuantizationDialect>();
   context.loadDialect<TFL::TensorFlowLiteDialect>();
   context.loadDialect<xcore::XCoreDialect>();
+  context.printOpOnDiagnostic(!verifyDiagnosticsEnabled);
 
   // Parse input.
   OwningModuleRef mod;
+  SourceMgr sourceMgr;
   if (mlirIOEnabled) {
     // Parse the MLIR input file.
-    mod = parseSourceFile(inputFilename, &context);
-    if (!mod) {
-      llvm::errs() << "Unable to read MLIR file\n";
+    std::string errorMessage;
+    auto file = openInputFile(inputFilename, &errorMessage);
+    if (!file) {
+      llvm::errs() << errorMessage << "\n";
       return 1;
     }
+    sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
+    mod = parseSourceFile(sourceMgr, &context);
   } else {
     // Read flatbuffer and convert to serialized MLIR string.
     mod = xcore::utils::readFlatBufferFileToMLIR(inputFilename, &context);
@@ -59,27 +110,14 @@ int main(int argc, char **argv) {
   }
 
   // Run transformations
-  // Apply any pass manager command line options
-  PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
-  applyPassManagerCLOptions(pm);
-
-  auto errorHandler = [&](const Twine &msg) {
-    return emitError(UnknownLoc::get(&context)) << msg;
-  };
-
-  if (passPipeline.hasAnyOccurrences()) {
-    // Build the provided pipeline.
-    if (failed(passPipeline.addToPipeline(pm, errorHandler)))
+  if (verifyDiagnosticsEnabled) {
+    SourceMgrDiagnosticVerifierHandler sourceMgrHandler(sourceMgr, &context);
+    (void)runPassPipeline(passPipeline, mod, &context);
+    if (failed(sourceMgrHandler.verify())) {
       return 1;
-
-    // Run the pipeline.
-    if (failed(pm.run(*mod)))
-      return 1;
-
+    }
   } else {
-    xcore::buildXCorePassPipeline(pm);
-    if (failed(pm.run(*mod))) {
-      llvm::errs() << "Running XCore pass pipeline failed\n";
+    if (failed(runPassPipeline(passPipeline, mod, &context))) {
       return 1;
     }
   }

@@ -49,7 +49,7 @@ pipeline {
                                          url: 'git@github.com:xmos/ai_tools']]
                 ])
                 // create venv and install pip packages
-                sh "conda env create -q -p ai_tools_venv -f ./utils/environment.yml"
+                sh "conda env create -q -p ai_tools_venv -f ./environment.yml"
                 sh """. activate ./ai_tools_venv &&
                       pip install -e "./tflite2xcore[test,examples]"
                 """
@@ -84,19 +84,13 @@ pipeline {
         }
         stage("Test") {
             steps {
-                //sh """. activate ./ai_tools_venv &&
-                      //make test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
-                //"""
-                // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
-                // This step collects these files for display in Jenkins UI
-                // junit "**/*_junit.xml"
-                //sh """. activate ./ai_tools_venv &&
-                      //make integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
-                //"""
                 // xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&
                       make xformer2_integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
                 """
+                // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
+                // This step collects these files for display in Jenkins UI
+                junit "**/*_junit.xml"
             }
         }
     }

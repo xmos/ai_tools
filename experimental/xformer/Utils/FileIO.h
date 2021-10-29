@@ -11,6 +11,11 @@ namespace mlir {
 namespace xcore {
 namespace utils {
 
+LogicalResult writeDataToFile(std::string &filename, std::string &data);
+
+LogicalResult writeFlashImageToFile(std::string &filename,
+                                    std::vector<std::vector<char>> tensorsVec);
+
 LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
                                         mlir::ModuleOp module);
 

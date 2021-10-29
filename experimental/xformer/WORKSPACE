@@ -77,7 +77,7 @@ tf_workspace0()
 ##### lib_nn
 new_local_repository(
     name = "lib_nn",
-    path = "../../utils/adf/lib_nn",
+    path = "../../third_party/lib_nn",
     build_file = "lib_nn.BUILD",
 )
 

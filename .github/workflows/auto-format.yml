@@ -1,0 +1,20 @@
+name: Auto-format
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  apply-formatting:
+    if: ${{ github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone git repo
+        uses: actions/checkout@v2
+
+      - id: format
+        uses: xmos/xaction_format@v1.0
+        with:
+          file-extensions:  |
+            c h cpp hpp
+          exclude-dirs: "./third-party ./utils/lib_flexbuffers"
+          c-style: llvm
+          token: ${{ secrets.GITHUB_TOKEN }}

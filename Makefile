@@ -8,7 +8,7 @@ NUM_PROCS := 4
 
 .PHONY: xcore_interpreters_build
 xcore_interpreters_build:
-	cd utils/adf/ && make build
+	cd third_party/lib_tflite_micro/ && make build
 
 #**************************
 # tflite2xcore targets
@@ -61,7 +61,7 @@ submodule_update:
 
 .PHONY: clean
 clean:
-	cd utils/adf/ && make clean
+	cd third_party/lib_tflite_micro/ && make clean
 	rm -rf utils/lib_flexbuffers/build
 
 .PHONY: help

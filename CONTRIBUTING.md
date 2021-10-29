@@ -50,7 +50,7 @@ diff <my_cc_file> /tmp/my_cc_file.cc
 
 Before running the tests, ensure that you installed the correct pip packages in your environment:
 ```shell
-pip install -e "./utils/adf/xcore_interpreters[test]"
+pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]"
 pip install -e "./tflite2xcore[examples,test]"
 ```
 

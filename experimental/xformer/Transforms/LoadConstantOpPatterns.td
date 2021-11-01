@@ -12,13 +12,11 @@ def : Pat<(XC_Conv2DV2Op
              (ConstantOp
               : $weights_op $weights),
              (ConstantOp
-              : $biases_op $biases),
-             (ConstantOp
-              : $multipliers_op $multipliers),
+              : $multipliers_and_biases_op $multipliers_and_biases),
              $abstract_kernel_params, $memcpy_fn_params, $aggregate_fn_params,
              $output_transform_fn_params, $conv2d_kernel_type),
           (XC_Conv2DV2Op $input, $thread_count, $scratch_bytes,
-           (XC_LoadConstantOp $weights_op), (XC_LoadConstantOp $biases_op),
-           (XC_LoadConstantOp $multipliers_op), $abstract_kernel_params,
-           $memcpy_fn_params, $aggregate_fn_params, $output_transform_fn_params,
-           $conv2d_kernel_type)>;
+           (XC_LoadConstantOp $weights_op),
+           (XC_LoadConstantOp $multipliers_and_biases_op),
+           $abstract_kernel_params, $memcpy_fn_params, $aggregate_fn_params,
+           $output_transform_fn_params, $conv2d_kernel_type)>;

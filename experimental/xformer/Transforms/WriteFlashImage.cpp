@@ -36,10 +36,15 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
     }
     std::vector<char> tensorData = attr.getRawData().vec();
 
-    // Create a LoadFlashOp with vector index and tensor size
+    int address = 0;
+    for(auto const &t : *tensorsVec_) {
+      address += t.size();
+    }
+
+    // Create a LoadFlashOp with data addr and tensor size
     auto loadFlashOp =
         rewriter.create<LoadFlashOp>(loadOp.getLoc(), loadOp.getType(),
-                                     tensorsVec_->size(), tensorData.size());
+                                     address, tensorData.size());
     tensorsVec_->push_back(tensorData);
 
     // Replace the LoadOp with the new LoadFlashOp

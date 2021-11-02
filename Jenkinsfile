@@ -84,7 +84,11 @@ pipeline {
         }
         stage("Test") {
             steps {
-                // xformer2 integration tests
+                // xformer2 unit tests
+		sh """. activate ./ai_tools_venv && cd experimental/xformer &&
+                      bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures
+                """
+		// xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&
                       make xformer2_integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
                 """

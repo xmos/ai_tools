@@ -3,7 +3,6 @@
 
 #include "Utils/FileIO.h"
 
-#include "flatbuffers/flexbuffers.h"
 #include "mlir/Support/FileUtilities.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_export.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_import.h"
@@ -27,21 +26,14 @@ LogicalResult writeDataToFile(std::string &filename, std::string &data) {
 
 LogicalResult writeFlashImageToFile(std::string &filename,
                                     std::vector<std::vector<char>> tensorsVec) {
-  // Create flexbuffer of params
-  flexbuffers::Builder fbb;
-  auto rootMap = fbb.StartMap();
-  auto paramsVec = fbb.StartVector("params");
-  // For each tensor, we add a new flexbuffer blob
-  for (auto const &tensor : tensorsVec) {
-    fbb.Blob(tensor.data(), tensor.size());
-  }
-  fbb.EndVector(paramsVec, false, false);
-  fbb.EndMap(rootMap);
-  fbb.Finish();
 
-  // Write flexbuffer data to file
-  std::string fbbData(fbb.GetBuffer().begin(), fbb.GetBuffer().end());
-  return utils::writeDataToFile(filename, fbbData);
+  // Combine data for the tensors
+  std::string data;
+  for (auto const &tensor : tensorsVec) {
+    data += std::string(tensor.data(), tensor.size());
+  }
+
+  return utils::writeDataToFile(filename, data);
 }
 
 LogicalResult writeMLIRToFlatBufferFile(std::string &filename,

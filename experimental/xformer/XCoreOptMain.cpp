@@ -25,6 +25,12 @@ cl::opt<std::string> flashImageFilenameOption(
     cl::desc("The file to write the xcore flash image."),
     cl::value_desc("filename"), cl::init(""));
 
+cl::opt<unsigned> loadExternallyIfLargerOption(
+    "xcore-load-externally-if-larger",
+    cl::desc("Load constants externally if larger than given limit in bytes "
+             "(default = 0)."),
+    cl::init(0));
+
 } // namespace xcore
 } // namespace mlir
 

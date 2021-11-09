@@ -30,21 +30,17 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
 
   LogicalResult matchAndRewrite(LoadConstantOp loadOp,
                                 PatternRewriter &rewriter) const override {
-    DenseElementsAttr attr;
-    if (!matchPattern(loadOp.input(), m_Constant(&attr))) {
-      return failure();
-    }
-    std::vector<char> tensorData = attr.getRawData().vec();
+    std::vector<char> tensorData =
+        loadOp.input().cast<DenseElementsAttr>().getRawData().vec();
 
     int address = 0;
-    for(auto const &t : *tensorsVec_) {
+    for (auto const &t : *tensorsVec_) {
       address += t.size();
     }
 
     // Create a LoadFlashOp with data addr and tensor size
-    auto loadFlashOp =
-        rewriter.create<LoadFlashOp>(loadOp.getLoc(), loadOp.getType(),
-                                     address, tensorData.size());
+    auto loadFlashOp = rewriter.create<LoadFlashOp>(
+        loadOp.getLoc(), loadOp.getType(), address, tensorData.size());
     tensorsVec_->push_back(tensorData);
 
     // Replace the LoadOp with the new LoadFlashOp

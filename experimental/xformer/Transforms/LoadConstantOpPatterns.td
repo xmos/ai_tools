@@ -7,16 +7,17 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 
 include "IR/XCoreOps.td"
 
-def : Pat<(XC_Conv2DV2Op
-           : $output $input, $thread_count, $scratch_bytes,
-             (ConstantOp
-              : $weights_op $weights),
-             (ConstantOp
-              : $multipliers_and_biases_op $multipliers_and_biases),
-             $abstract_kernel_params, $memcpy_fn_params, $aggregate_fn_params,
-             $output_transform_fn_params, $conv2d_kernel_type),
-          (XC_Conv2DV2Op $input, $thread_count, $scratch_bytes,
-           (XC_LoadConstantOp $weights_op),
-           (XC_LoadConstantOp $multipliers_and_biases_op),
-           $abstract_kernel_params, $memcpy_fn_params, $aggregate_fn_params,
-           $output_transform_fn_params, $conv2d_kernel_type)>;
+def ShouldBeLoadedExternally
+    : Constraint<CPred<"shouldBeLoadedExternally($0)">>;
+
+def IsUsedByValidOp : Constraint<CPred<"isUsedByValidOp($0)">>;
+
+def : Pat<(ConstantOp
+           : $optype $attr),
+          (XC_LoadConstantOp $attr),
+          [(ShouldBeLoadedExternally $optype), (IsUsedByValidOp $optype)]>;
+
+def : Pat<(TFL_ConstOp
+           : $optype $attr),
+          (XC_LoadConstantOp $attr),
+          [(ShouldBeLoadedExternally $optype), (IsUsedByValidOp $optype)]>;

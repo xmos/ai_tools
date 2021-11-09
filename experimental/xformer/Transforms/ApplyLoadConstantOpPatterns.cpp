@@ -28,6 +28,8 @@ bool shouldBeLoadedExternally(Value constOpType) {
 
 bool isUsedByValidOp(Value constOpType) {
   for (auto *operand : constOpType.getUsers()) {
+    // In the runtime, TFL::PadOp assumes that the constant data is available in
+    // the flatbuffer, and fails if it's not available
     if (llvm::isa<TFL::PadOp>(operand)) {
       return false;
     }

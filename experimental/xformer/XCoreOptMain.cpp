@@ -94,10 +94,17 @@ int main(int argc, char **argv) {
   context.loadDialect<xcore::XCoreDialect>();
   context.printOpOnDiagnostic(!verifyDiagnosticsEnabled);
 
+  auto failedMessage = [&](const Twine &msg) {
+    emitError(UnknownLoc::get(&context)) << msg;
+    return 1;
+  };
+
   // Validate options
   if (mlir::xcore::loadExternallyIfLargerOption.getNumOccurrences() > 0 &&
       mlir::xcore::flashImageFilenameOption.empty()) {
-    llvm::errs() <<"Please specify the xcore-flash-image-file option when specifying the xcore-load-externally-if-larger option!\n";
+    return failedMessage(
+        "Please specify the xcore-flash-image-file option when specifying the "
+        "xcore-load-externally-if-larger option!");
   }
 
   // Parse input.
@@ -108,8 +115,7 @@ int main(int argc, char **argv) {
     std::string errorMessage;
     auto file = openInputFile(inputFilename, &errorMessage);
     if (!file) {
-      llvm::errs() << errorMessage << "\n";
-      return 1;
+      return failedMessage(errorMessage);
     }
     sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
     mod = parseSourceFile(sourceMgr, &context);
@@ -117,8 +123,7 @@ int main(int argc, char **argv) {
     // Read flatbuffer and convert to serialized MLIR string.
     mod = xcore::utils::readFlatBufferFileToMLIR(inputFilename, &context);
     if (!mod) {
-      llvm::errs() << "Unable to read flatbuffer file\n";
-      return 1;
+      return failedMessage("Unable to read flatbuffer file!");
     }
   }
 
@@ -141,8 +146,7 @@ int main(int argc, char **argv) {
     std::string errorMessage;
     auto output = openOutputFile("-", &errorMessage);
     if (!output) {
-      llvm::errs() << errorMessage << "\n";
-      return 1;
+      return failedMessage(errorMessage);
     }
     mod->print(output->os());
     output->os() << '\n';

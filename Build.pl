@@ -17,7 +17,6 @@ my $BIN;
 my $BAZEL_VERSION;
 my $PTH;
 my $BAZELCONFIG;
-my $installPathExtension;
 
 my %ALIASES =
   (
@@ -47,7 +46,6 @@ sub main
     $PTH=$ENV{"PATH"};
     $ENV{"PATH"} = "$PTH:${XMOS_ROOT}${SLASH}bazel";
     $BAZELCONFIG="--config=darwin_config";
-    $installPathExtension="";
   } elsif ($^O eq "MSWin32") {
     ;
   } else {
@@ -107,7 +105,6 @@ sub DoBuild
   #system("make submodule_update") == 0                                         or die "Failed to configure submodules";
   system("python3 -m venv .venv") == 0                                         or die "Python -m venv failed";
   system(". .venv/bin/activate && pip install -r requirements.txt") == 0 or die "Python requirement install failed";
-  system(". .venv/bin/activate && cd experimental${SLASH}xformer && bazel clean") == 0              or die "Failed to build xformer-2.0";
   system(". .venv/bin/activate && cd experimental${SLASH}xformer && bazel build $BAZELCONFIG --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures") == 0              or die "Failed to build xformer-2.0";
 }
 
@@ -124,7 +121,8 @@ sub DoClean
 sub DoInstall
 {
   chdir("${XMOS_ROOT}${SLASH}ai_tools");
-  XmosBuildLib::InstallReleaseDirectory($DOMAIN, "experimental/xformer/bazel-bin", "xcore-opt");
+  system("mv experimental/xformer/bazel-bin/xcore-opt experimental/xformer/bazel-bin/xformer");
+  XmosBuildLib::InstallReleaseDirectory($DOMAIN, "experimental/xformer/bazel-bin", "xformer");
 }
 
 main()

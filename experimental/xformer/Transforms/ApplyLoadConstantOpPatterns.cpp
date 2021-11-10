@@ -23,7 +23,7 @@ struct ApplyLoadConstantOpPatterns
 
 bool shouldBeLoadedExternally(Value constOpType) {
   auto opType = constOpType.getType().cast<ShapedType>();
-  return opType.getSizeInBits() / 8 > loadExternallyIfLargerOption;
+  return opType.getSizeInBits() / CHAR_BIT > loadExternallyIfLargerOption;
 }
 
 bool isUsedByValidOp(Value constOpType) {

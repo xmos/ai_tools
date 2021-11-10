@@ -1,4 +1,4 @@
-// RUN: xcore-opt --mlir-io %s --xcore-apply-loadconstantop-patterns --xcore-flash-image-file=/dev/null | FileCheck %s
+// RUN: xcore-opt --mlir-io %s --xcore-apply-loadconstantop-patterns --xcore-flash-image-file=/dev/null --xcore-load-externally-if-larger=0 | FileCheck %s
 
 // RUN: xcore-opt --mlir-io %s --xcore-apply-loadconstantop-patterns --xcore-flash-image-file=/dev/null --xcore-load-externally-if-larger=16 | FileCheck %s -check-prefix=LARGER-CHECK
 

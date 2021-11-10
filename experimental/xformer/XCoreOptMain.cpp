@@ -28,8 +28,9 @@ cl::opt<std::string> flashImageFilenameOption(
 cl::opt<unsigned> loadExternallyIfLargerOption(
     "xcore-load-externally-if-larger",
     cl::desc("Load constants externally if larger than given limit in bytes "
-             "(default = 0)."),
-    cl::init(0));
+             "(default = 96 bytes). Cannot be specifed when "
+             "xcore-flash-image-file is not provided."),
+    cl::init(96));
 
 } // namespace xcore
 } // namespace mlir
@@ -92,6 +93,12 @@ int main(int argc, char **argv) {
   context.loadDialect<TFL::TensorFlowLiteDialect>();
   context.loadDialect<xcore::XCoreDialect>();
   context.printOpOnDiagnostic(!verifyDiagnosticsEnabled);
+
+  // Validate options
+  if (mlir::xcore::loadExternallyIfLargerOption.getNumOccurrences() > 0 &&
+      mlir::xcore::flashImageFilenameOption.empty()) {
+    llvm::errs() <<"Please specify the xcore-flash-image-file option when specifying the xcore-load-externally-if-larger option!\n");
+  }
 
   // Parse input.
   OwningModuleRef mod;

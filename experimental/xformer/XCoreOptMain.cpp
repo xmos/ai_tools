@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
   // Validate options
   if (mlir::xcore::loadExternallyIfLargerOption.getNumOccurrences() > 0 &&
       mlir::xcore::flashImageFilenameOption.empty()) {
-    llvm::errs() <<"Please specify the xcore-flash-image-file option when specifying the xcore-load-externally-if-larger option!\n");
+    llvm::errs() <<"Please specify the xcore-flash-image-file option when specifying the xcore-load-externally-if-larger option!\n";
   }
 
   // Parse input.

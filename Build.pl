@@ -14,6 +14,10 @@ my $CONFIG;
 my $HOST;
 my $DOMAIN;
 my $BIN;
+my $BAZEL_VERSION;
+my $PTH;
+my $BAZELCONFIG;
+my $installPathExtension;
 
 my %ALIASES =
   (
@@ -36,7 +40,14 @@ sub main
     $ENV{"JAVA_HOME"} = "/usr/lib/jvm/java-1.8.0";
     $ENV{"CC"} = "/opt/xmos/gcc/11.2.0/bin/gcc";
   } elsif ($^O eq "darwin") {
-    ;
+    $BAZEL_VERSION="4.1.0";
+    system("curl -fLO 'https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-installer-darwin-x86_64.sh'");
+    system("chmod +x 'bazel-${BAZEL_VERSION}-installer-darwin-x86_64.sh'");
+    system("./bazel-${BAZEL_VERSION}-installer-darwin-x86_64.sh --prefix=${XMOS_ROOT}${SLASH}bazel");
+    $PTH=$ENV{"PATH"};
+    $ENV{"PATH"} = "$PTH:${XMOS_ROOT}${SLASH}bazel";
+    $BAZELCONFIG="--config=darwin_config";
+    $installPathExtension="";
   } elsif ($^O eq "MSWin32") {
     ;
   } else {
@@ -97,8 +108,7 @@ sub DoBuild
   system("python3 -m venv .venv") == 0                                         or die "Python -m venv failed";
   system(". .venv/bin/activate && pip install -r requirements.txt") == 0 or die "Python requirement install failed";
   system(". .venv/bin/activate && cd experimental${SLASH}xformer && bazel clean") == 0              or die "Failed to build xformer-2.0";
-  system(". .venv/bin/activate && cd experimental${SLASH}xformer && bazel build --config=clang_config  //:xcore-opt") == 0              or die "Failed to build xformer-2.0";
-  #system(". .venv/bin/activate && cd experimental${SLASH}xformer && bazel build --features static_linking_mode --verbose_failures //:xcore-opt") == 0              or die "Failed to build xformer-2.0";
+  system(". .venv/bin/activate && cd experimental${SLASH}xformer && bazel build $BAZELCONFIG --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures") == 0              or die "Failed to build xformer-2.0";
 }
 
 sub DoClean

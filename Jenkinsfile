@@ -49,9 +49,8 @@ pipeline {
                                          url: 'git@github.com:xmos/ai_tools']]
                 ])
                 // create venv and install pip packages
-                sh "conda env create -q -p ai_tools_venv -f ./utils/adf/environment.yml"
+                sh "conda env create -q -p ai_tools_venv -f ./environment.yml"
                 sh """. activate ./ai_tools_venv &&
-                      pip install -e "./utils/adf/xcore_interpreters[test]" &&
                       pip install -e "./tflite2xcore[test,examples]"
                 """
                 // Install xmos tools version
@@ -78,23 +77,24 @@ pipeline {
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
                       bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
                 """
+                sh """. activate ./ai_tools_venv &&
+                      pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]"
+                """
             }
         }
         stage("Test") {
             steps {
+                // xformer2 unit tests
+		sh """. activate ./ai_tools_venv && cd experimental/xformer &&
+                      bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures
+                """
+		// xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&
-                      make test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
+                      make xformer2_integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
                 """
                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                 // This step collects these files for display in Jenkins UI
                 junit "**/*_junit.xml"
-                sh """. activate ./ai_tools_venv &&
-                      make integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
-                """
-                // xformer2 integration tests
-                sh """. activate ./ai_tools_venv &&
-                      make xformer2_integration_test NUM_PROCS=\$(grep -c ^processor /proc/cpuinfo)
-                """
             }
         }
     }

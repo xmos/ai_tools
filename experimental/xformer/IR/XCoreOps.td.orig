@@ -94,7 +94,8 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
     I32Attr:$thread_count,
     I32ArrayAttr:$scratch_bytes,
     TensorOf<[I8]>:$weights,
-    TensorOf<[I16]>:$multipliers_and_biases,
+    TensorOf<[I16]>:$biases,
+    TensorOf<[I16]>:$multipliers,
     StrArrayAttr:$abstract_kernel_params,
     StrArrayAttr:$memcpy_fn_params,
     StrArrayAttr:$aggregate_fn_params,
@@ -151,22 +152,31 @@ def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
 }
 
 def XC_LoadConstantOp
-    : XC_Op<"ld_constant", [NoSideEffect, SameOperandsAndResultType]> {
+    : XC_Op<"load_constant", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Load constant op";
 
-  let description = [{Load constant op.}];
+  let description = [{Load op.}];
 
   let arguments = (ins TensorOf<[I8, I16]> : $input);
 
   let results = (outs TensorOf<[I8, I16]> : $output);
 }
 
-def XC_LoadFlashOp : XC_Op<"ld_flash", [NoSideEffect]> {
+def XC_LoadFlashOp
+    : XC_Op<"load_flash", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Load from flash op";
 
   let description = [{Load from flash op.}];
 
+<<<<<<< HEAD
+  let arguments = (ins
+    TensorOf<[I8, I16]> : $input,
+    I32Attr : $address,
+    I32Attr : $bytes
+    );
+=======
   let arguments = (ins I32Attr : $address, I32Attr : $size);
+>>>>>>> Rename attributes
 
   let results = (outs TensorOf<[I8, I16]> : $output);
 }

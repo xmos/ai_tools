@@ -121,7 +121,8 @@ sub DoClean
 sub DoInstall
 {
   chdir("${XMOS_ROOT}${SLASH}ai_tools");
-  system("mv experimental/xformer/bazel-bin/xcore-opt experimental/xformer/bazel-bin/xformer");
+  mkdir("experimental/xformer/bazel-bin/xformer");
+  system("mv -f experimental/xformer/bazel-bin/xcore-opt experimental/xformer/bazel-bin/xformer/xcore-opt");
   XmosBuildLib::InstallReleaseDirectory($DOMAIN, "experimental/xformer/bazel-bin", "xformer");
 }
 

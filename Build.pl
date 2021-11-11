@@ -35,17 +35,26 @@ sub main
   my $xmosArg = XmosArg::new(\@ARGV);
   SetupEnv::SetupPaths();
 
+  $BAZEL_VERSION="4.1.0";
   if ($^O eq "linux") {
     $ENV{"JAVA_HOME"} = "/usr/lib/jvm/java-1.8.0";
-    $ENV{"CC"} = "/opt/xmos/gcc/11.2.0/bin/gcc";
+    system("curl -fLO 'https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh'");
+    system("chmod +x 'bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh'");
+    system("./bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh --prefix=${XMOS_ROOT}${SLASH}bazel");
+    $BAZELCONFIG="--config=linux_config";
+    $BAZEL="${XMOS_ROOT}${SLASH}bazel${SLASH}bin${SLASH}bazel"
   } elsif ($^O eq "darwin") {
-    $BAZEL_VERSION="4.1.0";
     system("curl -fLO 'https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-installer-darwin-x86_64.sh'");
     system("chmod +x 'bazel-${BAZEL_VERSION}-installer-darwin-x86_64.sh'");
     system("./bazel-${BAZEL_VERSION}-installer-darwin-x86_64.sh --prefix=${XMOS_ROOT}${SLASH}bazel");
     $BAZELCONFIG="--config=darwin_config";
+    $BAZEL="${XMOS_ROOT}${SLASH}bazel${SLASH}bin${SLASH}bazel"
   } elsif ($^O eq "MSWin32") {
-    ;
+    system("curl -fLO 'https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-windows-x86_64.exe'");
+#    system("chmod +x 'bazel-${BAZEL_VERSION}-windows-x86_64.exe'");
+    system("mv bazel-${BAZEL_VERSION}-windows-x86_64.exe ${XMOS_ROOT}${SLASH}bazel.exe");
+    $BAZELCONFIG="--config=windows_config";
+    $BAZEL="${XMOS_ROOT}${SLASH}bazel.exe"
   } else {
     die "Os $^O not recognised";
   }
@@ -103,7 +112,7 @@ sub DoBuild
   #system("make submodule_update") == 0                                         or die "Failed to configure submodules";
   system("python3 -m venv .venv") == 0                                         or die "Python -m venv failed";
   system(". .venv/bin/activate && pip install -r requirements.txt") == 0 or die "Python requirement install failed";
-  system(". .venv/bin/activate && cd experimental${SLASH}xformer && ${XMOS_ROOT}${SLASH}bazel${SLASH}bin${SLASH}bazel build $BAZELCONFIG //:xcore-opt --verbose_failures") == 0              or die "Failed to build xformer-2.0";
+  system(". .venv/bin/activate && cd experimental${SLASH}xformer && ${BAZEL} build $BAZELCONFIG //:xcore-opt --verbose_failures") == 0              or die "Failed to build xformer-2.0";
 }
 
 sub DoClean

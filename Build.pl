@@ -123,7 +123,7 @@ sub DoInstall
   chdir("${XMOS_ROOT}${SLASH}ai_tools");
   mkdir("experimental/xformer/bazel-bin/xformer");
   system("mv -f experimental/xformer/bazel-bin/xcore-opt experimental/xformer/bazel-bin/xformer/xcore-opt");
-  XmosBuildLib::InstallReleaseDirectory($DOMAIN, "experimental/xformer/bazel-bin", "xformer");
+  XmosBuildLib::InstallDirectory($DOMAIN, "experimental/xformer/bazel-bin", "xformer", "External");
 }
 
 main()

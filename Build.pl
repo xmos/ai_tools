@@ -17,6 +17,7 @@ my $BIN;
 my $BAZEL_VERSION;
 my $PTH;
 my $BAZELCONFIG;
+my $BAZEL;
 
 my %ALIASES =
   (

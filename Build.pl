@@ -103,7 +103,7 @@ sub DoBuild
   #system("make submodule_update") == 0                                         or die "Failed to configure submodules";
   system("python3 -m venv .venv") == 0                                         or die "Python -m venv failed";
   system(". .venv/bin/activate && pip install -r requirements.txt") == 0 or die "Python requirement install failed";
-  system(". .venv/bin/activate && cd experimental${SLASH}xformer && ${XMOS_ROOT}${SLASH}bazel${SLASH}bin${SLASH}bazel build $BAZELCONFIG --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures") == 0              or die "Failed to build xformer-2.0";
+  system(". .venv/bin/activate && cd experimental${SLASH}xformer && ${XMOS_ROOT}${SLASH}bazel${SLASH}bin${SLASH}bazel build $BAZELCONFIG //:xcore-opt --verbose_failures") == 0              or die "Failed to build xformer-2.0";
 }
 
 sub DoClean

@@ -20,6 +20,8 @@ struct WriteFlashImage : public PassWrapper<WriteFlashImage, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
+  StringRef getArgument() const final { return "xcore-write-flash-image"; }
+  StringRef getDescription() const final { return "Write flash image"; }
   void runOnFunction() override;
 };
 
@@ -37,14 +39,13 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
     std::vector<char> tensorData = attr.getRawData().vec();
 
     int address = 0;
-    for(auto const &t : *tensorsVec_) {
+    for (auto const &t : *tensorsVec_) {
       address += t.size();
     }
 
     // Create a LoadFlashOp with data addr and tensor size
-    auto loadFlashOp =
-        rewriter.create<LoadFlashOp>(loadOp.getLoc(), loadOp.getType(),
-                                     address, tensorData.size());
+    auto loadFlashOp = rewriter.create<LoadFlashOp>(
+        loadOp.getLoc(), loadOp.getType(), address, tensorData.size());
     tensorsVec_->push_back(tensorData);
 
     // Replace the LoadOp with the new LoadFlashOp
@@ -86,8 +87,7 @@ std::unique_ptr<OperationPass<FuncOp>> createWriteFlashImagePass() {
   return std::make_unique<WriteFlashImage>();
 }
 
-static PassRegistration<WriteFlashImage> pass("xcore-write-flash-image",
-                                              "Write flash image.");
+static PassRegistration<WriteFlashImage> pass;
 
 } // namespace xcore
 } // namespace mlir

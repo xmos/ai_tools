@@ -17,6 +17,10 @@ struct ApplyPatterns : public PassWrapper<ApplyPatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
+  StringRef getArgument() const final { return "xcore-apply-patterns"; }
+  StringRef getDescription() const final {
+    return "Apply generated optimization patterns";
+  }
   void runOnFunction() override;
 };
 
@@ -148,8 +152,7 @@ std::unique_ptr<OperationPass<FuncOp>> createApplyPatternsPass() {
   return std::make_unique<ApplyPatterns>();
 }
 
-static PassRegistration<ApplyPatterns>
-    pass("xcore-apply-patterns", "Apply generated optimization patterns.");
+static PassRegistration<ApplyPatterns> pass;
 
 } // namespace xcore
 } // namespace mlir

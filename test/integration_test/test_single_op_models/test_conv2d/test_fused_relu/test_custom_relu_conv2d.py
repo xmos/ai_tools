@@ -49,7 +49,7 @@ def test_reference_model_regression(reference_model: XCOREModel) -> None:
 
     opcodes = [op.operator_code.code for op in operators]
     major_version = tf.version.VERSION[:3]
-    if major_version == "2.5":
+    if float(major_version) >= 2.5:
         expected_opcodes = [
             BuiltinOpCodes.CONV_2D,
             BuiltinOpCodes.MINIMUM,

@@ -72,7 +72,9 @@ void WriteFlashImage::runOnFunction() {
   // Write tensor data to flash image file
   if (failed(
           utils::writeFlashImageToFile(flashImageFilenameOption, tensorsVec))) {
-    llvm::errs() << "Failed to write flash image!\n";
+    f.emitError("Failed to write flash image!");
+    signalPassFailure();
+    return;
   }
 }
 } // namespace

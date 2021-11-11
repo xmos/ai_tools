@@ -43,8 +43,6 @@ sub main
     system("curl -fLO 'https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-installer-darwin-x86_64.sh'");
     system("chmod +x 'bazel-${BAZEL_VERSION}-installer-darwin-x86_64.sh'");
     system("./bazel-${BAZEL_VERSION}-installer-darwin-x86_64.sh --prefix=${XMOS_ROOT}${SLASH}bazel");
-    $PTH=$ENV{"PATH"};
-    $ENV{"PATH"} = "$PTH:${XMOS_ROOT}${SLASH}bazel";
     $BAZELCONFIG="--config=darwin_config";
   } elsif ($^O eq "MSWin32") {
     ;
@@ -105,7 +103,7 @@ sub DoBuild
   #system("make submodule_update") == 0                                         or die "Failed to configure submodules";
   system("python3 -m venv .venv") == 0                                         or die "Python -m venv failed";
   system(". .venv/bin/activate && pip install -r requirements.txt") == 0 or die "Python requirement install failed";
-  system(". .venv/bin/activate && cd experimental${SLASH}xformer && bazel build $BAZELCONFIG --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures") == 0              or die "Failed to build xformer-2.0";
+  system(". .venv/bin/activate && cd experimental${SLASH}xformer && ${XMOS_ROOT}${SLASH}bazel${SLASH}bin${SLASH}bazel build $BAZELCONFIG --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures") == 0              or die "Failed to build xformer-2.0";
 }
 
 sub DoClean

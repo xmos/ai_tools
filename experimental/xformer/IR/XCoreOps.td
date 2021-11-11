@@ -150,15 +150,14 @@ def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
   let results = (outs TensorOf<[F32, I32, QI8]> : $output);
 }
 
-def XC_LoadConstantOp
-    : XC_Op<"ld_constant", [NoSideEffect, SameOperandsAndResultType]> {
+def XC_LoadConstantOp : XC_Op<"ld_constant", [NoSideEffect]> {
   let summary = "Load constant op";
 
   let description = [{Load constant op.}];
 
-  let arguments = (ins TensorOf<[I8, I16]> : $input);
+  let arguments = (ins ElementsAttr : $input);
 
-  let results = (outs TensorOf<[I8, I16]> : $output);
+  let results = (outs AnyTensor : $output);
 }
 
 def XC_LoadFlashOp : XC_Op<"ld_flash", [NoSideEffect]> {
@@ -168,7 +167,7 @@ def XC_LoadFlashOp : XC_Op<"ld_flash", [NoSideEffect]> {
 
   let arguments = (ins I32Attr : $address, I32Attr : $size);
 
-  let results = (outs TensorOf<[I8, I16]> : $output);
+  let results = (outs AnyTensor : $output);
 }
 
 #endif // XCORE_DIALECT

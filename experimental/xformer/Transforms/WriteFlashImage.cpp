@@ -32,11 +32,8 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
 
   LogicalResult matchAndRewrite(LoadConstantOp loadOp,
                                 PatternRewriter &rewriter) const override {
-    DenseElementsAttr attr;
-    if (!matchPattern(loadOp.input(), m_Constant(&attr))) {
-      return failure();
-    }
-    std::vector<char> tensorData = attr.getRawData().vec();
+    std::vector<char> tensorData =
+        loadOp.input().cast<DenseElementsAttr>().getRawData().vec();
 
     int address = 0;
     for (auto const &t : *tensorsVec_) {
@@ -77,7 +74,9 @@ void WriteFlashImage::runOnFunction() {
   // Write tensor data to flash image file
   if (failed(
           utils::writeFlashImageToFile(flashImageFilenameOption, tensorsVec))) {
-    llvm::errs() << "Failed to write flash image!\n";
+    f.emitError("Failed to write flash image!");
+    signalPassFailure();
+    return;
   }
 }
 } // namespace

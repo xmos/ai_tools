@@ -52,8 +52,8 @@ LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
                                                 &serialized_flatbuffer)) {
     return writeDataToFile(filename, serialized_flatbuffer);
   } else {
-    llvm::errs() << "Error converting MLIR to flatbuffer, no file written"
-                 << "\n";
+    emitError(UnknownLoc::get(module.getContext()))
+        << "Error converting MLIR to flatbuffer, no file written";
     return failure();
   }
 }
@@ -63,7 +63,7 @@ mlir::OwningModuleRef readFlatBufferFileToMLIR(std::string &filename,
   std::string errorMessage;
   auto inputFile = openInputFile(filename, &errorMessage);
   if (!inputFile) {
-    llvm::errs() << errorMessage << "\n";
+    emitError(UnknownLoc::get(context)) << errorMessage;
     return mlir::OwningModuleRef(nullptr);
   }
 

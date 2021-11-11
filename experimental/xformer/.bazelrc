@@ -14,10 +14,13 @@ build --linkopt=-lm
 build --host_linkopt=-pthread
 build --host_linkopt=-ldl
 build --host_linkopt=-lm
+
 build:darwin_config --linkopt=-framework
 build:darwin_config --linkopt=Foundation
 build:darwin_config --linkopt=-framework
 build:darwin_config --linkopt=SystemConfiguration
+
+build:linux_config --linkopt=-static
 
 # Default to an optimized build.
 # Override via: "-c dbg" or --compilation_mode=dbg

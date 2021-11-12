@@ -109,7 +109,7 @@ init_windows:
 .PHONY: build_release_linux
 build_release_linux:
 	python3 -m venv .venv
-	(. .venv/bin/activate && pip install -r requirements.txt
+	(. .venv/bin/activate && pip install -r requirements.txt)
 	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel build --config=linux_config //:xcore-opt --verbose_failures)
 	mkdir -p Install/Linux/External/xformer
 	cp bazel-bin/xcore-opt Install/Linux/External/xformer
@@ -117,7 +117,7 @@ build_release_linux:
 .PHONY: build_release_darwin
 build_release_darwin:
 	python3 -m venv .venv
-	(. .venv/bin/activate && pip install -r requirements.txt
+	(. .venv/bin/activate && pip install -r requirements.txt)
 	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel build --config=darwin_config //:xcore-opt --verbose_failures)
 	mkdir -p Install/Linux/External/xformer
 	cp bazel-bin/xcore-opt Install/Mac/External/xformer
@@ -125,7 +125,7 @@ build_release_darwin:
 .PHONY: build_release_windows
 build_release_windows:
 	python3 -m venv .venv
-	(. .venv/bin/activate && pip install -r requirements.txt
+	(. .venv/bin/activate && pip install -r requirements.txt)
 	(. .venv/bin/activate && cd experimental/xformer && ../../bazel build --config=windows_config //:xcore-opt --verbose_failures)
 	mkdir -p Install/Linux/External/xformer
 	cp bazel-bin/xcore-opt Install/Windows/External/xformer

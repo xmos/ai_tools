@@ -83,3 +83,49 @@ help:
 	$(info   integration_test              Run integration tests (requires tflite2xcore[test] package))
 	$(info   xformer2_test                 Run integration tests with xformer2 (experimental requires tflite2xcore[test] package))
 	$(info )
+
+.PHONY: init_linux
+init_linux:
+#	git submodule update --depth=1 --init --recursive --jobs 8
+	export BAZEL_VERSION=`cat experimental/xformer/.bazelversion` ;\
+	curl -fLO "https://github.com/bazelbuild/bazel/releases/download/$${BAZEL_VERSION}/bazel-$${BAZEL_VERSION}-installer-linux-x86_64.sh" && \
+	chmod +x bazel-$${BAZEL_VERSION}-installer-linux-x86_64.sh && \
+	./bazel-$${BAZEL_VERSION}-installer-linux-x86_64.sh --prefix=$$PWD/bazel
+
+.PHONY: init_darwin
+init_darwin:
+#	git submodule update --depth=1 --init --recursive --jobs 8
+	export BAZEL_VERSION=`cat experimental/xformer/.bazelversion` ;\
+	curl -fLO "https://github.com/bazelbuild/bazel/releases/download/$${BAZEL_VERSION}/bazel-$${BAZEL_VERSION}-installer-darwin-x86_64.sh" && \
+	chmod +x bazel-$${BAZEL_VERSION}-installer-darwin-x86_64.sh && \
+	./bazel-$${BAZEL_VERSION}-installer-darwin-x86_64.sh --prefix=$$PWD/bazel
+
+.PHONY: init_windows
+init_windows:
+	export BAZEL_VERSION=`cat experimental/xformer/.bazelversion` ;\
+	curl -fLO 'https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-windows-x86_64.exe'
+	mv bazel-${BAZEL_VERSION}-windows-x86_64.exe bazel.exe
+
+.PHONY: build_release_linux
+build_release_linux:
+	python3 -m venv .venv
+	(. .venv/bin/activate && pip install -r requirements.txt
+	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel build --config=linux_config //:xcore-opt --verbose_failures)
+	mkdir -p Install/Linux/External/xformer
+	cp bazel-bin/xcore-opt Install/Linux/External/xformer
+
+.PHONY: build_release_darwin
+build_release_darwin:
+	python3 -m venv .venv
+	(. .venv/bin/activate && pip install -r requirements.txt
+	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel build --config=darwin_config //:xcore-opt --verbose_failures)
+	mkdir -p Install/Linux/External/xformer
+	cp bazel-bin/xcore-opt Install/Mac/External/xformer
+
+.PHONY: build_release_windows
+build_release_windows:
+	python3 -m venv .venv
+	(. .venv/bin/activate && pip install -r requirements.txt
+	(. .venv/bin/activate && cd experimental/xformer && ../../bazel build --config=windows_config //:xcore-opt --verbose_failures)
+	mkdir -p Install/Linux/External/xformer
+	cp bazel-bin/xcore-opt Install/Windows/External/xformer

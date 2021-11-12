@@ -86,7 +86,7 @@ help:
 
 .PHONY: init_linux
 init_linux:
-#	git submodule update --depth=1 --init --recursive --jobs 8
+	git submodule update --depth=1 --init --recursive --jobs 8
 	export BAZEL_VERSION=`cat experimental/xformer/.bazelversion` ;\
 	curl -fLO "https://github.com/bazelbuild/bazel/releases/download/$${BAZEL_VERSION}/bazel-$${BAZEL_VERSION}-installer-linux-x86_64.sh" && \
 	chmod +x bazel-$${BAZEL_VERSION}-installer-linux-x86_64.sh && \
@@ -94,7 +94,7 @@ init_linux:
 
 .PHONY: init_darwin
 init_darwin:
-#	git submodule update --depth=1 --init --recursive --jobs 8
+	git submodule update --depth=1 --init --recursive --jobs 8
 	export BAZEL_VERSION=`cat experimental/xformer/.bazelversion` ;\
 	curl -fLO "https://github.com/bazelbuild/bazel/releases/download/$${BAZEL_VERSION}/bazel-$${BAZEL_VERSION}-installer-darwin-x86_64.sh" && \
 	chmod +x bazel-$${BAZEL_VERSION}-installer-darwin-x86_64.sh && \

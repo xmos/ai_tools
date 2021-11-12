@@ -30,6 +30,12 @@ struct LegalizeFullyConnected
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
+  StringRef getArgument() const final {
+    return "xcore-legalize-fullyconnected";
+  }
+  StringRef getDescription() const final {
+    return "Legalize FullyConnected operations";
+  }
   void runOnFunction() override;
 };
 
@@ -469,9 +475,7 @@ std::unique_ptr<OperationPass<FuncOp>> createLegalizeFullyConnectedPass() {
   return std::make_unique<LegalizeFullyConnected>();
 }
 
-static PassRegistration<LegalizeFullyConnected>
-    pass("xcore-legalize-fullyconnected",
-         "Legalize FullyConnected operations.");
+static PassRegistration<LegalizeFullyConnected> pass;
 
 } // namespace xcore
 } // namespace mlir

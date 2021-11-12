@@ -11,6 +11,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 using namespace llvm;

@@ -27,9 +27,11 @@ struct ApplyLoadConstantOpPatterns
   void runOnFunction() override;
 };
 
-bool shouldBeLoadedExternally(Value constOpType) {
-  auto opType = constOpType.getType().cast<ShapedType>();
-  return opType.getSizeInBits() / CHAR_BIT > loadExternallyIfLargerOption;
+bool shouldBeLoadedExternally(Attribute values) {
+  auto valuesAttr = values.cast<DenseElementsAttr>();
+  auto totalSizeInBits = (valuesAttr.getNumElements() *
+                          valuesAttr.getElementType().getIntOrFloatBitWidth());
+  return totalSizeInBits / CHAR_BIT > loadExternallyIfLargerOption;
 }
 
 bool isUsedByValidOp(Value constOpType) {

@@ -12,12 +12,15 @@ def ShouldBeLoadedExternally
 
 def IsUsedByValidOp : Constraint<CPred<"isUsedByValidOp($0)">>;
 
-def : Pat<(ConstantOp
-           : $optype $attr),
-          (XC_LoadConstantOp $attr),
-          [(ShouldBeLoadedExternally $optype), (IsUsedByValidOp $optype)]>;
+foreach constOp = [ConstantOp, TFL_ConstOp] in {
+def:
+  Pat<(constOp
+       : $optype $attr),
+      (XC_LoadConstantOp $attr),
+      [(ShouldBeLoadedExternally $attr), (IsUsedByValidOp $optype)]>;
+}
 
-def : Pat<(TFL_ConstOp
-           : $optype $attr),
+def : Pat<(TFL_QConstOp
+           : $optype $qtype, $attr),
           (XC_LoadConstantOp $attr),
-          [(ShouldBeLoadedExternally $optype), (IsUsedByValidOp $optype)]>;
+          [(ShouldBeLoadedExternally $attr), (IsUsedByValidOp $optype)]>;

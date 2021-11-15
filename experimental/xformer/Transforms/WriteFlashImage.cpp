@@ -32,8 +32,18 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
 
   LogicalResult matchAndRewrite(LoadConstantOp loadOp,
                                 PatternRewriter &rewriter) const override {
-    std::vector<char> tensorData =
-        loadOp.input().cast<DenseElementsAttr>().getRawData().vec();
+    auto attr = loadOp.input().cast<DenseElementsAttr>();
+    std::vector<char> tensorData;
+
+    if (attr.isSplat()) {
+      for (int i = 0; i < attr.getNumElements(); ++i) {
+        tensorData.insert(tensorData.end(), attr.getRawData().begin(),
+                          attr.getRawData().end());
+      }
+    } else {
+      tensorData.insert(tensorData.end(), attr.getRawData().begin(),
+                        attr.getRawData().end());
+    }
 
     int address = 0;
     for (auto const &t : *tensorsVec_) {

@@ -18,8 +18,32 @@ struct ApplyLoadConstantOpPatterns
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
+  StringRef getArgument() const final {
+    return "xcore-apply-loadconstantop-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Apply load constant op optimization patterns";
+  }
   void runOnFunction() override;
 };
+
+bool shouldBeLoadedExternally(Attribute values) {
+  auto valuesAttr = values.cast<DenseElementsAttr>();
+  auto totalSizeInBits = (valuesAttr.getNumElements() *
+                          valuesAttr.getElementType().getIntOrFloatBitWidth());
+  return totalSizeInBits / CHAR_BIT > loadExternallyIfLargerOption;
+}
+
+bool isUsedByValidOp(Value constOpType) {
+  for (auto *operand : constOpType.getUsers()) {
+    // In the runtime, TFL::PadOp assumes that the constant data is available in
+    // the flatbuffer, and fails if it's not available
+    if (llvm::isa<TFL::PadOp>(operand)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 #include "Transforms/GeneratedLoadConstantOpPatterns.inc"
 
@@ -33,7 +57,6 @@ void ApplyLoadConstantOpPatterns::runOnFunction() {
 
   OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
-
   populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
@@ -44,9 +67,7 @@ std::unique_ptr<OperationPass<FuncOp>> createApplyLoadConstantOpPatternsPass() {
   return std::make_unique<ApplyLoadConstantOpPatterns>();
 }
 
-static PassRegistration<ApplyLoadConstantOpPatterns>
-    pass("xcore-apply-loadconstantop-patterns",
-         "Apply load constant op optimization patterns.");
+static PassRegistration<ApplyLoadConstantOpPatterns> pass;
 
 } // namespace xcore
 } // namespace mlir

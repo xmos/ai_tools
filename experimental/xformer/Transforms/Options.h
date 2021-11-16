@@ -10,6 +10,7 @@ namespace mlir {
 namespace xcore {
 
 extern llvm::cl::opt<std::string> flashImageFilenameOption;
+extern llvm::cl::opt<unsigned> loadExternallyIfLargerOption;
 
 } // namespace xcore
 } // namespace mlir

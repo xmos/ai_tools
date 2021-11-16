@@ -15,6 +15,10 @@ struct ReplaceFCWithConv2D
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
+  StringRef getArgument() const final { return "xcore-replace-fc-with-conv2d"; }
+  StringRef getDescription() const final {
+    return "Replace suitable TFL FullyConnected with TFL Conv2D";
+  }
   void runOnFunction() override;
 };
 
@@ -142,9 +146,7 @@ std::unique_ptr<OperationPass<FuncOp>> createReplaceFCWithConv2DPass() {
   return std::make_unique<ReplaceFCWithConv2D>();
 }
 
-static PassRegistration<ReplaceFCWithConv2D>
-    pass("xcore-replace-fc-with-conv2d",
-         "Replace suitable TFL FullyConnected with TFL Conv2D for XCore.");
+static PassRegistration<ReplaceFCWithConv2D> pass;
 
 } // namespace xcore
 } // namespace mlir

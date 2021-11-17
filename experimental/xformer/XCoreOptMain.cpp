@@ -29,7 +29,7 @@ cl::opt<std::string> flashImageFilenameOption(
 cl::opt<unsigned> loadExternallyIfLargerOption(
     "xcore-load-externally-if-larger",
     cl::desc("Load constants externally if larger than given limit in bytes "
-             "(default = 96 bytes). Cannot be specifed when "
+             "(default = 96 bytes). Cannot be specified when "
              "xcore-flash-image-file is not provided."),
     cl::init(96));
 
@@ -71,12 +71,16 @@ int main(int argc, char **argv) {
                                             cl::desc("<TFLite FlatBuffer>"));
   static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
                                              cl::value_desc("filename"));
-  static cl::opt<bool> mlirIOEnabled("mlir-io",
-                                     cl::desc("Enable MLIR input and output"));
+  static cl::opt<bool> mlirIOEnabled(
+      "mlir-io", cl::desc("Enable MLIR input and output"), cl::init(false));
   static cl::opt<bool> verifyDiagnosticsEnabled(
       "verify-diagnostics",
       cl::desc("Check that emitted diagnostics match "
                "expected-* lines on the corresponding line"),
+      cl::init(false));
+  static cl::opt<bool> dontMinifyEnabled(
+      "xcore-dont-minify",
+      cl::desc("Do not strip debug info and minify the model"),
       cl::init(false));
 
   // Register any command line options.
@@ -155,8 +159,8 @@ int main(int argc, char **argv) {
     // Write modified flatbuffer to output file
     if (!outputFilename.empty()) {
       std::string outfilename(outputFilename);
-      if (failed(
-              xcore::utils::writeMLIRToFlatBufferFile(outfilename, mod.get())))
+      if (failed(xcore::utils::writeMLIRToFlatBufferFile(outfilename, mod.get(),
+                                                         dontMinifyEnabled)))
         return 1;
     }
   }

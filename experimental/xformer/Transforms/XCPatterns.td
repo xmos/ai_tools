@@ -72,3 +72,19 @@ def : Pat<(TFL_PadOp
             (HasNoPaddingForBatchAndChannel $padding_attr),
             (HasValidBytesPerPixel $input), (HasNoFollowingConv2D $output)
           ]>;
+
+// Fuse XC_Conv2D(Reshape()) -> XC_Conv2D()
+def : Pat<(XC_Conv2DV2Op
+           : $cout(TFL_ReshapeOp
+                   : $rout $input, $shape),
+             $tc, $scratch, $weights, $muls, $akp, $mp, $aggp, $otp, $ktp),
+          (XC_Conv2DV2Op $input, $tc, $scratch, $weights, $muls, $akp, $mp,
+           $aggp, $otp, $ktp)>;
+
+// Fuse Reshape(XC_Conv2D()) -> XC_Conv2D()
+def : Pat<(TFL_ReshapeOp
+           : $rout(XC_Conv2DV2Op $input, $tc, $scratch, $weights, $muls, $akp,
+                   $mp, $aggp, $otp, $ktp),
+             $shape),
+          (XC_Conv2DV2Op $input, $tc, $scratch, $weights, $muls, $akp, $mp,
+           $aggp, $otp, $ktp)>;

@@ -42,7 +42,6 @@ def test_inference(args):
     with open(model, "rb") as fd:
         model_content = fd.read()
 
-    print("\nInvoking tf interpreter...\n")
     interpreter = tensorflow.lite.Interpreter(
         model_content=model_content,
         experimental_op_resolver_type=tensorflow.lite.experimental.
@@ -53,17 +52,18 @@ def test_inference(args):
     input_tensor_details = interpreter.get_input_details()[0]
 
     if args.input:
-        print("\nInput provided via file...\n")
+        print("Input provided via file...")
         input_tensor = np.fromfile(args.input,
                                    dtype=input_tensor_details["dtype"])
         input_tensor.shape = input_tensor_details["shape"]
     else:
-        print("\nCreating random input...\n")
+        print("Creating random input...")
         input_tensor = np.array(np.random.random_sample(
             input_tensor_details["shape"]),
                                 dtype=input_tensor_details["dtype"])
 
     interpreter.set_tensor(input_tensor_details["index"], input_tensor)
+    print("Invoking tf interpreter...")
     interpreter.invoke()
 
     num_of_outputs = len(interpreter.get_output_details())
@@ -73,21 +73,20 @@ def test_inference(args):
             interpreter.get_tensor(
                 interpreter.get_output_details()[i]["index"]))
 
-    print("\nInvoking xformer...\n")
+    print("Invoking xformer to get converted model...")
     xformed_model = get_xformed_model(model_content)
-
-    print("\nInvoking XCORE interpreter...\n")
 
     ie = TFLMInterpreter(model_content=xformed_model)
     ie.set_input_tensor(0, input_tensor)
+    print("Invoking XCORE interpreter...")
     ie.invoke()
     xformer_outputs = []
     for i in range(num_of_outputs):
         xformer_outputs.append(ie.get_output_tensor(i))
 
-    print("\nComparing outputs...\n")
+    print("Comparing outputs...")
     for i in range(num_of_outputs):
-        print("\nComparing output " + str(i) + "...\n")
+        print("Comparing output " + str(i) + "...")
         np.testing.assert_equal(tflite_outputs[i], xformer_outputs[i])
 
 

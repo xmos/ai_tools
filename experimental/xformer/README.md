@@ -4,9 +4,12 @@ Build instructions
 `Bazel` is used to build this program. The choice of build system is
 driven by the most complex dependency (Tensorflow). 
 
-Note before the first step ensure that you have installed the 
+Note before the first step, ensure that you have installed the 
 `xcore_interpreters` and `tflite2xcore` python packages using 
 `pip`. This will ensure that the python requirements are installed.
+
+Run all the following commands within the conda env setup and from
+the `ai_tools/experimental/xformer` folder.
 
 With Bazel installed (check `.bazelversion` for current version),
 you can build with the following command:
@@ -24,10 +27,13 @@ To view the various supported options:
 Test instructions
 --
 
-We use [llvm-lit](https://llvm.org/docs/CommandGuide/lit.html) for writing unit tests. This makes it easier to test the impact of a single pass. To run all lit tests in the `Test` folder, use the following command:
+We use [llvm-lit](https://llvm.org/docs/CommandGuide/lit.html) for writing unit 
+tests. This makes it easier to test the impact of a single pass. To run all lit 
+tests in the `Test` folder, use the following command:
 
     bazel test //Test:all
 
-An individual test can be run by combining the `test filename` and `.test` suffix to create the bazel target name. For example, the following command:
+An individual test can be run by combining the `test filename` and `.test` suffix 
+to create the bazel target name. For example, the following command:
 
     bazel test //Test:xcfc-to-tflcustom.mlir.test

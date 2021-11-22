@@ -339,7 +339,12 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
                   .template cast<ShapedType>()
                   .getElementType()
                   .template cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 32)) {
+                  .getStorageTypeIntegralWidth() == 32) &&
+        !(conv2DOp.bias()
+              .getType()
+              .template cast<ShapedType>()
+              .getElementType()
+              .isInteger(32))) {
       return failure();
     }
 
@@ -435,9 +440,20 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
                             filter.template getValues<int8_t>().end()};
 
     // Get bias values
-    auto biasQConstOp =
-        dyn_cast<TFL::QConstOp>(conv2DOp.bias().getDefiningOp());
-    auto biases = biasQConstOp.value().template cast<DenseElementsAttr>();
+    DenseElementsAttr biases;
+    if (conv2DOp.bias()
+            .getType()
+            .template cast<ShapedType>()
+            .getElementType()
+            .template isa<quant::QuantizedType>()) {
+      auto biasQConstOp =
+          dyn_cast<TFL::QConstOp>(conv2DOp.bias().getDefiningOp());
+      biases = biasQConstOp.value().template cast<DenseElementsAttr>();
+    } else {
+      auto biasConstOp =
+          dyn_cast<mlir::ConstantOp>(conv2DOp.bias().getDefiningOp());
+      biases = biasConstOp.value().template cast<DenseElementsAttr>();
+    }
     auto biasVector =
         std::vector<int32_t>{biases.template getValues<int32_t>().begin(),
                              biases.template getValues<int32_t>().end()};

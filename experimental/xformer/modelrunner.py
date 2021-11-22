@@ -7,6 +7,7 @@ import subprocess
 import numpy as np
 import pathlib
 import argparse
+import cv2
 
 import tensorflow
 
@@ -24,7 +25,11 @@ def get_xformed_model(model):
             fd.write(model)
 
         output_path = pathlib.Path(dirname) / "output.tflite"
-        cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path)]
+        cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path),
+        #"--xcore-replace-avgpool-with-conv2d",
+        #"--xcore-replace-with-conv2dv2",
+        #"--xcore-translate-to-customop"
+        ]
         p = subprocess.run(cmd,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT,
@@ -42,10 +47,13 @@ def test_inference(args):
     with open(model, "rb") as fd:
         model_content = fd.read()
 
+    import time
+    #time.sleep(5)
+
     interpreter = tensorflow.lite.Interpreter(
         model_content=model_content,
         experimental_op_resolver_type=tensorflow.lite.experimental.
-        OpResolverType.BUILTIN_REF)
+        OpResolverType.BUILTIN_REF, experimental_preserve_all_tensors=True)
     # interpreter = tensorflow.lite.Interpreter(
     #     model_content=model_content)
     interpreter.allocate_tensors()
@@ -53,14 +61,19 @@ def test_inference(args):
 
     if args.input:
         print("Input provided via file...")
-        input_tensor = np.fromfile(args.input,
-                                   dtype=input_tensor_details["dtype"])
+        s = input_tensor_details["shape"]
+        img = cv2.imread(args.input)
+        res = cv2.resize(img, dsize=(s[1], s[2]), interpolation=cv2.INTER_CUBIC)
+
+        input_tensor = np.array(res, dtype=np.dtype("int8"))
         input_tensor.shape = input_tensor_details["shape"]
     else:
         print("Creating random input...")
-        input_tensor = np.array(np.random.random_sample(
+        input_tensor = np.array(100 * np.random.random_sample(
             input_tensor_details["shape"]),
                                 dtype=input_tensor_details["dtype"])
+
+    #print(repr(input_tensor))
 
     interpreter.set_tensor(input_tensor_details["index"], input_tensor)
     print("Invoking tf interpreter...")

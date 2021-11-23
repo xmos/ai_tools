@@ -520,8 +520,8 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
         // We should be ideally using a different Conv2D operator for BNNs
         .padValue = 0,
         .padding = padding,
-        .X = X,
         .Y = Y,
+        .X = X,
         .K = K};
 
     llvm::SmallVector<std::string> abstractKernelParams, memcpyFnParams,

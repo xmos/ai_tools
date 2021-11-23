@@ -20,8 +20,10 @@ build:darwin_config --linkopt=Foundation
 build:darwin_config --linkopt=-framework
 build:darwin_config --linkopt=SystemConfiguration
 
-build:linux_config --linkopt=-Xlinker
-build:linux_config --linkopt=-static
+#build:linux_config --linkopt=-Xlinker
+#build:linux_config --linkopt=-static
+#build:linux_config --copt=-fno-builtin
+#build:linux_config --cxxopt=-fno-builtin
 
 # Default to an optimized build.
 # Override via: "-c dbg" or --compilation_mode=dbg

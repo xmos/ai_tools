@@ -20,11 +20,6 @@ build:darwin_config --linkopt=Foundation
 build:darwin_config --linkopt=-framework
 build:darwin_config --linkopt=SystemConfiguration
 
-#build:linux_config --linkopt=-Xlinker
-#build:linux_config --linkopt=-static
-#build:linux_config --copt=-fno-builtin
-#build:linux_config --cxxopt=-fno-builtin
-
 # Default to an optimized build.
 # Override via: "-c dbg" or --compilation_mode=dbg
 # build --compilation_mode=opt
@@ -62,5 +57,4 @@ build:linux_config --cpu=k8
 
 # Use the default Bazel C++ toolchain to build the tools used during the
 # build.
-#build:linux_config --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 build:linux_config --host_crosstool_top=//toolchain:gnu_suite

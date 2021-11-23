@@ -108,7 +108,7 @@ init_windows:
 build_release_linux:
 	python3 -m venv .venv
 	(. .venv/bin/activate && pip install -r requirements.txt)
-	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel build --config=linux_config //:xcore-opt --verbose_failures)
+	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=linux_config //:xcore-opt --verbose_failures)
 	rm -rf ../Installs/Linux/External/xformer
 	mkdir -p ../Installs/Linux/External/xformer
 	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Linux/External/xformer
@@ -117,7 +117,7 @@ build_release_linux:
 build_release_darwin:
 	python3 -m venv .venv
 	(. .venv/bin/activate && pip install -r requirements.txt)
-	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel build --config=darwin_config //:xcore-opt --verbose_failures)
+	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=darwin_config //:xcore-opt --verbose_failures)
 	rm -rf ../Installs/Mac/External/xformer
 	mkdir -p ../Installs/Mac/External/xformer
 	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Mac/External/xformer
@@ -126,6 +126,6 @@ build_release_darwin:
 build_release_windows:
 	python3 -m venv .venv
 	(. .venv/bin/activate && pip install -r requirements.txt)
-	(. .venv/bin/activate && cd experimental/xformer && ../../bazel build --config=windows_config //:xcore-opt --verbose_failures)
+	(. .venv/bin/activate && cd experimental/xformer && ../../bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=windows_config //:xcore-opt --verbose_failures)
 	mkdir -p ../Installs/Linux/External/xformer
 	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Windows/External/xformer

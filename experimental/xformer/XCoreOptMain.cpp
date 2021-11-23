@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
-  xcore::registerAllPasses();
+  xcore::registerXCorePassPipeline();
   PassPipelineCLParser passPipeline("", "Compiler passes to run");
   cl::ParseCommandLineOptions(argc, argv);
 

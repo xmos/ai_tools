@@ -372,8 +372,8 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     auto inputWidth = inputType.getDimSize(2);
 
     // Find padding values
-    tensorflow::int64 newHeight, newWidth;
-    tensorflow::int64 padTop, padBottom, padLeft, padRight;
+    int64_t newHeight, newWidth;
+    int64_t padTop, padBottom, padLeft, padRight;
     tensorflow::Padding opPadding =
         symbolizePadding(conv2DOp.padding()) == Padding::VALID
             ? tensorflow::Padding::VALID

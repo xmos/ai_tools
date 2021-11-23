@@ -19,6 +19,7 @@ build:darwin_config --linkopt=-framework
 build:darwin_config --linkopt=Foundation
 build:darwin_config --linkopt=-framework
 build:darwin_config --linkopt=SystemConfiguration
+build:linux_config --host_linkopt=-lm
 
 # Default to an optimized build.
 # Override via: "-c dbg" or --compilation_mode=dbg
@@ -50,11 +51,11 @@ build --nocheck_visibility
 # bazel build -c dbg --spawn_strategy=local --javacopt="-g" --copt="-g" --strip="never" //:xcore-opt
 
 # Use our custom-configured c++ toolchain.
-build:linux_config --crosstool_top=//toolchain:gnu_suite
+build:inux_config --crosstool_top=//toolchain:gnu_suite
 
 # Use --cpu as a differentiator.
-build:linux_config --cpu=k8
+build:inux_config --cpu=k8
 
 # Use the default Bazel C++ toolchain to build the tools used during the
 # build.
-build:linux_config --host_crosstool_top=//toolchain:gnu_suite
+build:inux_config --host_crosstool_top=//toolchain:gnu_suite

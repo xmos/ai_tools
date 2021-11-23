@@ -132,11 +132,15 @@ build_release_windows:
 
 .PHONY: test_linux
 test_linux:
-	(. .venv/bin/activate && make tflite2xcore_dist)
-	(. .venv/bin/activate && pip install -e "./tflite2xcore[test]")
-	(. .venv/bin/activate && cd third_party/lib_tflite_micro/ && make build)            # First buld a TFLM interpreter
-	(. .venv/bin/activate && pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]")
-
-	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures)
-	(. .venv/bin/activate && cd test && pytest integration_test --cache-clear --collect-only -qq)
-	(. .venv/bin/activate && cd test && pytest integration_test/test_single_op_models/test_conv2d --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml) #conv2d tests
+	(. .venv/bin/activate && \
+	    module unload gcc && \
+	    module load gcc/gcc-11.2.0 && \
+	    module unload cmake && \
+	    module load cmake/cmake-3.21.4 && \
+	    make tflite2xcore_dist&& \
+	    pip install -e "./tflite2xcore[test]"&& \
+	    (cd third_party/lib_tflite_micro/ && make build)&& \
+	    pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]"&& \
+	    (cd experimental/xformer && ../../bazel/bin/bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures)&& \
+	    (cd test && pytest integration_test --cache-clear --collect-only -qq&& \
+	                pytest integration_test/test_single_op_models/test_conv2d --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml)) #conv2d tests

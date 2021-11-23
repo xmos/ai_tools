@@ -129,3 +129,14 @@ build_release_windows:
 	(. .venv/bin/activate && cd experimental/xformer && ../../bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=windows_config //:xcore-opt --verbose_failures)
 	mkdir -p ../Installs/Linux/External/xformer
 	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Windows/External/xformer
+
+.PHONY: test_linux
+test_linux:
+	(. .venv/bin/activate && make tflite2xcore_dist)
+	(. .venv/bin/activate && pip install -e "./tflite2xcore[test]")
+	(. .venv/bin/activate && cd third_party/lib_tflite_micro/ && make build)            # First buld a TFLM interpreter
+	(. .venv/bin/activate && pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]")
+
+	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures)
+	(. .venv/bin/activate && cd test && pytest integration_test --cache-clear --collect-only -qq)
+	(. .venv/bin/activate && cd test && pytest integration_test/test_single_op_models/test_conv2d --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml) #conv2d tests

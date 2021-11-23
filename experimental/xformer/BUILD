@@ -36,12 +36,24 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "patterns_inc_gen",
+    name = "xc_patterns_inc_gen",
     tbl_outs = [
-        (["-gen-rewriters"], "Transforms/GeneratedPatterns.inc"),
+        (["-gen-rewriters"], "Transforms/GeneratedXCPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "Transforms/Patterns.td",
+    td_file = "Transforms/XCPatterns.td",
+    deps = [
+        ":dialect_td_files"
+    ],
+)
+
+gentbl_cc_library(
+    name = "tfl_patterns_inc_gen",
+    tbl_outs = [
+        (["-gen-rewriters"], "Transforms/GeneratedTFLPatterns.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "Transforms/TFLPatterns.td",
     deps = [
         ":dialect_td_files"
     ],
@@ -69,7 +81,8 @@ cc_library(
         "IR/XCoreDialect.cpp.inc",
         "IR/XCoreOps.cpp.inc",
         "IR/XCoreOps.h.inc",
-        "Transforms/GeneratedPatterns.inc",
+        "Transforms/GeneratedXCPatterns.inc",
+        "Transforms/GeneratedTFLPatterns.inc",
         "Transforms/GeneratedLoadConstantOpPatterns.inc"
     ],
     hdrs = [
@@ -80,7 +93,8 @@ cc_library(
     ],
     deps = [
         ":xc_ops_inc_gen",
-        ":patterns_inc_gen",
+        ":xc_patterns_inc_gen",
+        ":tfl_patterns_inc_gen",
         ":load_constant_op_patterns_inc_gen",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",

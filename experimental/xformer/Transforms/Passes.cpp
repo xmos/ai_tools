@@ -12,11 +12,12 @@ namespace mlir {
 namespace xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
-  pm.addPass(createApplyPatternsPass());
+  pm.addPass(createApplyTFLPatternsPass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());
   pm.addPass(createReplaceWithConv2DV2Pass());
+  pm.addPass(createApplyXCPatternsPass());
   // pm.addPass(createLegalizeFullyConnectedPass());
   // Add to pipeline only if flash image file option is provided
   if (!flashImageFilenameOption.empty()) {

@@ -106,8 +106,11 @@ init_windows:
 
 .PHONY: build_release_linux
 build_release_linux:
-	(   module load python/python-3.8.1 && \
+	(   module unload python && \
+	    module load python/python-3.8.1 && \
+	    module unload gcc && \
 	    module load gcc/gcc-11.2.0 && \
+	    module unload cmake && \
 	    module load cmake/cmake-3.21.4 && \
 	    python3 -m venv .venv && \
 	    . .venv/bin/activate && \

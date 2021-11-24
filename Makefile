@@ -106,8 +106,10 @@ init_windows:
 
 .PHONY: build_release_linux
 build_release_linux:
-	python3 -m venv .venv
-	(. .venv/bin/activate && \
+	(
+	    module load python/python-3.8.1 && \
+	    python3 -m venv .venv && \
+	    . .venv/bin/activate && \
 	    pip install -r requirements.txt && \
 	    module unload gcc && \
 	    module load gcc/gcc-11.2.0 && \

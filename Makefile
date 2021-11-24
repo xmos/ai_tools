@@ -106,15 +106,12 @@ init_windows:
 
 .PHONY: build_release_linux
 build_release_linux:
-	(
-	    module load python/python-3.8.1 && \
+	(   module load python/python-3.8.1 && \
+	    module load gcc/gcc-11.2.0 && \
+	    module load cmake/cmake-3.21.4 && \
 	    python3 -m venv .venv && \
 	    . .venv/bin/activate && \
 	    pip install -r requirements.txt && \
-	    module unload gcc && \
-	    module load gcc/gcc-11.2.0 && \
-	    module unload cmake && \
-	    module load cmake/cmake-3.21.4 && \
 	    cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=linux_config //:xcore-opt --verbose_failures)
 	rm -rf ../Installs/Linux/External/xformer
 	mkdir -p ../Installs/Linux/External/xformer

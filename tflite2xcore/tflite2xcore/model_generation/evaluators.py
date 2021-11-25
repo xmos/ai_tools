@@ -7,7 +7,7 @@ import larq_compute_engine as lce
 from abc import abstractmethod
 from typing import Union
 
-from xcore_interpreters import XCOREInterpreter, XCOREDeviceInterpreter
+from tflm_interpreter import TFLMInterpreter
 
 from tflite2xcore.utils import (
     quantize,
@@ -36,10 +36,12 @@ class Evaluator(RunnerDependent):
         runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
         model_hook: Hook[Union[tf.keras.Model, TFLiteModel]],
+        model_params_hook: Hook[str],
     ) -> None:
         self._runner = runner
         self._input_data_hook = input_data_hook
         self._model_hook = model_hook
+        self._model_params_hook = model_params_hook
 
     @property
     def input_data(self) -> np.ndarray:
@@ -79,8 +81,9 @@ class TFLiteEvaluator(Evaluator):
         runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
         model_hook: Hook[TFLiteModel],
+        model_params_hook: Hook[str],
     ) -> None:
-        super().__init__(runner, input_data_hook, model_hook)
+        super().__init__(runner, input_data_hook, model_hook, model_params_hook)
 
     def set_interpreter(self) -> None:
         self._interpreter = tf.lite.Interpreter(model_content=self._model_hook())
@@ -113,8 +116,9 @@ class TFLiteQuantEvaluator(TFLiteEvaluator):
         runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
         model_hook: Hook[TFLiteModel],
+        model_params_hook: Hook[str],
     ) -> None:
-        super().__init__(runner, input_data_hook, model_hook)
+        super().__init__(runner, input_data_hook, model_hook, model_params_hook)
 
     @property
     def input_quant(self) -> QuantizationTuple:
@@ -163,19 +167,22 @@ class XCoreEvaluator(TFLiteQuantEvaluator):
         runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
         model_hook: Hook[TFLiteModel],
+        model_params_hook: Hook[str],
         use_device: bool = False,
     ) -> None:
-        super().__init__(runner, input_data_hook, model_hook)
+        super().__init__(runner, input_data_hook, model_hook, model_params_hook)
         self._use_device = use_device
 
     def evaluate(self) -> None:
         if self._use_device:
-            self._interpreter = XCOREDeviceInterpreter(model_content=self._model_hook())
+            print('Warning: use device deprecated')
+
+        if self._model_params_hook():
+            self._interpreter = TFLMInterpreter(model_content=self._model_hook(), params_content=self._model_params_hook())
         else:
-            self._interpreter = XCOREInterpreter(model_content=self._model_hook())
+            self._interpreter = TFLMInterpreter(model_content=self._model_hook())
 
         with self._interpreter:
-            self._interpreter.allocate_tensors()
             self.set_input_data()
             self.output_data = apply_interpreter_to_examples(
                 self._interpreter, self.input_data

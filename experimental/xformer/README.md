@@ -8,8 +8,16 @@ Note before the first step ensure that you have installed the
 `xcore_interpreters` and `tflite2xcore` python packages using 
 `pip`. This will ensure that the python requirements are installed.
 
+Also, before installing make sure that you have updated ai_tools
+including the submodules:
+
+    git pull
+    git submodule update --init --recursive
+
+
 With Bazel installed (check `.bazelversion` for current version),
-you can build with the following command:
+you can build with the following command (make sure you run it 
+from the directory /ai_tools/experimental/xformer):
 
     bazel build //:xcore-opt
 

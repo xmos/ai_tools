@@ -14,6 +14,16 @@ namespace xcore {
 std::vector<uint8_t> FullyConnectedOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Lookup8Op::buildCustomOptions() { return {}; }
 
+std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() {
+    fbb.Int("addr", (int32_t)address());
+    fbb.Int("size", (int32_t)size());
+  });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> PadOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() { fbb.Int("pad_value", (int32_t)pad_value()); });
@@ -72,6 +82,10 @@ namespace {
 /// This pass translates XCore ops to TFLite custom ops.
 struct TranslateToCustomOp
     : public PassWrapper<TranslateToCustomOp, FunctionPass> {
+  StringRef getArgument() const final { return "xcore-translate-to-customop"; }
+  StringRef getDescription() const final {
+    return "Translate to custom ops in TensorFlow Lite dialect";
+  }
   void runOnFunction() override;
 };
 
@@ -104,6 +118,7 @@ void TranslateToCustomOp::runOnFunction() {
   patterns.insert<RewriteToCustomOp<Lookup8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Conv2DV2Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
@@ -115,9 +130,7 @@ std::unique_ptr<OperationPass<FuncOp>> createTranslateToCustomOpPass() {
   return std::make_unique<TranslateToCustomOp>();
 }
 
-static PassRegistration<TranslateToCustomOp>
-    pass("xcore-translate-to-customop",
-         "Translate to custom ops in TensorFlow Lite dialect");
+static PassRegistration<TranslateToCustomOp> pass;
 
 } // namespace xcore
 } // namespace mlir

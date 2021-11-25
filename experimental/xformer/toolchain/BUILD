@@ -25,7 +25,7 @@ package(default_visibility = ["//visibility:public"])
 #filegroup(name = "clang_suite")
 
 cc_toolchain_suite(
-    name = "clang_suite",
+    name = "gnu_suite",
     toolchains = {
         "k8": ":k8_toolchain",
     },

@@ -1,0 +1,8 @@
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - bazel=4.0.0
+  - cmake=3.14.0
+  - make=4.2.1
+  - python=3.8

@@ -1,42 +1,73 @@
-load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
+load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-gentbl(
-    name = "xc_ops_inc_gen",
-    tbl_outs = [
-        ("-gen-enum-decls", "IR/XCoreEnumOps.h.inc"),
-        ("-gen-enum-defs", "IR/XCoreEnumOps.cpp.inc"),
-        ("-gen-op-decls", "IR/XCoreOps.h.inc"),
-        ("-gen-op-defs", "IR/XCoreOps.cpp.inc"),
-        ("-gen-dialect-decls -dialect=xc", "IR/XCoreDialect.h.inc"),
-        ("-gen-dialect-doc", "IR/XCoreOps.md"),
+td_library(
+    name = "dialect_td_files",
+    srcs = [
+        "IR/XCoreOps.td"
     ],
-    tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "IR/XCoreOps.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
+    includes = ["external/org_tensorflow"],
+    deps = [
         "@llvm-project//mlir:StdOpsTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
 
-gentbl(
-    name = "patterns_inc_gen",
+gentbl_cc_library(
+    name = "xc_ops_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "Transforms/GeneratedPatterns.inc"),
+        (["-gen-enum-decls"], "IR/XCoreEnumOps.h.inc"),
+        (["-gen-enum-defs"], "IR/XCoreEnumOps.cpp.inc"),
+        (["-gen-op-decls"], "IR/XCoreOps.h.inc"),
+        (["-gen-op-defs"], "IR/XCoreOps.cpp.inc"),
+        (["-gen-dialect-decls", "-dialect=xc"], "IR/XCoreDialect.h.inc"),
+        (["-gen-dialect-defs", "-dialect=xc"], "IR/XCoreDialect.cpp.inc"),
+        (["-gen-dialect-doc"], "IR/XCoreOps.md"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "Transforms/Patterns.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
-        "IR/XCoreOps.td",
-        "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    td_file = "IR/XCoreOps.td",
+    deps = [
+        ":dialect_td_files"
+    ],
+)
+
+gentbl_cc_library(
+    name = "xc_patterns_inc_gen",
+    tbl_outs = [
+        (["-gen-rewriters"], "Transforms/GeneratedXCPatterns.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "Transforms/XCPatterns.td",
+    deps = [
+        ":dialect_td_files"
+    ],
+)
+
+gentbl_cc_library(
+    name = "tfl_patterns_inc_gen",
+    tbl_outs = [
+        (["-gen-rewriters"], "Transforms/GeneratedTFLPatterns.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "Transforms/TFLPatterns.td",
+    deps = [
+        ":dialect_td_files"
+    ],
+)
+
+gentbl_cc_library(
+    name = "load_constant_op_patterns_inc_gen",
+    tbl_outs = [
+        (["-gen-rewriters"], "Transforms/GeneratedLoadConstantOpPatterns.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "Transforms/LoadConstantOpPatterns.td",
+    deps = [
+        ":dialect_td_files"
     ],
 )
 
@@ -47,16 +78,24 @@ cc_library(
         "IR/XCoreEnumOps.cpp.inc",
         "IR/XCoreOps.cpp",
         "IR/XCoreDialect.h.inc",
+        "IR/XCoreDialect.cpp.inc",
         "IR/XCoreOps.cpp.inc",
         "IR/XCoreOps.h.inc",
-        "Transforms/GeneratedPatterns.inc"
+        "Transforms/GeneratedXCPatterns.inc",
+        "Transforms/GeneratedTFLPatterns.inc",
+        "Transforms/GeneratedLoadConstantOpPatterns.inc"
     ],
     hdrs = [
+        "Transforms/Options.h",
         "Transforms/Passes.h",
+        "Utils/FileIO.h",
         "IR/XCoreOps.h",
-        "IR/XCoreOps.md",
     ],
     deps = [
+        ":xc_ops_inc_gen",
+        ":xc_patterns_inc_gen",
+        ":tfl_patterns_inc_gen",
+        ":load_constant_op_patterns_inc_gen",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:QuantOps",
@@ -65,7 +104,6 @@ cc_library(
         "@lib_nn//:libnn_lib",
     ],
     copts = ["-DNN_USE_REF -Iexternal/lib_nn/lib_nn/api"],
-    alwayslink = 1,
 ) 
 
 cc_library(
@@ -80,7 +118,6 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_import",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
     ],
-    alwayslink = 1,
 ) 
 
 cc_binary(

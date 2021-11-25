@@ -18,10 +18,10 @@ make submodule_update
 Install at least version 15 of the XMOS tools from your preferred location and activate it by sourcing `SetEnv` in the installation root.
 
 [CMake 3.14](https://cmake.org/download/) or newer is required for building libraries and test firmware.
-A correct version of CMake (and `make`) is included in the [`adf`](https://github.com/xmos/adf) submodule's Conda environment file, [`environment.yml`](https://github.com/xmos/adf/blob/develop/environment.yml).
+A correct version of CMake (and `make`) is included in the Conda environment file, utils/environment.yml.
 To set up and activate the environment, simply run:
 ```shell
-conda env create -p ./ai_tools_venv -f utils/adf/environment.yml
+conda env create -p ./ai_tools_venv -f utils/environment.yml
 conda activate ai_tools_venv/
 ```
 
@@ -37,7 +37,7 @@ make build
 
 Install the `xcore_interpreters` and `tflite2xcore` python packages using `pip` (preferably inside a venv):
 ```shell
-pip install -e "./utils/adf/xcore_interpreters"
+pip install -e "./third_party/lib_tflite_micro/tflm_interpreter"
 pip install -e "./tflite2xcore[examples]"
 ```
 
@@ -72,10 +72,10 @@ For a persistent container:
 Then inside the container
 ```shell
 # setup environment
-conda env create -p ai_tools_venv -f utils/adf/environment.yml
+conda env create -p ai_tools_venv -f utils/environment.yml
 /XMOS/get_tools.py 15.0.6
 conda activate ./ai_tools_venv
-pip install -e "./utils/adf/xcore_interpreters[test]"
+pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]"
 pip install -e "./tflite2xcore[examples,test,dev]"
 # activate tools (each new shell)
 module load tools/15.0.6

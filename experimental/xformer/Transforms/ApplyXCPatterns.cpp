@@ -6,16 +6,19 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
-#include <numeric>
 
 namespace mlir {
 namespace xcore {
 
 namespace {
-// Apply generated patterns.
-struct ApplyPatterns : public PassWrapper<ApplyPatterns, FunctionPass> {
+// Apply generated XC patterns.
+struct ApplyXCPatterns : public PassWrapper<ApplyXCPatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
+  }
+  StringRef getArgument() const final { return "xcore-apply-patterns"; }
+  StringRef getDescription() const final {
+    return "Apply generated optimization patterns";
   }
   void runOnFunction() override;
 };
@@ -132,9 +135,9 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
   return lookupTableAttr;
 }
 
-#include "Transforms/GeneratedPatterns.inc"
+#include "Transforms/GeneratedXCPatterns.inc"
 
-void ApplyPatterns::runOnFunction() {
+void ApplyXCPatterns::runOnFunction() {
   OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
 
@@ -143,13 +146,12 @@ void ApplyPatterns::runOnFunction() {
 }
 } // namespace
 
-// Creates an instance of the ApplyPatterns pass.
-std::unique_ptr<OperationPass<FuncOp>> createApplyPatternsPass() {
-  return std::make_unique<ApplyPatterns>();
+// Creates an instance of the ApplyXCPatterns pass.
+std::unique_ptr<OperationPass<FuncOp>> createApplyXCPatternsPass() {
+  return std::make_unique<ApplyXCPatterns>();
 }
 
-static PassRegistration<ApplyPatterns>
-    pass("xcore-apply-patterns", "Apply generated optimization patterns.");
+static PassRegistration<ApplyXCPatterns> pass;
 
 } // namespace xcore
 } // namespace mlir

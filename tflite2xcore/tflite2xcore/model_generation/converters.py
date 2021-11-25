@@ -27,6 +27,7 @@ class Converter(RunnerDependent):
     """
 
     _model: TFLiteModel
+    _model_params: str
 
     def __init__(
         self,
@@ -43,6 +44,9 @@ class Converter(RunnerDependent):
             raise Exception(
                 "Cannot get converted model before converter is run!"
             ) from None
+
+    def get_converted_model_params(self) -> str:
+            return self._model_params
 
     @abstractmethod
     def convert(self) -> None:
@@ -114,19 +118,24 @@ class XCoreConverter(Converter):
         if self._only_experimental_xformer2:
             with tempfile.TemporaryDirectory(suffix=str(os.getpid())) as dirname:
                 input_path = pathlib.Path(dirname) / "input.tflite"
+                flash_image_file_path = pathlib.Path(dirname) / "model.params"
 
                 with open(pathlib.Path(input_path).resolve(), "wb") as fd:
                     fd.write(model)
 
                 output_path = pathlib.Path(dirname) / "output.tflite"
-                cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path)]
+                cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path),"--xcore-flash-image-file", str(flash_image_file_path)]
                 p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
                 logger = logging.getLogger()
                 logger.debug(p.stdout)
 
                 with open(pathlib.Path(output_path).resolve(), "rb") as fd:
                     bits = bytes(fd.read())
+                with open(pathlib.Path(flash_image_file_path).resolve(), "rb") as fd:
+                    params = bytes(fd.read())
+
             self._model = bits
+            self._model_params = params
 
         else:
             model = XCOREModel.deserialize(model)
@@ -136,6 +145,7 @@ class XCoreConverter(Converter):
                 experimental_xformer2=self._experimental_xformer2,
             )
             self._model = model.serialize()
+            self._model_params = None
 
 
 class LarqConverter(KerasModelConverter):

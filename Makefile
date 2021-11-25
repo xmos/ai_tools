@@ -106,18 +106,27 @@ init_windows:
 
 .PHONY: build_release_linux
 build_release_linux:
-	python3 -m venv .venv
-	(. .venv/bin/activate && pip install -r requirements.txt)
-	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=linux_config //:xcore-opt --verbose_failures)
+	(   module unload python && \
+	    module load python/python-3.8.1 && \
+	    module unload gcc && \
+	    module load gcc/gcc-11.2.0 && \
+	    module unload cmake && \
+	    module load cmake/cmake-3.21.4 && \
+	    python3 -m venv .venv && \
+	    . .venv/bin/activate && \
+	    pip install -r requirements.txt && \
+	    cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures)
 	rm -rf ../Installs/Linux/External/xformer
 	mkdir -p ../Installs/Linux/External/xformer
 	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Linux/External/xformer
 
 .PHONY: build_release_darwin
 build_release_darwin:
-	python3 -m venv .venv
-	(. .venv/bin/activate && pip install -r requirements.txt)
-	(. .venv/bin/activate && cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=darwin_config //:xcore-opt --verbose_failures)
+	( python3 -m venv .venv && \
+	  . .venv/bin/activate && \
+	  pip3 install --upgrade pip && \
+	  pip3 install -r requirements.txt && \
+	  cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=darwin_config //:xcore-opt --verbose_failures)
 	rm -rf ../Installs/Mac/External/xformer
 	mkdir -p ../Installs/Mac/External/xformer
 	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Mac/External/xformer
@@ -129,3 +138,29 @@ build_release_windows:
 	(. .venv/bin/activate && cd experimental/xformer && ../../bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=windows_config //:xcore-opt --verbose_failures)
 	mkdir -p ../Installs/Linux/External/xformer
 	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Windows/External/xformer
+
+TEST_SCRIPT= \
+(cd utils/lib_flexbuffers && bash build.sh) && \
+make tflite2xcore_dist&& \
+pip install -e "./tflite2xcore[test]"&& \
+(cd third_party/lib_tflite_micro/ && make build)&& \
+pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]"&& \
+(cd experimental/xformer && ../../bazel/bin/bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures)&& \
+(cd test && pytest integration_test --cache-clear --collect-only -qq&& \
+pytest integration_test/test_single_op_models/test_conv2d --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml)
+
+.PHONY: test_linux
+test_linux:
+	(. .venv/bin/activate && \
+	    module unload python && \
+	    module load python/python-3.8.1 && \
+	    module unload gcc && \
+	    module load gcc/gcc-11.2.0 && \
+	    module unload cmake && \
+	    module load cmake/cmake-3.21.4 && \
+            ${TEST_SCRIPT} )
+
+.PHONY: test_darwin
+test_darwin:
+	(. .venv/bin/activate && \
+            ${TEST_SCRIPT} )

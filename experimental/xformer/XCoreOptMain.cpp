@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
-  xcore::registerAllPasses();
+  xcore::registerXCorePassPipeline();
   PassPipelineCLParser passPipeline("", "Compiler passes to run");
   cl::ParseCommandLineOptions(argc, argv);
 
@@ -155,14 +155,13 @@ int main(int argc, char **argv) {
     }
     mod->print(output->os());
     output->os() << '\n';
-  } else {
-    // Write modified flatbuffer to output file
-    if (!outputFilename.empty()) {
-      std::string outfilename(outputFilename);
-      if (failed(xcore::utils::writeMLIRToFlatBufferFile(outfilename, mod.get(),
-                                                         dontMinifyEnabled)))
-        return 1;
-    }
+  }
+  // Write modified flatbuffer to output file
+  if (!outputFilename.empty()) {
+    std::string outfilename(outputFilename);
+    if (failed(xcore::utils::writeMLIRToFlatBufferFile(outfilename, mod.get(),
+                                                       dontMinifyEnabled)))
+      return 1;
   }
 
   return 0;

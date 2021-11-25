@@ -45,7 +45,7 @@ build --nocheck_visibility
 # As a solution to this problem, the bazel option --per_file_copt is awesome as it allows just the files within a particular package to be built with different flags. 
 # This is used in the below command to create a Tensorflow build which includes only debug symbols for Tensorflow Lite. Tensorflow also requires bazel version 3.7.2, so this is used locally just for the Tensorflow build.
 # In the following command, we build the target "build_pip_package". This builds all(most) of Tensorflow and creates a Python whl package which we can "pip install". This can then be used to debug the TFLite interpreter when we are invoking it via the Tensorflow Python API, such as in xformer1.
-# ./bazel-3.7.2-darwin-x86_64 build -c opt --config=opt --strip="never" --per_file_copt=//tensorflow/lite/.*\.cc@-g,-O0 //tensorflow/tools/pip_package:build_pip_package
+# bazel build -c opt --strip="never" --per_file_copt="//tensorflow/lite/.*\.cc@-g,-O0" //tensorflow/tools/pip_package:build_pip_package
 
 # Use the following command to create a debug build for xformer2
 # bazel build -c dbg --spawn_strategy=local --javacopt="-g" --copt="-g" --strip="never" //:xcore-opt

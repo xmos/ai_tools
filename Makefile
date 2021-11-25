@@ -123,6 +123,7 @@ build_release_linux:
 .PHONY: build_release_darwin
 build_release_darwin:
 	( python3 -m venv .venv && \
+	  . .venv/bin/activate && \
 	  pip3 install --upgrade pip && \
 	  pip3 install -r requirements.txt && \
 	  cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=darwin_config //:xcore-opt --verbose_failures)

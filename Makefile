@@ -115,7 +115,7 @@ build_release_linux:
 	    python3 -m venv .venv && \
 	    . .venv/bin/activate && \
 	    pip install -r requirements.txt && \
-	    cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures)
+	    cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 --local_cpu_resources=2 //:xcore-opt --verbose_failures)
 	rm -rf ../Installs/Linux/External/xformer
 	mkdir -p ../Installs/Linux/External/xformer
 	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Linux/External/xformer

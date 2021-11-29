@@ -24,10 +24,3 @@ def convert(filename: Union[str, Path], outfile: Union[str, Path],
     process_call: subprocess.CompletedProcess = subprocess.run(
         [arg for arg in args], check=True)
     return process_call.returncode
-
-
-if __name__ == "__main__":
-    convert(
-        Path("../Test/mlir_example.tflite").resolve(),
-        Path("../mlir_example_output.tflite").resolve(),
-        {"mlir-disable-threading": None})

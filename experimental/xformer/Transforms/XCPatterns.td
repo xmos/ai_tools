@@ -55,14 +55,14 @@ def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
 // passes in xformer1
 def HasNoFollowingConv2D : Constraint<CPred<"hasNoFollowingConv2D($0)">>;
 
-def : Pat<(TFL_PadOp
-           : $output $input, (TFL_ConstOp
-                              : $padding_op $padding_attr)),
-          (XC_PadOp $input, $padding_op, (getPadValue $input)), [
-            (HasValidPaddingShape $padding_op),
-            (HasNoPaddingForBatchAndChannel $padding_attr),
-            (HasValidBytesPerPixel $input), (HasNoFollowingConv2D $output)
-          ]>;
+// def : Pat<(TFL_PadOp
+//            : $output $input, (TFL_ConstOp
+//                               : $padding_op $padding_attr)),
+//           (XC_PadOp $input, $padding_op, (getPadValue $input)), [
+//             (HasValidPaddingShape $padding_op),
+//             (HasNoPaddingForBatchAndChannel $padding_attr),
+//             (HasValidBytesPerPixel $input), (HasNoFollowingConv2D $output)
+//           ]>;
 
 // Fuse XC_Conv2D(Reshape()) -> XC_Conv2D()
 def : Pat<(XC_Conv2DV2Op

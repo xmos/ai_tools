@@ -50,13 +50,9 @@ LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
   }
 
   tflite::FlatbufferExportOptions options;
-  bool emit_builtin_tflite_ops = true;
-  bool emit_select_tf_ops = true;
-  bool emit_custom_ops = true;
-
-  options.toco_flags.set_force_select_tf_ops(!emit_builtin_tflite_ops);
-  options.toco_flags.set_enable_select_tf_ops(emit_select_tf_ops);
-  options.toco_flags.set_allow_custom_ops(emit_custom_ops);
+  options.emit_builtin_tflite_ops = true;
+  options.emit_select_tf_ops = true;
+  options.emit_custom_ops = true;
   options.op_or_arg_name_mapper = op_or_arg_name_mapper.get();
 
   if (tflite::MlirToFlatBufferTranslateFunction(module, options,

@@ -1,0 +1,10 @@
+--- BUILD2	2021-12-02 09:12:26.000000000 +0000
++++ larq_compute_engine/mlir/BUILD	2021-12-02 09:16:48.000000000 +0000
+@@ -146,6 +146,7 @@
+         "//larq_compute_engine/core:types",
+         "//larq_compute_engine/core/bitpacking:bitpack",
+         "@llvm-project//mlir:IR",
++        "@llvm-project//mlir:QuantOps",
+     ],
+ )
+ 

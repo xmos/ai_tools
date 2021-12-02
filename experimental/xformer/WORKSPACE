@@ -44,3 +44,18 @@ new_local_repository(
     build_file = "lib_nn.BUILD",
 )
 
+########################### larq compute engine ################################
+http_archive(
+    name = "lce",
+    patch_args = ["-p0"],
+    patch_tool = "patch",
+    patches = [
+        "//patches:quantops_build_fix.patch",
+    ],
+    sha256 = "a7a47c0cf2ba9acfac2ea686aed12807cbe35c2cefa08f032dd1ca692d86aa11",
+    strip_prefix = "compute-engine-0.6.2",
+    urls = [
+        "https://github.com/larq/compute-engine/archive/refs/tags/v0.6.2.tar.gz",
+    ],
+)
+

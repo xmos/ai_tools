@@ -66,8 +66,11 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
             args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
     nn::QuantisationParams qp =
         nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
+    auto serialisedOffsetsMultipliersAndBiases =
+        nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(
-        qp.multipliers_and_biases, VPU_INT16_EPV, (int16_t)args.padValue);
+        serialisedOffsetsMultipliersAndBiases, VPU_INT16_EPV,
+        (int16_t)args.padValue);
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
                                  qp.final_shr);
 
@@ -86,7 +89,7 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     conv2DParams.push_back(afStr);
     conv2DParams.push_back(otStr);
     weightsTensorData = rw.weights;
-    multipliersAndBiasesTensorData = qp.multipliers_and_biases;
+    multipliersAndBiasesTensorData = serialisedOffsetsMultipliersAndBiases;
 
     return conv2DParams;
   }
@@ -113,8 +116,11 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
             args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
     nn::QuantisationParams qp =
         nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
+    auto serialisedOffsetsMultipliersAndBiases =
+        nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(
-        qp.multipliers_and_biases, VPU_INT16_EPV, (int16_t)args.padValue);
+        serialisedOffsetsMultipliersAndBiases, VPU_INT16_EPV,
+        (int16_t)args.padValue);
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
                                  qp.final_shr);
 
@@ -133,7 +139,7 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     conv2DParams.push_back(afStr);
     conv2DParams.push_back(otStr);
     weightsTensorData = rw.weights;
-    multipliersAndBiasesTensorData = qp.multipliers_and_biases;
+    multipliersAndBiasesTensorData = serialisedOffsetsMultipliersAndBiases;
 
     return conv2DParams;
   }
@@ -160,8 +166,11 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
             args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
     nn::QuantisationParams qp =
         nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
+    auto serialisedOffsetsMultipliersAndBiases =
+        nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(
-        qp.multipliers_and_biases, VPU_INT16_EPV, (int16_t)args.padValue);
+        serialisedOffsetsMultipliersAndBiases, VPU_INT16_EPV,
+        (int16_t)args.padValue);
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
                                  qp.final_shr);
 
@@ -180,7 +189,7 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     conv2DParams.push_back(afStr);
     conv2DParams.push_back(otStr);
     weightsTensorData = rw.weights;
-    multipliersAndBiasesTensorData = qp.multipliers_and_biases;
+    multipliersAndBiasesTensorData = serialisedOffsetsMultipliersAndBiases;
 
     return conv2DParams;
   }
@@ -206,8 +215,11 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
             args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
     nn::QuantisationParams qp =
         nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
+    auto serialisedOffsetsMultipliersAndBiases =
+        nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(
-        qp.multipliers_and_biases, VPU_INT16_EPV, (int16_t)args.padValue);
+        serialisedOffsetsMultipliersAndBiases, VPU_INT16_EPV,
+        (int16_t)args.padValue);
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
                                  qp.final_shr);
 
@@ -226,7 +238,7 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     conv2DParams.push_back(afStr);
     conv2DParams.push_back(otStr);
     weightsTensorData = rw.weights;
-    multipliersAndBiasesTensorData = qp.multipliers_and_biases;
+    multipliersAndBiasesTensorData = serialisedOffsetsMultipliersAndBiases;
 
     return conv2DParams;
   }
@@ -251,8 +263,11 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
             args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
     nn::QuantisationParams qp =
         nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
+    auto serialisedOffsetsMultipliersAndBiases =
+        nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(
-        qp.multipliers_and_biases, VPU_INT16_EPV, (int16_t)args.padValue);
+        serialisedOffsetsMultipliersAndBiases, VPU_INT16_EPV,
+        (int16_t)args.padValue);
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
                                  qp.final_shr);
 
@@ -271,7 +286,7 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     conv2DParams.push_back(afStr);
     conv2DParams.push_back(otStr);
     weightsTensorData = rw.weights;
-    multipliersAndBiasesTensorData = qp.multipliers_and_biases;
+    multipliersAndBiasesTensorData = serialisedOffsetsMultipliersAndBiases;
 
     return conv2DParams;
   }

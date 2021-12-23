@@ -389,10 +389,9 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFLOp> {
     // Find padding values
     int64_t newHeight, newWidth;
     int64_t padTop, padBottom, padLeft, padRight;
-    tensorflow::Padding opPadding =
-        symbolizePadding(conv2DOp.padding()) == Padding::VALID
-            ? tensorflow::Padding::VALID
-            : tensorflow::Padding::SAME;
+    tensorflow::Padding opPadding = conv2DOp.padding() == "VALID"
+                                        ? tensorflow::Padding::VALID
+                                        : tensorflow::Padding::SAME;
     if (tensorflow::GetWindowedOutputSizeVerboseV2(
             inputHeight, filterHeight, conv2DOp.dilation_h_factor(),
             conv2DOp.stride_h(), opPadding, &newHeight, &padTop,

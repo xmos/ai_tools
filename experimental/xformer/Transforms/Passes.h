@@ -27,7 +27,6 @@ std::unique_ptr<OperationPass<FuncOp>> createReplaceFCWithConv2DPass();
 std::unique_ptr<OperationPass<FuncOp>> createPad3to4Conv2DPass();
 std::unique_ptr<OperationPass<FuncOp>> createReplaceWithConv2DV2Pass();
 std::unique_ptr<OperationPass<FuncOp>> createApplyXCPatternsPass();
-// std::unique_ptr<OperationPass<FuncOp>> createLegalizeFullyConnectedPass();
 std::unique_ptr<OperationPass<FuncOp>> createApplyLoadConstantOpPatternsPass();
 std::unique_ptr<OperationPass<FuncOp>> createWriteFlashImagePass();
 std::unique_ptr<OperationPass<FuncOp>> createTranslateToCustomOpPass();

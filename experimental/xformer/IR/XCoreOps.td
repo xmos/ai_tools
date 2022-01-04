@@ -125,4 +125,14 @@ def XC_LoadFlashOp : XC_Op<"ld_flash", [NoSideEffect]> {
   let results = (outs AnyTensor : $output);
 }
 
+def XC_Bsign8Op : XC_Op<"bsign_8", [NoSideEffect]> {
+  let summary = "Binary sign op";
+
+  let description = [{Binary sign op.}];
+
+  let arguments = (ins TensorOf<[QI8]> : $input);
+
+  let results = (outs TensorOf<[I32]> : $output);
+}
+
 #endif // XCORE_DIALECT

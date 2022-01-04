@@ -18,7 +18,6 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createPad3to4Conv2DPass());
   pm.addPass(createReplaceWithConv2DV2Pass());
   pm.addPass(createApplyXCPatternsPass());
-  // pm.addPass(createLegalizeFullyConnectedPass());
   // Add to pipeline only if flash image file option is provided
   if (!flashImageFilenameOption.empty()) {
     pm.addPass(createApplyLoadConstantOpPatternsPass());

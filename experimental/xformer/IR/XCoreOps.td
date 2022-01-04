@@ -11,31 +11,6 @@ include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "tensorflow/compiler/mlir/lite/quantization/quantization.td"
 
-#ifndef TFL_OPS
-def TFL_AF_None : StrEnumAttrCase<"NONE">;
-def TFL_AF_Relu : StrEnumAttrCase<"RELU">;
-def TFL_AF_Relu1 : StrEnumAttrCase<"RELU_N1_TO_1">;
-def TFL_AF_Relu6 : StrEnumAttrCase<"RELU6">;
-
-def TFL_AFAttr
-    : StrEnumAttr<"ActivationFunctionType", "fused activation enum",
-                  [TFL_AF_None, TFL_AF_Relu, TFL_AF_Relu1, TFL_AF_Relu6]>;
-
-def TFL_PAD_Same : StrEnumAttrCase<"SAME">;
-def TFL_PAD_Valid : StrEnumAttrCase<"VALID">;
-
-def TFL_PaddingAttr
-    : StrEnumAttr<"Padding", "padding enum", [TFL_PAD_Same, TFL_PAD_Valid]>;
-
-def TFL_FCWO_Default : StrEnumAttrCase<"DEFAULT">;
-def TFL_FCWO_Shuffled4x16i8 : StrEnumAttrCase<"SHUFFLED4x16INT8">;
-
-def TFL_FullyConnectedOptionsWeightFormatAttr
-    : StrEnumAttr<"FullyConnectedOptionsWeightsFormat",
-                  "fully connected options weights format",
-                  [TFL_FCWO_Default, TFL_FCWO_Shuffled4x16i8]>;
-#endif
-
 //===----------------------------------------------------------------------===//
 // XCore dialect definitions
 //===----------------------------------------------------------------------===//
@@ -100,26 +75,6 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
     StrArrayAttr:$aggregate_fn_params,
     StrArrayAttr:$output_transform_fn_params,
     StrArrayAttr:$conv2d_kernel_type
-  );
-
-  let results = (outs TensorOf<[QI8]> : $output);
-}
-
-def XC_FullyConnectedOp : XC_Op<"fc", [NoSideEffect]> {
-  let summary = "Fully connected op";
-
-  let description = [{Fully connected op.}];
-
-  let arguments = (ins
-    TensorOf<[QI8]>:$input,
-    // TODO: Hack to enable I8 for filter and I16 for bias
-    // We might need a different op or match and replace in one pass
-    TensorOf<[QI8, I8]>:$filter,
-    TensorOf<[QI32, I16]>:$bias,
-
-    TFL_AFAttr:$fused_activation_function,
-    TFL_FullyConnectedOptionsWeightFormatAttr:$weights_format,
-    BoolAttr:$keep_num_dims
   );
 
   let results = (outs TensorOf<[QI8]> : $output);

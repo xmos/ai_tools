@@ -53,7 +53,7 @@ http_archive(
     patch_args = ["-p0"],
     patch_tool = "patch",
     patches = [
-        "//patches:build_fix.patch",
+        "//patches:larq_to_main.patch",
     ],
     sha256 = "a7a47c0cf2ba9acfac2ea686aed12807cbe35c2cefa08f032dd1ca692d86aa11",
     strip_prefix = "compute-engine-0.6.2",

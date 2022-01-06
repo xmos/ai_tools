@@ -55,6 +55,9 @@ def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
 // passes in xformer1
 def HasNoFollowingConv2D : Constraint<CPred<"hasNoFollowingConv2D($0)">>;
 
+// TODO : DPK
+// Not using XC_Pad in our runtime at the moment
+// Would fail with "Failed to get registration from op code CUSTOM"
 // def : Pat<(TFL_PadOp
 //            : $output $input, (TFL_ConstOp
 //                               : $padding_op $padding_attr)),

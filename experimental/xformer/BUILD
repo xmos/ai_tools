@@ -1,73 +1,74 @@
-load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-td_library(
-    name = "dialect_td_files",
-    srcs = [
-        "IR/XCoreOps.td"
+gentbl(
+    name = "xc_ops_inc_gen",
+    tbl_outs = [
+        ("-gen-enum-decls", "IR/XCoreEnumOps.h.inc"),
+        ("-gen-enum-defs", "IR/XCoreEnumOps.cpp.inc"),
+        ("-gen-op-decls", "IR/XCoreOps.h.inc"),
+        ("-gen-op-defs", "IR/XCoreOps.cpp.inc"),
+        ("-gen-dialect-decls -dialect=xc", "IR/XCoreDialect.h.inc"),
+        ("-gen-dialect-doc", "IR/XCoreOps.md"),
     ],
-    includes = ["external/org_tensorflow"],
-    deps = [
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "IR/XCoreOps.td",
+    td_includes = ["external/org_tensorflow"],
+    td_srcs = [
         "@llvm-project//mlir:StdOpsTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
 
-gentbl_cc_library(
-    name = "xc_ops_inc_gen",
-    tbl_outs = [
-        (["-gen-enum-decls"], "IR/XCoreEnumOps.h.inc"),
-        (["-gen-enum-defs"], "IR/XCoreEnumOps.cpp.inc"),
-        (["-gen-op-decls"], "IR/XCoreOps.h.inc"),
-        (["-gen-op-defs"], "IR/XCoreOps.cpp.inc"),
-        (["-gen-dialect-decls", "-dialect=xc"], "IR/XCoreDialect.h.inc"),
-        (["-gen-dialect-defs", "-dialect=xc"], "IR/XCoreDialect.cpp.inc"),
-        (["-gen-dialect-doc"], "IR/XCoreOps.md"),
-    ],
-    tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "IR/XCoreOps.td",
-    deps = [
-        ":dialect_td_files"
-    ],
-)
-
-gentbl_cc_library(
+gentbl(
     name = "xc_patterns_inc_gen",
     tbl_outs = [
-        (["-gen-rewriters"], "Transforms/GeneratedXCPatterns.inc"),
+        ("-gen-rewriters", "Transforms/GeneratedXCPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "Transforms/XCPatterns.td",
-    deps = [
-        ":dialect_td_files"
+    td_includes = ["external/org_tensorflow", "external/lce"],
+    td_srcs = [
+        "IR/XCoreOps.td",
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@lce//larq_compute_engine/mlir:lce_ops_td_file",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
 
-gentbl_cc_library(
+gentbl(
     name = "tfl_patterns_inc_gen",
     tbl_outs = [
-        (["-gen-rewriters"], "Transforms/GeneratedTFLPatterns.inc"),
+        ("-gen-rewriters", "Transforms/GeneratedTFLPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "Transforms/TFLPatterns.td",
-    deps = [
-        ":dialect_td_files"
+    td_includes = ["external/org_tensorflow"],
+    td_srcs = [
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
 
-gentbl_cc_library(
+gentbl(
     name = "load_constant_op_patterns_inc_gen",
     tbl_outs = [
-        (["-gen-rewriters"], "Transforms/GeneratedLoadConstantOpPatterns.inc"),
+        ("-gen-rewriters", "Transforms/GeneratedLoadConstantOpPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "Transforms/LoadConstantOpPatterns.td",
-    deps = [
-        ":dialect_td_files"
+    td_includes = ["external/org_tensorflow"],
+    td_srcs = [
+        "IR/XCoreOps.td",
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
 
@@ -78,7 +79,6 @@ cc_library(
         "IR/XCoreEnumOps.cpp.inc",
         "IR/XCoreOps.cpp",
         "IR/XCoreDialect.h.inc",
-        "IR/XCoreDialect.cpp.inc",
         "IR/XCoreOps.cpp.inc",
         "IR/XCoreOps.h.inc",
         "Transforms/GeneratedXCPatterns.inc",
@@ -96,6 +96,7 @@ cc_library(
         ":xc_patterns_inc_gen",
         ":tfl_patterns_inc_gen",
         ":load_constant_op_patterns_inc_gen",
+        "@lce//larq_compute_engine/mlir:larq_compute_engine",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:QuantOps",

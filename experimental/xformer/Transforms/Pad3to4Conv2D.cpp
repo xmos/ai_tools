@@ -14,11 +14,6 @@ struct Pad3to4Conv2D : public PassWrapper<Pad3to4Conv2D, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
-  StringRef getArgument() const final { return "xcore-pad-3to4-conv2d"; }
-  StringRef getDescription() const final {
-    return "Add padding before TFL Conv2D to align input depth from three to "
-           "four";
-  }
   void runOnFunction() override;
 };
 
@@ -123,7 +118,9 @@ std::unique_ptr<OperationPass<FuncOp>> createPad3to4Conv2DPass() {
   return std::make_unique<Pad3to4Conv2D>();
 }
 
-static PassRegistration<Pad3to4Conv2D> pass;
+static PassRegistration<Pad3to4Conv2D> pass(
+    "xcore-pad-3to4-conv2d",
+    "Add padding before TFL Conv2D to align input depth from three to four.");
 
 } // namespace xcore
 } // namespace mlir

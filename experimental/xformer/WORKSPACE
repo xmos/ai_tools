@@ -17,10 +17,13 @@ http_archive(
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
 ################################## TensorFlow ##################################
-maybe(
-    local_repository,
+http_archive(
     name = "org_tensorflow",
-    path = paths.join("../../", "third_party/tensorflow"),
+    sha256 = "233875ea27fc357f6b714b2a0de5f6ff124b50c1ee9b3b41f9e726e9e677b86c",
+    strip_prefix = "tensorflow-2.5.0",
+    urls = [
+        "https://github.com/tensorflow/tensorflow/archive/v2.5.0.tar.gz",
+    ],
 )
 
 # Import all of the tensorflow dependencies. Note that we are deliberately
@@ -42,5 +45,20 @@ new_local_repository(
     name = "lib_nn",
     path = "../../third_party/lib_nn",
     build_file = "lib_nn.BUILD",
+)
+
+########################### larq compute engine ################################
+http_archive(
+    name = "lce",
+    patch_args = ["-p0"],
+    patch_tool = "patch",
+    patches = [
+        "//patches:larq_to_main.patch",
+    ],
+    sha256 = "a7a47c0cf2ba9acfac2ea686aed12807cbe35c2cefa08f032dd1ca692d86aa11",
+    strip_prefix = "compute-engine-0.6.2",
+    urls = [
+        "https://github.com/larq/compute-engine/archive/refs/tags/v0.6.2.tar.gz",
+    ],
 )
 

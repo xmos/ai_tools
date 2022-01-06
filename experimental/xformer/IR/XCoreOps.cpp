@@ -3,9 +3,6 @@
 
 #include "IR/XCoreOps.h"
 
-// Generated dialect defs.
-#include "IR/XCoreDialect.cpp.inc"
-
 #define GET_OP_CLASSES
 #include "IR/XCoreOps.cpp.inc"
 

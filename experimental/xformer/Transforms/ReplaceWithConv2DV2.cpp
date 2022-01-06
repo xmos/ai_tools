@@ -20,10 +20,6 @@ struct ReplaceWithConv2DV2
     registry.insert<TFL::TensorFlowLiteDialect>();
     registry.insert<XCoreDialect>();
   }
-  StringRef getArgument() const final { return "xcore-replace-with-conv2dv2"; }
-  StringRef getDescription() const final {
-    return "Replace TFL Conv2D and DepthwiseConv2D with XC Conv2DV2 operations";
-  }
   void runOnFunction() override;
 };
 
@@ -671,7 +667,9 @@ std::unique_ptr<OperationPass<FuncOp>> createReplaceWithConv2DV2Pass() {
   return std::make_unique<ReplaceWithConv2DV2>();
 }
 
-static PassRegistration<ReplaceWithConv2DV2> pass;
+static PassRegistration<ReplaceWithConv2DV2>
+    pass("xcore-replace-with-conv2dv2",
+         "Replace TFL Conv2D and DepthwiseConv2D with XC Conv2DV2 operations.");
 
 } // namespace xcore
 } // namespace mlir

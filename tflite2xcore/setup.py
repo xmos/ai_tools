@@ -15,10 +15,10 @@ SCRIPTS = ["xformer.py", "tflite2xcore/tflite_visualize.py"]
 INSTALL_REQUIRES = [
     "aenum>=2.2.4",
     "dill>=0.3.1.1",
-    "flatbuffers==2.0",
+    "flatbuffers==1.12",
     "numpy>=1.19.5",
-    "tensorflow>=2.7.0,<=2.7.1",
-    "larq-compute-engine>=0.5.0",
+    "tensorflow>=2.5.0,<=2.5.1",
+    "larq-compute-engine>=0.6.2",
 ]
 
 setuptools.setup(

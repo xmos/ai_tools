@@ -18,19 +18,14 @@ struct ApplyLoadConstantOpPatterns
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
-  StringRef getArgument() const final {
-    return "xcore-apply-loadconstantop-patterns";
-  }
-  StringRef getDescription() const final {
-    return "Apply load constant op optimization patterns";
-  }
   void runOnFunction() override;
 };
 
 bool shouldBeLoadedExternally(Attribute values) {
   auto valuesAttr = values.cast<DenseElementsAttr>();
-  auto totalSizeInBits = (valuesAttr.getNumElements() *
-                          valuesAttr.getElementType().getIntOrFloatBitWidth());
+  auto totalSizeInBits =
+      (valuesAttr.getNumElements() *
+       valuesAttr.getType().getElementType().getIntOrFloatBitWidth());
   return totalSizeInBits / CHAR_BIT > loadExternallyIfLargerOption;
 }
 
@@ -67,7 +62,9 @@ std::unique_ptr<OperationPass<FuncOp>> createApplyLoadConstantOpPatternsPass() {
   return std::make_unique<ApplyLoadConstantOpPatterns>();
 }
 
-static PassRegistration<ApplyLoadConstantOpPatterns> pass;
+static PassRegistration<ApplyLoadConstantOpPatterns>
+    pass("xcore-apply-loadconstantop-patterns",
+         "Apply load constant op optimization patterns.");
 
 } // namespace xcore
 } // namespace mlir

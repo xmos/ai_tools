@@ -6,6 +6,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+#include <numeric>
 
 namespace mlir {
 namespace xcore {
@@ -15,10 +16,6 @@ namespace {
 struct ApplyXCPatterns : public PassWrapper<ApplyXCPatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
-  }
-  StringRef getArgument() const final { return "xcore-apply-patterns"; }
-  StringRef getDescription() const final {
-    return "Apply generated optimization patterns";
   }
   void runOnFunction() override;
 };
@@ -151,7 +148,8 @@ std::unique_ptr<OperationPass<FuncOp>> createApplyXCPatternsPass() {
   return std::make_unique<ApplyXCPatterns>();
 }
 
-static PassRegistration<ApplyXCPatterns> pass;
+static PassRegistration<ApplyXCPatterns>
+    pass("xcore-apply-xcpatterns", "Apply generated XC optimization patterns.");
 
 } // namespace xcore
 } // namespace mlir

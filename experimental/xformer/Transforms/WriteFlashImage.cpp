@@ -20,8 +20,6 @@ struct WriteFlashImage : public PassWrapper<WriteFlashImage, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
-  StringRef getArgument() const final { return "xcore-write-flash-image"; }
-  StringRef getDescription() const final { return "Write flash image"; }
   void runOnFunction() override;
 };
 
@@ -92,7 +90,8 @@ std::unique_ptr<OperationPass<FuncOp>> createWriteFlashImagePass() {
   return std::make_unique<WriteFlashImage>();
 }
 
-static PassRegistration<WriteFlashImage> pass;
+static PassRegistration<WriteFlashImage> pass("xcore-write-flash-image",
+                                              "Write flash image.");
 
 } // namespace xcore
 } // namespace mlir

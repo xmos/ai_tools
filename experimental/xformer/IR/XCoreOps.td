@@ -49,6 +49,8 @@ def XC_Conv2D_ValidIndirect : StrEnumAttrCase<"ValidIndirect">;
 def XC_Conv2D_PaddedIndirect : StrEnumAttrCase<"PaddedIndirect">;
 def XC_DW_Conv2D_ValidDirect : StrEnumAttrCase<"DepthwiseValidDirect">;
 def XC_DW_Conv2D_PaddedIndirect : StrEnumAttrCase<"DepthwisePaddedIndirect">;
+def XC_BNN_Conv2D_ValidIndirect_Binary
+    : StrEnumAttrCase<"BNNValidIndirectBinary">;
 
 def XC_Conv2D_TypeAttr : StrEnumAttr<"Conv2DType", "conv2d type enum", [
   XC_Conv2D_ValidDirect,
@@ -56,6 +58,7 @@ def XC_Conv2D_TypeAttr : StrEnumAttr<"Conv2DType", "conv2d type enum", [
   XC_Conv2D_PaddedIndirect,
   XC_DW_Conv2D_ValidDirect,
   XC_DW_Conv2D_PaddedIndirect,
+  XC_BNN_Conv2D_ValidIndirect_Binary,
 ]>;
 
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
@@ -64,7 +67,8 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
   let description = [{Conv2D V2 op.}];
 
   let arguments = (ins
-    TensorOf<[QI8]>:$input,
+    // I32 input is for BNNs
+    TensorOf<[QI8, I32]>:$input,
 
     I32Attr:$thread_count,
     I32ArrayAttr:$scratch_bytes,
@@ -77,7 +81,8 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
     StrArrayAttr:$conv2d_kernel_type
   );
 
-  let results = (outs TensorOf<[QI8]> : $output);
+  // I32 output is for BNNs
+  let results = (outs TensorOf<[QI8, I32]> : $output);
 }
 
 def XC_Lookup8Op : XC_Op<"lookup_8", [NoSideEffect]> {

@@ -96,7 +96,7 @@ cc_library(
         ":xc_patterns_inc_gen",
         ":tfl_patterns_inc_gen",
         ":load_constant_op_patterns_inc_gen",
-        "@lce//larq_compute_engine/mlir:larq_compute_engine",
+        "@lce//larq_compute_engine/mlir:lce_tfl_passes",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:QuantOps",

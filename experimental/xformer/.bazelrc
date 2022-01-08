@@ -21,6 +21,19 @@ build:darwin_config --linkopt=-framework
 build:darwin_config --linkopt=SystemConfiguration
 build:linux_config --host_linkopt=-lm
 
+# Address sanitizer
+# CC=clang bazel build --config asan
+build:asan --strip=never
+build:asan --copt -Wno-macro-redefined
+build:asan --copt -fsanitize=address
+build:asan --copt -DADDRESS_SANITIZER
+build:asan --copt -g
+build:asan --copt -O1
+build:asan --copt -fno-omit-frame-pointer
+build:asan --copt -fno-sanitize-recover=all
+build:asan --copt -gmlt
+build:asan --linkopt -fsanitize=address
+
 # Default to an optimized build.
 # Override via: "-c dbg" or --compilation_mode=dbg
 # build --compilation_mode=opt

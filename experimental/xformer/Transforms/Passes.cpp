@@ -4,6 +4,7 @@
 #include "Transforms/Passes.h"
 #include "Transforms/Options.h"
 
+#include "larq_compute_engine/mlir/transforms/passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
@@ -12,11 +13,15 @@ namespace mlir {
 namespace xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
+  // Run pass from LCE to convert Larq ops which are in TFL custom op format to
+  // Larq dialect
+  pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
   pm.addPass(createApplyTFLPatternsPass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());
   pm.addPass(createReplaceWithConv2DV2Pass());
+  pm.addPass(createReplaceBConvWithConv2DV2Pass());
   pm.addPass(createApplyXCPatternsPass());
   // Add to pipeline only if flash image file option is provided
   if (!flashImageFilenameOption.empty()) {

@@ -86,6 +86,7 @@ cc_library(
         "Transforms/GeneratedLoadConstantOpPatterns.inc"
     ],
     hdrs = [
+        "Transforms/ConvPatterns.h",
         "Transforms/Options.h",
         "Transforms/Passes.h",
         "Utils/FileIO.h",

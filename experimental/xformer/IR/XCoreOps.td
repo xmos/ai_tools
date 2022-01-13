@@ -49,16 +49,17 @@ def XC_Conv2D_ValidIndirect : StrEnumAttrCase<"ValidIndirect">;
 def XC_Conv2D_PaddedIndirect : StrEnumAttrCase<"PaddedIndirect">;
 def XC_DW_Conv2D_ValidDirect : StrEnumAttrCase<"DepthwiseValidDirect">;
 def XC_DW_Conv2D_PaddedIndirect : StrEnumAttrCase<"DepthwisePaddedIndirect">;
+def XC_BNN_Conv2D_ValidDirect_Binary : StrEnumAttrCase<"BNNValidDirectBinary">;
 def XC_BNN_Conv2D_ValidIndirect_Binary
     : StrEnumAttrCase<"BNNValidIndirectBinary">;
+def XC_BNN_Conv2D_ValidDirect_Int8 : StrEnumAttrCase<"BNNValidDirectInt8">;
+def XC_BNN_Conv2D_ValidIndirect_Int8 : StrEnumAttrCase<"BNNValidIndirectInt8">;
 
 def XC_Conv2D_TypeAttr : StrEnumAttr<"Conv2DType", "conv2d type enum", [
-  XC_Conv2D_ValidDirect,
-  XC_Conv2D_ValidIndirect,
-  XC_Conv2D_PaddedIndirect,
-  XC_DW_Conv2D_ValidDirect,
-  XC_DW_Conv2D_PaddedIndirect,
-  XC_BNN_Conv2D_ValidIndirect_Binary,
+  XC_Conv2D_ValidDirect, XC_Conv2D_ValidIndirect, XC_Conv2D_PaddedIndirect,
+  XC_DW_Conv2D_ValidDirect, XC_DW_Conv2D_PaddedIndirect,
+  XC_BNN_Conv2D_ValidDirect_Binary, XC_BNN_Conv2D_ValidIndirect_Binary,
+  XC_BNN_Conv2D_ValidDirect_Int8, XC_BNN_Conv2D_ValidIndirect_Int8
 ]>;
 
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
@@ -73,7 +74,7 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
     I32Attr:$thread_count,
     I32ArrayAttr:$scratch_bytes,
     TensorOf<[I8]>:$weights,
-    TensorOf<[I16]>:$multipliers_and_biases,
+    TensorOf<[I16]>:$mulsbiases_or_thresholds,
     StrArrayAttr:$abstract_kernel_params,
     StrArrayAttr:$memcpy_fn_params,
     StrArrayAttr:$aggregate_fn_params,

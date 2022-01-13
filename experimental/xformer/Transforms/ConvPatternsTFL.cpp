@@ -103,7 +103,6 @@ template <typename ConcreteType, typename TFLConvOpType>
 LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
     TFLConvOpType conv2DOp, TFLConvArgs &args) const {
   // Retrieve remaining args
-
   // Get output zero point
   auto outputType =
       conv2DOp.output().getType().template dyn_cast<RankedTensorType>();
@@ -251,29 +250,24 @@ LogicalResult ReplaceConv2DPattern::getKernelType(const TFLConvArgs &args,
 
 LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
     const TFLConvArgs &args, const Conv2DType &kt,
-    llvm::SmallVector<std::string> &strParams,
-    std::vector<int8_t> &weightsTensorData,
-    std::vector<int16_t> &multipliersAndBiasesTensorData,
-    int &scratchBytes) const {
+    llvm::SmallVector<std::string> &strParams, std::vector<int8_t> &weightsData,
+    std::vector<int16_t> &mulsBiasesData, int &scratchBytes) const {
   switch (kt) {
   case Conv2DType::ValidDirect:
-    if (failed(getConv2DValidDirectParams(args, strParams, weightsTensorData,
-                                          multipliersAndBiasesTensorData,
-                                          scratchBytes))) {
+    if (failed(getConv2DValidDirectParams(args, strParams, weightsData,
+                                          mulsBiasesData, scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::ValidIndirect:
-    if (failed(getConv2DValidIndirectParams(args, strParams, weightsTensorData,
-                                            multipliersAndBiasesTensorData,
-                                            scratchBytes))) {
+    if (failed(getConv2DValidIndirectParams(args, strParams, weightsData,
+                                            mulsBiasesData, scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::PaddedIndirect:
-    if (failed(getConv2DPaddedIndirectParams(args, strParams, weightsTensorData,
-                                             multipliersAndBiasesTensorData,
-                                             scratchBytes))) {
+    if (failed(getConv2DPaddedIndirectParams(args, strParams, weightsData,
+                                             mulsBiasesData, scratchBytes))) {
       return failure();
     }
     break;
@@ -287,8 +281,7 @@ LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
 
 LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
-    std::vector<int8_t> &weightsTensorData,
-    std::vector<int16_t> &multipliersAndBiasesTensorData,
+    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
 
   nn::ImToColPadded::Params imToColParams(args.X, args.K, args.padding,
@@ -327,8 +320,8 @@ LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
-  weightsTensorData = rw.weights;
-  multipliersAndBiasesTensorData = serialisedMultipliersAndBiases;
+  weightsData = rw.weights;
+  mulsBiasesData = serialisedMultipliersAndBiases;
   scratchBytes =
       nn::MatMulInt8::get_scratch_mem_bytes(inputBytes) + 32; //[asj] FIXME
 
@@ -337,8 +330,7 @@ LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
 
 LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
-    std::vector<int8_t> &weightsTensorData,
-    std::vector<int16_t> &multipliersAndBiasesTensorData,
+    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
 
   nn::ImToColValid::Params imToColParams(args.X, args.K, args.inputDepth);
@@ -376,8 +368,8 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
-  weightsTensorData = rw.weights;
-  multipliersAndBiasesTensorData = serialisedMultipliersAndBiases;
+  weightsData = rw.weights;
+  mulsBiasesData = serialisedMultipliersAndBiases;
   scratchBytes =
       nn::MatMulInt8::get_scratch_mem_bytes(inputBytes) + 32; //[asj] FIXME
 
@@ -386,8 +378,7 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
 
 LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
-    std::vector<int8_t> &weightsTensorData,
-    std::vector<int16_t> &multipliersAndBiasesTensorData,
+    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
 
   nn::DerefInputFn::Params imToColParams(args.X, args.K);
@@ -424,8 +415,8 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
-  weightsTensorData = rw.weights;
-  multipliersAndBiasesTensorData = serialisedMultipliersAndBiases;
+  weightsData = rw.weights;
+  mulsBiasesData = serialisedMultipliersAndBiases;
   scratchBytes = 0;
 
   return success();
@@ -448,22 +439,18 @@ ReplaceDepthwiseConv2DPattern::getKernelType(const TFLConvArgs &args,
 
 LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
     const TFLConvArgs &args, const Conv2DType &kt,
-    llvm::SmallVector<std::string> &strParams,
-    std::vector<int8_t> &weightsTensorData,
-    std::vector<int16_t> &multipliersAndBiasesTensorData,
-    int &scratchBytes) const {
+    llvm::SmallVector<std::string> &strParams, std::vector<int8_t> &weightsData,
+    std::vector<int16_t> &mulsBiasesData, int &scratchBytes) const {
   switch (kt) {
   case Conv2DType::DepthwiseValidDirect:
     if (failed(getDepthwiseConv2DValidDirectParams(
-            args, strParams, weightsTensorData, multipliersAndBiasesTensorData,
-            scratchBytes))) {
+            args, strParams, weightsData, mulsBiasesData, scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::DepthwisePaddedIndirect:
     if (failed(getDepthwiseConv2DPaddedIndirectParams(
-            args, strParams, weightsTensorData, multipliersAndBiasesTensorData,
-            scratchBytes))) {
+            args, strParams, weightsData, mulsBiasesData, scratchBytes))) {
       return failure();
     }
     break;
@@ -478,8 +465,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
 LogicalResult
 ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DValidDirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
-    std::vector<int8_t> &weightsTensorData,
-    std::vector<int16_t> &multipliersAndBiasesTensorData,
+    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
 
   nn::DerefInputFn::Params imToColParams(args.X, args.K);
@@ -516,8 +502,8 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DValidDirectParams(
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
-  weightsTensorData = rw.weights;
-  multipliersAndBiasesTensorData = serialisedMultipliersAndBiases;
+  weightsData = rw.weights;
+  mulsBiasesData = serialisedMultipliersAndBiases;
   scratchBytes = 0;
 
   return success();
@@ -526,8 +512,7 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DValidDirectParams(
 LogicalResult
 ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DPaddedIndirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
-    std::vector<int8_t> &weightsTensorData,
-    std::vector<int16_t> &multipliersAndBiasesTensorData,
+    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
 
   nn::ImToColPadded::Params imToColParams(args.X, args.K, args.padding, 16,
@@ -565,8 +550,8 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DPaddedIndirectParams(
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
-  weightsTensorData = rw.weights;
-  multipliersAndBiasesTensorData = serialisedMultipliersAndBiases;
+  weightsData = rw.weights;
+  mulsBiasesData = serialisedMultipliersAndBiases;
   scratchBytes = nn::MatMulDirectFn_DW::get_scratch_mem_bytes(filterShape);
 
   return success();

@@ -61,8 +61,8 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   // TODO: We only have one thread now
   // If we have more threads, we'll need to combine the tensor data
   // and save the sizes for each thread
-  std::vector<int8_t> weightsTensorData;
-  std::vector<int16_t> multipliersAndBiasesTensorData;
+  std::vector<int8_t> weightsData;
+  std::vector<int16_t> mulsBiasesOrThresholdsData;
 
   // TODO: Currently thread count is one
   const int threadCount = 1;
@@ -77,8 +77,8 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
     // Obtain serialized params and calculated tensors from lib_nn for the
     // conv2d kernel type
     if (failed(builder->getSerializedParamsAndTensors(
-            args, kernelType, strParams, weightsTensorData,
-            multipliersAndBiasesTensorData, scratchBytes))) {
+            args, kernelType, strParams, weightsData,
+            mulsBiasesOrThresholdsData, scratchBytes))) {
       return failure();
     }
 
@@ -102,28 +102,27 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   // Create the tensors for weights and multipliers_and_biases
   assert(threadCount == 1 &&
          "Tensor data has to be combined for more than one thread!");
-  ShapedType weightsType =
-      RankedTensorType::get({static_cast<long long>(weightsTensorData.size())},
-                            rewriter.getIntegerType(8));
-  auto weightsAttr =
-      DenseElementsAttr::get<int8_t>(weightsType, weightsTensorData);
+  ShapedType weightsType = RankedTensorType::get(
+      {static_cast<long long>(weightsData.size())}, rewriter.getIntegerType(8));
+  auto weightsAttr = DenseElementsAttr::get<int8_t>(weightsType, weightsData);
   auto weightsConstantOp =
       rewriter.create<mlir::ConstantOp>(conv2DOp.getLoc(), weightsAttr);
 
-  ShapedType multipliersAndBiasesType = RankedTensorType::get(
-      {static_cast<long long>(multipliersAndBiasesTensorData.size())},
+  ShapedType mulsBiasesOrThresholdsType = RankedTensorType::get(
+      {static_cast<long long>(mulsBiasesOrThresholdsData.size())},
       rewriter.getIntegerType(16));
-  auto multipliersAndBiasesAttr = DenseElementsAttr::get<int16_t>(
-      multipliersAndBiasesType, multipliersAndBiasesTensorData);
-  auto multipliersAndBiasesConstantOp = rewriter.create<mlir::ConstantOp>(
-      conv2DOp.getLoc(), multipliersAndBiasesAttr);
+  auto mulsBiasesOrThresholdsAttr = DenseElementsAttr::get<int16_t>(
+      mulsBiasesOrThresholdsType, mulsBiasesOrThresholdsData);
+  auto mulsBiasesOrThresholdsConstantOp = rewriter.create<mlir::ConstantOp>(
+      conv2DOp.getLoc(), mulsBiasesOrThresholdsAttr);
 
   // Create the Conv2DV2 Op with the params and kernel type
   auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
       conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(),
       rewriter.getI32IntegerAttr(threadCount),
       rewriter.getI32ArrayAttr(scratchByteParams), weightsConstantOp,
-      multipliersAndBiasesConstantOp, getStringArrayAttr(abstractKernelParams),
+      mulsBiasesOrThresholdsConstantOp,
+      getStringArrayAttr(abstractKernelParams),
       getStringArrayAttr(memcpyFnParams), getStringArrayAttr(aggregateFnParams),
       getStringArrayAttr(outputTransformFnParams),
       getStringArrayAttr(kernelTypeEnumParams));

@@ -21,7 +21,7 @@ Install at least version 15 of the XMOS tools from your preferred location and a
 A correct version of CMake (and `make`) is included in the Conda environment file, utils/environment.yml.
 To set up and activate the environment, simply run:
 ```shell
-conda env create -p ./ai_tools_venv -f utils/environment.yml
+conda env create -p ./ai_tools_venv -f environment.yml
 conda activate ai_tools_venv/
 ```
 

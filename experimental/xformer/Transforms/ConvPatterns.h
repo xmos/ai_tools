@@ -44,6 +44,8 @@ struct BConvArgs {
   nn::ImageGeometry Y;
   nn::ImageGeometry X;
   nn::WindowGeometry K;
+  // For emitting errors
+  mlir::LocationAttr loc;
 };
 
 //

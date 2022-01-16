@@ -54,7 +54,7 @@ def test_inference(args):
 
     if args.bnn:
         print("Creating LCE interpreter...")
-        interpreter = lce.testing.Interpreter(model_content)
+        interpreter = lce.testing.Interpreter(model_content, num_threads=1, use_reference_bconv=True)
         input_tensor_type = interpreter.input_types[0]
         input_tensor_shape = interpreter.input_shapes[0]
 
@@ -81,8 +81,8 @@ def test_inference(args):
         input_tensor.shape = input_tensor_shape
     else:
         print("Creating random input...")
-        input_tensor = np.array(100 * np.random.random_sample(
-            input_tensor_shape), dtype=input_tensor_type)
+        input_tensor = np.array(100 * np.random.random_sample(input_tensor_shape), dtype=input_tensor_type)
+        #input_tensor = np.array(100 * np.ones(input_tensor_shape), dtype=input_tensor_type)
 
     #print(repr(input_tensor))
 
@@ -92,7 +92,6 @@ def test_inference(args):
         # for some reason, batch dim is missing in lce output
         outputs = [outputs]
         num_of_outputs = len(outputs)
-        print(outputs)
     else:
         interpreter.set_tensor(input_tensor_details["index"], input_tensor)
         print("Invoking TFLite interpreter...")

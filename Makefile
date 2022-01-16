@@ -43,7 +43,7 @@ xformer2_integration_test:
 	# bnn tests
 	cd test && pytest integration_test/test_single_op_models/test_binarized/test_bconv2d_bin.py --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 	cd test && pytest integration_test/test_single_op_models/test_binarized/test_bconv2d_bin_DI.py --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
-	cd test && pytest integration_test/test_single_op_models/test_binarized/test_bconv2d_int8_activation_.py --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
+	cd test && pytest integration_test/test_single_op_models/test_binarized/test_bconv2d_int8_activation.py --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 	cd test && pytest integration_test/test_single_op_models/test_binarized/test_bconv2d_int8_DIDO_activation.py --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 	cd test && pytest integration_test/test_single_op_models/test_binarized/test_bsign.py --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 

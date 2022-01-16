@@ -4,7 +4,7 @@ default:
   0:
     K_h: 6
     K_w: 3
-    activation: relu6
+    activation: relu
     height: 7
     input_channels: 32
     num_threads: 1
@@ -19,7 +19,7 @@ default:
   1:
     K_h: 3
     K_w: 1
-    activation: relu6
+    activation: relu
     height: 7
     input_channels: 128
     num_threads: 2
@@ -34,7 +34,7 @@ default:
   2:
     K_h: 6
     K_w: 4
-    activation: relu6
+    activation: relu
     height: 10
     input_channels: 320
     num_threads: 2
@@ -64,7 +64,7 @@ default:
   4:
     K_h: 1
     K_w: 5
-    activation: relu6
+    activation: relu
     height: 7
     input_channels: 320
     num_threads: 5
@@ -94,7 +94,7 @@ default:
   6:
     K_h: 2
     K_w: 4
-    activation: relu6
+    activation: relu
     height: 10
     input_channels: 128
     num_threads: 2
@@ -124,7 +124,7 @@ default:
   8:
     K_h: 2
     K_w: 5
-    activation: relu6
+    activation: relu
     height: 7
     input_channels: 32
     num_threads: 1
@@ -169,7 +169,7 @@ default:
   11:
     K_h: 1
     K_w: 3
-    activation: relu6
+    activation: relu
     height: 12
     input_channels: 128
     num_threads: 5
@@ -184,7 +184,7 @@ default:
   12:
     K_h: 1
     K_w: 3
-    activation: relu6
+    activation: relu
     height: 12
     input_channels: 128
     num_threads: 5
@@ -199,7 +199,7 @@ default:
   13:
     K_h: 3
     K_w: 3
-    activation: relu6
+    activation: relu
     height: 7
     input_channels: 128
     num_threads: 1
@@ -274,7 +274,7 @@ default:
   18:
     K_h: 3
     K_w: 5
-    activation: relu6
+    activation: relu
     height: 7
     input_channels: 32
     num_threads: 5

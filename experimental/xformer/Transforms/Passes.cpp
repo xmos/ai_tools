@@ -20,7 +20,6 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());
-  // pm.addPass(createReplaceWithConv2DV2Pass());
   pm.addPass(createReplaceConv2DPass());
   pm.addPass(createApplyXCPatternsPass());
   // Add to pipeline only if flash image file option is provided

@@ -23,7 +23,8 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update && apt-get install -y \
     gnupg lsb-release software-properties-common
 ADD https://apt.llvm.org/llvm.sh /tmp/
-ARG clang_version=12 all
+ARG clang_version=12
+ARG all
 RUN cd /tmp \
     && chmod +x llvm.sh \
     && ./llvm.sh $clang_version

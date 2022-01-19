@@ -19,7 +19,7 @@ ReplaceBConv2DPattern::checkIfValid(lq::Bconv2dOp conv2DOp) const {
            .template cast<ShapedType>()
            .getElementType()
            .isInteger(32)) {
-    conv2DOp.emitError("Filter type must be int32 for BConv2D!");
+    conv2DOp.emitError("Filter type must be int32(packed binary) for BConv2D!");
     return failure();
   }
 
@@ -46,7 +46,8 @@ ReplaceBConv2DPattern::checkIfValid(lq::Bconv2dOp conv2DOp) const {
             .template cast<ShapedType>()
             .getElementType()
             .isInteger(32))) {
-    conv2DOp.emitError("Output type must be int32 or int8 for BConv2D!");
+    conv2DOp.emitError(
+        "Output type must be int32(packed binary) or int8 for BConv2D!");
     return failure();
   }
 
@@ -63,7 +64,7 @@ ReplaceBConv2DPattern::checkIfValid(lq::Bconv2dOp conv2DOp) const {
 
   // Check padding is VALID
   if (!(conv2DOp.padding() == "VALID")) {
-    conv2DOp.emitError("VALID padding is not supported for BConv2D!");
+    conv2DOp.emitError("Only VALID padding is supported for BConv2D!");
     return failure();
   }
 
@@ -205,6 +206,9 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
 
 LogicalResult ReplaceBConv2DPattern::getKernelType(const BConvArgs &args,
                                                    Conv2DType &kt) const {
+  // In case of binary output, since the input and output types are int32(packed
+  // binary), they will always be a multiple of 32 channels
+  // Hence we don't need to check for that case
   if (args.inputDepth % 256 == 0 && args.binaryOutput) {
     kt = Conv2DType::BNNValidDirectBinary;
   } else if (args.inputDepth % 256 == 0 && args.outputDepth % 16 == 0) {

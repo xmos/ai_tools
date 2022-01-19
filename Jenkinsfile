@@ -23,8 +23,12 @@ pipeline {
     }
 
     options { // plenty of things could go here
-        //buildDiscarder(logRotator(numToKeepStr: '10'))
         timestamps()
+	// on develop discard builds after a certain number else keep forever
+        buildDiscarder(logRotator(
+            numToKeepStr:         env.BRANCH_NAME ==~ /develop/ ? '100' : '',
+            artifactNumToKeepStr: env.BRANCH_NAME ==~ /develop/ ? '100' : ''
+        ))
     }
 
     stages {

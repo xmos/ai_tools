@@ -15,6 +15,12 @@ build --host_linkopt=-pthread
 build --host_linkopt=-ldl
 build --host_linkopt=-lm
 
+build:darwin_config --linkopt=-framework
+build:darwin_config --linkopt=Foundation
+build:darwin_config --linkopt=-framework
+build:darwin_config --linkopt=SystemConfiguration
+build:linux_config --host_linkopt=-lm
+
 # Default to an optimized build.
 # Override via: "-c dbg" or --compilation_mode=dbg
 # build --compilation_mode=opt
@@ -39,18 +45,17 @@ build --nocheck_visibility
 # As a solution to this problem, the bazel option --per_file_copt is awesome as it allows just the files within a particular package to be built with different flags. 
 # This is used in the below command to create a Tensorflow build which includes only debug symbols for Tensorflow Lite. Tensorflow also requires bazel version 3.7.2, so this is used locally just for the Tensorflow build.
 # In the following command, we build the target "build_pip_package". This builds all(most) of Tensorflow and creates a Python whl package which we can "pip install". This can then be used to debug the TFLite interpreter when we are invoking it via the Tensorflow Python API, such as in xformer1.
-# ./bazel-3.7.2-darwin-x86_64 build -c opt --config=opt --strip="never" --per_file_copt=//tensorflow/lite/.*\.cc@-g,-O0 //tensorflow/tools/pip_package:build_pip_package
+# bazel build -c opt --strip="never" --per_file_copt="//tensorflow/lite/.*\.cc@-g,-O0" //tensorflow/tools/pip_package:build_pip_package
 
 # Use the following command to create a debug build for xformer2
 # bazel build -c dbg --spawn_strategy=local --javacopt="-g" --copt="-g" --strip="never" //:xcore-opt
 
 # Use our custom-configured c++ toolchain.
-build:clang_config --crosstool_top=//toolchain:clang_suite
+#build:linux_config --crosstool_top=//toolchain:gnu_suite
 
 # Use --cpu as a differentiator.
-build:clang_config --cpu=k8
+#build:linux_config --cpu=k8
 
 # Use the default Bazel C++ toolchain to build the tools used during the
 # build.
-#build:clang_config --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
-build:clang_config --host_crosstool_top=//toolchain:clang_suite
+#build:linux_config --host_crosstool_top=//toolchain:gnu_suite

@@ -7,15 +7,6 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 
 include "IR/XCoreOps.td"
 
-// TODO: DPK
-// // Fully connected pattern
-// def : Pat<(TFL_FullyConnectedOp
-//            : $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$filter,
-//            TensorOf<[QI32]>:$bias, $fused_activation_function,
-//              $weights_format, $keep_num_dims),
-//           (XC_FullyConnectedOp $input, $filter, $bias,
-//            $fused_activation_function, $weights_format, $keep_num_dims)>;
-
 // Activation lowering patterns
 def getLookupTable
     : NativeCodeCall<"getLookupTable($_builder, $0.getDefiningOp())">;
@@ -64,11 +55,30 @@ def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
 // passes in xformer1
 def HasNoFollowingConv2D : Constraint<CPred<"hasNoFollowingConv2D($0)">>;
 
-def : Pat<(TFL_PadOp
-           : $output $input, (TFL_ConstOp
-                              : $padding_op $padding_attr)),
-          (XC_PadOp $input, $padding_op, (getPadValue $input)), [
-            (HasValidPaddingShape $padding_op),
-            (HasNoPaddingForBatchAndChannel $padding_attr),
-            (HasValidBytesPerPixel $input), (HasNoFollowingConv2D $output)
-          ]>;
+// TODO : DPK
+// Not using XC_Pad in our runtime at the moment
+// Would fail with "Failed to get registration from op code CUSTOM"
+// def : Pat<(TFL_PadOp
+//            : $output $input, (TFL_ConstOp
+//                               : $padding_op $padding_attr)),
+//           (XC_PadOp $input, $padding_op, (getPadValue $input)), [
+//             (HasValidPaddingShape $padding_op),
+//             (HasNoPaddingForBatchAndChannel $padding_attr),
+//             (HasValidBytesPerPixel $input), (HasNoFollowingConv2D $output)
+//           ]>;
+
+// Fuse XC_Conv2D(Reshape()) -> XC_Conv2D()
+def : Pat<(XC_Conv2DV2Op
+           : $cout(TFL_ReshapeOp
+                   : $rout $input, $shape),
+             $tc, $scratch, $weights, $muls, $akp, $mp, $aggp, $otp, $ktp),
+          (XC_Conv2DV2Op $input, $tc, $scratch, $weights, $muls, $akp, $mp,
+           $aggp, $otp, $ktp)>;
+
+// Fuse Reshape(XC_Conv2D()) -> XC_Conv2D()
+def : Pat<(TFL_ReshapeOp
+           : $rout(XC_Conv2DV2Op $input, $tc, $scratch, $weights, $muls, $akp,
+                   $mp, $aggp, $otp, $ktp),
+             $shape),
+          (XC_Conv2DV2Op $input, $tc, $scratch, $weights, $muls, $akp, $mp,
+           $aggp, $otp, $ktp)>;

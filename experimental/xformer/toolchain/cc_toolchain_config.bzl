@@ -84,10 +84,10 @@ def _impl(ctx):
        target_system_name = "local",
        target_cpu = "k8",
        target_libc = "unknown",
-       compiler = "clang",
+       compiler = "gnu",
        abi_version = "unknown",
        abi_libc_version = "unknown",
-       tool_paths = tool_paths,
+       tool_paths = tool_paths
    )
 
 cc_toolchain_config = rule(

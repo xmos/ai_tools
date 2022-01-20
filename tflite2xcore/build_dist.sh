@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-rm -r dist
+rm -rf dist
 
 python setup.py sdist bdist_wheel
 

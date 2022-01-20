@@ -3,7 +3,6 @@
 
 #include "Utils/FileIO.h"
 
-#include "flatbuffers/flexbuffers.h"
 #include "mlir/Support/FileUtilities.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_export.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_import.h"
@@ -27,37 +26,41 @@ LogicalResult writeDataToFile(std::string &filename, std::string &data) {
 
 LogicalResult writeFlashImageToFile(std::string &filename,
                                     std::vector<std::vector<char>> tensorsVec) {
-  // Create flexbuffer of params
-  flexbuffers::Builder fbb;
-  auto rootMap = fbb.StartMap();
-  auto paramsVec = fbb.StartVector("params");
-  // For each tensor, we add a new flexbuffer blob
-  for (auto const &tensor : tensorsVec) {
-    fbb.Blob(tensor.data(), tensor.size());
-  }
-  fbb.EndVector(paramsVec, false, false);
-  fbb.EndMap(rootMap);
-  fbb.Finish();
 
-  // Write flexbuffer data to file
-  std::string fbbData(fbb.GetBuffer().begin(), fbb.GetBuffer().end());
-  return utils::writeDataToFile(filename, fbbData);
+  // Combine data for the tensors
+  std::string data;
+  for (auto const &tensor : tensorsVec) {
+    data += std::string(tensor.data(), tensor.size());
+  }
+
+  return utils::writeDataToFile(filename, data);
 }
 
 LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
-                                        mlir::ModuleOp module) {
+                                        mlir::ModuleOp module,
+                                        const bool &dontMinify) {
   std::string serialized_flatbuffer;
+  std::unique_ptr<tensorflow::OpOrArgNameMapper> op_or_arg_name_mapper;
+  if (dontMinify) {
+    op_or_arg_name_mapper =
+        std::make_unique<tensorflow::OpOrArgLocNameMapper>();
+  } else {
+    op_or_arg_name_mapper =
+        std::make_unique<tensorflow::OpOrArgStripNameMapper>();
+  }
+
   tflite::FlatbufferExportOptions options;
   options.emit_builtin_tflite_ops = true;
   options.emit_select_tf_ops = true;
   options.emit_custom_ops = true;
+  options.op_or_arg_name_mapper = op_or_arg_name_mapper.get();
 
   if (tflite::MlirToFlatBufferTranslateFunction(module, options,
                                                 &serialized_flatbuffer)) {
     return writeDataToFile(filename, serialized_flatbuffer);
   } else {
-    llvm::errs() << "Error converting MLIR to flatbuffer, no file written"
-                 << "\n";
+    emitError(UnknownLoc::get(module.getContext()))
+        << "Error converting MLIR to flatbuffer, no file written";
     return failure();
   }
 }
@@ -67,7 +70,7 @@ mlir::OwningModuleRef readFlatBufferFileToMLIR(std::string &filename,
   std::string errorMessage;
   auto inputFile = openInputFile(filename, &errorMessage);
   if (!inputFile) {
-    llvm::errs() << errorMessage << "\n";
+    emitError(UnknownLoc::get(context)) << errorMessage;
     return mlir::OwningModuleRef(nullptr);
   }
 

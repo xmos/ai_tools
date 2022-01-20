@@ -21,12 +21,12 @@ void buildXCorePassPipeline(OpPassManager &pm);
 // XCore-specific passes
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<OperationPass<FuncOp>> createApplyPatternsPass();
+std::unique_ptr<OperationPass<FuncOp>> createApplyTFLPatternsPass();
 std::unique_ptr<OperationPass<FuncOp>> createReplaceAvgPoolWithConv2DPass();
 std::unique_ptr<OperationPass<FuncOp>> createReplaceFCWithConv2DPass();
 std::unique_ptr<OperationPass<FuncOp>> createPad3to4Conv2DPass();
 std::unique_ptr<OperationPass<FuncOp>> createReplaceWithConv2DV2Pass();
-// std::unique_ptr<OperationPass<FuncOp>> createLegalizeFullyConnectedPass();
+std::unique_ptr<OperationPass<FuncOp>> createApplyXCPatternsPass();
 std::unique_ptr<OperationPass<FuncOp>> createApplyLoadConstantOpPatternsPass();
 std::unique_ptr<OperationPass<FuncOp>> createWriteFlashImagePass();
 std::unique_ptr<OperationPass<FuncOp>> createTranslateToCustomOpPass();
@@ -36,20 +36,6 @@ std::unique_ptr<OperationPass<FuncOp>> createTranslateToCustomOpPass();
 //===----------------------------------------------------------------------===//
 
 void registerXCorePassPipeline();
-
-inline void registerAllPasses() {
-  registerXCorePassPipeline();
-
-  createApplyPatternsPass();
-  createReplaceAvgPoolWithConv2DPass();
-  createReplaceFCWithConv2DPass();
-  createPad3to4Conv2DPass();
-  createReplaceWithConv2DV2Pass();
-  // createLegalizeFullyConnectedPass();
-  createApplyLoadConstantOpPatternsPass();
-  createWriteFlashImagePass();
-  createTranslateToCustomOpPass();
-}
 
 } // namespace xcore
 } // namespace mlir

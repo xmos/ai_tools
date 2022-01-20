@@ -30,16 +30,23 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
 
   LogicalResult matchAndRewrite(LoadConstantOp loadOp,
                                 PatternRewriter &rewriter) const override {
-    DenseElementsAttr attr;
-    if (!matchPattern(loadOp.input(), m_Constant(&attr))) {
-      return failure();
-    }
-    std::vector<char> tensorData = attr.getRawData().vec();
+    auto attr = loadOp.input().cast<DenseElementsAttr>();
+    std::vector<char> tensorData;
 
-    // Create a LoadFlashOp with vector index and tensor size
-    auto loadFlashOp =
-        rewriter.create<LoadFlashOp>(loadOp.getLoc(), loadOp.getType(),
-                                     tensorsVec_->size(), tensorData.size());
+    int n = attr.isSplat() ? attr.getNumElements() : 1;
+    for (int i = 0; i < n; ++i) {
+      tensorData.insert(tensorData.end(), attr.getRawData().begin(),
+                        attr.getRawData().end());
+    }
+
+    int address = 0;
+    for (auto const &t : *tensorsVec_) {
+      address += t.size();
+    }
+
+    // Create a LoadFlashOp with data addr and tensor size
+    auto loadFlashOp = rewriter.create<LoadFlashOp>(
+        loadOp.getLoc(), loadOp.getType(), address, tensorData.size());
     tensorsVec_->push_back(tensorData);
 
     // Replace the LoadOp with the new LoadFlashOp
@@ -71,7 +78,9 @@ void WriteFlashImage::runOnFunction() {
   // Write tensor data to flash image file
   if (failed(
           utils::writeFlashImageToFile(flashImageFilenameOption, tensorsVec))) {
-    llvm::errs() << "Failed to write flash image!\n";
+    f.emitError("Failed to write flash image!");
+    signalPassFailure();
+    return;
   }
 }
 } // namespace

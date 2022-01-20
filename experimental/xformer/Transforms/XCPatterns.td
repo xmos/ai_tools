@@ -4,6 +4,7 @@
 // This is the optimization pattern definition file for XCore.
 include "mlir/Dialect/StandardOps/IR/Ops.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
+include "larq_compute_engine/mlir/ir/lce_ops.td"
 
 include "IR/XCoreOps.td"
 
@@ -82,3 +83,6 @@ def : Pat<(TFL_ReshapeOp
              $shape),
           (XC_Conv2DV2Op $input, $tc, $scratch, $weights, $muls, $akp, $mp,
            $aggp, $otp, $ktp)>;
+
+// Replace LQ_QuantizeOp with XC_bsign_8
+def : Pat<(LQ_QuantizeOp $input), (XC_Bsign8Op $input)>;

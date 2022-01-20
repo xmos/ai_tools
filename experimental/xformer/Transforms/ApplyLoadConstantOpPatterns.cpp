@@ -22,10 +22,15 @@ struct ApplyLoadConstantOpPatterns
 };
 
 bool shouldBeLoadedExternally(Attribute values) {
-  auto valuesAttr = values.cast<DenseElementsAttr>();
-  auto totalSizeInBits =
-      (valuesAttr.getNumElements() *
-       valuesAttr.getType().getElementType().getIntOrFloatBitWidth());
+  // values might be UnitAttr or BoolAttr which are too small to be loaded
+  // externally anyway
+  auto totalSizeInBits = 0;
+  if (values.isa<DenseElementsAttr>()) {
+    auto valuesAttr = values.cast<DenseElementsAttr>();
+    totalSizeInBits =
+        (valuesAttr.getNumElements() *
+         valuesAttr.getType().getElementType().getIntOrFloatBitWidth());
+  }
   return totalSizeInBits / CHAR_BIT > loadExternallyIfLargerOption;
 }
 

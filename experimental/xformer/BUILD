@@ -86,6 +86,7 @@ cc_library(
         "Transforms/GeneratedLoadConstantOpPatterns.inc"
     ],
     hdrs = [
+        "Transforms/ConvPatterns.h",
         "Transforms/Options.h",
         "Transforms/Passes.h",
         "Utils/FileIO.h",
@@ -96,7 +97,7 @@ cc_library(
         ":xc_patterns_inc_gen",
         ":tfl_patterns_inc_gen",
         ":load_constant_op_patterns_inc_gen",
-        "@lce//larq_compute_engine/mlir:larq_compute_engine",
+        "@lce//larq_compute_engine/mlir:larq_compute_engine_translate_tflite",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:QuantOps",

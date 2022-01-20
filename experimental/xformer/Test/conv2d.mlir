@@ -1,4 +1,4 @@
-// RUN: xcore-opt --mlir-io %s --xcore-replace-with-conv2dv2 | FileCheck %s
+// RUN: xcore-opt --mlir-io %s --xcore-replace-conv2d | FileCheck %s
 
 // CHECK-LABEL: padded_indirect
 func @padded_indirect(%arg0: tensor<?x1x1x4x!quant.uniform<i8:f32, 0.0077245929278433323:-1>>) -> tensor<?x1x1x4x!quant.uniform<i8:f32, 0.010062812827527523:-18>> attributes {tf.entry_function = {inputs = "conv2d_input", outputs = "Identity"}} {
@@ -73,3 +73,4 @@ func @invalid_input_depth(%arg0: tensor<?x1x1x3x!quant.uniform<i8:f32, 0.0076398
   %2 = "tfl.conv_2d"(%arg0, %0, %1) {dilation_h_factor = 1 : i32, dilation_w_factor = 1 : i32, fused_activation_function = "NONE", padding = "SAME", stride_h = 1 : i32, stride_w = 1 : i32} : (tensor<?x1x1x3x!quant.uniform<i8:f32, 0.0076398402452468872:1>>, tensor<4x1x9x3x!quant.uniform<i8<-127:127>:f32:0, {0.0078621776774525642,0.0078216465190052986,0.0078239291906356812,0.0078047262504696846}>>, tensor<4x!quant.uniform<i32:f32:0, {6.0065780417062342E-5,5.9756130212917924E-5,5.9773570683319122E-5,5.9626861911965534E-5}>>) -> tensor<?x1x1x4x!quant.uniform<i8:f32, 0.0078214062377810478:16>>
   return %2 : tensor<?x1x1x4x!quant.uniform<i8:f32, 0.0078214062377810478:16>>
 }
+

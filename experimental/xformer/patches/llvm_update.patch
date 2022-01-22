@@ -1,0 +1,1363 @@
+diff -Naur third_party/llvm/llvm_td_update.patch /Users/deepakpanickal/code/llvm/llvm_td_update.patch
+--- third_party/llvm/llvm_td_update.patch	1970-01-01 01:00:00.000000000 +0100
++++ /Users/deepakpanickal/code/llvm/llvm_td_update.patch	2022-01-20 16:37:32.000000000 +0000
+@@ -0,0 +1,1350 @@
++diff --git a/mlir/docs/DeclarativeRewrites.md b/mlir/docs/DeclarativeRewrites.md
++index 27ae161978c8..c3518972bb0e 100644
++--- a/mlir/docs/DeclarativeRewrites.md
+++++ b/mlir/docs/DeclarativeRewrites.md
++@@ -11,8 +11,8 @@ compiler build time.
++ This manual explains in detail all of the available mechanisms for defining
++ rewrite rules in such a declarative manner. It aims to be a specification
++ instead of a tutorial. Please refer to
++-[Quickstart tutorial to adding MLIR graph
++-rewrite](Tutorials/QuickstartRewrites.md) for the latter.
+++[Quickstart tutorial to adding MLIR graph rewrite](Tutorials/QuickstartRewrites.md)
+++for the latter.
++ 
++ Given that declarative rewrite rules depend on op definition specification, this
++ manual assumes knowledge of the [ODS](OpDefinitions.md) doc.
++@@ -51,8 +51,8 @@ features:
++ *   Matching multi-result ops in nested patterns.
++ *   Matching and generating variadic operand/result ops in nested patterns.
++ *   Packing and unpacking variadic operands/results during generation.
++-*   [`NativeCodeCall`](#nativecodecall-transforming-the-generated-op)
++-    returning more than one results.
+++*   [`NativeCodeCall`](#nativecodecall-transforming-the-generated-op) returning
+++    more than one results.
++ 
++ ## Rule Definition
++ 
++@@ -93,9 +93,9 @@ Each pattern is specified as a TableGen `dag` object with the syntax of
++ [directives](#rewrite-directives). `argN` is for matching (if used in source
++ pattern) or generating (if used in result pattern) the `N`-th argument for
++ `operator`. If the `operator` is some MLIR operation, it means the `N`-th
++-argument as specified in the `arguments` list of the op's definition.
++-Therefore, we say op argument specification in pattern is **position-based**:
++-the position where they appear matters.
+++argument as specified in the `arguments` list of the op's definition. Therefore,
+++we say op argument specification in pattern is **position-based**: the position
+++where they appear matters.
++ 
++ `argN` can be a `dag` object itself, thus we can have nested `dag` tree to model
++ the def-use relationship between ops.
++@@ -245,15 +245,15 @@ the pattern by following the exact same order as the ODS `arguments` definition.
++ Otherwise, a custom `build()` method that matches the argument list is required.
++ 
++ Right now all ODS-generated `build()` methods require specifying the result
++-type(s), unless the op has known traits like `SameOperandsAndResultType` that
++-we can use to auto-generate a `build()` method with result type deduction.
++-When generating an op to replace the result of the matched root op, we can use
++-the matched root op's result type when calling the ODS-generated builder.
++-Otherwise (e.g., generating an [auxiliary op](#supporting-auxiliary-ops) or
++-generating an op with a nested result pattern), DRR will not be able to deduce
++-the result type(s). The pattern author will need to define a custom builder
++-that has result type deduction ability via `OpBuilder` in ODS. For example,
++-in the following pattern
+++type(s), unless the op has known traits like `SameOperandsAndResultType` that we
+++can use to auto-generate a `build()` method with result type deduction. When
+++generating an op to replace the result of the matched root op, we can use the
+++matched root op's result type when calling the ODS-generated builder. Otherwise
+++(e.g., generating an [auxiliary op](#supporting-auxiliary-ops) or generating an
+++op with a nested result pattern), DRR will not be able to deduce the result
+++type(s). The pattern author will need to define a custom builder that has result
+++type deduction ability via `OpBuilder` in ODS. For example, in the following
+++pattern
++ 
++ ```tablegen
++ def : Pat<(AOp $input, $attr), (COp (AOp $input, $attr) $attr)>;
++@@ -295,8 +295,8 @@ to replace the matched `AOp`.
++ 
++ In the result pattern, we can bind to the result(s) of a newly built op by
++ attaching symbols to the op. (But we **cannot** bind to op arguments given that
++-they are referencing previously bound symbols.) This is useful for reusing
++-newly created results where suitable. For example,
+++they are referencing previously bound symbols.) This is useful for reusing newly
+++created results where suitable. For example,
++ 
++ ```tablegen
++ def DOp : Op<"d_op"> {
++@@ -373,18 +373,15 @@ And make sure the generated C++ code from the above pattern has access to the
++ definition of the C++ helper function.
++ 
++ In the above example, we are using a string to specialize the `NativeCodeCall`
++-template. The string can be an arbitrary C++ expression that evaluates into
++-some C++ object expected at the `NativeCodeCall` site (here it would be
++-expecting an array attribute). Typically the string should be a function call.
++-
++-Note that currently `NativeCodeCall` must return no more than one value or
++-attribute. This might change in the future.
+++template. The string can be an arbitrary C++ expression that evaluates into some
+++C++ object expected at the `NativeCodeCall` site (here it would be expecting an
+++array attribute). Typically the string should be a function call.
++ 
++ ##### `NativeCodeCall` placeholders
++ 
++-In `NativeCodeCall`, we can use placeholders like `$_builder`, `$N`. The former
++-is called _special placeholder_, while the latter is called _positional
++-placeholder_.
+++In `NativeCodeCall`, we can use placeholders like `$_builder`, `$N` and `$N...`.
+++The former is called _special placeholder_, while the latter is called
+++_positional placeholder_ and _positional range placeholder_.
++ 
++ `NativeCodeCall` right now only supports three special placeholders:
++ `$_builder`, `$_loc`, and `$_self`:
++@@ -423,6 +420,35 @@ the `NativeCodeCall` use site. For example, if we define `SomeCall :
++ NativeCodeCall<"someFn($1, $2, $0)">` and use it like `(SomeCall $in0, $in1,
++ $in2)`, then this will be translated into C++ call `someFn($in1, $in2, $in0)`.
++ 
+++Positional range placeholders will be substituted by multiple `dag` object
+++parameters at the `NativeCodeCall` use site. For example, if we define
+++`SomeCall : NativeCodeCall<"someFn($1...)">` and use it like `(SomeCall $in0,
+++$in1, $in2)`, then this will be translated into C++ call `someFn($in1, $in2)`.
+++
+++##### `NativeCodeCall` binding multi-results
+++
+++To bind multi-results and access the N-th result with `$<name>__N`, specify the
+++number of return values in the template. Note that only `Value` type is
+++supported for multiple results binding. For example,
+++
+++```tablegen
+++
+++def PackAttrs : NativeCodeCall<"packAttrs($0, $1)", 2>;
+++def : Pattern<(TwoResultOp $attr1, $attr2),
+++              [(OneResultOp (PackAttr:$res__0, $attr1, $attr2)),
+++               (OneResultOp $res__1)]>;
+++
+++```
+++
+++Use `NativeCodeCallVoid` for case has no return value.
+++
+++The correct number of returned value specified in NativeCodeCall is important.
+++It will be used to verify the consistency of the number of result values.
+++Additionally, `mlir-tblgen` will try to capture the return value of
+++NativeCodeCall in the generated code so that it will trigger a later compilation
+++error if a NativeCodeCall that doesn't return a result isn't labeled with 0
+++returns.
+++
++ ##### Customizing entire op building
++ 
++ `NativeCodeCall` is not only limited to transforming arguments for building an
++@@ -490,8 +516,8 @@ matched op.
++ 
++ Multi-result ops bring extra complexity to declarative rewrite rules. We use
++ TableGen `dag` objects to represent ops in patterns; there is no native way to
++-indicate that an op generates multiple results. The approach adopted is based
++-on **naming convention**: a `__N` suffix is added to a symbol to indicate the
+++indicate that an op generates multiple results. The approach adopted is based on
+++**naming convention**: a `__N` suffix is added to a symbol to indicate the
++ `N`-th result.
++ 
++ #### `__N` suffix
++@@ -541,12 +567,12 @@ The above example also shows how to replace a matched multi-result op.
++ 
++ To replace an `N`-result op, the result patterns must generate at least `N`
++ declared values (see [Declared vs. actual value](#declared-vs-actual-value) for
++-definition). If there are more than `N` declared values generated, only the
++-last `N` declared values will be used to replace the matched op. Note that
++-because of the existence of multi-result op, one result pattern **may** generate
++-multiple declared values. So it means we do not necessarily need `N` result
++-patterns to replace an `N`-result op. For example, to replace an op with three
++-results, you can have
+++definition). If there are more than `N` declared values generated, only the last
+++`N` declared values will be used to replace the matched op. Note that because of
+++the existence of multi-result op, one result pattern **may** generate multiple
+++declared values. So it means we do not necessarily need `N` result patterns to
+++replace an `N`-result op. For example, to replace an op with three results, you
+++can have
++ 
++ ```tablegen
++ // ThreeResultOp/TwoResultOp/OneResultOp generates three/two/one result(s),
++@@ -590,8 +616,8 @@ regarding an op's values.
++ *   _Actual operand/result/value_: an operand/result/value of an op instance at
++     runtime
++ 
++-The above terms are needed because ops can have multiple results, and some of the
++-results can also be variadic. For example,
+++The above terms are needed because ops can have multiple results, and some of
+++the results can also be variadic. For example,
++ 
++ ```tablegen
++ def MultiVariadicOp : Op<"multi_variadic_op"> {
++@@ -611,8 +637,8 @@ def MultiVariadicOp : Op<"multi_variadic_op"> {
++ 
++ We say the above op has 3 declared operands and 3 declared results. But at
++ runtime, an instance can have 3 values corresponding to `$input2` and 2 values
++-correspond to `$output2`; we say it has 5 actual operands and 4 actual
++-results. A variadic operand/result is a considered as a declared value that can
+++correspond to `$output2`; we say it has 5 actual operands and 4 actual results.
+++A variadic operand/result is a considered as a declared value that can
++ correspond to multiple actual values.
++ 
++ [TODO]
++@@ -651,10 +677,10 @@ You can
++ 
++ ### Adjusting benefits
++ 
++-The benefit of a `Pattern` is an integer value indicating the benefit of matching
++-the pattern. It determines the priorities of patterns inside the pattern rewrite
++-driver. A pattern with a higher benefit is applied before one with a lower
++-benefit.
+++The benefit of a `Pattern` is an integer value indicating the benefit of
+++matching the pattern. It determines the priorities of patterns inside the
+++pattern rewrite driver. A pattern with a higher benefit is applied before one
+++with a lower benefit.
++ 
++ In DRR, a rule is set to have a benefit of the number of ops in the source
++ pattern. This is based on the heuristics and assumptions that:
++@@ -662,7 +688,6 @@ pattern. This is based on the heuristics and assumptions that:
++ *   Larger matches are more beneficial than smaller ones.
++ *   If a smaller one is applied first the larger one may not apply anymore.
++ 
++-
++ The fourth parameter to `Pattern` (and `Pat`) allows to manually tweak a
++ pattern's benefit. Just supply `(addBenefit N)` to add `N` to the benefit value.
++ 
++@@ -696,8 +721,8 @@ def : Pat<(LocSrc1Op:$src1 (LocSrc2Op:$src2 ...),
++           (LocDst1Op (LocDst2Op ..., (location $src2)), (location "outer"))>;
++ ```
++ 
++-In the above pattern, the generated `LocDst2Op` will use the matched location
++-of `LocSrc2Op` while the root `LocDst1Op` node will used the named location
+++In the above pattern, the generated `LocDst2Op` will use the matched location of
+++`LocSrc2Op` while the root `LocDst1Op` node will used the named location
++ `outer`.
++ 
++ ### `replaceWithValue`
++@@ -724,8 +749,8 @@ The above pattern removes the `Foo` and replaces all uses of `Foo` with
++ 
++ ### Run `mlir-tblgen` to see the generated content
++ 
++-TableGen syntax sometimes can be obscure; reading the generated content can be
++-a very helpful way to understand and debug issues. To build `mlir-tblgen`, run
+++TableGen syntax sometimes can be obscure; reading the generated content can be a
+++very helpful way to understand and debug issues. To build `mlir-tblgen`, run
++ `cmake --build . --target mlir-tblgen` in your build directory and find the
++ `mlir-tblgen` binary in the `bin/` subdirectory. All the supported generators
++ can be found via `mlir-tblgen --help`.
++diff --git a/mlir/include/mlir/IR/OpBase.td b/mlir/include/mlir/IR/OpBase.td
++index 952e3a36e457..ebd882db9a27 100644
++--- a/mlir/include/mlir/IR/OpBase.td
+++++ b/mlir/include/mlir/IR/OpBase.td
++@@ -2543,26 +2543,69 @@ class Pat<dag pattern, dag result, list<dag> preds = [],
++ // If used as a DAG node, i.e., `(NativeCodeCall<"..."> <arg0>, ..., <argN>)`,
++ // then positional placeholders are also supported; placeholder `$N` in the
++ // wrapped C++ expression will be replaced by `<argN>`.
+++//
+++// ## Bind multiple results
+++//
+++// To bind multi-results and access the N-th result with `$<name>__N`, specify
+++// the number of return values in the template. Note that only `Value` type is
+++// supported for multiple results binding.
++ 
++-class NativeCodeCall<string expr> {
+++class NativeCodeCall<string expr, int returns = 1> {
++   string expression = expr;
+++  int numReturns = returns;
++ }
++ 
+++class NativeCodeCallVoid<string expr> : NativeCodeCall<expr, 0>;
+++
++ def ConstantLikeMatcher : NativeCodeCall<"success(matchPattern($_self->getResult(0), m_Constant(&$0)))">;
++ 
++ //===----------------------------------------------------------------------===//
++ // Rewrite directives
++ //===----------------------------------------------------------------------===//
++ 
++-// Directive used in result pattern to specify the location of the generated
++-// op. This directive must be used as the last argument to the op creation
++-// DAG construct. The arguments to location must be previously captured symbol.
++-def location;
++-
++ // Directive used in result pattern to indicate that no new op are generated,
++ // so to replace the matched DAG with an existing SSA value.
++ def replaceWithValue;
++ 
+++// Directive used in result patterns to specify the location of the generated
+++// op. This directive must be used as a trailing argument to op creation or
+++// native code calls.
+++//
+++// Usage:
+++// * Create a named location: `(location "myLocation")`
+++// * Copy the location of a captured symbol: `(location $arg)`
+++// * Create a fused location: `(location "metadata", $arg0, $arg1)`
+++
+++def location;
+++
+++// Directive used in result patterns to specify return types for a created op.
+++// This allows ops to be created without relying on type inference with
+++// `OpTraits` or an op builder with deduction.
+++//
+++// This directive must be used as a trailing argument to op creation.
+++//
+++// Specify one return type with a string literal:
+++//
+++// ```
+++// (AnOp $val, (returnType "$_builder.getI32Type()"))
+++// ```
+++//
+++// Pass a captured value to copy its return type:
+++//
+++// ```
+++// (AnOp $val, (returnType $val));
+++// ```
+++//
+++// Pass a native code call inside a DAG to create a new type with arguments.
+++//
+++// ```
+++// (AnOp $val,
+++//       (returnType (NativeCodeCall<"$_builder.getTupleType({$0})"> $val)));
+++// ```
+++//
+++// Specify multiple return types with multiple of any of the above.
+++
+++def returnType;
++ 
++ //===----------------------------------------------------------------------===//
++ // Attribute and Type generation
++diff --git a/mlir/include/mlir/TableGen/Pattern.h b/mlir/include/mlir/TableGen/Pattern.h
++index 98c5d9b18f5d..a3786cd8e0b8 100644
++--- a/mlir/include/mlir/TableGen/Pattern.h
+++++ b/mlir/include/mlir/TableGen/Pattern.h
++@@ -100,6 +100,11 @@ public:
++   // Precondition: isNativeCodeCall()
++   StringRef getNativeCodeTemplate() const;
++ 
+++  // Returns the number of values will be returned by the native helper
+++  // function.
+++  // Precondition: isNativeCodeCall()
+++  int getNumReturnsOfNativeCode() const;
+++
++   // Returns the string associated with the leaf.
++   // Precondition: isStringAttr()
++   std::string getStringAttr() const;
++@@ -171,6 +176,9 @@ public:
++   // Returns whether this DAG represents the location of an op creation.
++   bool isLocationDirective() const;
++ 
+++  // Returns whether this DAG is a return type specifier.
+++  bool isReturnTypeDirective() const;
+++
++   // Returns true if this DAG node is wrapping native code call.
++   bool isNativeCodeCall() const;
++ 
++@@ -181,9 +189,17 @@ public:
++   // Precondition: isNativeCodeCall()
++   StringRef getNativeCodeTemplate() const;
++ 
+++  // Returns the number of values will be returned by the native helper
+++  // function.
+++  // Precondition: isNativeCodeCall()
+++  int getNumReturnsOfNativeCode() const;
+++
++   void print(raw_ostream &os) const;
++ 
++ private:
+++  friend class SymbolInfoMap;
+++  const void *getAsOpaquePointer() const { return node; }
+++
++   const llvm::DagInit *node; // nullptr means null DagNode
++ };
++ 
++@@ -237,26 +253,34 @@ public:
++     // Allow SymbolInfoMap to access private methods.
++     friend class SymbolInfoMap;
++ 
+++    // DagNode and DagLeaf are accessed by value which means it can't be used as
+++    // identifier here. Use an opaque pointer type instead.
+++    using DagAndConstant = std::pair<const void *, int>;
+++
++     // What kind of entity this symbol represents:
++     // * Attr: op attribute
++     // * Operand: op operand
++     // * Result: op result
++     // * Value: a value not attached to an op (e.g., from NativeCodeCall)
++-    enum class Kind : uint8_t { Attr, Operand, Result, Value };
+++    // * MultipleValues: a pack of values not attached to an op (e.g., from
+++    //   NativeCodeCall). This kind supports indexing.
+++    enum class Kind : uint8_t { Attr, Operand, Result, Value, MultipleValues };
++ 
++-    // Creates a SymbolInfo instance. `index` is only used for `Attr` and
++-    // `Operand` so should be negative for `Result` and `Value` kind.
++-    SymbolInfo(const Operator *op, Kind kind, Optional<int> index);
+++    // Creates a SymbolInfo instance. `dagAndConstant` is only used for `Attr`
+++    // and `Operand` so should be llvm::None for `Result` and `Value` kind.
+++    SymbolInfo(const Operator *op, Kind kind,
+++               Optional<DagAndConstant> dagAndConstant);
++ 
++     // Static methods for creating SymbolInfo.
++     static SymbolInfo getAttr(const Operator *op, int index) {
++-      return SymbolInfo(op, Kind::Attr, index);
+++      return SymbolInfo(op, Kind::Attr, DagAndConstant(nullptr, index));
++     }
++     static SymbolInfo getAttr() {
++       return SymbolInfo(nullptr, Kind::Attr, llvm::None);
++     }
++-    static SymbolInfo getOperand(const Operator *op, int index) {
++-      return SymbolInfo(op, Kind::Operand, index);
+++    static SymbolInfo getOperand(DagNode node, const Operator *op, int index) {
+++      return SymbolInfo(op, Kind::Operand,
+++                        DagAndConstant(node.getAsOpaquePointer(), index));
++     }
++     static SymbolInfo getResult(const Operator *op) {
++       return SymbolInfo(op, Kind::Result, llvm::None);
++@@ -264,6 +288,10 @@ public:
++     static SymbolInfo getValue() {
++       return SymbolInfo(nullptr, Kind::Value, llvm::None);
++     }
+++    static SymbolInfo getMultipleValues(int numValues) {
+++      return SymbolInfo(nullptr, Kind::MultipleValues,
+++                        DagAndConstant(nullptr, numValues));
+++    }
++ 
++     // Returns the number of static values this symbol corresponds to.
++     // A static value is an operand/result declared in ODS. Normally a symbol
++@@ -289,10 +317,21 @@ public:
++     std::string getAllRangeUse(StringRef name, int index, const char *fmt,
++                                const char *separator) const;
++ 
+++    // The argument index (for `Attr` and `Operand` only)
+++    int getArgIndex() const { return (*dagAndConstant).second; }
+++
+++    // The number of values in the MultipleValue
+++    int getSize() const { return (*dagAndConstant).second; }
+++
++     const Operator *op; // The op where the bound entity belongs
++     Kind kind;          // The kind of the bound entity
++-    // The argument index (for `Attr` and `Operand` only)
++-    Optional<int> argIndex;
+++
+++    // The pair of DagNode pointer and constant value (for `Attr`, `Operand` and
+++    // the size of MultipleValue symbol). Note that operands may be bound to the
+++    // same symbol, use the DagNode and index to distinguish them. For `Attr`
+++    // and MultipleValue, the Dag part will be nullptr.
+++    Optional<DagAndConstant> dagAndConstant;
+++
++     // Alternative name for the symbol. It is used in case the name
++     // is not unique. Applicable for `Operand` only.
++     Optional<std::string> alternativeName;
++@@ -312,16 +351,24 @@ public:
++ 
++   // Binds the given `symbol` to the `argIndex`-th argument to the given `op`.
++   // Returns false if `symbol` is already bound and symbols are not operands.
++-  bool bindOpArgument(StringRef symbol, const Operator &op, int argIndex);
+++  bool bindOpArgument(DagNode node, StringRef symbol, const Operator &op,
+++                      int argIndex);
++ 
++   // Binds the given `symbol` to the results the given `op`. Returns false if
++   // `symbol` is already bound.
++   bool bindOpResult(StringRef symbol, const Operator &op);
++ 
++-  // Registers the given `symbol` as bound to a value. Returns false if `symbol`
++-  // is already bound.
+++  // A helper function for dispatching target value binding functions.
+++  bool bindValues(StringRef symbol, int numValues = 1);
+++
+++  // Registers the given `symbol` as bound to the Value(s). Returns false if
+++  // `symbol` is already bound.
++   bool bindValue(StringRef symbol);
++ 
+++  // Registers the given `symbol` as bound to a MultipleValue. Return false if
+++  // `symbol` is already bound.
+++  bool bindMultipleValues(StringRef symbol, int numValues);
+++
++   // Registers the given `symbol` as bound to an attr. Returns false if `symbol`
++   // is already bound.
++   bool bindAttr(StringRef symbol);
++@@ -334,8 +381,8 @@ public:
++ 
++   // Returns an iterator to the information of the given symbol named as `key`,
++   // with index `argIndex` for operator `op`.
++-  const_iterator findBoundSymbol(StringRef key, const Operator &op,
++-                                 int argIndex) const;
+++  const_iterator findBoundSymbol(StringRef key, DagNode node,
+++                                 const Operator &op, int argIndex) const;
++ 
++   // Returns the bounds of a range that includes all the elements which
++   // bind to the `key`.
++diff --git a/mlir/lib/TableGen/Pattern.cpp b/mlir/lib/TableGen/Pattern.cpp
++index d3bd6f7662bf..ce225ed93076 100644
++--- a/mlir/lib/TableGen/Pattern.cpp
+++++ b/mlir/lib/TableGen/Pattern.cpp
++@@ -54,9 +54,7 @@ bool DagLeaf::isEnumAttrCase() const {
++   return isSubClassOf("EnumAttrCaseInfo");
++ }
++ 
++-bool DagLeaf::isStringAttr() const {
++-  return isa<llvm::StringInit>(def);
++-}
+++bool DagLeaf::isStringAttr() const { return isa<llvm::StringInit>(def); }
++ 
++ Constraint DagLeaf::getAsConstraint() const {
++   assert((isOperandMatcher() || isAttrMatcher()) &&
++@@ -83,6 +81,11 @@ llvm::StringRef DagLeaf::getNativeCodeTemplate() const {
++   return cast<llvm::DefInit>(def)->getDef()->getValueAsString("expression");
++ }
++ 
+++int DagLeaf::getNumReturnsOfNativeCode() const {
+++  assert(isNativeCodeCall() && "the DAG leaf must be NativeCodeCall");
+++  return cast<llvm::DefInit>(def)->getDef()->getValueAsInt("numReturns");
+++}
+++
++ std::string DagLeaf::getStringAttr() const {
++   assert(isStringAttr() && "the DAG leaf must be string attribute");
++   return def->getAsUnquotedString();
++@@ -109,7 +112,8 @@ bool DagNode::isNativeCodeCall() const {
++ }
++ 
++ bool DagNode::isOperation() const {
++-  return !isNativeCodeCall() && !isReplaceWithValue() && !isLocationDirective();
+++  return !isNativeCodeCall() && !isReplaceWithValue() &&
+++         !isLocationDirective() && !isReturnTypeDirective();
++ }
++ 
++ llvm::StringRef DagNode::getNativeCodeTemplate() const {
++@@ -119,6 +123,13 @@ llvm::StringRef DagNode::getNativeCodeTemplate() const {
++       ->getValueAsString("expression");
++ }
++ 
+++int DagNode::getNumReturnsOfNativeCode() const {
+++  assert(isNativeCodeCall() && "the DAG leaf must be NativeCodeCall");
+++  return cast<llvm::DefInit>(node->getOperator())
+++      ->getDef()
+++      ->getValueAsInt("numReturns");
+++}
+++
++ llvm::StringRef DagNode::getSymbol() const { return node->getNameStr(); }
++ 
++ Operator &DagNode::getDialectOp(RecordOperatorMap *mapper) const {
++@@ -168,6 +179,11 @@ bool DagNode::isLocationDirective() const {
++   return dagOpDef->getName() == "location";
++ }
++ 
+++bool DagNode::isReturnTypeDirective() const {
+++  auto *dagOpDef = cast<llvm::DefInit>(node->getOperator())->getDef();
+++  return dagOpDef->getName() == "returnType";
+++}
+++
++ void DagNode::print(raw_ostream &os) const {
++   if (node)
++     node->print(os);
++@@ -193,8 +209,8 @@ StringRef SymbolInfoMap::getValuePackName(StringRef symbol, int *index) {
++ }
++ 
++ SymbolInfoMap::SymbolInfo::SymbolInfo(const Operator *op, SymbolInfo::Kind kind,
++-                                      Optional<int> index)
++-    : op(op), kind(kind), argIndex(index) {}
+++                                      Optional<DagAndConstant> dagAndConstant)
+++    : op(op), kind(kind), dagAndConstant(dagAndConstant) {}
++ 
++ int SymbolInfoMap::SymbolInfo::getStaticValueCount() const {
++   switch (kind) {
++@@ -204,6 +220,8 @@ int SymbolInfoMap::SymbolInfo::getStaticValueCount() const {
++     return 1;
++   case Kind::Result:
++     return op->getNumResults();
+++  case Kind::MultipleValues:
+++    return getSize();
++   }
++   llvm_unreachable("unknown kind");
++ }
++@@ -217,8 +235,9 @@ std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
++   switch (kind) {
++   case Kind::Attr: {
++     if (op) {
++-      auto type =
++-          op->getArg(*argIndex).get<NamedAttribute *>()->attr.getStorageType();
+++      auto type = op->getArg(getArgIndex())
+++                      .get<NamedAttribute *>()
+++                      ->attr.getStorageType();
++       return std::string(formatv("{0} {1};\n", type, name));
++     }
++     // TODO(suderman): Use a more exact type when available.
++@@ -234,6 +253,14 @@ std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
++   case Kind::Value: {
++     return std::string(formatv("::mlir::Value {0};\n", name));
++   }
+++  case Kind::MultipleValues: {
+++    // This is for the variable used in the source pattern. Each named value in
+++    // source pattern will only be bound to a Value. The others in the result
+++    // pattern may be associated with multiple Values as we will use `auto` to
+++    // do the type inference.
+++    return std::string(formatv(
+++        "::mlir::Value {0}_raw; ::mlir::ValueRange {0}({0}_raw);\n", name));
+++  }
++   case Kind::Result: {
++     // Use the op itself for captured results.
++     return std::string(formatv("{0} {1};\n", op->getQualCppClassName(), name));
++@@ -254,7 +281,7 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
++   }
++   case Kind::Operand: {
++     assert(index < 0);
++-    auto *operand = op->getArg(*argIndex).get<NamedTypeConstraint *>();
+++    auto *operand = op->getArg(getArgIndex()).get<NamedTypeConstraint *>();
++     // If this operand is variadic, then return a range. Otherwise, return the
++     // value itself.
++     if (operand->isVariableLength()) {
++@@ -309,6 +336,21 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
++     LLVM_DEBUG(llvm::dbgs() << repl << " (Value)\n");
++     return std::string(repl);
++   }
+++  case Kind::MultipleValues: {
+++    assert(op == nullptr);
+++    assert(index < getSize());
+++    if (index >= 0) {
+++      std::string repl =
+++          formatv(fmt, std::string(formatv("{0}[{1}]", name, index)));
+++      LLVM_DEBUG(llvm::dbgs() << repl << " (MultipleValues)\n");
+++      return repl;
+++    }
+++    // If it doesn't specify certain element, unpack them all.
+++    auto repl =
+++        formatv(fmt, std::string(formatv("{0}.begin(), {0}.end()", name)));
+++    LLVM_DEBUG(llvm::dbgs() << repl << " (MultipleValues)\n");
+++    return std::string(repl);
+++  }
++   }
++   llvm_unreachable("unknown kind");
++ }
++@@ -351,12 +393,26 @@ std::string SymbolInfoMap::SymbolInfo::getAllRangeUse(
++     LLVM_DEBUG(llvm::dbgs() << repl << " (Value)\n");
++     return std::string(repl);
++   }
+++  case Kind::MultipleValues: {
+++    assert(op == nullptr);
+++    assert(index < getSize());
+++    if (index >= 0) {
+++      std::string repl =
+++          formatv(fmt, std::string(formatv("{0}[{1}]", name, index)));
+++      LLVM_DEBUG(llvm::dbgs() << repl << " (MultipleValues)\n");
+++      return repl;
+++    }
+++    auto repl =
+++        formatv(fmt, std::string(formatv("{0}.begin(), {0}.end()", name)));
+++    LLVM_DEBUG(llvm::dbgs() << repl << " (MultipleValues)\n");
+++    return std::string(repl);
+++  }
++   }
++   llvm_unreachable("unknown kind");
++ }
++ 
++-bool SymbolInfoMap::bindOpArgument(StringRef symbol, const Operator &op,
++-                                   int argIndex) {
+++bool SymbolInfoMap::bindOpArgument(DagNode node, StringRef symbol,
+++                                   const Operator &op, int argIndex) {
++   StringRef name = getValuePackName(symbol);
++   if (name != symbol) {
++     auto error = formatv(
++@@ -366,7 +422,7 @@ bool SymbolInfoMap::bindOpArgument(StringRef symbol, const Operator &op,
++ 
++   auto symInfo = op.getArg(argIndex).is<NamedAttribute *>()
++                      ? SymbolInfo::getAttr(&op, argIndex)
++-                     : SymbolInfo::getOperand(&op, argIndex);
+++                     : SymbolInfo::getOperand(node, &op, argIndex);
++ 
++   std::string key = symbol.str();
++   if (symbolInfoMap.count(key)) {
++@@ -393,11 +449,25 @@ bool SymbolInfoMap::bindOpResult(StringRef symbol, const Operator &op) {
++   return symbolInfoMap.count(inserted->first) == 1;
++ }
++ 
+++bool SymbolInfoMap::bindValues(StringRef symbol, int numValues) {
+++  std::string name = getValuePackName(symbol).str();
+++  if (numValues > 1)
+++    return bindMultipleValues(name, numValues);
+++  return bindValue(name);
+++}
+++
++ bool SymbolInfoMap::bindValue(StringRef symbol) {
++   auto inserted = symbolInfoMap.emplace(symbol.str(), SymbolInfo::getValue());
++   return symbolInfoMap.count(inserted->first) == 1;
++ }
++ 
+++bool SymbolInfoMap::bindMultipleValues(StringRef symbol, int numValues) {
+++  std::string name = getValuePackName(symbol).str();
+++  auto inserted =
+++      symbolInfoMap.emplace(name, SymbolInfo::getMultipleValues(numValues));
+++  return symbolInfoMap.count(inserted->first) == 1;
+++}
+++
++ bool SymbolInfoMap::bindAttr(StringRef symbol) {
++   auto inserted = symbolInfoMap.emplace(symbol.str(), SymbolInfo::getAttr());
++   return symbolInfoMap.count(inserted->first) == 1;
++@@ -414,16 +484,16 @@ SymbolInfoMap::const_iterator SymbolInfoMap::find(StringRef key) const {
++ }
++ 
++ SymbolInfoMap::const_iterator
++-SymbolInfoMap::findBoundSymbol(StringRef key, const Operator &op,
+++SymbolInfoMap::findBoundSymbol(StringRef key, DagNode node, const Operator &op,
++                                int argIndex) const {
++   std::string name = getValuePackName(key).str();
++   auto range = symbolInfoMap.equal_range(name);
++ 
++-  for (auto it = range.first; it != range.second; ++it) {
++-    if (it->second.op == &op && it->second.argIndex == argIndex) {
+++  const auto symbolInfo = SymbolInfo::getOperand(node, &op, argIndex);
+++
+++  for (auto it = range.first; it != range.second; ++it)
+++    if (it->second.dagAndConstant == symbolInfo.dagAndConstant)
++       return it;
++-    }
++-  }
++ 
++   return symbolInfoMap.end();
++ }
++@@ -629,7 +699,9 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
++       if (!isSrcPattern) {
++         LLVM_DEBUG(llvm::dbgs() << "found symbol bound to NativeCodeCall: "
++                                 << treeName << '\n');
++-        verifyBind(infoMap.bindValue(treeName), treeName);
+++        verifyBind(
+++            infoMap.bindValues(treeName, tree.getNumReturnsOfNativeCode()),
+++            treeName);
++       } else {
++         PrintFatalError(&def,
++                         formatv("binding symbol '{0}' to NativecodeCall in "
++@@ -685,14 +757,18 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
++     auto &op = getDialectOp(tree);
++     auto numOpArgs = op.getNumArgs();
++ 
++-    // The pattern might have the last argument specifying the location.
++-    bool hasLocDirective = false;
++-    if (numTreeArgs != 0) {
++-      if (auto lastArg = tree.getArgAsNestedDag(numTreeArgs - 1))
++-        hasLocDirective = lastArg.isLocationDirective();
+++    // The pattern might have trailing directives.
+++    int numDirectives = 0;
+++    for (int i = numTreeArgs - 1; i >= 0; --i) {
+++      if (auto dagArg = tree.getArgAsNestedDag(i)) {
+++        if (dagArg.isLocationDirective() || dagArg.isReturnTypeDirective())
+++          ++numDirectives;
+++        else
+++          break;
+++      }
++     }
++ 
++-    if (numOpArgs != numTreeArgs - hasLocDirective) {
+++    if (numOpArgs != numTreeArgs - numDirectives) {
++       auto err = formatv("op '{0}' argument number mismatch: "
++                          "{1} in pattern vs. {2} in definition",
++                          op.getOperationName(), numTreeArgs, numOpArgs);
++@@ -722,7 +798,8 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
++         if (!treeArgName.empty() && treeArgName != "_") {
++           LLVM_DEBUG(llvm::dbgs() << "found symbol bound to op argument: "
++                                   << treeArgName << '\n');
++-          verifyBind(infoMap.bindOpArgument(treeArgName, op, i), treeArgName);
+++          verifyBind(infoMap.bindOpArgument(tree, treeArgName, op, i),
+++                     treeArgName);
++         }
++       }
++     }
++diff --git a/mlir/test/lib/Dialect/Test/TestOps.td b/mlir/test/lib/Dialect/Test/TestOps.td
++index 0f1775f7a78f..b6cd59978cce 100644
++--- a/mlir/test/lib/Dialect/Test/TestOps.td
+++++ b/mlir/test/lib/Dialect/Test/TestOps.td
++@@ -860,7 +860,7 @@ def OpNativeCodeCall3 : TEST_Op<"native_code_call3"> {
++ // Test that NativeCodeCall is not ignored if it is not used to directly
++ // replace the matched root op.
++ def : Pattern<(OpNativeCodeCall3 $input),
++-              [(NativeCodeCall<"createOpI($_builder, $_loc, $0)"> $input),
+++              [(NativeCodeCallVoid<"createOpI($_builder, $_loc, $0)"> $input),
++                (OpK)]>;
++ 
++ def OpNativeCodeCall4 : TEST_Op<"native_code_call4"> {
++@@ -877,6 +877,19 @@ def BindNativeCodeCallResult : NativeCodeCall<"bindNativeCodeCallResult($0)">;
++ def : Pat<(OpNativeCodeCall4 (GetFirstI32Result $ret)),
++           (OpNativeCodeCall5 (BindNativeCodeCallResult:$native $ret), $native)>;
++ 
+++def OpNativeCodeCall6 : TEST_Op<"native_code_call6"> {
+++  let arguments = (ins I32:$input1, I32:$input2);
+++  let results = (outs I32:$output1, I32:$output2);
+++}
+++def OpNativeCodeCall7 : TEST_Op<"native_code_call7"> {
+++  let arguments = (ins I32:$input);
+++  let results = (outs I32);
+++}
+++def BindMultipleNativeCodeCallResult : NativeCodeCall<"bindMultipleNativeCodeCallResult($0, $1)", 2>;
+++def : Pattern<(OpNativeCodeCall6 $arg1, $arg2),
+++              [(OpNativeCodeCall7 (BindMultipleNativeCodeCallResult:$native__0 $arg1, $arg2)),
+++               (OpNativeCodeCall7 $native__1)]>;
+++
++ // Test AllAttrConstraintsOf.
++ def OpAllAttrConstraint1 : TEST_Op<"all_attr_constraint_of1"> {
++   let arguments = (ins I64ArrayAttr:$attr);
++@@ -1036,7 +1049,7 @@ def OpSymbolBindingNoResult : TEST_Op<"symbol_binding_no_result", []> {
++ 
++ // Test that we can bind to an op without results and reference it later.
++ def : Pat<(OpSymbolBindingNoResult:$op $operand),
++-          (NativeCodeCall<"handleNoResultOp($_builder, $0)"> $op)>;
+++          (NativeCodeCallVoid<"handleNoResultOp($_builder, $0)"> $op)>;
++ 
++ //===----------------------------------------------------------------------===//
++ // Test Patterns (Attributes)
++@@ -1291,6 +1304,64 @@ def : Pat<(TestLocationSrcOp:$res1
++               (location "named")),
++             (location "fused", $res2, $res3))>;
++ 
+++//===----------------------------------------------------------------------===//
+++// Test Patterns (Type Builders)
+++
+++def SourceOp : TEST_Op<"source_op"> {
+++  let arguments = (ins AnyInteger:$arg, AnyI32Attr:$tag);
+++  let results = (outs AnyInteger);
+++}
+++
+++// An op without return type deduction.
+++def OpX : TEST_Op<"op_x"> {
+++  let arguments = (ins AnyInteger:$input);
+++  let results = (outs AnyInteger);
+++}
+++
+++// Test that ops without built-in type deduction can be created in the
+++// replacement DAG with an explicitly specified type.
+++def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "11">:$attr),
+++          (OpX (OpX $val, (returnType "$_builder.getI32Type()")))>;
+++// Test NativeCodeCall type builder can accept arguments.
+++def SameTypeAs : NativeCodeCall<"$0.getType()">;
+++
+++def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "22">:$attr),
+++          (OpX (OpX $val, (returnType (SameTypeAs $val))))>;
+++
+++// Test multiple return types.
+++def MakeI64Type : NativeCodeCall<"$_builder.getI64Type()">;
+++def MakeI32Type : NativeCodeCall<"$_builder.getI32Type()">;
+++
+++def OneToTwo : TEST_Op<"one_to_two"> {
+++  let arguments = (ins AnyInteger);
+++  let results = (outs AnyInteger, AnyInteger);
+++}
+++
+++def TwoToOne : TEST_Op<"two_to_one"> {
+++  let arguments = (ins AnyInteger, AnyInteger);
+++  let results = (outs AnyInteger);
+++}
+++
+++def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "33">:$attr),
+++          (TwoToOne (OpX (OneToTwo:$res__0 $val, (returnType (MakeI64Type), (MakeI32Type))), (returnType (MakeI32Type))),
+++                    (OpX $res__1, (returnType (MakeI64Type))))>;
+++
+++// Test copy value return type.
+++def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "44">:$attr),
+++          (OpX (OpX $val, (returnType $val)))>;
+++
+++// Test create multiple return types with different methods.
+++def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "55">:$attr),
+++          (TwoToOne (OneToTwo:$res__0 $val, (returnType $val, "$_builder.getI64Type()")), $res__1)>;
+++
+++//===----------------------------------------------------------------------===//
+++// Test Patterns (Trailing Directives)
+++
+++// Test that we can specify both `location` and `returnType` directives.
+++def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "66">:$attr),
+++          (TwoToOne (OpX $val, (returnType $val), (location "loc1")),
+++                    (OpX $val, (location "loc2"), (returnType $val)))>;
+++
++ //===----------------------------------------------------------------------===//
++ // Test Legalization
++ //===----------------------------------------------------------------------===//
++diff --git a/mlir/test/lib/Dialect/Test/TestPatterns.cpp b/mlir/test/lib/Dialect/Test/TestPatterns.cpp
++index c27d855a2c2e..568f3bfe3630 100644
++--- a/mlir/test/lib/Dialect/Test/TestPatterns.cpp
+++++ b/mlir/test/lib/Dialect/Test/TestPatterns.cpp
++@@ -44,6 +44,11 @@ static bool getFirstI32Result(Operation *op, Value &value) {
++ 
++ static Value bindNativeCodeCallResult(Value value) { return value; }
++ 
+++static SmallVector<Value, 2> bindMultipleNativeCodeCallResult(Value input1,
+++                                                              Value input2) {
+++  return SmallVector<Value, 2>({input2, input1});
+++}
+++
++ // Test that natives calls are only called once during rewrites.
++ // OpM_Test will return Pi, increased by 1 for each subsequent calls.
++ // This let us check the number of times OpM_Test was called by inspecting
++diff --git a/mlir/test/mlir-tblgen/pattern.mlir b/mlir/test/mlir-tblgen/pattern.mlir
++index affc3d7a9396..f7345c14f0bb 100644
++--- a/mlir/test/mlir-tblgen/pattern.mlir
+++++ b/mlir/test/mlir-tblgen/pattern.mlir
++@@ -102,6 +102,16 @@ func @verifyNativeCodeCallBinding(%arg0 : i32) -> (i32) {
++   return %1 : i32
++ }
++ 
+++// CHECK-LABEL: verifyMultipleNativeCodeCallBinding
+++func@verifyMultipleNativeCodeCallBinding(%arg0 : i32) -> (i32) {
+++  %0 = "test.op_k"() : () -> (i32)
+++  %1 = "test.op_k"() : () -> (i32)
+++  // CHECK: %[[A:.*]] = "test.native_code_call7"(%1) : (i32) -> i32
+++  // CHECK: %[[A:.*]] = "test.native_code_call7"(%0) : (i32) -> i32
+++  %2, %3 = "test.native_code_call6"(%0, %1) : (i32, i32) -> (i32, i32)
+++  return %2 : i32
+++}
+++
++ // CHECK-LABEL: verifyAllAttrConstraintOf
++ func @verifyAllAttrConstraintOf() -> (i32, i32, i32) {
++   // CHECK: "test.all_attr_constraint_of2"
++@@ -509,3 +519,56 @@ func @redundantTest(%arg0: i32) -> i32 {
++   // CHECK: "test.op_m"(%arg0) {optional_attr = 314159265 : i32} : (i32) -> i32
++   return %0 : i32
++ }
+++
+++//===----------------------------------------------------------------------===//
+++// Test that ops without type deduction can be created with type builders.
+++//===----------------------------------------------------------------------===//
+++
+++func @explicitReturnTypeTest(%arg0 : i64) -> i8 {
+++  %0 = "test.source_op"(%arg0) {tag = 11 : i32} : (i64) -> i8
+++  // CHECK: "test.op_x"(%arg0) : (i64) -> i32
+++  // CHECK: "test.op_x"(%0) : (i32) -> i8
+++  return %0 : i8
+++}
+++
+++func @returnTypeBuilderTest(%arg0 : i1) -> i8 {
+++  %0 = "test.source_op"(%arg0) {tag = 22 : i32} : (i1) -> i8
+++  // CHECK: "test.op_x"(%arg0) : (i1) -> i1
+++  // CHECK: "test.op_x"(%0) : (i1) -> i8
+++  return %0 : i8
+++}
+++
+++func @multipleReturnTypeBuildTest(%arg0 : i1) -> i1 {
+++  %0 = "test.source_op"(%arg0) {tag = 33 : i32} : (i1) -> i1
+++  // CHECK: "test.one_to_two"(%arg0) : (i1) -> (i64, i32)
+++  // CHECK: "test.op_x"(%0#0) : (i64) -> i32
+++  // CHECK: "test.op_x"(%0#1) : (i32) -> i64
+++  // CHECK: "test.two_to_one"(%1, %2) : (i32, i64) -> i1
+++  return %0 : i1
+++}
+++
+++func @copyValueType(%arg0 : i8) -> i32 {
+++  %0 = "test.source_op"(%arg0) {tag = 44 : i32} : (i8) -> i32
+++  // CHECK: "test.op_x"(%arg0) : (i8) -> i8
+++  // CHECK: "test.op_x"(%0) : (i8) -> i32
+++  return %0 : i32
+++}
+++
+++func @multipleReturnTypeDifferent(%arg0 : i1) -> i64 {
+++  %0 = "test.source_op"(%arg0) {tag = 55 : i32} : (i1) -> i64
+++  // CHECK: "test.one_to_two"(%arg0) : (i1) -> (i1, i64)
+++  // CHECK: "test.two_to_one"(%0#0, %0#1) : (i1, i64) -> i64
+++  return %0 : i64
+++}
+++
+++//===----------------------------------------------------------------------===//
+++// Test that multiple trailing directives can be mixed in patterns.
+++//===----------------------------------------------------------------------===//
+++
+++func @returnTypeAndLocation(%arg0 : i32) -> i1 {
+++  %0 = "test.source_op"(%arg0) {tag = 66 : i32} : (i32) -> i1
+++  // CHECK: "test.op_x"(%arg0) : (i32) -> i32 loc("loc1")
+++  // CHECK: "test.op_x"(%arg0) : (i32) -> i32 loc("loc2")
+++  // CHECK: "test.two_to_one"(%0, %1) : (i32, i32) -> i1
+++  return %0 : i1
+++}
++diff --git a/mlir/test/mlir-tblgen/rewriter-errors.td b/mlir/test/mlir-tblgen/rewriter-errors.td
++index 60e4710688e7..3cebe2dfd34f 100644
++--- a/mlir/test/mlir-tblgen/rewriter-errors.td
+++++ b/mlir/test/mlir-tblgen/rewriter-errors.td
++@@ -1,6 +1,8 @@
++ // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
++ // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
++ // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR3 %s 2>&1 | FileCheck --check-prefix=ERROR3 %s
+++// RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR4 %s 2>&1 | FileCheck --check-prefix=ERROR4 %s
+++// RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR5 %s 2>&1 | FileCheck --check-prefix=ERROR5 %s
++ 
++ include "mlir/IR/OpBase.td"
++ 
++@@ -35,3 +37,15 @@ def NativeMatcher : NativeCodeCall<"success(nativeCall($_self, $0, $1))">;
++ def : Pat<(OpA (NativeMatcher (OpB $val, $unused)), AnyI32Attr:$arg),
++           (OpB $val, $arg)>;
++ #endif
+++
+++#ifdef ERROR4
+++// Check trying to pass op as DAG node inside ReturnTypeFunc fails.
+++// ERROR4: [[@LINE+1]]:1: error: nested DAG in `returnType` must be a native code
+++def : Pat<(OpB $val, AnyI32Attr:$attr), (OpA (OpA $val, $val, (returnType (OpA $val, $val))), $val)>;
+++#endif
+++
+++#ifdef ERROR5
+++// Check that trying to specify explicit types at the root node fails.
+++// ERROR5: [[@LINE+1]]:1: error: Cannot specify explicit return types in an op
+++def : Pat<(OpB $val, AnyI32Attr:$attr), (OpA $val, $val, (returnType "someType()"))>;
+++#endif
++diff --git a/mlir/test/mlir-tblgen/rewriter-indexing.td b/mlir/test/mlir-tblgen/rewriter-indexing.td
++index cbdeff9c743d..e31d78c2481e 100644
++--- a/mlir/test/mlir-tblgen/rewriter-indexing.td
+++++ b/mlir/test/mlir-tblgen/rewriter-indexing.td
++@@ -85,3 +85,18 @@ def NativeBuilder :
++ // CHECK: nativeCall(rewriter, odsLoc, (*v1.begin()), (*v2.begin()), (*v3.begin()), (*v4.begin()), (*v5.begin()), (*v6.begin()), (*v7.begin()), (*v8.begin()), (*v9.begin()), (*v10.begin()))
++ def test4 : Pat<(DOp $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10),
++                 (NativeBuilder $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10)>;
+++
+++// CHECK: struct test5 : public ::mlir::RewritePattern {
+++// CHECK: foo(rewriter, (*v4.begin()), (*v5.begin()), (*v6.begin()), (*v7.begin()), (*v8.begin()), (*v9.begin()), (*v10.begin()))
+++def test5 : Pat<(DOp $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10),
+++                (NativeCodeCall<[{ foo($_builder, $3...) }]> $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10)>;
+++
+++// Check Pattern with return type builder.
+++def SameTypeAs : NativeCodeCall<"$0.getType()">;
+++// CHECK: struct test6 : public ::mlir::RewritePattern {
+++// CHECK: tblgen_types.push_back((*v2.begin()).getType())
+++// CHECK: tblgen_types.push_back(rewriter.getI32Type())
+++// CHECK: nativeVar_1 = doSomething((*v3.begin()))
+++// CHECK: tblgen_types.push_back(nativeVar_1)
+++def test6 : Pat<(DOp $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10),
+++                (AOp (AOp $v1, (returnType $v2, "$_builder.getI32Type()", (NativeCodeCall<"doSomething($0)"> $v3))))>;
++diff --git a/mlir/tools/mlir-tblgen/RewriterGen.cpp b/mlir/tools/mlir-tblgen/RewriterGen.cpp
++index e0112af6b5b0..a258b076accd 100644
++--- a/mlir/tools/mlir-tblgen/RewriterGen.cpp
+++++ b/mlir/tools/mlir-tblgen/RewriterGen.cpp
++@@ -127,12 +127,31 @@ private:
++   // Returns the symbol of the old value serving as the replacement.
++   StringRef handleReplaceWithValue(DagNode tree);
++ 
+++  // Trailing directives are used at the end of DAG node argument lists to
+++  // specify additional behaviour for op matchers and creators, etc.
+++  struct TrailingDirectives {
+++    // DAG node containing the `location` directive. Null if there is none.
+++    DagNode location;
+++
+++    // DAG node containing the `returnType` directive. Null if there is none.
+++    DagNode returnType;
+++
+++    // Number of found trailing directives.
+++    int numDirectives;
+++  };
+++
+++  // Collect any trailing directives.
+++  TrailingDirectives getTrailingDirectives(DagNode tree);
+++
++   // Returns the location value to use.
++-  std::pair<bool, std::string> getLocation(DagNode tree);
+++  std::string getLocation(TrailingDirectives &tail);
++ 
++   // Returns the location value to use.
++   std::string handleLocationDirective(DagNode tree);
++ 
+++  // Emit return type argument.
+++  std::string handleReturnTypeArg(DagNode returnType, int i, int depth);
+++
++   // Emits the C++ statement to build a new op out of the given DAG `tree` and
++   // returns the variable name that this op is assigned to. If the root op in
++   // DAG `tree` has a specified name, the created op will be assigned to a
++@@ -272,9 +291,10 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
++     capture.push_back(std::move(argName));
++   }
++ 
++-  bool hasLocationDirective;
++-  std::string locToUse;
++-  std::tie(hasLocationDirective, locToUse) = getLocation(tree);
+++  auto tail = getTrailingDirectives(tree);
+++  if (tail.returnType)
+++    PrintFatalError(loc, "`NativeCodeCall` cannot have return type specifier");
+++  auto locToUse = getLocation(tail);
++ 
++   auto fmt = tree.getNativeCodeTemplate();
++   if (fmt.count("$_self") != 1) {
++@@ -287,14 +307,14 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
++ 
++   os << "if (failed(" << nativeCodeCall << ")) return ::mlir::failure();\n";
++ 
++-  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+++  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
++     auto name = tree.getArgName(i);
++     if (!name.empty() && name != "_") {
++       os << formatv("{0} = {1};\n", name, capture[i]);
++     }
++   }
++ 
++-  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+++  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
++     std::string argName = capture[i];
++ 
++     // Handle nested DAG construct first
++@@ -750,7 +770,8 @@ void PatternEmitter::emitRewriteLogic() {
++     // NativeCodeCall will only be materialized to `os` if it is used. Here
++     // we are handling auxiliary patterns so we want the side effect even if
++     // NativeCodeCall is not replacing matched root op's results.
++-    if (resultTree.isNativeCodeCall())
+++    if (resultTree.isNativeCodeCall() &&
+++        resultTree.getNumReturnsOfNativeCode() == 0)
++       os << val << ";\n";
++   }
++ 
++@@ -800,11 +821,8 @@ std::string PatternEmitter::handleResultPattern(DagNode resultTree,
++                     "location directive can only be used with op creation");
++   }
++ 
++-  if (resultTree.isNativeCodeCall()) {
++-    auto symbol = handleReplaceWithNativeCodeCall(resultTree, depth);
++-    symbolInfoMap.bindValue(symbol);
++-    return symbol;
++-  }
+++  if (resultTree.isNativeCodeCall())
+++    return handleReplaceWithNativeCodeCall(resultTree, depth);
++ 
++   if (resultTree.isReplaceWithValue())
++     return handleReplaceWithValue(resultTree).str();
++@@ -882,6 +900,24 @@ std::string PatternEmitter::handleLocationDirective(DagNode tree) {
++   return os.str();
++ }
++ 
+++std::string PatternEmitter::handleReturnTypeArg(DagNode returnType, int i,
+++                                                int depth) {
+++  // Nested NativeCodeCall.
+++  if (auto dagNode = returnType.getArgAsNestedDag(i)) {
+++    if (!dagNode.isNativeCodeCall())
+++      PrintFatalError(loc, "nested DAG in `returnType` must be a native code "
+++                           "call");
+++    return handleReplaceWithNativeCodeCall(dagNode, depth);
+++  }
+++  // String literal.
+++  auto dagLeaf = returnType.getArgAsLeaf(i);
+++  if (dagLeaf.isStringAttr())
+++    return tgfmt(dagLeaf.getStringAttr(), &fmtCtx);
+++  return tgfmt(
+++      "$0.getType()", &fmtCtx,
+++      handleOpArgument(returnType.getArgAsLeaf(i), returnType.getArgName(i)));
+++}
+++
++ std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
++                                              StringRef patArgName) {
++   if (leaf.isStringAttr())
++@@ -927,11 +963,12 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree,
++ 
++   SmallVector<std::string, 16> attrs;
++ 
++-  bool hasLocationDirective;
++-  std::string locToUse;
++-  std::tie(hasLocationDirective, locToUse) = getLocation(tree);
+++  auto tail = getTrailingDirectives(tree);
+++  if (tail.returnType)
+++    PrintFatalError(loc, "`NativeCodeCall` cannot have return type specifier");
+++  auto locToUse = getLocation(tail);
++ 
++-  for (int i = 0, e = tree.getNumArgs() - hasLocationDirective; i != e; ++i) {
+++  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
++     if (tree.isNestedDagArg(i)) {
++       attrs.push_back(
++           handleResultPattern(tree.getArgAsNestedDag(i), i, depth + 1));
++@@ -944,9 +981,39 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree,
++   }
++ 
++   std::string symbol = tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse), attrs);
++-  if (!tree.getSymbol().empty()) {
++-    os << formatv("auto {0} = {1};\n", tree.getSymbol(), symbol);
++-    symbol = tree.getSymbol().str();
+++
+++  // In general, NativeCodeCall without naming binding don't need this. To
+++  // ensure void helper function has been correctly labeled, i.e., use
+++  // NativeCodeCallVoid, we cache the result to a local variable so that we will
+++  // get a compilation error in the auto-generated file.
+++  // Example.
+++  //   // In the td file
+++  //   Pat<(...), (NativeCodeCall<Foo> ...)>
+++  //
+++  //   ---
+++  //
+++  //   // In the auto-generated .cpp
+++  //   ...
+++  //   // Causes compilation error if Foo() returns void.
+++  //   auto nativeVar = Foo();
+++  //   ...
+++  if (tree.getNumReturnsOfNativeCode() != 0) {
+++    // Determine the local variable name for return value.
+++    std::string varName =
+++        SymbolInfoMap::getValuePackName(tree.getSymbol()).str();
+++    if (varName.empty()) {
+++      varName = formatv("nativeVar_{0}", nextValueId++);
+++      // Register the local variable for later uses.
+++      symbolInfoMap.bindValues(varName, tree.getNumReturnsOfNativeCode());
+++    }
+++
+++    // Catch the return value of helper function.
+++    os << formatv("auto {0} = {1}; (void){0};\n", varName, symbol);
+++
+++    if (!tree.getSymbol().empty())
+++      symbol = tree.getSymbol().str();
+++    else
+++      symbol = varName;
++   }
++ 
++   return symbol;
++@@ -963,23 +1030,56 @@ int PatternEmitter::getNodeValueCount(DagNode node) {
++     // Otherwise this is an unbound op; we will use all its results.
++     return pattern.getDialectOp(node).getNumResults();
++   }
++-  // TODO: This considers all NativeCodeCall as returning one
++-  // value. Enhance if multi-value ones are needed.
+++
+++  if (node.isNativeCodeCall())
+++    return node.getNumReturnsOfNativeCode();
+++
++   return 1;
++ }
++ 
++-std::pair<bool, std::string> PatternEmitter::getLocation(DagNode tree) {
++-  auto numPatArgs = tree.getNumArgs();
+++PatternEmitter::TrailingDirectives
+++PatternEmitter::getTrailingDirectives(DagNode tree) {
+++  TrailingDirectives tail = {DagNode(nullptr), DagNode(nullptr), 0};
++ 
++-  if (numPatArgs != 0) {
++-    if (auto lastArg = tree.getArgAsNestedDag(numPatArgs - 1))
++-      if (lastArg.isLocationDirective()) {
++-        return std::make_pair(true, handleLocationDirective(lastArg));
++-      }
+++  // Look backwards through the arguments.
+++  auto numPatArgs = tree.getNumArgs();
+++  for (int i = numPatArgs - 1; i >= 0; --i) {
+++    auto dagArg = tree.getArgAsNestedDag(i);
+++    // A leaf is not a directive. Stop looking.
+++    if (!dagArg)
+++      break;
+++
+++    auto isLocation = dagArg.isLocationDirective();
+++    auto isReturnType = dagArg.isReturnTypeDirective();
+++    // If encountered a DAG node that isn't a trailing directive, stop looking.
+++    if (!(isLocation || isReturnType))
+++      break;
+++    // Save the directive, but error if one of the same type was already
+++    // found.
+++    ++tail.numDirectives;
+++    if (isLocation) {
+++      if (tail.location)
+++        PrintFatalError(loc, "`location` directive can only be specified "
+++                             "once");
+++      tail.location = dagArg;
+++    } else if (isReturnType) {
+++      if (tail.returnType)
+++        PrintFatalError(loc, "`returnType` directive can only be specified "
+++                             "once");
+++      tail.returnType = dagArg;
+++    }
++   }
++ 
+++  return tail;
+++}
+++
+++std::string
+++PatternEmitter::getLocation(PatternEmitter::TrailingDirectives &tail) {
+++  if (tail.location)
+++    return handleLocationDirective(tail.location);
+++
++   // If no explicit location is given, use the default, all fused, location.
++-  return std::make_pair(false, "odsLoc");
+++  return "odsLoc";
++ }
++ 
++ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
++@@ -992,11 +1092,10 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
++   auto numOpArgs = resultOp.getNumArgs();
++   auto numPatArgs = tree.getNumArgs();
++ 
++-  bool hasLocationDirective;
++-  std::string locToUse;
++-  std::tie(hasLocationDirective, locToUse) = getLocation(tree);
+++  auto tail = getTrailingDirectives(tree);
+++  auto locToUse = getLocation(tail);
++ 
++-  auto inPattern = numPatArgs - hasLocationDirective;
+++  auto inPattern = numPatArgs - tail.numDirectives;
++   if (numOpArgs != inPattern) {
++     PrintFatalError(loc,
++                     formatv("resultant op '{0}' argument number mismatch: "
++@@ -1011,7 +1110,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
++   // First go through all the child nodes who are nested DAG constructs to
++   // create ops for them and remember the symbol names for them, so that we can
++   // use the results in the current node. This happens in a recursive manner.
++-  for (int i = 0, e = tree.getNumArgs() - hasLocationDirective; i != e; ++i) {
+++  for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
++     if (auto child = tree.getArgAsNestedDag(i))
++       childNodeNames[i] = handleResultPattern(child, i, depth + 1);
++   }
++@@ -1046,7 +1145,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
++   bool useFirstAttr =
++       resultOp.getTrait("::mlir::OpTrait::FirstAttrDerivedResultType");
++ 
++-  if (isSameOperandsAndResultType || useFirstAttr) {
+++  if (!tail.returnType && (isSameOperandsAndResultType || useFirstAttr)) {
++     // We know how to deduce the result type for ops with these traits and we've
++     // generated builders taking aggregate parameters. Use those builders to
++     // create the ops.
++@@ -1063,7 +1162,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
++ 
++   bool usePartialResults = valuePackName != resultValue;
++ 
++-  if (usePartialResults || depth > 0 || resultIndex < 0) {
+++  if (!tail.returnType && (usePartialResults || depth > 0 || resultIndex < 0)) {
++     // For these cases (broadcastable ops, op results used both as auxiliary
++     // values and replacement values, ops in nested patterns, auxiliary ops), we
++     // still need to supply the result types when building the op. But because
++@@ -1081,10 +1180,14 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
++     return resultValue;
++   }
++ 
++-  // If depth == 0 and resultIndex >= 0, it means we are replacing the values
++-  // generated from the source pattern root op. Then we can use the source
++-  // pattern's value types to determine the value type of the generated op
++-  // here.
+++  // If we are provided explicit return types, use them to build the op.
+++  // However, if depth == 0 and resultIndex >= 0, it means we are replacing
+++  // the values generated from the source pattern root op. Then we must use the
+++  // source pattern's value types to determine the value type of the generated
+++  // op here.
+++  if (depth == 0 && resultIndex >= 0 && tail.returnType)
+++    PrintFatalError(loc, "Cannot specify explicit return types in an op whose "
+++                         "return values replace the source pattern's root op");
++ 
++   // First prepare local variables for op arguments used in builder call.
++   createAggregateLocalVarsForOpArgs(tree, childNodeNames, depth);
++@@ -1094,11 +1197,20 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
++   os.indent() << formatv("::mlir::SmallVector<::mlir::Type, 4> tblgen_types; "
++                          "(void)tblgen_types;\n");
++   int numResults = resultOp.getNumResults();
++-  if (numResults != 0) {
++-    for (int i = 0; i < numResults; ++i)
++-      os << formatv("for (auto v: castedOp0.getODSResults({0})) {{\n"
++-                    "  tblgen_types.push_back(v.getType());\n}\n",
++-                    resultIndex + i);
+++  if (tail.returnType) {
+++    auto numRetTys = tail.returnType.getNumArgs();
+++    for (int i = 0; i < numRetTys; ++i) {
+++      auto varName = handleReturnTypeArg(tail.returnType, i, depth + 1);
+++      os << "tblgen_types.push_back(" << varName << ");\n";
+++    }
+++  } else {
+++    if (numResults != 0) {
+++      // Copy the result types from the source pattern.
+++      for (int i = 0; i < numResults; ++i)
+++        os << formatv("for (auto v: castedOp0.getODSResults({0})) {{\n"
+++                      "  tblgen_types.push_back(v.getType());\n}\n",
+++                      resultIndex + i);
+++    }
++   }
++   os << formatv("{0} = rewriter.create<{1}>({2}, tblgen_types, "
++                 "tblgen_values, tblgen_attrs);\n",
++@@ -1187,8 +1299,7 @@ void PatternEmitter::supplyValuesForOpArgs(
++       if (!subTree.isNativeCodeCall())
++         PrintFatalError(loc, "only NativeCodeCall allowed in nested dag node "
++                              "for creating attribute");
++-      os << formatv("/*{0}=*/{1}", opArgName,
++-                    handleReplaceWithNativeCodeCall(subTree, depth));
+++      os << formatv("/*{0}=*/{1}", opArgName, childNodeNames.lookup(argIndex));
++     } else {
++       auto leaf = node.getArgAsLeaf(argIndex);
++       // The argument in the result DAG pattern.
++@@ -1229,8 +1340,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
++         if (!subTree.isNativeCodeCall())
++           PrintFatalError(loc, "only NativeCodeCall allowed in nested dag node "
++                                "for creating attribute");
++-        os << formatv(addAttrCmd, opArgName,
++-                      handleReplaceWithNativeCodeCall(subTree, depth + 1));
+++        os << formatv(addAttrCmd, opArgName, childNodeNames.lookup(argIndex));
++       } else {
++         auto leaf = node.getArgAsLeaf(argIndex);
++         // The argument in the result DAG pattern.
+diff -Naur third_party/llvm/workspace.bzl /Users/deepakpanickal/code/llvm/workspace.bzl
+--- third_party/llvm/workspace.bzl	2022-01-19 21:56:22.000000000 +0000
++++ /Users/deepakpanickal/code/llvm/workspace.bzl	2022-01-19 22:16:11.000000000 +0000
+@@ -20,4 +20,5 @@
+             "//third_party/mlir:BUILD": "mlir/BUILD",
+             "//third_party/mlir:test.BUILD": "mlir/test/BUILD",
+         },
++        patch_file = "//third_party/llvm:llvm_td_update.patch",
+     )

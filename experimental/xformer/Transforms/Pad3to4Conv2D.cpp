@@ -23,6 +23,49 @@ struct Pad3to4Conv2DPattern : public OpRewritePattern<TFL::Conv2DOp> {
   LogicalResult matchAndRewrite(TFL::Conv2DOp conv2DOp,
                                 PatternRewriter &rewriter) const override {
     // Check for invalid types and return
+    // These are the types applicable for lowering to an XC Conv2D
+    // Input type must be QI8
+    if (!(conv2DOp.input()
+              .getType()
+              .template cast<ShapedType>()
+              .getElementType()
+              .template isa<quant::QuantizedType>() &&
+          conv2DOp.input()
+              .getType()
+              .template cast<ShapedType>()
+              .getElementType()
+              .template cast<quant::QuantizedType>()
+              .isSigned() &&
+          conv2DOp.input()
+                  .getType()
+                  .template cast<ShapedType>()
+                  .getElementType()
+                  .template cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    // Filter type must be QI8
+    if (!(conv2DOp.filter()
+              .getType()
+              .template cast<ShapedType>()
+              .getElementType()
+              .template isa<quant::QuantizedType>() &&
+          conv2DOp.filter()
+              .getType()
+              .template cast<ShapedType>()
+              .getElementType()
+              .template cast<quant::QuantizedType>()
+              .isSigned() &&
+          conv2DOp.filter()
+                  .getType()
+                  .template cast<ShapedType>()
+                  .getElementType()
+                  .template cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
     // We don't bother padding if output depth is not a multiple of four as we
     // cannot optimize it with an XC Conv2D
     auto outputDepth =

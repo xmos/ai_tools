@@ -68,6 +68,13 @@ ReplaceBConv2DPattern::checkIfValid(lq::Bconv2dOp conv2DOp) const {
     return failure();
   }
 
+  // Check channels_in is a multiple of 32
+  if (!(conv2DOp.channels_in() % 32 == 0)) {
+    conv2DOp.emitError(
+        "Only channels_in of multiples of 32 is supported for BConv2D!");
+    return failure();
+  }
+
   return success();
 }
 
@@ -146,10 +153,6 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
     auto outputScale = outputQType.getScale();
     auto outputZeroPoint = outputQType.getZeroPoint();
 
-    // channels_in should be the same as input depth in bits which is the number
-    // of input channels
-    assert(conv2DOp.channels_in() == args.inputDepth &&
-           "BConv2D channels_in and input depth in bits must match!");
     int32_t backtransformAdd =
         args.filterHeight * args.filterWidth * conv2DOp.channels_in();
 

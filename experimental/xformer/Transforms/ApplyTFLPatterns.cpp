@@ -67,7 +67,7 @@ SmallVector<Value, 2> getBConv2DPaddingValues(PatternRewriter &rewriter,
   auto outputWidth = inputWidth + padLeft + padRight;
   std::vector<int32_t> dummy(batch * outputHeight * outputWidth * depth, 0);
   RankedTensorType outputType = RankedTensorType::get(
-      {batch, newHeight, newWidth, depth}, rewriter.getI32Type());
+      {batch, outputHeight, outputWidth, depth}, rewriter.getI32Type());
   auto outputTypeOp =
       rewriter.create<ConstantOp>(conv2DOp->getLoc(), outputType,
                                   DenseIntElementsAttr::get(outputType, dummy));

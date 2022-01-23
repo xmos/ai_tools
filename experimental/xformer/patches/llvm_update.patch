@@ -1,7 +1,7 @@
 diff -Naur third_party/llvm/llvm_td_update.patch /Users/deepakpanickal/code/llvm/llvm_td_update.patch
 --- third_party/llvm/llvm_td_update.patch	1970-01-01 01:00:00.000000000 +0100
-+++ /Users/deepakpanickal/code/llvm/llvm_td_update.patch	2022-01-20 16:37:32.000000000 +0000
-@@ -0,0 +1,1350 @@
++++ /Users/deepakpanickal/code/llvm/llvm_td_update.patch	2022-01-23 13:24:10.000000000 +0000
+@@ -0,0 +1,1359 @@
 +diff --git a/mlir/docs/DeclarativeRewrites.md b/mlir/docs/DeclarativeRewrites.md
 +index 27ae161978c8..c3518972bb0e 100644
 +--- a/mlir/docs/DeclarativeRewrites.md
@@ -1002,7 +1002,7 @@ diff -Naur third_party/llvm/llvm_td_update.patch /Users/deepakpanickal/code/llvm
 ++def test6 : Pat<(DOp $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10),
 ++                (AOp (AOp $v1, (returnType $v2, "$_builder.getI32Type()", (NativeCodeCall<"doSomething($0)"> $v3))))>;
 +diff --git a/mlir/tools/mlir-tblgen/RewriterGen.cpp b/mlir/tools/mlir-tblgen/RewriterGen.cpp
-+index e0112af6b5b0..a258b076accd 100644
++index e0112af6b5b0..f6bba0721805 100644
 +--- a/mlir/tools/mlir-tblgen/RewriterGen.cpp
 ++++ b/mlir/tools/mlir-tblgen/RewriterGen.cpp
 +@@ -127,12 +127,31 @@ private:
@@ -1069,6 +1069,15 @@ diff -Naur third_party/llvm/llvm_td_update.patch /Users/deepakpanickal/code/llvm
 +     std::string argName = capture[i];
 + 
 +     // Handle nested DAG construct first
++@@ -450,7 +470,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
++         op.arg_begin(), op.arg_begin() + argIndex,
++         [](const Argument &arg) { return arg.is<NamedAttribute *>(); });
++ 
++-    auto res = symbolInfoMap.findBoundSymbol(name, op, argIndex);
+++    auto res = symbolInfoMap.findBoundSymbol(name, tree, op, argIndex);
++     os << formatv("{0} = {1}.getODSOperands({2});\n",
++                   res->second.getVarName(name), opName,
++                   argIndex - numPrevAttrs);
 +@@ -750,7 +770,8 @@ void PatternEmitter::emitRewriteLogic() {
 +     // NativeCodeCall will only be materialized to `os` if it is used. Here
 +     // we are handling auxiliary patterns so we want the side effect even if

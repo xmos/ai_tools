@@ -38,7 +38,7 @@ except ImportError:
 
 setup(
     name="xmos-tools",
-    version="0.1",
+    version="0.1.0",
     author="XMOS",
     author_email="support@xmos.com",
     license="LICENSE.txt",

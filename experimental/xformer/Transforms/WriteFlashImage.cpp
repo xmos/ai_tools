@@ -30,9 +30,19 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
 
   LogicalResult matchAndRewrite(LoadConstantOp loadOp,
                                 PatternRewriter &rewriter) const override {
-    auto attr = loadOp.input().cast<DenseElementsAttr>();
-    std::vector<char> tensorData;
+    DenseElementsAttr attr;
+    if (loadOp.input()
+            .getType()
+            .cast<ShapedType>()
+            .getElementType()
+            .isa<quant::QuantizedType>()) {
+      auto qConstOp = dyn_cast<TFL::QConstOp>(loadOp.input().getDefiningOp());
+      attr = qConstOp.value().template cast<DenseElementsAttr>();
+    } else if (!matchPattern(loadOp.input(), m_Constant(&attr))) {
+      return failure();
+    }
 
+    std::vector<char> tensorData;
     int n = attr.isSplat() ? attr.getNumElements() : 1;
     for (int i = 0; i < n; ++i) {
       tensorData.insert(tensorData.end(), attr.getRawData().begin(),

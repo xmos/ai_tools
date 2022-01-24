@@ -34,17 +34,6 @@ bool shouldBeLoadedExternally(Attribute values) {
   return totalSizeInBits / CHAR_BIT > loadExternallyIfLargerOption;
 }
 
-bool isUsedByValidOp(Value constOpType) {
-  for (auto *operand : constOpType.getUsers()) {
-    // In the runtime, TFL::PadOp assumes that the constant data is available in
-    // the flatbuffer, and fails if it's not available
-    if (llvm::isa<TFL::PadOp>(operand)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 #include "Transforms/GeneratedLoadConstantOpPatterns.inc"
 
 void ApplyLoadConstantOpPatterns::runOnFunction() {

@@ -19,6 +19,11 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 ################################## TensorFlow ##################################
 http_archive(
     name = "org_tensorflow",
+    patch_args = ["-p0"],
+    patch_tool = "patch",
+    patches = [
+        "//patches:llvm_update.patch",
+    ],
     sha256 = "e68c1d346fc3d529653530ca346b2c62f5b31bd4fcca7ffc9c65bb39ab2f6ed3",
     strip_prefix = "tensorflow-2.6.2",
     urls = [

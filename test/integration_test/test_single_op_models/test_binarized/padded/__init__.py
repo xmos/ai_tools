@@ -18,7 +18,7 @@ from .. import (
 #                                   TESTS
 #  ----------------------------------------------------------------------------
 
-
+@pytest.mark.skip_on_xformer2
 @pytest.mark.skip_on_device
 def test_converted_model(
     xcore_model: XCOREModel, converted_op_code: XCOREOpCodes

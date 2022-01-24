@@ -7,13 +7,14 @@ import platform
 from setuptools import setup, find_packages
 import pathlib
 
+# Find path to xcore-opt binary
 here = pathlib.Path(__file__).parent.resolve()
-# Get the long description from the README file
-long_description = (here / 'README.md').read_text(encoding='utf-8')
-
 exe_suffix = ".exe" if platform.system() == "Windows" else ""
 XCOREOPT_BINARY = pathlib.Path.joinpath(here.parent, "bazel-bin", "xcore-opt",
                                         exe_suffix)
+
+# Get the long description from the README file
+long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 # Force platform specific wheel.
 # https://stackoverflow.com/questions/45150304
@@ -36,8 +37,8 @@ except ImportError:
     bdist_wheel = None
 
 setup(
-    name="xmosaitools",
-    version="1.0",
+    name="xmos-tools",
+    version="0.1",
     author="XMOS",
     author_email="support@xmos.com",
     license="LICENSE.txt",
@@ -46,15 +47,29 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/xmos/ai_tools",
     classifiers=[
+        "License :: Other/Proprietary License",
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache License",
-        "Development Status :: 3 - Alpha",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Mathematics",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     package_dir={'': 'src'},
     packages=find_packages(where='src'),  # Required
     data_files=[('bin', [str(XCOREOPT_BINARY)])],
     cmdclass={
         'bdist_wheel': bdist_wheel,
     },
+    keywords="tensorflow binarized neural networks",
 )

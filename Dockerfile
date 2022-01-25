@@ -26,7 +26,7 @@ ADD https://apt.llvm.org/llvm.sh /tmp/
 ARG clang_version=12
 RUN cd /tmp \
     && chmod +x llvm.sh \
-    && ./llvm.sh $clang_version
+    && ./llvm.sh $clang_version all
 RUN ln -s /usr/bin/clang-$clang_version /usr/bin/clang \
     && ln -s /usr/bin/clang++-$clang_version /usr/bin/clang++ \
     && ln -s /usr/bin/clang /usr/bin/cc \

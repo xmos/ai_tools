@@ -11,6 +11,7 @@
 namespace mlir {
 namespace xcore {
 
+std::vector<uint8_t> Bsign8Op::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Lookup8Op::buildCustomOptions() { return {}; }
 
 std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
@@ -113,6 +114,7 @@ void TranslateToCustomOp::runOnFunction() {
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Conv2DV2Op>>(ctx);
   patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

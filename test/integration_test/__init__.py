@@ -256,7 +256,7 @@ class BinarizedTestRunner(IntegrationTestRunner):
         self.register_converter(self._lce_converter)
 
         self._lce_evaluator = LarqEvaluator(
-            self, self.get_representative_data, self._lce_converter.get_converted_model
+            self, self.get_representative_data, self._lce_converter.get_converted_model, None
         )
         self.register_evaluator(self._lce_evaluator)
 

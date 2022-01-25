@@ -22,22 +22,16 @@ struct ApplyLoadConstantOpPatterns
 };
 
 bool shouldBeLoadedExternally(Attribute values) {
-  auto valuesAttr = values.cast<DenseElementsAttr>();
-  auto totalSizeInBits =
-      (valuesAttr.getNumElements() *
-       valuesAttr.getType().getElementType().getIntOrFloatBitWidth());
-  return totalSizeInBits / CHAR_BIT > loadExternallyIfLargerOption;
-}
-
-bool isUsedByValidOp(Value constOpType) {
-  for (auto *operand : constOpType.getUsers()) {
-    // In the runtime, TFL::PadOp assumes that the constant data is available in
-    // the flatbuffer, and fails if it's not available
-    if (llvm::isa<TFL::PadOp>(operand)) {
-      return false;
-    }
+  // values might be UnitAttr or BoolAttr which are too small to be loaded
+  // externally anyway
+  auto totalSizeInBits = 0;
+  if (values.isa<DenseElementsAttr>()) {
+    auto valuesAttr = values.cast<DenseElementsAttr>();
+    totalSizeInBits =
+        (valuesAttr.getNumElements() *
+         valuesAttr.getType().getElementType().getIntOrFloatBitWidth());
   }
-  return true;
+  return totalSizeInBits / CHAR_BIT > loadExternallyIfLargerOption;
 }
 
 #include "Transforms/GeneratedLoadConstantOpPatterns.inc"

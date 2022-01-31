@@ -1,0 +1,12 @@
+tensorflow
+tensorflow-datasets
+opencv-python
+keras
+pickle-mixin
+numpy
+prettyprinter
+Pillow
+-e ../../third_party/lib_tflite_micro/tflm_interpreter
+openpyxl
+Matplotlib
+-i https://test.pypi.org/simple/ xmos-tools

@@ -1,0 +1,11 @@
+/venv
+stage0/*
+stage1/*
+stage2/*
+tflite_models/*
+xcore_models/*
+graphs/*
+hists/*
+/investigation
+erroneousChannels.py
+investigateConv.py

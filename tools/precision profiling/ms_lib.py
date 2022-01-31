@@ -64,6 +64,7 @@ class layerArtifacts:
       yield a
 
   def createTfliteModel(self):
+    os.makedirs('./tflite_models', exist_ok = True)
     print('Generating tflite model ' + str(self.layerID))
     converter = tf.lite.TFLiteConverter.from_keras_model(self.tfModel)
     converter.optimizations = [tf.lite.Optimize.DEFAULT]

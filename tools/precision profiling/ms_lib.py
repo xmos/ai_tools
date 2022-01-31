@@ -81,6 +81,7 @@ class layerArtifacts:
         f.write(self.tfliteModel)
 
   def saveTflite(self):
+    os.makedirs('./tflite_models', exist_ok = True)
     if os.path.exists('./tflite_models/{}.tflite'.format(self.layerID)):
       os.system('rm ./tflite_models/{}.tflite'.format(self.layerID))
     with open('./tflite_models/' + str(self.layerID) + '.tflite', 'wb') as f:
@@ -88,6 +89,7 @@ class layerArtifacts:
 
   def createXcoreModel(self):
     print('Generating xcore model ' + str(self.layerID))
+    os.makedirs('./xcore_models', exist_ok = True)
     if os.path.exists('./xcore_models/{}.tflite'.format(self.layerID)):
       os.system('rm ./xcore_models/{}.tflite'.format(self.layerID))
     xf.convert('./tflite_models/{}.tflite'.format(self.layerID), './xcore_models/{}.tflite'.format(self.layerID), params=None)
@@ -201,6 +203,7 @@ def clamp(datapoint):
   return np.clip(datapoint, -128, 127)
 
 def hists(histogram, layer, hist_type, opList):
+  os.makedirs('./hists', exist_ok = True)
   fig, ax = plt.subplots()
   dim = len(histogram[0])
   xlimit = max(histogram[1][-1], abs(histogram[1][0]))
@@ -253,6 +256,7 @@ def calcErrorSet(out1, out2, findError=False):
   return error, abserror, maxabs, mse, hist
 
 def mainGraphs(Layers, error_type):
+  os.makedirs('./graphs', exist_ok = True)
   tf_tflite_err = []
   tf_xcore_err = []
   tflite_xcore_err = []
@@ -410,6 +414,9 @@ def setRepDatasets(Layers, samples):
     Layers[i+1].repDataset = rDataset
 
 def saveLayers(Layers, stage):
+  os.makedirs('./stage0', exist_ok = True)
+  os.makedirs('./stage1', exist_ok = True)
+  os.makedirs('./stage2', exist_ok = True)
   print('\nSaving Layers...\n')
   for Layer in Layers:
     with open('./stage{}/{}'.format(stage, Layer.layerID),"wb") as f:

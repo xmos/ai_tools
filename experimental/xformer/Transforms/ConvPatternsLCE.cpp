@@ -75,6 +75,21 @@ ReplaceBConv2DPattern::checkIfValid(lq::Bconv2dOp conv2DOp) const {
     return failure();
   }
 
+  auto outputType =
+      conv2DOp.output().getType().template dyn_cast<RankedTensorType>();
+  auto outputDepth = outputType.getDimSize(3);
+  // If we have QI8 output, check output depth is a multiple of four
+  if (conv2DOp.output()
+          .getType()
+          .template cast<ShapedType>()
+          .getElementType()
+          .template isa<quant::QuantizedType>() &&
+      (outputDepth % 4 != 0)) {
+    conv2DOp.emitError(
+        "Output depth must be a multiple of four for BConv2D int8!");
+    return failure();
+  }
+
   return success();
 }
 
@@ -201,8 +216,6 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
   args.postActivationBias = biasVector;
   args.postActivationMultiplier = multiplierVector;
   args.threshold = thresholdVector;
-  // For emitting errors
-  args.loc = conv2DOp.getLoc();
 
   return success();
 }
@@ -218,12 +231,8 @@ LogicalResult ReplaceBConv2DPattern::getKernelType(const BConvArgs &args,
     kt = Conv2DType::BNNValidDirectInt8;
   } else if (args.binaryOutput) {
     kt = Conv2DType::BNNValidIndirectBinary;
-  } else if (args.outputDepth % 4 == 0) {
-    kt = Conv2DType::BNNValidIndirectInt8;
   } else {
-    emitError(args.loc,
-              "Output depth must be a multiple of four for BConv2D int8!");
-    return failure();
+    kt = Conv2DType::BNNValidIndirectInt8;
   }
 
   return success();

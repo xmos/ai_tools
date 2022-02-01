@@ -33,6 +33,12 @@ cl::opt<unsigned> loadExternallyIfLargerOption(
              "xcore-flash-image-file is not provided."),
     cl::init(96));
 
+cl::opt<bool> reduceMemoryOption(
+    "xcore-reduce-memory",
+    cl::desc(
+        "Try to reduce memory usage by possibly increasing execution time."),
+    cl::init(true));
+
 } // namespace xcore
 } // namespace mlir
 

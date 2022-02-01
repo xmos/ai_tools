@@ -86,6 +86,51 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8, I32]> : $output);
 }
 
+def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [NoSideEffect]> {
+  let summary = "Fake Conv2D op";
+
+  let description = [{Fake Conv2D op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+    TensorOf<[QI8]>:$filter,
+    TensorOf<[I32,QI32]>:$bias,
+    I32Attr:$dilation_h_factor,
+    I32Attr:$dilation_w_factor,
+    StrAttr:$fused_activation_function,
+    StrAttr:$padding,
+    // For using explicit padding
+    AnyTypeOf<[TensorOf<[I32,I64]>, NoneType]>:$padding_values,
+    I32Attr:$stride_h,
+    I32Attr:$stride_w
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [NoSideEffect]> {
+  let summary = "Fake Depthwise Conv2D op";
+
+  let description = [{Fake Depthwise Conv2D op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+    TensorOf<[QI8]>:$filter,
+    TensorOf<[I32,QI32]>:$bias,
+    I32Attr:$dilation_h_factor,
+    I32Attr:$dilation_w_factor,
+    StrAttr:$fused_activation_function,
+    StrAttr:$padding,
+    // For using explicit padding
+    AnyTypeOf<[TensorOf<[I32,I64]>, NoneType]>:$padding_values,
+    I32Attr:$stride_h,
+    I32Attr:$stride_w,
+    I32Attr:$depth_multiplier
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_Lookup8Op : XC_Op<"lookup_8", [NoSideEffect]> {
   let summary = "Lookup table op";
 

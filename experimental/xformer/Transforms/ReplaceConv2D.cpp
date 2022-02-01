@@ -3,6 +3,7 @@
 
 #include "IR/XCoreOps.h"
 #include "Transforms/ConvPatterns.h"
+#include "Transforms/Options.h"
 
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/Pass/Pass.h"
@@ -141,13 +142,27 @@ struct ReplaceConv2D : public PassWrapper<ReplaceConv2D, FunctionPass> {
   void runOnFunction() override;
 };
 
+bool shouldReduceMemory() { return reduceMemoryOption; }
+
+#include "Transforms/GeneratedConvPatterns.inc"
+
 void ReplaceConv2D::runOnFunction() {
   auto *ctx = &getContext();
   auto func = getFunction();
-  OwningRewritePatternList patterns(ctx);
-  patterns.insert<ReplaceConv2DPattern, ReplaceDepthwiseConv2DPattern,
-                  ReplaceBConv2DPattern>(ctx);
-  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+
+  // Apply patterns to lower TFL Conv to XC Fake Conv ops
+  // This helps in pattern matching only types we support for xcore such as QI8
+  // and for handling issues such as EXPLICIT padding which is not supported in
+  // TFL Conv ops
+  OwningRewritePatternList patterns1(ctx);
+  populateWithGenerated(patterns1);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns1));
+
+  // Replace with XC Conv2D op
+  OwningRewritePatternList patterns2(ctx);
+  patterns2.insert<ReplaceConv2DPattern, ReplaceDepthwiseConv2DPattern,
+                   ReplaceBConv2DPattern>(ctx);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
 }
 } // namespace
 

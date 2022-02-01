@@ -29,6 +29,20 @@ To view the various supported options:
 
     ./bazel-bin/xcore-opt --help
 
+
+Python package instructions
+--
+
+After building the xcore-opt binary, the python package can be built
+with the following command (make sure you run it from the directory 
+/ai_tools/experimental/xformer/python):
+
+    cd python
+    python setup.py bdist_wheel
+
+The wheel file will be created in a newly created `dist` folder.
+This can now be installed via pip or uploaded to pypi via twine.    
+
 Test instructions
 --
 

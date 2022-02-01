@@ -11,3 +11,4 @@ erroneousChannels.py
 investigateConv.py
 report/*.png
 report/*.rst
+!report/report.html

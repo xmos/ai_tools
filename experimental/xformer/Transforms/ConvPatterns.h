@@ -44,8 +44,6 @@ struct BConvArgs {
   nn::ImageGeometry Y;
   nn::ImageGeometry X;
   nn::WindowGeometry K;
-  // For emitting errors
-  mlir::LocationAttr loc;
 };
 
 //
@@ -112,7 +110,7 @@ private:
 //
 //
 // TFL Conv2D Base class
-// ConcreteType would be TFL Conv2D or TFL DepthwiseConv2D
+// TFLConvOpType would be XC_FakeConv2D or XC_FakeDepthwiseConv2D
 template <typename ConcreteType, typename TFLConvOpType>
 class ReplaceConv2DBase : public ReplaceWithXCConv2DBase<
                               ReplaceConv2DBase<ConcreteType, TFLConvOpType>,
@@ -123,7 +121,7 @@ public:
                               TFLConvOpType, TFLConvArgs>;
   ReplaceConv2DBase(MLIRContext *context) : BaseType(context) {}
 
-  LogicalResult checkIfValid(TFLConvOpType op) const;
+  LogicalResult checkIfValid(TFLConvOpType op) const { return success(); }
 
   LogicalResult getArgs(TFLConvOpType op, TFLConvArgs &args) const;
 
@@ -151,11 +149,14 @@ public:
   }
 };
 
-// Handle TFL Conv2D
+//
+//
+//
+// Handle XC_FakeConv2D
 class ReplaceConv2DPattern
-    : public ReplaceConv2DBase<ReplaceConv2DPattern, TFL::Conv2DOp> {
+    : public ReplaceConv2DBase<ReplaceConv2DPattern, FakeConv2DOp> {
 public:
-  using BaseType = ReplaceConv2DBase<ReplaceConv2DPattern, TFL::Conv2DOp>;
+  using BaseType = ReplaceConv2DBase<ReplaceConv2DPattern, FakeConv2DOp>;
   ReplaceConv2DPattern(MLIRContext *context) : BaseType(context) {}
 
   LogicalResult getKernelType(const TFLConvArgs &args, Conv2DType &kt) const;
@@ -187,13 +188,16 @@ private:
       int &scratchBytes) const;
 };
 
-// Handle TFL DepthwiseConv2D
+//
+//
+//
+// Handle XC_FakeDepthwiseConv2D
 class ReplaceDepthwiseConv2DPattern
     : public ReplaceConv2DBase<ReplaceDepthwiseConv2DPattern,
-                               TFL::DepthwiseConv2DOp> {
+                               FakeDepthwiseConv2DOp> {
 public:
   using BaseType =
-      ReplaceConv2DBase<ReplaceDepthwiseConv2DPattern, TFL::DepthwiseConv2DOp>;
+      ReplaceConv2DBase<ReplaceDepthwiseConv2DPattern, FakeDepthwiseConv2DOp>;
   ReplaceDepthwiseConv2DPattern(MLIRContext *context) : BaseType(context) {}
 
   LogicalResult getKernelType(const TFLConvArgs &args, Conv2DType &kt) const;

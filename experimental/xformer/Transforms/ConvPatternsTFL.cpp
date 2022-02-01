@@ -9,96 +9,7 @@ namespace mlir {
 namespace xcore {
 
 // TFL Conv2D Base class implementation
-// ConcreteType would be TFL Conv2D or TFL DepthwiseConv2D
-template <typename ConcreteType, typename TFLConvOpType>
-LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::checkIfValid(
-    TFLConvOpType conv2DOp) const {
-  // Check for invalid types and return
-  // Input type must be QI8
-  if (!(conv2DOp.input()
-            .getType()
-            .template cast<ShapedType>()
-            .getElementType()
-            .template isa<quant::QuantizedType>() &&
-        conv2DOp.input()
-            .getType()
-            .template cast<ShapedType>()
-            .getElementType()
-            .template cast<quant::QuantizedType>()
-            .isSigned() &&
-        conv2DOp.input()
-                .getType()
-                .template cast<ShapedType>()
-                .getElementType()
-                .template cast<quant::QuantizedType>()
-                .getStorageTypeIntegralWidth() == 8)) {
-    return failure();
-  }
-
-  // Filter type must be QI8
-  if (!(conv2DOp.filter()
-            .getType()
-            .template cast<ShapedType>()
-            .getElementType()
-            .template isa<quant::QuantizedType>() &&
-        conv2DOp.filter()
-            .getType()
-            .template cast<ShapedType>()
-            .getElementType()
-            .template cast<quant::QuantizedType>()
-            .isSigned() &&
-        conv2DOp.filter()
-                .getType()
-                .template cast<ShapedType>()
-                .getElementType()
-                .template cast<quant::QuantizedType>()
-                .getStorageTypeIntegralWidth() == 8)) {
-    return failure();
-  }
-
-  // TODO: What to do if no bias?
-  // Bias type must be QI32
-  if (!(conv2DOp.bias()
-            .getType()
-            .template cast<ShapedType>()
-            .getElementType()
-            .template isa<quant::QuantizedType>() &&
-        conv2DOp.bias()
-            .getType()
-            .template cast<ShapedType>()
-            .getElementType()
-            .template cast<quant::QuantizedType>()
-            .isSigned() &&
-        conv2DOp.bias()
-                .getType()
-                .template cast<ShapedType>()
-                .getElementType()
-                .template cast<quant::QuantizedType>()
-                .getStorageTypeIntegralWidth() == 32) &&
-      !(conv2DOp.bias()
-            .getType()
-            .template cast<ShapedType>()
-            .getElementType()
-            .isInteger(32))) {
-    return failure();
-  }
-
-  // Output depth and input depth must be a multiple of four
-  // If this is not the case, we return to the reference
-  // implementation
-  auto outputType =
-      conv2DOp.output().getType().template dyn_cast<RankedTensorType>();
-  auto inputType =
-      conv2DOp.input().getType().template dyn_cast<RankedTensorType>();
-  auto outputDepth = outputType.getDimSize(3);
-  auto inputDepth = inputType.getDimSize(3);
-  if (outputDepth % 4 != 0 || inputDepth % 4 != 0) {
-    return failure();
-  }
-
-  return success();
-}
-
+// TFLConvOpType would be XC_FakeConv2D or XC_FakeDepthwiseConv2D
 template <typename ConcreteType, typename TFLConvOpType>
 LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
     TFLConvOpType conv2DOp, TFLConvArgs &args) const {
@@ -184,20 +95,32 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   // Find padding values
   int64_t newHeight, newWidth;
   int64_t padTop, padBottom, padLeft, padRight;
-  tensorflow::Padding opPadding = conv2DOp.padding() == "VALID"
-                                      ? tensorflow::Padding::VALID
-                                      : tensorflow::Padding::SAME;
-  if (tensorflow::GetWindowedOutputSizeVerboseV2(
-          args.inputHeight, args.filterHeight, conv2DOp.dilation_h_factor(),
-          conv2DOp.stride_h(), opPadding, &newHeight, &padTop,
-          &padBottom) != tensorflow::Status::OK()) {
-    return failure();
-  }
-  if (tensorflow::GetWindowedOutputSizeVerboseV2(
-          args.inputWidth, args.filterWidth, conv2DOp.dilation_w_factor(),
-          conv2DOp.stride_w(), opPadding, &newWidth, &padLeft,
-          &padRight) != tensorflow::Status::OK()) {
-    return failure();
+
+  if (conv2DOp.padding() == "EXPLICIT") {
+    auto paddingValuesConstOp =
+        dyn_cast<mlir::ConstantOp>(conv2DOp.padding_values().getDefiningOp());
+    auto paddingValues =
+        paddingValuesConstOp.value().template cast<DenseElementsAttr>();
+    padTop = paddingValues.template getValue<int32_t>({1, 0});
+    padBottom = paddingValues.template getValue<int32_t>({1, 1});
+    padLeft = paddingValues.template getValue<int32_t>({2, 0});
+    padRight = paddingValues.template getValue<int32_t>({2, 1});
+  } else {
+    tensorflow::Padding opPadding = conv2DOp.padding() == "VALID"
+                                        ? tensorflow::Padding::VALID
+                                        : tensorflow::Padding::SAME;
+    if (tensorflow::GetWindowedOutputSizeVerboseV2(
+            args.inputHeight, args.filterHeight, conv2DOp.dilation_h_factor(),
+            conv2DOp.stride_h(), opPadding, &newHeight, &padTop,
+            &padBottom) != tensorflow::Status::OK()) {
+      return failure();
+    }
+    if (tensorflow::GetWindowedOutputSizeVerboseV2(
+            args.inputWidth, args.filterWidth, conv2DOp.dilation_w_factor(),
+            conv2DOp.stride_w(), opPadding, &newWidth, &padLeft,
+            &padRight) != tensorflow::Status::OK()) {
+      return failure();
+    }
   }
   args.toBePadded =
       padTop != 0 || padBottom != 0 || padLeft != 0 || padRight != 0;
@@ -228,9 +151,9 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
 
 // Since we are not defining the template functions in the header, we need
 // explicit template class instantiations to avoid linker errors
-template class ReplaceConv2DBase<ReplaceConv2DPattern, TFL::Conv2DOp>;
+template class ReplaceConv2DBase<ReplaceConv2DPattern, FakeConv2DOp>;
 template class ReplaceConv2DBase<ReplaceDepthwiseConv2DPattern,
-                                 TFL::DepthwiseConv2DOp>;
+                                 FakeDepthwiseConv2DOp>;
 
 //
 //

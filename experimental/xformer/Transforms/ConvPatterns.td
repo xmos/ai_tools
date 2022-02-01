@@ -6,6 +6,8 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 
 include "IR/XCoreOps.td"
 
+def ShouldReduceMemory : Constraint<CPred<"shouldReduceMemory()">>;
+
 def CreateNoneAttrValue : NativeCodeCall<"$_builder.getUnitAttr()">;
 
 // Check that depth is a multiple of four
@@ -33,4 +35,5 @@ def : Pat<(XC_FakeDepthwiseConv2DOp(TFL_PadOp $input, $padding_values), $f, $b,
            $dh, $dw, $faf, ConstantAttr<StrAttr, "VALID">, $dummy_values, $sh,
            $sw, $dm),
           (XC_FakeDepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf,
-           ConstantAttr<StrAttr, "EXPLICIT">, $padding_values, $sh, $sw, $dm)>;
+           ConstantAttr<StrAttr, "EXPLICIT">, $padding_values, $sh, $sw, $dm),
+          [(ShouldReduceMemory)]>;

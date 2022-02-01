@@ -3,6 +3,7 @@
 
 #include "IR/XCoreOps.h"
 #include "Transforms/ConvPatterns.h"
+#include "Transforms/Options.h"
 
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/Pass/Pass.h"
@@ -140,6 +141,8 @@ struct ReplaceConv2D : public PassWrapper<ReplaceConv2D, FunctionPass> {
   }
   void runOnFunction() override;
 };
+
+bool shouldReduceMemory() { return reduceMemoryOption; }
 
 #include "Transforms/GeneratedConvPatterns.inc"
 

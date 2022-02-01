@@ -9,3 +9,5 @@ hists/*
 /investigation
 erroneousChannels.py
 investigateConv.py
+report/*.png
+report/*.rst

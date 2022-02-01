@@ -101,6 +101,11 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
         dyn_cast<mlir::ConstantOp>(conv2DOp.padding_values().getDefiningOp());
     auto paddingValues =
         paddingValuesConstOp.value().template cast<DenseElementsAttr>();
+    // The padding values for the PadOp are stored as a 4x2 tensor
+    // 0,0 and 0,1 is for the batch dimension and 3,0, and 3,1 for the
+    // channel/depth
+    // 1,0 and 1,1 is top and bottom, and 2,0 and 2,1 is
+    // left and right which are the padding values we need
     padTop = paddingValues.template getValue<int32_t>({1, 0});
     padBottom = paddingValues.template getValue<int32_t>({1, 1});
     padLeft = paddingValues.template getValue<int32_t>({2, 0});

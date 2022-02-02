@@ -1,11 +1,14 @@
 import os, sys, pickle, logging
 
 import tensorflow as tf
+from tensorflow.python.ops.numpy_ops import np_config
+np_config.enable_numpy_behavior()
 from keras.applications.imagenet_utils import decode_predictions
 from tflm_interpreter import TFLMInterpreter
 from xmos_tools import xformer as xf
 import tensorflow_datasets as tfds
 import numpy as np
+
 from pprint import pprint
 from keras.preprocessing import image
 from openpyxl import Workbook

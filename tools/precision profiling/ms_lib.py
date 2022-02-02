@@ -1,23 +1,19 @@
-import os, sys
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import os, sys, pickle, logging
+
 import tensorflow as tf
 from keras.applications.imagenet_utils import decode_predictions
 from tflm_interpreter import TFLMInterpreter
 from xmos_tools import xformer as xf
 import tensorflow_datasets as tfds
-import pickle
-
 import numpy as np
 from pprint import pprint
-import cv2
 from keras.preprocessing import image
 from openpyxl import Workbook
 import matplotlib.pyplot as plt
-import seaborn
 
 from tflite.Model import Model
 
-import logging
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 tf.get_logger().setLevel(logging.ERROR)
 
 
@@ -399,7 +395,7 @@ def setRepDatasets(Layers, samples):
   dataset = []
   for data in ds:
     a = data['image'].numpy()
-    a = cv2.resize(a, (224, 224)) #q
+    a = tf.image.resize(a, (224, 224)) #q
     a = (a.astype(np.float32)/255.0) -0.5
     a = [a.reshape(1, *Layers[0].tfModel.input_shape[1:])] #deq
     dataset.append(a)

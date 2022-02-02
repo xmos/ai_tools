@@ -25,6 +25,8 @@ From ../../third_party/lib_tflite_micro/lib_tflite_micro/submodules/flatbuffers 
   
   `cmake ..`
   
+  `make`
+  
 This will have build flatc. Next to compile the schema run:
 
   `./flatc --python -o ../../../../../../tools/precision\ profiling/ ../../../../../../tools/precision\ profiling/schema.fbs`

@@ -7,3 +7,4 @@ dependencies:
   - cmake=3.14.0
   - make=4.2.1
   - python=3.8
+  - clang=13

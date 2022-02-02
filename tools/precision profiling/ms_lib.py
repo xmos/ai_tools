@@ -1,11 +1,14 @@
 import os, sys, pickle, logging
 
 import tensorflow as tf
+from tensorflow.python.ops.numpy_ops import np_config
+np_config.enable_numpy_behavior()
 from keras.applications.imagenet_utils import decode_predictions
 from tflm_interpreter import TFLMInterpreter
 from xmos_tools import xformer as xf
 import tensorflow_datasets as tfds
 import numpy as np
+
 from pprint import pprint
 from keras.preprocessing import image
 from openpyxl import Workbook
@@ -198,11 +201,12 @@ class layerArtifacts:
     saveHist(hist1, 'tf_tflite', self.layerID)
     saveHist(hist2, 'tf_xcore', self.layerID)
     saveHist(hist3, 'tflite_xcore', self.layerID)
+    plt.close('all')
 
 def clamp(datapoint):
   return np.clip(datapoint, -128, 127)
 
-def genHists(histogram, layer, hist_type, opList):
+def genHist(histogram, layer, hist_type, opList):
   fig, ax = plt.subplots()
   dim = len(histogram[0])
   xlimit = max(histogram[1][-1], abs(histogram[1][0]))

@@ -35,6 +35,8 @@ A virtual environment is reccomended such aw venv. Once an environment is active
 
   `pip3 install -r requirements.txt`
 
+  `pip3 install -i https://test.pypi.org/simple/ xmos-tools`
+
 Running model_splitting.py
 ---------------------------
 

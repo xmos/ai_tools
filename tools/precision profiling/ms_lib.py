@@ -192,15 +192,17 @@ class layerArtifacts:
   def errorHists(self):
     print('Producing hist for layer {}'.format(self.layerID))
 
-    hists(self.tf_tflite_hist, self.layerID, 'tf_tflite', self.opList)
-    hists(self.tf_xcore_hist, self.layerID, 'tf_xcore', self.opList)
-    hists(self.tflite_xcore_hist, self.layerID, 'tflite_xcore', self.opList)
+    hist1 = genHist(self.tf_tflite_hist, self.layerID, 'tf_tflite', self.opList)
+    hist2 = genHist(self.tf_xcore_hist, self.layerID, 'tf_xcore', self.opList)
+    hist3 = genHist(self.tflite_xcore_hist, self.layerID, 'tflite_xcore', self.opList)
+    saveHist(hist1, 'tf_tflite', self.layerID)
+    saveHist(hist2, 'tf_xcore', self.layerID)
+    saveHist(hist3, 'tflite_xcore', self.layerID)
 
 def clamp(datapoint):
   return np.clip(datapoint, -128, 127)
 
-def hists(histogram, layer, hist_type, opList):
-  os.makedirs('./hists', exist_ok = True)
+def genHists(histogram, layer, hist_type, opList):
   fig, ax = plt.subplots()
   dim = len(histogram[0])
   xlimit = max(histogram[1][-1], abs(histogram[1][0]))
@@ -211,9 +213,12 @@ def hists(histogram, layer, hist_type, opList):
   ax.set_ylabel("Frequency")
   ax.set_xlim(-xlimit, xlimit)
   ax.set_title("{} layer {} Average Error Histogram (ops: {})".format(hist_type, layer, str(opList)))
+  
+  return fig
+
+def saveHist(fig, hist_type, layer):
+  os.makedirs('./hists', exist_ok = True)
   fig.savefig('hists/{}_{}.png'.format(hist_type, layer))
-  fig.clf()
-  plt.close('all')
 
 def calcErrorSet(out1, out2, findError=False):
   samples = len(out1)

@@ -201,11 +201,12 @@ class layerArtifacts:
     saveHist(hist1, 'tf_tflite', self.layerID)
     saveHist(hist2, 'tf_xcore', self.layerID)
     saveHist(hist3, 'tflite_xcore', self.layerID)
+    plt.close('all')
 
 def clamp(datapoint):
   return np.clip(datapoint, -128, 127)
 
-def genHists(histogram, layer, hist_type, opList):
+def genHist(histogram, layer, hist_type, opList):
   fig, ax = plt.subplots()
   dim = len(histogram[0])
   xlimit = max(histogram[1][-1], abs(histogram[1][0]))

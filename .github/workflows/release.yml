@@ -1,0 +1,46 @@
+name: xmos-ai-tools-release
+
+on:
+  release:
+    types: [published]
+    tags:
+      - v*
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version of the form 1.0.0(.devYYYYMMDD)"
+        required: true
+
+jobs:
+  macos-release-wheel:
+    name: Build release wheels for macOS
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8, 3.9]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build macOS wheels
+        run: |
+          python --version
+          python -m pip install delocate wheel setuptools numpy six cibuildwheel --no-cache-dir
+
+          cd experimental/xformer
+
+          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
+          
+          cd python
+          cibuildwheel --output-dir wheelhouse
+          #python setup.py bdist_wheel
+          #for f in artifacts/*.whl; do
+          #  auditwheel repair $f
+          #done
+          
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ runner.os }}-wheels
+          path: wheelhouse

@@ -6,6 +6,7 @@
 import platform
 from setuptools import setup, find_packages
 import pathlib
+import os
 
 # Find path to xcore-opt binary
 here = pathlib.Path(__file__).parent.resolve()
@@ -15,6 +16,10 @@ XCOREOPT_BINARY = pathlib.Path.joinpath(here.parent, "bazel-bin", "xcore-opt",
 
 # Get the long description from the README file
 long_description = (here / 'README.md').read_text(encoding='utf-8')
+
+# Get version from env variable
+environment_variable_name = 'XMOS_AI_TOOLS_RELEASE_VERSION'
+VERSION_NUMBER = os.environ.get( environment_variable_name, "0.1.0" )
 
 # Force platform specific wheel.
 # https://stackoverflow.com/questions/45150304
@@ -38,7 +43,7 @@ except ImportError:
 
 setup(
     name="xmos-tools",
-    version="0.1.0",
+    version=VERSION_NUMBER,
     author="XMOS",
     author_email="support@xmos.com",
     license="LICENSE.txt",
@@ -64,7 +69,7 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.7",
     package_dir={'': 'src'},
     packages=find_packages(where='src'),  # Required
     data_files=[('bin', [str(XCOREOPT_BINARY)])],

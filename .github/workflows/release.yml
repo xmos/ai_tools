@@ -37,6 +37,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS wheels
+        env:
+          XMOS_AI_TOOLS_RELEASE_VERSION: ${{ github.event.inputs.version }}
+        shell: bash
         run: |
           python --version
           python -m pip install delocate wheel setuptools numpy six auditwheel --no-cache-dir
@@ -54,3 +57,28 @@ jobs:
         with:
           name: ${{ runner.os }}-wheels
           path: experimental/xformer/python/dist
+
+
+  publish-wheels:
+    name: Publish wheels to TestPyPi
+    if: ${{ always() }}
+    needs: [macos-release-wheel]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: macOS-wheels
+          path: macOS-wheels
+        if: ${{ needs.macos-release-wheel.result == 'success' }}
+      - run: |
+          set -x
+          mkdir -p dist
+          cp macOS-wheels/*.whl dist/ || true
+          ls -la dist/
+          sha256sum dist/*.whl
+      - name: Publish package to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/

@@ -29,7 +29,7 @@ jobs:
       - name: Build macOS wheels
         run: |
           python --version
-          python -m pip install delocate wheel setuptools numpy six --no-cache-dir
+          python -m pip install delocate wheel setuptools numpy six auditwheel --no-cache-dir
                     
           cd experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false

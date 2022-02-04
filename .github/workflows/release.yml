@@ -46,11 +46,11 @@ jobs:
           
           cd python
           python setup.py bdist_wheel
-          for f in dist/*.whl; do
-            auditwheel repair $f -w wheelhouse
-          done
+          #for f in dist/*.whl; do
+          #  auditwheel repair $f -w wheelhouse
+          #done
           
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
-          path: experimental/xformer/python/wheelhouse
+          path: experimental/xformer/python/dist

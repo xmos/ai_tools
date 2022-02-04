@@ -17,7 +17,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8]
       fail-fast: false
     steps:
       - uses: actions/checkout@v2
@@ -29,19 +29,18 @@ jobs:
       - name: Build macOS wheels
         run: |
           python --version
-          python -m pip install delocate wheel setuptools numpy six cibuildwheel --no-cache-dir
+          python -m pip install delocate wheel setuptools numpy six --no-cache-dir
                     
           cd experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
           
           cd python
-          cibuildwheel --output-dir wheelhouse
-          #python setup.py bdist_wheel
-          #for f in artifacts/*.whl; do
-          #  auditwheel repair $f
-          #done
+          python setup.py bdist_wheel
+          for f in dist/*.whl; do
+            auditwheel repair $f -w wheelhouse
+          done
           
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
-          path: wheelhouse
+          path: experimental/xformer/python/wheelhouse

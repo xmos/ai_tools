@@ -28,9 +28,10 @@ jobs:
         run: |
           python --version
           python -m pip install delocate wheel setuptools numpy six cibuildwheel --no-cache-dir
-
+          
+          make submodule_update
+          
           cd experimental/xformer
-
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
           
           cd python

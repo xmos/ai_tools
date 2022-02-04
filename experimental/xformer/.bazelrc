@@ -1,25 +1,29 @@
 # Clang 9 is required.
-build --client_env=CC=clang
+#build --client_env=CC=clang
 
 # Disable warnings we don't care about.
-build --copt=-Wno-unused-local-typedef
+#build --copt=-Wno-unused-local-typedef
 
 # C++14 standard version is required.
 build --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
 
 # Necessary linker options.
-build --linkopt=-pthread
-build --linkopt=-ldl
-build --linkopt=-lm
-build --host_linkopt=-pthread
-build --host_linkopt=-ldl
-build --host_linkopt=-lm
+#build --linkopt=-pthread
+#build --linkopt=-ldl
+#build --linkopt=-lm
+#build --host_linkopt=-pthread
+#build --host_linkopt=-ldl
+#build --host_linkopt=-lm
+
+build --experimental_repo_remote_exec
+build --nocheck_visibility
 
 build:darwin_config --linkopt=-framework
 build:darwin_config --linkopt=Foundation
 build:darwin_config --linkopt=-framework
 build:darwin_config --linkopt=SystemConfiguration
-build:linux_config --host_linkopt=-lm
+#build:linux_config --linkopt=-lm
+#build:linux_config --linkopt=-lrt
 
 # Address sanitizer
 # CC=clang bazel build --config asan
@@ -33,25 +37,6 @@ build:asan --copt -fno-omit-frame-pointer
 build:asan --copt -fno-sanitize-recover=all
 build:asan --copt -gmlt
 build:asan --linkopt -fsanitize=address
-
-# Default to an optimized build.
-# Override via: "-c dbg" or --compilation_mode=dbg
-# build --compilation_mode=opt
-
-
-# Disable RTTI and exceptions
-build:disable_rtti_and_exceptions --no//:rtti_and_exceptions
-
-# Minimize code size for //tools:code_size_test_driver target.
-build:code_size_test --compilation_mode=opt --copt=-Os
-build:code_size_test --linkopt=-Wl,--strip-all --linkopt=-Wl,--icf=safe
-build:code_size_test --config=disable_rtti_and_exceptions
-
-# Remote repo experimental feature
-build --experimental_repo_remote_exec
-
-# I think this is what allows us to build out of tree
-build --nocheck_visibility
 
 # BAZEL DEBUG BUILD NOTES
 # Creating a debug build for Tensorflow is extremely taxing. Enabling debug for all of Tensorflow makes the build and link process take 3-4 hours. It finally doesn't work as the library is too large to be loaded. 

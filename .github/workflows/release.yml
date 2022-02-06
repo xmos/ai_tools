@@ -1,10 +1,6 @@
 name: xmos-ai-tools-release
 
 on:
-  release:
-    types: [published]
-    tags:
-      - v*
   workflow_dispatch:
     inputs:
       version:

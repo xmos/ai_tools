@@ -43,4 +43,7 @@ jobs:
         run: |
           python --version
           echo $GITHUB_REF_NAME
+          echo ${{ github.ref_name }}
+          echo ${{ github.event.inputs.version }}
+
           

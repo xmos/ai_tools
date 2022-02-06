@@ -16,10 +16,10 @@ on:
 env:
   TAG_VERSION: ${{ github.event.inputs.version == 0 && github.ref_name || github.event.inputs.version }}
 
-jobs:
-  macos-release-wheel:
-    name: Build release wheels for macOS
-    runs-on: macos-latest
+jobs:     
+  manylinux-release-wheel:
+    name: Build release wheels for manylinux2010
+    runs-on: ubuntu-18.04
     strategy:
       matrix:
         python-version: [3.8]
@@ -42,14 +42,28 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Build macOS wheels
+      - name: Build manylinux2010 wheels
         env:
           XMOS_AI_TOOLS_RELEASE_VERSION: ${{ env.TAG_VERSION }}
         shell: bash
         run: |
-          python --version
-          echo $TAG_VERSION
-          echo ${{ github.ref_name }}
-          echo ${{ github.event.inputs.version }}
+          docker run -e \
+            -v ${PWD}:/ai_tools -w /ai_tools \
+            tensorflow/build:latest-python${{ matrix.python-version }} \
+            cd experimental/xformer && \
+            bazelisk build //:xcore-opt --crosstool_top=@org_tensorflow//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda11.2:toolchain
+            .github/tools/release_linux.sh
+            
+          sudo apt-get -y -qq install patchelf --no-install-recommends
+          python -m pip install auditwheel --no-cache-dir
+          cd experimental/xformer/python
+          python setup.py bdist_wheel
 
+          for f in dist/*.whl; do
+            auditwheel repair --plat manylinux2010_x86_64 $f
+          done
           
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ runner.os }}-wheels
+          path: experimental/xformer/python/dist

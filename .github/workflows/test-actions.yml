@@ -8,9 +8,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Providde release tag version in the format (vX.Y.Z)"
+        description: "Provide release tag version in the format vX.Y.Z"
         required: true
 
+# Either we triggered a workflow providing a version or published a new release
+# Save the tag version in an environment variable
 env:
   TAG_VERSION: ${{ github.event.inputs.version == 0 && github.ref_name || github.event.inputs.version }}
 

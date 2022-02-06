@@ -47,12 +47,10 @@ jobs:
           XMOS_AI_TOOLS_RELEASE_VERSION: ${{ env.TAG_VERSION }}
         shell: bash
         run: |
-          docker run -e \
-            -v ${PWD}:/ai_tools -w /ai_tools \
+          docker run -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:latest-python${{ matrix.python-version }} \
             cd experimental/xformer && \
             bazelisk build //:xcore-opt --crosstool_top=@org_tensorflow//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda11.2:toolchain
-            .github/tools/release_linux.sh
             
           sudo apt-get -y -qq install patchelf --no-install-recommends
           python -m pip install auditwheel --no-cache-dir

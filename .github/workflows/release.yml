@@ -1,11 +1,20 @@
 name: xmos-ai-tools-release
 
 on:
+  release:
+    types: [published]
+    tags:
+      - v*
   workflow_dispatch:
     inputs:
       version:
-        description: "Version of the form 1.0.0(.devYYYYMMDD)"
+        description: "Provide release tag version in the format vX.Y.Z"
         required: true
+
+# Either we triggered a workflow providing a version or published a new release
+# Save the tag version in an environment variable
+env:
+  TAG_VERSION: ${{ github.event.inputs.version == 0 && github.ref_name || github.event.inputs.version }}
 
 jobs:
   macos-release-wheel:
@@ -29,12 +38,13 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+          ref: ${{ env.TAG_VERSION }}
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS wheels
         env:
-          XMOS_AI_TOOLS_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          XMOS_AI_TOOLS_RELEASE_VERSION: ${{ env.TAG_VERSION }}
         shell: bash
         run: |
           python --version

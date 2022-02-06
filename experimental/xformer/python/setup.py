@@ -17,9 +17,12 @@ XCOREOPT_BINARY = pathlib.Path.joinpath(here.parent, "bazel-bin", "xcore-opt",
 # Get the long description from the README file
 long_description = (here / 'README.md').read_text(encoding='utf-8')
 
-# Get version from env variable
+# Get tag version from env variable
+# This will be in the format, vX.Y.Z
+# We need to remove the first character to get just the version number
 environment_variable_name = 'XMOS_AI_TOOLS_RELEASE_VERSION'
 VERSION_NUMBER = os.environ.get( environment_variable_name, "0.1.0" )
+VERSION_NUMBER = VERSION_NUMBER[1:]
 
 # Force platform specific wheel.
 # https://stackoverflow.com/questions/45150304

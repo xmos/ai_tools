@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -e -x
+
 # Build xcore-opt with an older gcc7 toolchain
 # Have to explicitly link with -lrt to prevent the following linking errors
 

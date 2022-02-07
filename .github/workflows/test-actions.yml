@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Provide release tag version in the format vX.Y.Z"
+        description: "Provide a valid release tag version in the format vX.Y.Z"
         required: true
 
 # Either we triggered a workflow providing a version or published a new release
@@ -43,13 +43,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build manylinux2010 wheels
+        # The XMOS_AI_TOOLS_RELEASE_VERSION var is passed via docker to the
+        # python setup.py script to add the version info for the wheel file.
+        #
+        # auditwheel requires patchelf and repairs the created wheel file to 
+        # be compatible for manylinux.
         run: |
-          #mkdir -p experimental/xformer/bazel-bin
-          #touch experimental/xformer/bazel-bin/xcore-opt
-          #docker run -v ${PWD}:/ai_tools -w /ai_tools/experimental/xformer/python \
-          #  tensorflow/build:latest-python${{ matrix.python-version }} \
-          # python setup.py bdist_wheel
-
           docker run -e XMOS_AI_TOOLS_RELEASE_VERSION=${{ env.TAG_VERSION }} \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:latest-python${{ matrix.python-version }} \
@@ -57,9 +56,8 @@ jobs:
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
           python -m pip install auditwheel --no-cache-dir
-          cd experimental/xformer/python
-          #python setup.py bdist_wheel
 
+          cd experimental/xformer/python
           for f in dist/*.whl; do
             auditwheel repair --plat manylinux2010_x86_64 $f
           done
@@ -67,7 +65,8 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
-          path: experimental/xformer/python/dist
+          # auditwheel creates the output wheel in the wheelhouse folder
+          path: experimental/xformer/python/wheelhouse
           
   publish-wheels:
     name: Publish wheels to TestPyPi

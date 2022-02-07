@@ -43,9 +43,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build manylinux2010 wheels
-        env:
-          XMOS_AI_TOOLS_RELEASE_VERSION: ${{ env.TAG_VERSION }}
-        shell: bash
         run: |
           #mkdir -p experimental/xformer/bazel-bin
           #touch experimental/xformer/bazel-bin/xcore-opt
@@ -53,7 +50,8 @@ jobs:
           #  tensorflow/build:latest-python${{ matrix.python-version }} \
           # python setup.py bdist_wheel
 
-          docker run -v ${PWD}:/ai_tools -w /ai_tools \
+          docker run -e XMOS_AI_TOOLS_RELEASE_VERSION=${{ env.TAG_VERSION }} \
+            -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:latest-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
           

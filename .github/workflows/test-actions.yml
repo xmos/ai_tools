@@ -49,7 +49,7 @@ jobs:
         run: |
           docker run -v ${PWD}:/ai_tools -w /ai_tools/experimental/xformer \
             tensorflow/build:latest-python${{ matrix.python-version }} \
-            bazel build //:xcore-opt --crosstool_top=@org_tensorflow//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda11.2:toolchain
+            bazel build //:xcore-opt --host_linkopt=-lrt --crosstool_top=@org_tensorflow//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda11.2:toolchain
             
           sudo apt-get -y -qq install patchelf --no-install-recommends
           python -m pip install auditwheel --no-cache-dir
@@ -64,3 +64,27 @@ jobs:
         with:
           name: ${{ runner.os }}-wheels
           path: experimental/xformer/python/dist
+          
+  publish-wheels:
+    name: Publish wheels to TestPyPi
+    if: ${{ always() }}
+    needs: [manylinux-release-wheel]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: Linux-wheels
+          path: Linux-wheels
+        if: ${{ needs.manylinux-release-wheel.result == 'success' }}
+      - run: |
+          set -x
+          mkdir -p dist
+          cp Linux-wheels/*.whl dist/ || true
+          ls -la dist/
+          sha256sum dist/*.whl
+      - name: Publish package to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/

@@ -35,7 +35,7 @@ jobs:
           path: |
             ~/.cache/bazelisk
             ~/.cache/bazel
-          key: ${{ runner.os }}-${{ env.cache-name }}
+          key: ${{ runner.os }}-arm-${{ env.cache-name }}
       - uses: actions/checkout@v2
         with:
           submodules: recursive

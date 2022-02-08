@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           python --version
-          python -m pip install delocate wheel setuptools numpy six auditwheel --no-cache-dir
+          python -m pip install wheel setuptools numpy six --no-cache-dir
                     
           cd experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
@@ -64,6 +64,52 @@ jobs:
           path: experimental/xformer/python/dist
 
 
+
+  macos-arm-release-wheel:
+    name: Build release wheels for macOS arm64
+    runs-on: macos-11
+    strategy:
+      matrix:
+        python-version: [3.8]
+      fail-fast: false
+    steps:
+      # Caches and restores the bazelisk download directory, the bazel build directory.
+      - name: Cache bazel
+        uses: actions/cache@v2.1.4
+        env:
+          cache-name: bazel-cache
+        with:
+          path: |
+            ~/.cache/bazelisk
+            ~/.cache/bazel
+          key: ${{ runner.os }}-arm-${{ env.cache-name }}
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          ref: ${{ env.TAG_VERSION }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build macOS arm wheels
+        env:
+          XMOS_AI_TOOLS_RELEASE_VERSION: ${{ env.TAG_VERSION }}
+        shell: bash
+        run: |
+          python --version
+          python -m pip install wheel setuptools numpy six --no-cache-dir
+                    
+          cd experimental/xformer
+          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
+          
+          cd python
+          python setup.py bdist_wheel --plat-name macosx_11_0_arm64
+          
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ runner.os }}-arm-wheels
+          path: experimental/xformer/python/dist
+          
+  
 
   manylinux-release-wheel:
     name: Build release wheels for manylinux2010
@@ -120,7 +166,7 @@ jobs:
   publish-wheels:
     name: Publish wheels to TestPyPi
     if: ${{ always() }}
-    needs: [macos-release-wheel, manylinux-release-wheel]
+    needs: [macos-release-wheel, macos-arm-release-wheel, manylinux-release-wheel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2
@@ -130,6 +176,11 @@ jobs:
         if: ${{ needs.macos-release-wheel.result == 'success' }}
       - uses: actions/download-artifact@v2
         with:
+          name: macOS-arm-wheels
+          path: macOS-arm-wheels
+        if: ${{ needs.macos-arm-release-wheel.result == 'success' }}
+      - uses: actions/download-artifact@v2
+        with:
           name: Linux-wheels
           path: Linux-wheels
         if: ${{ needs.manylinux-release-wheel.result == 'success' }}
@@ -137,6 +188,7 @@ jobs:
           set -x
           mkdir -p dist
           cp macOS-wheels/*.whl dist/ || true
+          cp macOS-arm-wheels/*.whl dist/ || true
           cp Linux-wheels/*.whl dist/ || true
           ls -la dist/
           sha256sum dist/*.whl

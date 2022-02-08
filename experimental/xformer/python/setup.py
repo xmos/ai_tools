@@ -21,7 +21,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 # This will be in the format, vX.Y.Z
 # We need to remove the first character to get just the version number
 environment_variable_name = 'XMOS_AI_TOOLS_RELEASE_VERSION'
-VERSION_NUMBER = os.environ.get( environment_variable_name, "0.1.0" )
+VERSION_NUMBER = os.environ.get( environment_variable_name, "v0.1.0" )
 VERSION_NUMBER = VERSION_NUMBER[1:]
 
 # Force platform specific wheel.
@@ -45,7 +45,7 @@ except ImportError:
     bdist_wheel = None
 
 setup(
-    name="xmos-tools",
+    name="xmos-ai-tools",
     version=VERSION_NUMBER,
     author="XMOS",
     author_email="support@xmos.com",

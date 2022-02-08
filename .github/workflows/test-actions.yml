@@ -1,10 +1,10 @@
 name: xmos-ai-tools-test-actions
 
 on:
-  release:
-    types: [published]
-    tags:
-      - v*
+#   release:
+#     types: [published]
+#     tags:
+#       - v*
   workflow_dispatch:
     inputs:
       version:

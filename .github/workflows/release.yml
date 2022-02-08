@@ -1,20 +1,22 @@
 name: xmos-ai-tools-release
 
 on:
-#   release:
-#     types: [published]
-#     tags:
-#       - v*
+  release:
+    types: [published]
+    tags:
+      - v*
   workflow_dispatch:
     inputs:
       version:
-        description: "Provide release tag version in the format vX.Y.Z"
+        description: "Provide a valid release tag version in the format vX.Y.Z"
         required: true
 
 # Either we triggered a workflow providing a version or published a new release
 # Save the tag version in an environment variable
 env:
   TAG_VERSION: ${{ github.event.inputs.version == 0 && github.ref_name || github.event.inputs.version }}
+
+
 
 jobs:
   macos-release-wheel:
@@ -55,9 +57,6 @@ jobs:
           
           cd python
           python setup.py bdist_wheel
-          #for f in dist/*.whl; do
-          #  auditwheel repair $f -w wheelhouse
-          #done
           
       - uses: actions/upload-artifact@v2
         with:
@@ -65,10 +64,63 @@ jobs:
           path: experimental/xformer/python/dist
 
 
+
+  manylinux-release-wheel:
+    name: Build release wheels for manylinux2010
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        python-version: [3.8]
+      fail-fast: false
+    steps:
+      # Caches and restores the bazelisk download directory, the bazel build directory.
+      - name: Cache bazel
+        uses: actions/cache@v2.1.4
+        env:
+          cache-name: bazel-cache
+        with:
+          path: |
+            ~/.cache/bazelisk
+            ~/.cache/bazel
+          key: ${{ runner.os }}-${{ env.cache-name }}
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          ref: ${{ env.TAG_VERSION }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build manylinux2010 wheels
+        # The XMOS_AI_TOOLS_RELEASE_VERSION var is passed via docker to the
+        # python setup.py script to add the version info for the wheel file.
+        #
+        # auditwheel requires patchelf and repairs the created wheel file to 
+        # be compatible for manylinux.
+        run: |
+          docker run -e XMOS_AI_TOOLS_RELEASE_VERSION=${{ env.TAG_VERSION }} \
+            -v ${PWD}:/ai_tools -w /ai_tools \
+            tensorflow/build:latest-python${{ matrix.python-version }} \
+            .github/scripts/build_linux_wheel.sh
+          
+          sudo apt-get -y -qq install patchelf --no-install-recommends
+          python -m pip install auditwheel --no-cache-dir
+          cd experimental/xformer/python
+          for f in dist/*.whl; do
+            auditwheel repair --plat manylinux2010_x86_64 $f
+          done
+          
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ runner.os }}-wheels
+          # auditwheel creates the output wheel in the wheelhouse folder
+          path: experimental/xformer/python/wheelhouse
+
+
+
   publish-wheels:
     name: Publish wheels to TestPyPi
     if: ${{ always() }}
-    needs: [macos-release-wheel]
+    needs: [macos-release-wheel, manylinux-release-wheel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2
@@ -76,10 +128,16 @@ jobs:
           name: macOS-wheels
           path: macOS-wheels
         if: ${{ needs.macos-release-wheel.result == 'success' }}
+      - uses: actions/download-artifact@v2
+        with:
+          name: Linux-wheels
+          path: Linux-wheels
+        if: ${{ needs.manylinux-release-wheel.result == 'success' }}
       - run: |
           set -x
           mkdir -p dist
           cp macOS-wheels/*.whl dist/ || true
+          cp Linux-wheels/*.whl dist/ || true
           ls -la dist/
           sha256sum dist/*.whl
       - name: Publish package to TestPyPI

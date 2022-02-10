@@ -50,6 +50,9 @@ jobs:
         run: |
           python --version
           python -m pip install wheel setuptools numpy six --no-cache-dir
+          
+          cd third_party/lib_tflite_micro
+          make build
                     
           cd experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip

@@ -54,7 +54,7 @@ jobs:
           cd third_party/lib_tflite_micro
           make build
                     
-          cd experimental/xformer
+          cd ${{ env.GITHUB_WORKSPACE }}/experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
           
           cd python

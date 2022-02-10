@@ -4,7 +4,7 @@
 # XMOS Public License: Version 1
 
 import platform
-from setuptools import setup, find_packages
+from setuptools import setup
 import pathlib
 import os
 
@@ -15,7 +15,22 @@ XCOREOPT_BINARY = pathlib.Path.joinpath(here.parent, "bazel-bin", "xcore-opt",
                                         exe_suffix)
 
 # Get the long description from the README file
-long_description = (here / 'README.md').read_text(encoding='utf-8')
+LONG_README = (here / 'README.md').read_text(encoding='utf-8')
+
+# tflm_interpreter path and libs from lib_tflite_micro
+TFLM_INTERPRETER_LIBS = [
+    "/libs/linux/tflm_python.so",
+    "/libs/linux/tflm_python.so.1.0.1",
+    "/libs/macos/tflm_python.dylib",
+    "/libs/macos/tflm_python.1.0.1.dylib",
+]
+TFLM_INTERPRETER_PATH = pathlib.Path.joinpath(here.parent.parent.parent, "third_party", "lib_tflite_micro", "tflm_interpreter", "tflm_interpreter")
+# adjust path to libs
+TFLM_INTERPRETER_LIBS = [str(TFLM_INTERPRETER_PATH) + x for x in TFLM_INTERPRETER_LIBS]
+# tflm_interpreter requires numpy
+REQUIRED_PACKAGES = [
+    "numpy~=1.19.2",
+]
 
 # Get tag version from env variable
 # This will be in the format, vX.Y.Z
@@ -51,7 +66,7 @@ setup(
     author_email="support@xmos.com",
     license="LICENSE.txt",
     description="XMOS AI Tools",
-    long_description=long_description,
+    long_description=LONG_README,
     long_description_content_type="text/markdown",
     url="https://github.com/xmos/ai_tools",
     classifiers=[
@@ -73,8 +88,10 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires=">=3.7",
-    package_dir={'': 'src'},
-    packages=find_packages(where='src'),  # Required
+    install_requires=REQUIRED_PACKAGES,
+    package_dir={'xmos_ai_tools.xformer': 'src/xformer', 'xmos_ai_tools.tflm_interpreter': str(TFLM_INTERPRETER_PATH)},
+    packages=['xmos_ai_tools.xformer', 'xmos_ai_tools.tflm_interpreter'],  # Required
+    package_data={"": TFLM_INTERPRETER_LIBS},
     data_files=[('bin', [str(XCOREOPT_BINARY)])],
     cmdclass={
         'bdist_wheel': bdist_wheel,

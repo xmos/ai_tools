@@ -11,7 +11,10 @@ set -e -x
 #/usr/bin/ld: bazel-out/k8-fastbuild/bin/external/com_google_absl/absl/base/libbase.a(sysinfo.pic.o): in function `absl::lts_20210324::base_internal::ReadMonotonicClockNanos()':
 #sysinfo.cc:(.text+0x156): undefined reference to `clock_gettime'
 
-cd experimental/xformer
+cd third_party/lib_tflite_micro
+make build
+
+cd ../../experimental/xformer
 bazel build //:xcore-opt --linkopt=-lrt --crosstool_top=@org_tensorflow//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda11.2:toolchain
 
 # Build python wheel

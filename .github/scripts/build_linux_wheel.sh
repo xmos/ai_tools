@@ -11,6 +11,7 @@ set -e -x
 #/usr/bin/ld: bazel-out/k8-fastbuild/bin/external/com_google_absl/absl/base/libbase.a(sysinfo.pic.o): in function `absl::lts_20210324::base_internal::ReadMonotonicClockNanos()':
 #sysinfo.cc:(.text+0x156): undefined reference to `clock_gettime'
 
+pip install cmake
 cd third_party/lib_tflite_micro
 make build
 

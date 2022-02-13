@@ -5,6 +5,7 @@
 
 import platform
 from setuptools import setup
+from setuptools.command.install import install
 import pathlib
 import os
 
@@ -59,6 +60,14 @@ try:
 except ImportError:
     bdist_wheel = None
 
+
+# See https://github.com/bigartm/bigartm/issues/840
+class install_plat_lib(install):
+    def finalize_options(self):
+        install.finalize_options(self)
+        self.install_lib = self.install_platlib
+
+
 setup(
     name="xmos-ai-tools",
     version=VERSION_NUMBER,
@@ -95,6 +104,7 @@ setup(
     data_files=[('bin', [str(XCOREOPT_BINARY)])],
     cmdclass={
         'bdist_wheel': bdist_wheel,
+        'install': install_plat_lib,
     },
     keywords="tensorflow binarized neural networks",
 )

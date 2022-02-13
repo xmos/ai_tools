@@ -18,16 +18,16 @@ XCOREOPT_BINARY = pathlib.Path.joinpath(here.parent, "bazel-bin", "xcore-opt",
 # Get the long description from the README file
 LONG_README = (here / 'README.md').read_text(encoding='utf-8')
 
-# tflm_interpreter path and libs from lib_tflite_micro
-TFLM_INTERPRETER_LIBS = [
-    "/libs/linux/tflm_python.so",
-    "/libs/linux/tflm_python.so.1.0.1",
-    "/libs/macos/tflm_python.dylib",
-    "/libs/macos/tflm_python.1.0.1.dylib",
+# xtflm_interpreter path and libs from lib_tflite_micro
+XTFLM_INTERPRETER_LIBS = [
+    "/libs/linux/xtflm_python.so",
+    "/libs/linux/xtflm_python.so.1.0.1",
+    "/libs/macos/xtflm_python.dylib",
+    "/libs/macos/xtflm_python.1.0.1.dylib",
 ]
-TFLM_INTERPRETER_PATH = pathlib.Path.joinpath(here.parent.parent.parent, "third_party", "lib_tflite_micro", "tflm_interpreter", "tflm_interpreter")
+XTFLM_INTERPRETER_PATH = pathlib.Path.joinpath(here.parent.parent.parent, "third_party", "lib_tflite_micro", "xtflm_interpreter", "xtflm_interpreter")
 # adjust path to libs
-TFLM_INTERPRETER_LIBS = [str(TFLM_INTERPRETER_PATH) + x for x in TFLM_INTERPRETER_LIBS]
+XTFLM_INTERPRETER_LIBS = [str(XTFLM_INTERPRETER_PATH) + x for x in XTFLM_INTERPRETER_LIBS]
 # tflm_interpreter requires numpy
 REQUIRED_PACKAGES = [
     "numpy<2.0",
@@ -98,9 +98,9 @@ setup(
     ],
     python_requires=">=3.7",
     install_requires=REQUIRED_PACKAGES,
-    package_dir={'xmos_ai_tools.xformer': 'src/xformer', 'xmos_ai_tools.tflm_interpreter': str(TFLM_INTERPRETER_PATH)},
-    packages=['xmos_ai_tools.xformer', 'xmos_ai_tools.tflm_interpreter'],  # Required
-    package_data={"": TFLM_INTERPRETER_LIBS},
+    package_dir={'xmos_ai_tools.xformer': 'src/xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter': str(XTFLM_INTERPRETER_PATH)},
+    packages=['xmos_ai_tools.xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter'],  # Required
+    package_data={"": XTFLM_INTERPRETER_LIBS},
     data_files=[('bin', [str(XCOREOPT_BINARY)])],
     cmdclass={
         'bdist_wheel': bdist_wheel,

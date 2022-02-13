@@ -30,7 +30,7 @@ TFLM_INTERPRETER_PATH = pathlib.Path.joinpath(here.parent.parent.parent, "third_
 TFLM_INTERPRETER_LIBS = [str(TFLM_INTERPRETER_PATH) + x for x in TFLM_INTERPRETER_LIBS]
 # tflm_interpreter requires numpy
 REQUIRED_PACKAGES = [
-    "numpy~=1.19.2",
+    "numpy<2.0",
 ]
 
 # Get tag version from env variable

@@ -28,7 +28,7 @@ XTFLM_INTERPRETER_LIBS = [
 XTFLM_INTERPRETER_PATH = pathlib.Path.joinpath(here.parent.parent.parent, "third_party", "lib_tflite_micro", "xtflm_interpreter", "xtflm_interpreter")
 # adjust path to libs
 XTFLM_INTERPRETER_LIBS = [str(XTFLM_INTERPRETER_PATH) + x for x in XTFLM_INTERPRETER_LIBS]
-# tflm_interpreter requires numpy
+# xtflm_interpreter requires numpy
 REQUIRED_PACKAGES = [
     "numpy<2.0",
 ]

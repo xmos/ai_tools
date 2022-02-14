@@ -55,7 +55,7 @@ jobs:
           cd third_party/lib_tflite_micro
           make build
                     
-          cd experimental/xformer
+          cd ../../experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
           
           cd python
@@ -104,7 +104,7 @@ jobs:
           cd third_party/lib_tflite_micro
           make build
                     
-          cd experimental/xformer
+          cd ../../experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
           
           cd python

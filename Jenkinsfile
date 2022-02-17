@@ -82,7 +82,7 @@ pipeline {
                       bazel build --client_env=CC=clang --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
                 """
                 sh """. activate ./ai_tools_venv &&
-                      pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]"
+                      pip install -e "./third_party/lib_tflite_micro/xtflm_interpreter[test]"
                 """
             }
         }

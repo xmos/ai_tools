@@ -170,7 +170,7 @@ jobs:
 
 
   publish-wheels:
-    name: Publish wheels to TestPyPi
+    name: Publish wheels to PyPi
     if: ${{ always() }}
     needs: [macos-release-wheel, macos-arm-release-wheel, manylinux-release-wheel]
     runs-on: ubuntu-latest

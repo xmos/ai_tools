@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "IR/XCoreOps.h"
+#include "Transforms/Options.h"
 
 #include "flatbuffers/flexbuffers.h"
 #include "mlir/Pass/Pass.h"
@@ -36,6 +37,7 @@ std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
 
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
+  fbb.Int("tc", (int32_t)threadCountOption);
   auto threadsVec = fbb.StartVector("threads");
   for (int i = 0; i < threadCount; ++i) {
     auto vec = fbb.StartVector();

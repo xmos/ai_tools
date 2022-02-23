@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "Transforms/ConvPatterns.h"
+#include "Transforms/Options.h"
 
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
@@ -330,7 +331,59 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
   nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
                                qp.final_shr);
 
-  auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
+  int numThreads = threadCountOption;
+
+  /*
+pick larger number
+loop
+divide by number of remaining threads
+ceil
+add to array
+
+use this array to create new array for imageregions
+
+return an array of four numbers, one for each thread
+*/
+  int dimSize;
+  bool isHeightChosenDim;
+  if (args.Y.height % numThreads == 0) {
+    dimSize = args.Y.height;
+    isHeightChosenDim = true;
+  } else if (args.Y.width % numThreads == 0) {
+    dimSize = args.Y.width;
+    isHeightChosenDim = false;
+  } else {
+    dimSize = args.Y.height > args.Y.width ? args.Y.height : args.Y.width;
+    isHeightChosenDim = args.Y.height > args.Y.width ? true : false;
+  }
+
+  llvm::SmallVector<int> threadSplits;
+  for (int i = numThreads; i > 0; --i) {
+    auto split = static_cast<int>(ceil(double(dimSize) / double(i)));
+    dimSize -= split;
+    if (split > 0) {
+      threadSplits.push_back(split);
+    }
+  }
+
+  int tr = 0;
+  int tc = 0;
+  int nr = args.Y.height;
+  int nc = args.Y.width;
+
+  llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
+  for (auto &split : threadSplits) {
+    if (isHeightChosenDim) {
+      imageRegionSplits.push_back({tr, tc, split, nc});
+      tr += split;
+    } else {
+      imageRegionSplits.push_back({tr, tc, nr, split});
+      tc += split;
+    }
+  }
+
+  auto ir = nn::ImageRegion(tr, tc, 0, nr /*args.Y.height*/,
+                            nc /*args.Y.width*/, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
   // TODO: Check serialization

@@ -55,41 +55,39 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
     return failure();
   }
 
-  llvm::SmallVector<std::string> abstractKernelParams, memcpyFnParams,
-      aggregateFnParams, outputTransformFnParams, kernelTypeEnumParams;
-  llvm::SmallVector<int32_t> scratchByteParams;
-
-  // TODO: We only have one thread now
-  // If we have more threads, we'll need to combine the tensor data
-  // and save the sizes for each thread
+  llvm::SmallVector<std::string> abstractKernelParams;
+  std::string memcpyFnParam, aggregateFnParam, outputTransformFnParam,
+      kernelTypeEnumParam;
+  int32_t scratchByteParam;
   std::vector<int8_t> weightsData;
   std::vector<int16_t> mulsBiasesOrThresholdsData;
 
-  // TODO: Currently thread count is one
-  const int threadCount = 1;
+  // Obtain thread count from command-line option
+  const int threadCount = threadCountOption;
+  llvm::SmallVector<std::string> strParams;
+  int scratchBytes = 0;
 
-  // TODO: Multithread analysis to determine how to split up the data
-  // between threads. Might be better to do this as an analysis pass and
-  // access the analysis results here
-  for (int i = 0; i < threadCount; ++i) {
-    llvm::SmallVector<std::string> strParams;
-    int scratchBytes = 0;
-
-    // Obtain serialized params and calculated tensors from lib_nn for the
-    // conv2d kernel type
-    if (failed(builder->getSerializedParamsAndTensors(
-            args, kernelType, strParams, weightsData,
-            mulsBiasesOrThresholdsData, scratchBytes))) {
-      return failure();
-    }
-
-    kernelTypeEnumParams.push_back(stringifyConv2DType(kernelType).str());
-    abstractKernelParams.push_back(strParams[0]);
-    memcpyFnParams.push_back(strParams[1]);
-    aggregateFnParams.push_back(strParams[2]);
-    outputTransformFnParams.push_back(strParams[3]);
-    scratchByteParams.push_back(scratchBytes);
+  // Obtain serialized params and calculated tensors from lib_nn for the
+  // conv2d kernel type
+  if (failed(builder->getSerializedParamsAndTensors(
+          args, kernelType, threadCount, strParams, abstractKernelParams,
+          weightsData, mulsBiasesOrThresholdsData, scratchBytes))) {
+    return failure();
   }
+
+  // The actual thread count might be less than the count specified on the
+  // command-line
+  // If the output height/width is smaller than the specified
+  // thread count, only the required number of threads would be used
+  // The number of abstract kernel params gives us the actual thread count
+  int actualThreadCount = abstractKernelParams.size();
+
+  // Prepare params to create Conv2DV2 Op
+  kernelTypeEnumParam = stringifyConv2DType(kernelType).str();
+  memcpyFnParam = strParams[0];
+  aggregateFnParam = strParams[1];
+  outputTransformFnParam = strParams[2];
+  scratchByteParam = scratchBytes;
 
   // Create a string array attr from a vector of strings
   auto getStringArrayAttr = [&](llvm::SmallVector<std::string> value) {
@@ -101,8 +99,6 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   };
 
   // Create the tensors for weights and multipliers_and_biases
-  assert(threadCount == 1 &&
-         "Tensor data has to be combined for more than one thread!");
   ShapedType weightsType = RankedTensorType::get(
       {static_cast<long long>(weightsData.size())}, rewriter.getIntegerType(8));
   auto weightsAttr = DenseElementsAttr::get<int8_t>(weightsType, weightsData);
@@ -120,13 +116,14 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   // Create the Conv2DV2 Op with the params and kernel type
   auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
       conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(),
-      rewriter.getI32IntegerAttr(threadCount),
-      rewriter.getI32ArrayAttr(scratchByteParams), weightsConstantOp,
-      mulsBiasesOrThresholdsConstantOp,
-      getStringArrayAttr(abstractKernelParams),
-      getStringArrayAttr(memcpyFnParams), getStringArrayAttr(aggregateFnParams),
-      getStringArrayAttr(outputTransformFnParams),
-      getStringArrayAttr(kernelTypeEnumParams));
+      weightsConstantOp, mulsBiasesOrThresholdsConstantOp,
+      rewriter.getStringAttr(kernelTypeEnumParam),
+      rewriter.getStringAttr(memcpyFnParam),
+      rewriter.getStringAttr(aggregateFnParam),
+      rewriter.getStringAttr(outputTransformFnParam),
+      rewriter.getI32IntegerAttr(scratchByteParam),
+      rewriter.getI32IntegerAttr(actualThreadCount),
+      getStringArrayAttr(abstractKernelParams));
   rewriter.replaceOp(conv2DOp, newConv2DV2Op.output());
 
   return success();

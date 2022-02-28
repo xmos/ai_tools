@@ -108,6 +108,7 @@ cc_library(
         "Transforms/Options.h",
         "Transforms/Passes.h",
         "Utils/FileIO.h",
+        "Utils/ThreadSupport.h",
         "IR/XCoreOps.h",
     ],
     deps = [

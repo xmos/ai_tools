@@ -190,7 +190,8 @@ private:
       int &scratchBytes) const;
 
   LogicalResult getConv2DValidDirectParams(
-      const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+      const TFLConvArgs &args, const int &threadCount,
+      llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const;

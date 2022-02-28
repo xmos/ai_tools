@@ -3,6 +3,7 @@
 
 #include "Transforms/ConvPatterns.h"
 #include "Transforms/Options.h"
+#include "Utils/ThreadSupport.h"
 
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
@@ -185,9 +186,9 @@ LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
     int &scratchBytes) const {
   switch (kt) {
   case Conv2DType::ValidDirect:
-    if (failed(getConv2DValidDirectParams(args, strParams, abstractKernelParams,
-                                          weightsData, mulsBiasesData,
-                                          scratchBytes))) {
+    if (failed(getConv2DValidDirectParams(args, threadCount, strParams,
+                                          abstractKernelParams, weightsData,
+                                          mulsBiasesData, scratchBytes))) {
       return failure();
     }
     break;
@@ -245,7 +246,6 @@ LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColPadded::Params>();
   std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
@@ -294,7 +294,6 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
   std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
@@ -313,7 +312,8 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
 }
 
 LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
-    const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+    const TFLConvArgs &args, const int &threadCount,
+    llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
@@ -339,57 +339,10 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
   nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
                                qp.final_shr);
 
-  int numThreads = threadCountOption;
-
-  /*
-pick larger number
-loop
-divide by number of remaining threads
-ceil
-add to array
-
-use this array to create new array for imageregions
-
-return an array of four numbers, one for each thread
-*/
-  int dimSize;
-  bool isHeightChosenDim;
-  if (args.Y.height % numThreads == 0) {
-    dimSize = args.Y.height;
-    isHeightChosenDim = true;
-  } else if (args.Y.width % numThreads == 0) {
-    dimSize = args.Y.width;
-    isHeightChosenDim = false;
-  } else {
-    dimSize = args.Y.height > args.Y.width ? args.Y.height : args.Y.width;
-    isHeightChosenDim = args.Y.height > args.Y.width ? true : false;
-  }
-
-  llvm::SmallVector<int> threadSplits;
-  for (int i = numThreads; i > 0; --i) {
-    auto split = static_cast<int>(ceil(double(dimSize) / double(i)));
-    dimSize -= split;
-    if (split > 0) {
-      threadSplits.push_back(split);
-    }
-  }
-
-  int tr = 0;
-  int tc = 0;
-  int nr = args.Y.height;
-  int nc = args.Y.width;
-
-  llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
-  for (auto &split : threadSplits) {
-    if (isHeightChosenDim) {
-      imageRegionSplits.push_back({tr, tc, split, nc});
-      tr += split;
-    } else {
-      imageRegionSplits.push_back({tr, tc, nr, split});
-      tc += split;
-    }
-  }
-
+  // Get image region splits for multiple threads
+  llvm::SmallVector<std::array<int, 4>> imageRegionSplits =
+      utils::getImageRegionThreadSplits(threadCount, args.Y.height,
+                                        args.Y.width);
   for (auto &regionsplits : imageRegionSplits) {
     auto ir = nn::ImageRegion(regionsplits[0], regionsplits[1], 0,
                               regionsplits[2], regionsplits[3], args.Y.depth);
@@ -487,7 +440,6 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DValidDirectParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D_DW::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D_DW::Params>();
   std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
   std::string afStr = afParams.serialise<nn::MatMulDirectFn_DW::Params>();
@@ -536,7 +488,6 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DPaddedIndirectParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D_DW::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D_DW::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColPadded::Params>();
   std::string afStr = afParams.serialise<nn::MatMulDirectFn_DW::Params>();

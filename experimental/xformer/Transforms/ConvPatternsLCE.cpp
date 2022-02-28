@@ -305,7 +305,6 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectBinaryParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinaryDirectFn::Params>();
@@ -350,7 +349,6 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectBinaryParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinary::Params>();
@@ -403,7 +401,6 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectInt8Params(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinaryDirectFn::Params>();
@@ -460,7 +457,6 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinary::Params>();

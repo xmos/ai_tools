@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
         "xcore-load-externally-if-larger option!");
   }
 
-  if (mlir::xcore::threadCountOption <= 8) {
+  if (mlir::xcore::threadCountOption > 8) {
     return failedMessage(
         "Please specify a thread count between one and eight!");
   }

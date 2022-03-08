@@ -71,15 +71,15 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
     // I32 input is for BNNs
     TensorOf<[QI8, I32]>:$input,
 
-    I32Attr:$thread_count,
-    I32ArrayAttr:$scratch_bytes,
     TensorOf<[I8]>:$weights,
     TensorOf<[I16]>:$mulsbiases_or_thresholds,
-    StrArrayAttr:$abstract_kernel_params,
-    StrArrayAttr:$memcpy_fn_params,
-    StrArrayAttr:$aggregate_fn_params,
-    StrArrayAttr:$output_transform_fn_params,
-    StrArrayAttr:$conv2d_kernel_type
+    StrAttr:$conv2d_kernel_type,
+    StrAttr:$memcpy_fn_param,
+    StrAttr:$aggregate_fn_param,
+    StrAttr:$output_transform_fn_param,
+    I32Attr:$scratch_bytes,
+    I32Attr:$thread_count,
+    StrArrayAttr:$abstract_kernel_params
   );
 
   // I32 output is for BNNs

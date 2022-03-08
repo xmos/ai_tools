@@ -239,31 +239,37 @@ LogicalResult ReplaceBConv2DPattern::getKernelType(const BConvArgs &args,
 }
 
 LogicalResult ReplaceBConv2DPattern::getSerializedParamsAndTensors(
-    const BConvArgs &args, const Conv2DType &kt,
-    llvm::SmallVector<std::string> &strParams, std::vector<int8_t> &weightsData,
-    std::vector<int16_t> &thresholdsData, int &scratchBytes) const {
+    const BConvArgs &args, const Conv2DType &kt, const int &threadCount,
+    llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
+    std::vector<int8_t> &weightsData, std::vector<int16_t> &thresholdsData,
+    int &scratchBytes) const {
   switch (kt) {
   case Conv2DType::BNNValidDirectBinary:
     if (failed(getBConv2DValidDirectBinaryParams(
-            args, strParams, weightsData, thresholdsData, scratchBytes))) {
+            args, strParams, abstractKernelParams, weightsData, thresholdsData,
+            scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::BNNValidIndirectBinary:
     if (failed(getBConv2DValidIndirectBinaryParams(
-            args, strParams, weightsData, thresholdsData, scratchBytes))) {
+            args, strParams, abstractKernelParams, weightsData, thresholdsData,
+            scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::BNNValidDirectInt8:
-    if (failed(getBConv2DValidDirectInt8Params(args, strParams, weightsData,
-                                               thresholdsData, scratchBytes))) {
+    if (failed(getBConv2DValidDirectInt8Params(
+            args, strParams, abstractKernelParams, weightsData, thresholdsData,
+            scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::BNNValidIndirectInt8:
     if (failed(getBConv2DValidIndirectInt8Params(
-            args, strParams, weightsData, thresholdsData, scratchBytes))) {
+            args, strParams, abstractKernelParams, weightsData, thresholdsData,
+            scratchBytes))) {
       return failure();
     }
     break;
@@ -276,6 +282,7 @@ LogicalResult ReplaceBConv2DPattern::getSerializedParamsAndTensors(
 
 LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectBinaryParams(
     const BConvArgs &args, llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &thresholdsData,
     int &scratchBytes) const {
   nn::DerefInputFn::Params imToColParams(args.X, args.K);
@@ -298,13 +305,12 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectBinaryParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinaryDirectFn::Params>();
   std::string otStr = ""; // otParams.serialise<nn::OT_int8::Params>();
 
-  strParams.push_back(akpStr);
+  abstractKernelParams.push_back(akpStr);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -317,6 +323,7 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectBinaryParams(
 
 LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectBinaryParams(
     const BConvArgs &args, llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &thresholdsData,
     int &scratchBytes) const {
   nn::ImToColValid::Params imToColParams(args.X, args.K, args.inputDepth);
@@ -342,13 +349,12 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectBinaryParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinary::Params>();
   std::string otStr = ""; // otParams.serialise<nn::OT_int8::Params>();
 
-  strParams.push_back(akpStr);
+  abstractKernelParams.push_back(akpStr);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -361,6 +367,7 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectBinaryParams(
 
 LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectInt8Params(
     const BConvArgs &args, llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
   nn::DerefInputFn::Params imToColParams(args.X, args.K);
@@ -394,13 +401,12 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectInt8Params(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinaryDirectFn::Params>();
   std::string otStr = otParams.serialise<nn::OT_int8_clamped::Params>();
 
-  strParams.push_back(akpStr);
+  abstractKernelParams.push_back(akpStr);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -413,6 +419,7 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectInt8Params(
 
 LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
     const BConvArgs &args, llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
   nn::ImToColValid::Params imToColParams(args.X, args.K, args.inputDepth);
@@ -450,13 +457,12 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinary::Params>();
   std::string otStr = otParams.serialise<nn::OT_int8_clamped::Params>();
 
-  strParams.push_back(akpStr);
+  abstractKernelParams.push_back(akpStr);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);

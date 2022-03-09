@@ -4,8 +4,11 @@ from pathlib import Path
 from typing import Union, List, Optional
 
 
-def convert(filename: Union[str, Path], outfile: Union[str, Path],
-        params: Optional[typing.Dict[str, Optional[str]]]) -> int:
+def convert(
+    filename: Union[str, Path],
+    outfile: Union[str, Path],
+    params: Optional[typing.Dict[str, Optional[str]]],
+) -> int:
     args: List[Optional[str]] = ["xcore-opt", "-o", str(outfile)]
 
     if params is not None:
@@ -22,5 +25,13 @@ def convert(filename: Union[str, Path], outfile: Union[str, Path],
     args.append(str(filename))
 
     process_call: subprocess.CompletedProcess = subprocess.run(
-        [arg for arg in args], check=True)
+        [arg for arg in args], check=True
+    )
     return process_call.returncode
+
+
+def xformer_help(show_hidden: Optional[bool] = False) -> int:
+    if show_hidden:
+        return subprocess.run(["xcore-opt", "--help-list-hidden"]).returncode
+
+    return subprocess.run(["xcore-opt", "--help-list"]).returncode

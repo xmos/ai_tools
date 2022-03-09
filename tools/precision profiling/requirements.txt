@@ -1,0 +1,10 @@
+tensorflow
+tensorflow-datasets
+keras
+pickle-mixin
+numpy
+prettyprinter
+Pillow
+../../third_party/lib_tflite_micro/tflm_interpreter
+openpyxl
+matplotlib

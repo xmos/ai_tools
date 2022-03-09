@@ -3,6 +3,7 @@
 
 #include "IR/XCoreOps.h"
 
+#include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"

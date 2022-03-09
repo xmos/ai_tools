@@ -17,7 +17,7 @@ INSTALL_REQUIRES = [
     "dill>=0.3.1.1",
     "flatbuffers==1.12",
     "numpy>=1.19.5",
-    "tensorflow>=2.5.0,<=2.5.1",
+    "tensorflow>=2.6.2,<=2.6.2",
     "larq-compute-engine>=0.6.2",
 ]
 

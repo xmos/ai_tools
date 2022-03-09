@@ -40,6 +40,8 @@ xformer2_integration_test:
 	cd test && pytest integration_test --cache-clear --collect-only -qq
 	# conv2d tests
 	cd test && pytest integration_test/test_single_op_models/test_conv2d --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
+	# bnn tests
+	cd test && pytest integration_test/test_single_op_models/test_binarized --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 
 #**************************
 # default build and test targets
@@ -144,7 +146,7 @@ TEST_SCRIPT= \
 make tflite2xcore_dist&& \
 pip install -e "./tflite2xcore[test]"&& \
 (cd third_party/lib_tflite_micro/ && make build)&& \
-pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]"&& \
+pip install -e "./third_party/lib_tflite_micro/xtflm_interpreter[test]"&& \
 (cd experimental/xformer && ../../bazel/bin/bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures)&& \
 (cd test && pytest integration_test --cache-clear --collect-only -qq&& \
 pytest integration_test/test_single_op_models/test_conv2d --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml)

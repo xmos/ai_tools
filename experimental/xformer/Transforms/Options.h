@@ -9,8 +9,12 @@
 namespace mlir {
 namespace xcore {
 
+extern llvm::cl::opt<std::string> threadSplitOption;
+extern llvm::cl::opt<unsigned> threadCountOption;
+
 extern llvm::cl::opt<std::string> flashImageFilenameOption;
 extern llvm::cl::opt<unsigned> loadExternallyIfLargerOption;
+extern llvm::cl::opt<bool> reduceMemoryOption;
 
 } // namespace xcore
 } // namespace mlir

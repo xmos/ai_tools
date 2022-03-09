@@ -4,16 +4,41 @@
 # XMOS Public License: Version 1
 
 import platform
-from setuptools import setup, find_packages
+from setuptools import setup
+from setuptools.command.install import install
 import pathlib
+import os
 
+# Find path to xcore-opt binary
 here = pathlib.Path(__file__).parent.resolve()
-# Get the long description from the README file
-long_description = (here / 'README.md').read_text(encoding='utf-8')
-
 exe_suffix = ".exe" if platform.system() == "Windows" else ""
 XCOREOPT_BINARY = pathlib.Path.joinpath(here.parent, "bazel-bin", "xcore-opt",
                                         exe_suffix)
+
+# Get the long description from the README file
+LONG_README = (here / 'README.md').read_text(encoding='utf-8')
+
+# xtflm_interpreter path and libs from lib_tflite_micro
+XTFLM_INTERPRETER_LIBS = [
+    "/libs/linux/xtflm_python.so",
+    "/libs/linux/xtflm_python.so.1.0.1",
+    "/libs/macos/xtflm_python.dylib",
+    "/libs/macos/xtflm_python.1.0.1.dylib",
+]
+XTFLM_INTERPRETER_PATH = pathlib.Path.joinpath(here.parent.parent.parent, "third_party", "lib_tflite_micro", "xtflm_interpreter", "xtflm_interpreter")
+# adjust path to libs
+XTFLM_INTERPRETER_LIBS = [str(XTFLM_INTERPRETER_PATH) + x for x in XTFLM_INTERPRETER_LIBS]
+# xtflm_interpreter requires numpy
+REQUIRED_PACKAGES = [
+    "numpy<2.0",
+]
+
+# Get tag version from env variable
+# This will be in the format, vX.Y.Z
+# We need to remove the first character to get just the version number
+environment_variable_name = 'XMOS_AI_TOOLS_RELEASE_VERSION'
+VERSION_NUMBER = os.environ.get( environment_variable_name, "v0.1.0" )
+VERSION_NUMBER = VERSION_NUMBER[1:]
 
 # Force platform specific wheel.
 # https://stackoverflow.com/questions/45150304
@@ -35,26 +60,51 @@ try:
 except ImportError:
     bdist_wheel = None
 
+
+# See https://github.com/bigartm/bigartm/issues/840
+class install_plat_lib(install):
+    def finalize_options(self):
+        install.finalize_options(self)
+        self.install_lib = self.install_platlib
+
+
 setup(
-    name="xmosaitools",
-    version="1.0",
+    name="xmos-ai-tools",
+    version=VERSION_NUMBER,
     author="XMOS",
     author_email="support@xmos.com",
     license="LICENSE.txt",
     description="XMOS AI Tools",
-    long_description=long_description,
+    long_description=LONG_README,
     long_description_content_type="text/markdown",
     url="https://github.com/xmos/ai_tools",
     classifiers=[
+        "License :: Other/Proprietary License",
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache License",
-        "Development Status :: 3 - Alpha",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Mathematics",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires=">=3.7",
-    package_dir={'': 'src'},
-    packages=find_packages(where='src'),  # Required
+    install_requires=REQUIRED_PACKAGES,
+    package_dir={'xmos_ai_tools.xformer': 'src/xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter': str(XTFLM_INTERPRETER_PATH)},
+    packages=['xmos_ai_tools.xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter'],  # Required
+    package_data={"": XTFLM_INTERPRETER_LIBS},
     data_files=[('bin', [str(XCOREOPT_BINARY)])],
     cmdclass={
         'bdist_wheel': bdist_wheel,
+        'install': install_plat_lib,
     },
+    keywords="tensorflow binarized neural networks",
 )

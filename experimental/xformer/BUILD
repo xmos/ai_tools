@@ -34,8 +34,8 @@ gentbl(
     td_includes = ["external/org_tensorflow", "external/lce"],
     td_srcs = [
         "IR/XCoreOps.td",
-        "@llvm-project//mlir:StdOpsTdFiles",
         "@lce//larq_compute_engine/mlir:lce_ops_td_file",
+        "@llvm-project//mlir:StdOpsTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
@@ -48,8 +48,9 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "Transforms/TFLPatterns.td",
-    td_includes = ["external/org_tensorflow"],
+    td_includes = ["external/org_tensorflow", "external/lce"],
     td_srcs = [
+        "@lce//larq_compute_engine/mlir:lce_ops_td_file",
         "@llvm-project//mlir:StdOpsTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
@@ -72,6 +73,22 @@ gentbl(
     ],
 )
 
+gentbl(
+    name = "conv_patterns_inc_gen",
+    tbl_outs = [
+        ("-gen-rewriters", "Transforms/GeneratedConvPatterns.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "Transforms/ConvPatterns.td",
+    td_includes = ["external/org_tensorflow"],
+    td_srcs = [
+        "IR/XCoreOps.td",
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
 cc_library(
     name = "xcore_passes",
     srcs = glob(["Transforms/*.cpp"]) + [
@@ -83,12 +100,15 @@ cc_library(
         "IR/XCoreOps.h.inc",
         "Transforms/GeneratedXCPatterns.inc",
         "Transforms/GeneratedTFLPatterns.inc",
-        "Transforms/GeneratedLoadConstantOpPatterns.inc"
+        "Transforms/GeneratedLoadConstantOpPatterns.inc",
+        "Transforms/GeneratedConvPatterns.inc"
     ],
     hdrs = [
+        "Transforms/ConvPatterns.h",
         "Transforms/Options.h",
         "Transforms/Passes.h",
         "Utils/FileIO.h",
+        "Utils/ThreadSupport.h",
         "IR/XCoreOps.h",
     ],
     deps = [
@@ -96,7 +116,8 @@ cc_library(
         ":xc_patterns_inc_gen",
         ":tfl_patterns_inc_gen",
         ":load_constant_op_patterns_inc_gen",
-        "@lce//larq_compute_engine/mlir:larq_compute_engine",
+        ":conv_patterns_inc_gen",
+        "@lce//larq_compute_engine/mlir:larq_compute_engine_translate_tflite",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:QuantOps",

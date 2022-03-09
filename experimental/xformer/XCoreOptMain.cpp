@@ -21,6 +21,9 @@ using namespace mlir;
 namespace mlir {
 namespace xcore {
 
+cl::opt<unsigned> threadCountOption("xcore-thread-count",
+                                    cl::desc("Thread count"), cl::init(1));
+
 cl::opt<std::string> flashImageFilenameOption(
     "xcore-flash-image-file",
     cl::desc("The file to write the xcore flash image."),
@@ -116,6 +119,11 @@ int main(int argc, char **argv) {
     return failedMessage(
         "Please specify the xcore-flash-image-file option when specifying the "
         "xcore-load-externally-if-larger option!");
+  }
+
+  if (mlir::xcore::threadCountOption > 8) {
+    return failedMessage(
+        "Please specify a thread count between one and eight!");
   }
 
   // Parse input.

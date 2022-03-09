@@ -11,28 +11,30 @@ def ShouldBeLoadedExternally
     : Constraint<CPred<"shouldBeLoadedExternally($0)">>;
 
 def : Pat<(XC_Conv2DV2Op
-           : $output $input, $thread_count, $scratch_bytes,
+           : $output $input,
              (ConstantOp
               : $weights_op $weights_attr),
-             $mulsbiases_or_thresholds, $abstract_kernel_params,
-             $memcpy_fn_params, $aggregate_fn_params,
-             $output_transform_fn_params, $conv2d_kernel_type),
-          (XC_Conv2DV2Op $input, $thread_count, $scratch_bytes,
-           (XC_LoadConstantOp $weights_op), $mulsbiases_or_thresholds,
-           $abstract_kernel_params, $memcpy_fn_params, $aggregate_fn_params,
-           $output_transform_fn_params, $conv2d_kernel_type),
+             $mulsbiases_or_thresholds, $conv2d_kernel_type, $memcpy_fn_params,
+             $aggregate_fn_params, $output_transform_fn_params, $scratch_bytes,
+             $thread_count, $abstract_kernel_params),
+          (XC_Conv2DV2Op $input, (XC_LoadConstantOp $weights_op),
+           $mulsbiases_or_thresholds, $conv2d_kernel_type, $memcpy_fn_params,
+           $aggregate_fn_params, $output_transform_fn_params, $scratch_bytes,
+           $thread_count, $abstract_kernel_params),
           [(ShouldBeLoadedExternally $weights_attr)]>;
 
 def : Pat<(XC_Conv2DV2Op
-           : $output $input, $thread_count, $scratch_bytes, $weights,
+           : $output $input, $weights,
              (ConstantOp
               : $mulsbiases_or_thresholds_op $mulsbiases_or_thresholds_attr),
-             $abstract_kernel_params, $memcpy_fn_params, $aggregate_fn_params,
-             $output_transform_fn_params, $conv2d_kernel_type),
-          (XC_Conv2DV2Op $input, $thread_count, $scratch_bytes, $weights,
+             $conv2d_kernel_type, $memcpy_fn_params, $aggregate_fn_params,
+             $output_transform_fn_params, $scratch_bytes, $thread_count,
+             $abstract_kernel_params),
+          (XC_Conv2DV2Op $input, $weights,
            (XC_LoadConstantOp $mulsbiases_or_thresholds_op),
-           $abstract_kernel_params, $memcpy_fn_params, $aggregate_fn_params,
-           $output_transform_fn_params, $conv2d_kernel_type),
+           $conv2d_kernel_type, $memcpy_fn_params, $aggregate_fn_params,
+           $output_transform_fn_params, $scratch_bytes, $thread_count,
+           $abstract_kernel_params),
           [(ShouldBeLoadedExternally $mulsbiases_or_thresholds_attr)]>;
 
 foreach constOp = [ConstantOp, TFL_ConstOp] in {

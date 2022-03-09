@@ -2,6 +2,8 @@
 // XMOS Public License: Version 1
 
 #include "Transforms/ConvPatterns.h"
+#include "Transforms/Options.h"
+#include "Utils/ThreadSupport.h"
 
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
@@ -177,24 +179,29 @@ LogicalResult ReplaceConv2DPattern::getKernelType(const TFLConvArgs &args,
 }
 
 LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
-    const TFLConvArgs &args, const Conv2DType &kt,
-    llvm::SmallVector<std::string> &strParams, std::vector<int8_t> &weightsData,
-    std::vector<int16_t> &mulsBiasesData, int &scratchBytes) const {
+    const TFLConvArgs &args, const Conv2DType &kt, const int &threadCount,
+    llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
+    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
+    int &scratchBytes) const {
   switch (kt) {
   case Conv2DType::ValidDirect:
-    if (failed(getConv2DValidDirectParams(args, strParams, weightsData,
+    if (failed(getConv2DValidDirectParams(args, threadCount, strParams,
+                                          abstractKernelParams, weightsData,
                                           mulsBiasesData, scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::ValidIndirect:
-    if (failed(getConv2DValidIndirectParams(args, strParams, weightsData,
+    if (failed(getConv2DValidIndirectParams(args, strParams,
+                                            abstractKernelParams, weightsData,
                                             mulsBiasesData, scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::PaddedIndirect:
-    if (failed(getConv2DPaddedIndirectParams(args, strParams, weightsData,
+    if (failed(getConv2DPaddedIndirectParams(args, strParams,
+                                             abstractKernelParams, weightsData,
                                              mulsBiasesData, scratchBytes))) {
       return failure();
     }
@@ -209,6 +216,7 @@ LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
 
 LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
 
@@ -238,13 +246,12 @@ LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColPadded::Params>();
   std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
   std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
-  strParams.push_back(akpStr);
+  abstractKernelParams.push_back(akpStr);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -258,6 +265,7 @@ LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
 
 LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
 
@@ -286,13 +294,12 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
   std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
   std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
-  strParams.push_back(akpStr);
+  abstractKernelParams.push_back(akpStr);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -305,7 +312,9 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
 }
 
 LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
-    const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+    const TFLConvArgs &args, const int &threadCount,
+    llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
 
@@ -330,16 +339,22 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
   nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
                                qp.final_shr);
 
-  auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
-  nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
+  // Get image region splits for multiple threads
+  llvm::SmallVector<std::array<int, 4>> imageRegionSplits =
+      utils::getImageRegionThreadSplits(threadCount, args.Y.height,
+                                        args.Y.width);
+  for (auto &regionsplits : imageRegionSplits) {
+    auto ir = nn::ImageRegion(regionsplits[0], regionsplits[1], 0,
+                              regionsplits[2], regionsplits[3], args.Y.depth);
+    nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
+    std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
+    abstractKernelParams.push_back(akpStr);
+  }
 
-  // TODO: Check serialization
-  std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
   std::string afStr = afParams.serialise<nn::MatMulDirectFn::Params>();
   std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
-  strParams.push_back(akpStr);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -366,19 +381,23 @@ ReplaceDepthwiseConv2DPattern::getKernelType(const TFLConvArgs &args,
 }
 
 LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
-    const TFLConvArgs &args, const Conv2DType &kt,
-    llvm::SmallVector<std::string> &strParams, std::vector<int8_t> &weightsData,
-    std::vector<int16_t> &mulsBiasesData, int &scratchBytes) const {
+    const TFLConvArgs &args, const Conv2DType &kt, const int &threadCount,
+    llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
+    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
+    int &scratchBytes) const {
   switch (kt) {
   case Conv2DType::DepthwiseValidDirect:
     if (failed(getDepthwiseConv2DValidDirectParams(
-            args, strParams, weightsData, mulsBiasesData, scratchBytes))) {
+            args, strParams, abstractKernelParams, weightsData, mulsBiasesData,
+            scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::DepthwisePaddedIndirect:
     if (failed(getDepthwiseConv2DPaddedIndirectParams(
-            args, strParams, weightsData, mulsBiasesData, scratchBytes))) {
+            args, strParams, abstractKernelParams, weightsData, mulsBiasesData,
+            scratchBytes))) {
       return failure();
     }
     break;
@@ -393,6 +412,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
 LogicalResult
 ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DValidDirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
 
@@ -420,13 +440,12 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DValidDirectParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D_DW::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D_DW::Params>();
   std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
   std::string afStr = afParams.serialise<nn::MatMulDirectFn_DW::Params>();
   std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
-  strParams.push_back(akpStr);
+  abstractKernelParams.push_back(akpStr);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -440,6 +459,7 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DValidDirectParams(
 LogicalResult
 ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DPaddedIndirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
 
@@ -468,13 +488,12 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DPaddedIndirectParams(
   auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
   nn::Filter2D_DW::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
 
-  // TODO: Check serialization
   std::string akpStr = akParams.serialise<nn::Filter2D_DW::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColPadded::Params>();
   std::string afStr = afParams.serialise<nn::MatMulDirectFn_DW::Params>();
   std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
-  strParams.push_back(akpStr);
+  abstractKernelParams.push_back(akpStr);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);

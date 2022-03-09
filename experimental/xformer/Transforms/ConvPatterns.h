@@ -79,8 +79,9 @@ public:
   LogicalResult getKernelType(const BConvArgs &args, Conv2DType &kt) const;
 
   LogicalResult getSerializedParamsAndTensors(
-      const BConvArgs &args, const Conv2DType &kt,
+      const BConvArgs &args, const Conv2DType &kt, const int &threadCount,
       llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData,
       std::vector<int16_t> &mulsBiasesOrThresholdsData,
       int &scratchBytes) const;
@@ -88,21 +89,25 @@ public:
 private:
   LogicalResult getBConv2DValidDirectBinaryParams(
       const BConvArgs &args, llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &thresholdsData,
       int &scratchBytes) const;
 
   LogicalResult getBConv2DValidIndirectBinaryParams(
       const BConvArgs &args, llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &thresholdsData,
       int &scratchBytes) const;
 
   LogicalResult getBConv2DValidDirectInt8Params(
       const BConvArgs &args, llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const;
 
   LogicalResult getBConv2DValidIndirectInt8Params(
       const BConvArgs &args, llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const;
 };
@@ -133,16 +138,16 @@ public:
     return success();
   }
 
-  LogicalResult
-  getSerializedParamsAndTensors(const TFLConvArgs &args, const Conv2DType &kt,
-                                llvm::SmallVector<std::string> &strParams,
-                                std::vector<int8_t> &weightsData,
-                                std::vector<int16_t> &mulsBiasesData,
-                                int &scratchBytes) const {
+  LogicalResult getSerializedParamsAndTensors(
+      const TFLConvArgs &args, const Conv2DType &kt, const int &threadCount,
+      llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
+      std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
+      int &scratchBytes) const {
     if (failed(static_cast<const ConcreteType *>(this)
-                   ->getSerializedParamsAndTensors(args, kt, strParams,
-                                                   weightsData, mulsBiasesData,
-                                                   scratchBytes))) {
+                   ->getSerializedParamsAndTensors(
+                       args, kt, threadCount, strParams, abstractKernelParams,
+                       weightsData, mulsBiasesData, scratchBytes))) {
       return failure();
     }
     return success();
@@ -164,26 +169,30 @@ public:
   // Conv is quantized along dimension 0
   int getQuantizationIndex() const { return 0; }
 
-  LogicalResult
-  getSerializedParamsAndTensors(const TFLConvArgs &args, const Conv2DType &kt,
-                                llvm::SmallVector<std::string> &strParams,
-                                std::vector<int8_t> &weightsData,
-                                std::vector<int16_t> &mulsBiasesData,
-                                int &scratchBytes) const;
+  LogicalResult getSerializedParamsAndTensors(
+      const TFLConvArgs &args, const Conv2DType &kt, const int &threadCount,
+      llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
+      std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
+      int &scratchBytes) const;
 
 private:
   LogicalResult getConv2DPaddedIndirectParams(
       const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const;
 
   LogicalResult getConv2DValidIndirectParams(
       const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const;
 
   LogicalResult getConv2DValidDirectParams(
-      const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+      const TFLConvArgs &args, const int &threadCount,
+      llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const;
 };
@@ -205,21 +214,23 @@ public:
   // DepthwiseConv is quantized along dimension 3
   int getQuantizationIndex() const { return 3; }
 
-  LogicalResult
-  getSerializedParamsAndTensors(const TFLConvArgs &args, const Conv2DType &kt,
-                                llvm::SmallVector<std::string> &strParams,
-                                std::vector<int8_t> &weightsData,
-                                std::vector<int16_t> &mulsBiasesData,
-                                int &scratchBytes) const;
+  LogicalResult getSerializedParamsAndTensors(
+      const TFLConvArgs &args, const Conv2DType &kt, const int &threadCount,
+      llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
+      std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
+      int &scratchBytes) const;
 
 private:
   LogicalResult getDepthwiseConv2DValidDirectParams(
       const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const;
 
   LogicalResult getDepthwiseConv2DPaddedIndirectParams(
       const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const;
 };

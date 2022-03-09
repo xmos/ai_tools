@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "IR/XCoreOps.h"
+#include "Transforms/Options.h"
 
 #include "flatbuffers/flexbuffers.h"
 #include "mlir/Pass/Pass.h"
@@ -32,46 +33,26 @@ std::vector<uint8_t> PadOp::buildCustomOptions() {
 }
 
 std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
-  int threadCount = (int)thread_count();
-
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
-  auto threadsVec = fbb.StartVector("threads");
+
+  fbb.Int("kt",
+          (int32_t)(symbolizeConv2DType(conv2d_kernel_type()).getValue()));
+  fbb.String("mp", memcpy_fn_param().str());
+  fbb.String("aggp", aggregate_fn_param().str());
+  fbb.String("otp", output_transform_fn_param().str());
+  fbb.Int("scratch", (int32_t)scratch_bytes());
+
+  int threadCount = (int)thread_count();
+  auto akpVec = fbb.StartVector("akp");
   for (int i = 0; i < threadCount; ++i) {
-    auto vec = fbb.StartVector();
-    fbb.Int((int32_t)scratch_bytes()
-                .cast<ArrayAttr>()[i]
-                .cast<IntegerAttr>()
-                .getInt());
-    fbb.Int((int32_t)(symbolizeConv2DType(conv2d_kernel_type()
-                                              .cast<ArrayAttr>()[i]
-                                              .cast<StringAttr>()
-                                              .getValue()
-                                              .str())
-                          .getValue()));
     fbb.String(abstract_kernel_params()
                    .cast<ArrayAttr>()[i]
                    .cast<StringAttr>()
                    .getValue()
                    .str());
-    fbb.String(memcpy_fn_params()
-                   .cast<ArrayAttr>()[i]
-                   .cast<StringAttr>()
-                   .getValue()
-                   .str());
-    fbb.String(aggregate_fn_params()
-                   .cast<ArrayAttr>()[i]
-                   .cast<StringAttr>()
-                   .getValue()
-                   .str());
-    fbb.String(output_transform_fn_params()
-                   .cast<ArrayAttr>()[i]
-                   .cast<StringAttr>()
-                   .getValue()
-                   .str());
-    fbb.EndVector(vec, false, false);
   }
-  fbb.EndVector(threadsVec, false, false);
+  fbb.EndVector(akpVec, false, false);
 
   fbb.EndMap(rootMap);
   fbb.Finish();

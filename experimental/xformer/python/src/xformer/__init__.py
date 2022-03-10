@@ -30,7 +30,7 @@ def convert(
     return process_call.returncode
 
 
-def xformer_help(show_hidden: Optional[bool] = False) -> int:
+def print_help(show_hidden: Optional[bool] = False) -> int:
     if show_hidden:
         return subprocess.run(["xcore-opt", "--help-list-hidden"]).returncode
 

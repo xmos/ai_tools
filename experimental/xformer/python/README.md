@@ -14,7 +14,7 @@ For example:
 ```python
 from xmos_ai_tools import xformer as xf
 
-xf.convert("/Users/salmankhan/Development/tflite_flatbuffers/weights_full_integer_quant.tflite", "./converted", {
+xf.convert("example_int8_model.tflite", "xcore_optimised_example_int8_model.tflite", {
     "mlir-disable-threading": None,
     "xcore-reduce-memory": None,
 })

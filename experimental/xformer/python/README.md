@@ -24,9 +24,9 @@ To see all available parameters, call
 ```python
 from xmos_ai_tools import xformer as xf
 
-xf.xformer_help()
+xf.print_help()
 ```
-This will print all options available to pass to xformer. To see hidden options, run `xformer_help(show_hidden=True)`
+This will print all options available to pass to xformer. To see hidden options, run `print_help(show_hidden=True)`
 
 
 ### Using the xcore tflm host interpreter

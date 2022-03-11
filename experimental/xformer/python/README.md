@@ -3,11 +3,31 @@
 ## Usage
 
 ### Using xformer
-```
+```python
 from xmos_ai_tools import xformer as xf
 
 xf.convert("source model path", "converted model path", params=None)
 ```
+where `params` is a dictionary of compiler flags and paramters and their values.
+
+For example:
+```python
+from xmos_ai_tools import xformer as xf
+
+xf.convert("example_int8_model.tflite", "xcore_optimised_example_int8_model.tflite", {
+    "mlir-disable-threading": None,
+    "xcore-reduce-memory": None,
+})
+```
+
+To see all available parameters, call
+```python
+from xmos_ai_tools import xformer as xf
+
+xf.print_help()
+```
+This will print all options available to pass to xformer. To see hidden options, run `print_help(show_hidden=True)`
+
 
 ### Using the xcore tflm host interpreter
 ```

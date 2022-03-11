@@ -37,7 +37,7 @@ make build
 
 Install the `xcore_interpreters` and `tflite2xcore` python packages using `pip` (preferably inside a venv):
 ```shell
-pip install -e "./third_party/lib_tflite_micro/tflm_interpreter"
+pip install -e "./third_party/lib_tflite_micro/xtflm_interpreter"
 pip install -e "./tflite2xcore[examples]"
 ```
 
@@ -75,7 +75,7 @@ Then inside the container
 conda env create -p ai_tools_venv -f utils/environment.yml
 /XMOS/get_tools.py 15.0.6
 conda activate ./ai_tools_venv
-pip install -e "./third_party/lib_tflite_micro/tflm_interpreter[test]"
+pip install -e "./third_party/lib_tflite_micro/xtflm_interpreter[test]"
 pip install -e "./tflite2xcore[examples,test,dev]"
 # activate tools (each new shell)
 module load tools/15.0.6

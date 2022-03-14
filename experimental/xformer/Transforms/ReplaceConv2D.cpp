@@ -4,6 +4,7 @@
 #include "IR/XCoreOps.h"
 #include "Transforms/ConvPatterns.h"
 #include "Transforms/Options.h"
+#include "Utils/ThreadSupport.h"
 
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/Pass/Pass.h"
@@ -67,11 +68,15 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   llvm::SmallVector<std::string> strParams;
   int scratchBytes = 0;
 
+  // Get image region splits for multiple threads
+  args.imageRegionSplits = utils::getImageRegionThreadSplits(
+      threadCount, args.Y.height, args.Y.width);
+
   // Obtain serialized params and calculated tensors from lib_nn for the
   // conv2d kernel type
   if (failed(builder->getSerializedParamsAndTensors(
-          args, kernelType, threadCount, strParams, abstractKernelParams,
-          weightsData, mulsBiasesOrThresholdsData, scratchBytes))) {
+          args, kernelType, strParams, abstractKernelParams, weightsData,
+          mulsBiasesOrThresholdsData, scratchBytes))) {
     return failure();
   }
 

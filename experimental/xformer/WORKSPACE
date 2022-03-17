@@ -52,6 +52,13 @@ new_local_repository(
     build_file = "lib_nn.BUILD",
 )
 
+############################# lib_tflite_micro #################################
+new_local_repository(
+    name = "lib_tflite_micro",
+    path = "../../third_party/lib_tflite_micro",
+    build_file = "lib_tflite_micro.BUILD",
+)
+
 ########################### larq compute engine ################################
 http_archive(
     name = "lce",

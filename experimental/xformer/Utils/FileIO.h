@@ -16,9 +16,10 @@ LogicalResult writeDataToFile(std::string &filename, std::string &data);
 LogicalResult writeFlashImageToFile(std::string &filename,
                                     std::vector<std::vector<char>> tensorsVec);
 
-LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
-                                        mlir::ModuleOp module,
-                                        const bool &dontMinify);
+LogicalResult
+writeMLIRToFlatBufferFile(std::string &filename, mlir::ModuleOp module,
+                          std::map<std::string, std::string> metadata,
+                          const bool &dontMinify);
 
 mlir::OwningModuleRef readFlatBufferFileToMLIR(std::string &filename,
                                                mlir::MLIRContext *context);

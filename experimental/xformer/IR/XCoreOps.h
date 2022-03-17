@@ -16,4 +16,8 @@
 #define GET_OP_CLASSES
 #include "IR/XCoreOps.h.inc"
 
+// Attribute name to store max thread count in the module
+// The attribute name is required to be prefixed by the dialect
+constexpr char xcMaxThreadCountAttrName[] = "xc.maxThreadCount";
+
 #endif // XFORMER_IR_XCOREOPS_H

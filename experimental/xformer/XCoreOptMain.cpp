@@ -178,11 +178,11 @@ int main(int argc, char **argv) {
 
     // Prepare metadata
     auto module = mod.get();
-    int maxThreadCount = module->getAttr(xcMaxThreadCountAttrName)
-                             .cast<mlir::IntegerAttr>()
-                             .getInt();
+    int requiredThreadCount = module->getAttr(xcRequiredThreadCountAttrName)
+                                  .cast<mlir::IntegerAttr>()
+                                  .getInt();
     struct shared_config::xcore_metadata cfg;
-    cfg.max_threads_used = maxThreadCount;
+    cfg.required_thread_count = requiredThreadCount;
     auto bufferData =
         std::string((char *)&cfg, sizeof(shared_config::xcore_metadata));
 

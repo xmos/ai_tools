@@ -11,12 +11,6 @@ on:
         description: "Provide a valid release tag version in the format vX.Y.Z"
         required: true
 
-# Either we triggered a workflow providing a version or published a new release
-# Save the tag version in an environment variable
-env:
-  TAG_VERSION: ${{ github.event.inputs.version == 0 && github.ref_name || github.event.inputs.version }}
-
-
 jobs:
   manylinux-release-wheel:
     name: Build release wheels for manylinux2010
@@ -26,6 +20,16 @@ jobs:
         python-version: [3.8]
       fail-fast: false
     steps:
+      - name: 'Get previous release tag'
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        with:
+          fallback: v0.1.0 # Optional fallback tag to use when no tag can be found
+        env:
+          TAG: ${{ steps.previoustag.outputs.tag }}
+      - name: set env
+        run: echo "TAG_VERSION=$TAG.dev$(date +'%Y%m%d')" >> $GITHUB_ENV
+  
       # Caches and restores the bazelisk download directory, the bazel build directory.
       - name: Cache bazel
         uses: actions/cache@v2.1.4
@@ -49,17 +53,8 @@ jobs:
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
-          docker run -e XMOS_AI_TOOLS_RELEASE_VERSION=${{ env.TAG_VERSION }} \
-            -v ${PWD}:/ai_tools -w /ai_tools \
-            tensorflow/build:latest-python${{ matrix.python-version }} \
-            .github/scripts/build_linux_wheel.sh
-          
-          sudo apt-get -y -qq install patchelf --no-install-recommends
-          python -m pip install auditwheel --no-cache-dir
-          cd experimental/xformer/python
-          for f in dist/*.whl; do
-            auditwheel repair --plat manylinux2010_x86_64 $f
-          done
+          set -x
+          echo ${{ env.TAG_VERSION }}
           
       - uses: actions/upload-artifact@v2
         with:

@@ -40,6 +40,13 @@ environment_variable_name = 'XMOS_AI_TOOLS_RELEASE_VERSION'
 VERSION_NUMBER = os.environ.get( environment_variable_name, "v0.1.0" )
 VERSION_NUMBER = VERSION_NUMBER[1:]
 
+# Check if beta build from env variable
+environment_variable_name = 'XMOS_AI_TOOLS_BETA_BUILD'
+if environment_variable_name in os.environ:
+    PROJECT_NAME = "xmos_ai_tools_beta"
+else:
+    PROJECT_NAME = "xmos_ai_tools"
+
 # Force platform specific wheel.
 # https://stackoverflow.com/questions/45150304
 try:
@@ -69,7 +76,7 @@ class install_plat_lib(install):
 
 
 setup(
-    name="xmos-ai-tools",
+    name=PROJECT_NAME,
     version=VERSION_NUMBER,
     author="XMOS",
     author_email="support@xmos.com",

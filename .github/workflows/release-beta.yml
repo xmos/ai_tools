@@ -1,21 +1,9 @@
-name: xmos-ai-tools-release
+name: xmos-ai-tools-release-beta
 
 on:
-  release:
-    types: [published]
-    tags:
-      - v*
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Provide a valid release tag version in the format vX.Y.Z"
-        required: true
-
-# Either we triggered a workflow providing a version or published a new release
-# Save the tag version in an environment variable
-env:
-  TAG_VERSION: ${{ github.event.inputs.version == 0 && github.ref_name || github.event.inputs.version }}
-
+  push:
+    branches:
+      - develop
 
 
 jobs:
@@ -40,13 +28,16 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-          ref: ${{ env.TAG_VERSION }}
+          fetch-depth: 0
+      - name: Set tag version in env
+        run: echo "TAG_VERSION=`echo $(git describe --tags --abbrev=0)`.dev$(date +'%Y%m%d')" >> $GITHUB_ENV
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS wheels
         env:
           XMOS_AI_TOOLS_RELEASE_VERSION: ${{ env.TAG_VERSION }}
+          XMOS_AI_TOOLS_BETA_BUILD: 1
         shell: bash
         run: |
           python --version
@@ -89,13 +80,16 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-          ref: ${{ env.TAG_VERSION }}
+          fetch-depth: 0
+      - name: Set tag version in env
+        run: echo "TAG_VERSION=`echo $(git describe --tags --abbrev=0)`.dev$(date +'%Y%m%d')" >> $GITHUB_ENV
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS arm wheels
         env:
           XMOS_AI_TOOLS_RELEASE_VERSION: ${{ env.TAG_VERSION }}
+          XMOS_AI_TOOLS_BETA_BUILD: 1
         shell: bash
         run: |
           python --version
@@ -138,7 +132,9 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-          ref: ${{ env.TAG_VERSION }}
+          fetch-depth: 0
+      - name: Set tag version in env
+        run: echo "TAG_VERSION=`echo $(git describe --tags --abbrev=0)`.dev$(date +'%Y%m%d')" >> $GITHUB_ENV
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
@@ -149,7 +145,7 @@ jobs:
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
-          docker run -e XMOS_AI_TOOLS_RELEASE_VERSION=${{ env.TAG_VERSION }} \
+          docker run -e XMOS_AI_TOOLS_RELEASE_VERSION=${{ env.TAG_VERSION }} XMOS_AI_TOOLS_BETA_BUILD=1 \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:latest-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh

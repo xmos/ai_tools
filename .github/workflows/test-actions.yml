@@ -36,9 +36,7 @@ jobs:
           submodules: recursive
           
       - name: set env
-        run: |
-          echo "GIT_TAG=`echo $(git describe --tags --abbrev=0)`" >> $GITHUB_ENV
-          echo "TAG_VERSION=$GIT_TAG.dev$(date +'%Y%m%d')" >> $GITHUB_ENV
+        run: echo "TAG_VERSION=`echo $(git describe --tags --abbrev=0)`.dev$(date +'%Y%m%d')" >> $GITHUB_ENV
         
       - uses: actions/setup-python@v2
         with:

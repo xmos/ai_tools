@@ -28,10 +28,6 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          
-      - name: set env
-        run: echo "TAG_VERSION=`echo $(git describe --tags --abbrev=0)`.dev$(date +'%Y%m%d')" >> $GITHUB_ENV
-        
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
@@ -43,7 +39,6 @@ jobs:
         # be compatible for manylinux.
         run: |
           set -x
-          echo ${{ env.TAG_VERSION }}
 
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           cd experimental/xformer/python

@@ -32,11 +32,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build manylinux2010 wheels
-        # The XMOS_AI_TOOLS_RELEASE_VERSION var is passed via docker to the
-        # python setup.py script to add the version info for the wheel file.
-        #
-        # auditwheel requires patchelf and repairs the created wheel file to 
-        # be compatible for manylinux.
         run: |
           set -x
 

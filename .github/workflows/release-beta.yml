@@ -29,15 +29,10 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-      - name: Set tag version in env
-        run: echo "TAG_VERSION=`echo $(git describe --tags --abbrev=0)`.dev$(date +'%Y%m%d')" >> $GITHUB_ENV
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS wheels
-        env:
-          XMOS_AI_TOOLS_RELEASE_VERSION: ${{ env.TAG_VERSION }}
-          XMOS_AI_TOOLS_BETA_BUILD: 1
         shell: bash
         run: |
           python --version
@@ -81,15 +76,10 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-      - name: Set tag version in env
-        run: echo "TAG_VERSION=`echo $(git describe --tags --abbrev=0)`.dev$(date +'%Y%m%d')" >> $GITHUB_ENV
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS arm wheels
-        env:
-          XMOS_AI_TOOLS_RELEASE_VERSION: ${{ env.TAG_VERSION }}
-          XMOS_AI_TOOLS_BETA_BUILD: 1
         shell: bash
         run: |
           python --version
@@ -133,8 +123,6 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-      - name: Set tag version in env
-        run: echo "TAG_VERSION=`echo $(git describe --tags --abbrev=0)`.dev$(date +'%Y%m%d')" >> $GITHUB_ENV
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
@@ -145,7 +133,7 @@ jobs:
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
-          docker run -e XMOS_AI_TOOLS_RELEASE_VERSION=${{ env.TAG_VERSION }} -e XMOS_AI_TOOLS_BETA_BUILD=1 \
+          docker run \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:latest-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh

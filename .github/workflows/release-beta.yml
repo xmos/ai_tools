@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           python --version
-          python -m pip install wheel setuptools numpy six --no-cache-dir
+          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
           cd third_party/lib_tflite_micro
           make build
@@ -83,7 +83,7 @@ jobs:
         shell: bash
         run: |
           python --version
-          python -m pip install wheel setuptools numpy six --no-cache-dir
+          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
           cd third_party/lib_tflite_micro
           make build

@@ -46,7 +46,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS wheels
         env:
-          XMOS_AI_TOOLS_RELEASE_VERSION: ${{ env.TAG_VERSION }}
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG_VERSION }}
         shell: bash
         run: |
           python --version
@@ -95,7 +95,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS arm wheels
         env:
-          XMOS_AI_TOOLS_RELEASE_VERSION: ${{ env.TAG_VERSION }}
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG_VERSION }}
         shell: bash
         run: |
           python --version
@@ -149,7 +149,7 @@ jobs:
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
-          docker run -e XMOS_AI_TOOLS_RELEASE_VERSION=${{ env.TAG_VERSION }} \
+          docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.TAG_VERSION }} \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:latest-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh

@@ -77,7 +77,13 @@ class install_plat_lib(install):
 
 setup(
     name=PROJECT_NAME,
-    version=VERSION_NUMBER,
+    #version=VERSION_NUMBER,
+    use_scm_version = {
+        "root": "../../..",
+        "relative_to": __file__,
+        "local_scheme": "node-and-timestamp"
+    },
+    setup_requires=['setuptools_scm'],
     author="XMOS",
     author_email="support@xmos.com",
     license="LICENSE.txt",

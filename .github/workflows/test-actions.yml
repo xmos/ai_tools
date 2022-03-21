@@ -44,6 +44,10 @@ jobs:
         run: |
           set -x
           echo ${{ env.TAG_VERSION }}
+
+          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
+          cd experimental/xformer/python
+          python setup.py --version
           
       - uses: actions/upload-artifact@v2
         with:

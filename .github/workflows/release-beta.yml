@@ -1,21 +1,9 @@
-name: xmos-ai-tools-release
+name: xmos-ai-tools-release-beta
 
 on:
-  release:
-    types: [published]
-    tags:
-      - v*
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Provide a valid release tag version in the format vX.Y.Z"
-        required: true
-
-# Either we triggered a workflow providing a version or published a new release
-# Save the tag version in an environment variable
-env:
-  TAG_VERSION: ${{ github.event.inputs.version == 0 && github.ref_name || github.event.inputs.version }}
-
+  push:
+    branches:
+      - develop
 
 
 jobs:
@@ -41,13 +29,10 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-          ref: ${{ env.TAG_VERSION }}
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS wheels
-        env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG_VERSION }}
         shell: bash
         run: |
           python --version
@@ -91,13 +76,10 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-          ref: ${{ env.TAG_VERSION }}
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS arm wheels
-        env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG_VERSION }}
         shell: bash
         run: |
           python --version
@@ -141,18 +123,17 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-          ref: ${{ env.TAG_VERSION }}
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build manylinux2010 wheels
-        # The SETUPTOOLS_SCM_PRETEND_VERSION var is passed via docker to the
+        # The XMOS_AI_TOOLS_RELEASE_VERSION var is passed via docker to the
         # python setup.py script to add the version info for the wheel file.
         #
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
-          docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.TAG_VERSION }} \
+          docker run \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:latest-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh

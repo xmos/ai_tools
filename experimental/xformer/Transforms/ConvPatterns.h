@@ -28,6 +28,7 @@ struct TFLConvArgs {
   nn::ImageGeometry Y;
   nn::ImageGeometry X;
   nn::WindowGeometry K;
+  llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
 };
 
 struct BConvArgs {
@@ -44,6 +45,7 @@ struct BConvArgs {
   nn::ImageGeometry Y;
   nn::ImageGeometry X;
   nn::WindowGeometry K;
+  llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
 };
 
 //
@@ -79,7 +81,7 @@ public:
   LogicalResult getKernelType(const BConvArgs &args, Conv2DType &kt) const;
 
   LogicalResult getSerializedParamsAndTensors(
-      const BConvArgs &args, const Conv2DType &kt, const int &threadCount,
+      const BConvArgs &args, const Conv2DType &kt,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData,
@@ -139,15 +141,15 @@ public:
   }
 
   LogicalResult getSerializedParamsAndTensors(
-      const TFLConvArgs &args, const Conv2DType &kt, const int &threadCount,
+      const TFLConvArgs &args, const Conv2DType &kt,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const {
     if (failed(static_cast<const ConcreteType *>(this)
                    ->getSerializedParamsAndTensors(
-                       args, kt, threadCount, strParams, abstractKernelParams,
-                       weightsData, mulsBiasesData, scratchBytes))) {
+                       args, kt, strParams, abstractKernelParams, weightsData,
+                       mulsBiasesData, scratchBytes))) {
       return failure();
     }
     return success();
@@ -170,7 +172,7 @@ public:
   int getQuantizationIndex() const { return 0; }
 
   LogicalResult getSerializedParamsAndTensors(
-      const TFLConvArgs &args, const Conv2DType &kt, const int &threadCount,
+      const TFLConvArgs &args, const Conv2DType &kt,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
@@ -190,8 +192,7 @@ private:
       int &scratchBytes) const;
 
   LogicalResult getConv2DValidDirectParams(
-      const TFLConvArgs &args, const int &threadCount,
-      llvm::SmallVector<std::string> &strParams,
+      const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const;
@@ -215,7 +216,7 @@ public:
   int getQuantizationIndex() const { return 3; }
 
   LogicalResult getSerializedParamsAndTensors(
-      const TFLConvArgs &args, const Conv2DType &kt, const int &threadCount,
+      const TFLConvArgs &args, const Conv2DType &kt,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
@@ -234,6 +235,21 @@ private:
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const;
 };
+
+template <typename Filter2DParams>
+llvm::SmallVector<std::string> getAbstractKernelParamsForMultipleThreads(
+    llvm::SmallVector<std::array<int, 4>> imageRegionSplits,
+    const nn::ImageGeometry &Y) {
+  llvm::SmallVector<std::string> abstractKernelParams;
+  for (auto &regionsplits : imageRegionSplits) {
+    auto ir = nn::ImageRegion(regionsplits[0], regionsplits[1], 0,
+                              regionsplits[2], regionsplits[3], Y.depth);
+    Filter2DParams akParams(Y, ir, VPU_INT8_ACC_PERIOD);
+    std::string akpStr = akParams.template serialise<Filter2DParams>();
+    abstractKernelParams.push_back(akpStr);
+  }
+  return abstractKernelParams;
+}
 
 } // namespace xcore
 } // namespace mlir

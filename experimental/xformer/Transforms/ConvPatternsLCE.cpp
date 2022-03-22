@@ -239,7 +239,7 @@ LogicalResult ReplaceBConv2DPattern::getKernelType(const BConvArgs &args,
 }
 
 LogicalResult ReplaceBConv2DPattern::getSerializedParamsAndTensors(
-    const BConvArgs &args, const Conv2DType &kt, const int &threadCount,
+    const BConvArgs &args, const Conv2DType &kt,
     llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &thresholdsData,
@@ -302,15 +302,13 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectBinaryParams(
   nn::OutputTransformFn::pad_final_access(adjustedThresholds, VPU_INT16_EPV,
                                           (int16_t)args.padValue);
 
-  auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
-  nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
-
-  std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinaryDirectFn::Params>();
   std::string otStr = ""; // otParams.serialise<nn::OT_int8::Params>();
 
-  abstractKernelParams.push_back(akpStr);
+  abstractKernelParams =
+      getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
+          args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -346,15 +344,13 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectBinaryParams(
   nn::OutputTransformFn::pad_final_access(adjustedThresholds, VPU_INT16_EPV,
                                           (int16_t)args.padValue);
 
-  auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
-  nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
-
-  std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinary::Params>();
   std::string otStr = ""; // otParams.serialise<nn::OT_int8::Params>();
 
-  abstractKernelParams.push_back(akpStr);
+  abstractKernelParams =
+      getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
+          args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -398,15 +394,13 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectInt8Params(
   nn::OT_int8_clamped::Params otParams((int32_t)args.outputDepth,
                                        qp.initial_shr, qp.final_shr);
 
-  auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
-  nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
-
-  std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinaryDirectFn::Params>();
   std::string otStr = otParams.serialise<nn::OT_int8_clamped::Params>();
 
-  abstractKernelParams.push_back(akpStr);
+  abstractKernelParams =
+      getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
+          args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -454,15 +448,13 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
   nn::OT_int8_clamped::Params otParams((int32_t)args.outputDepth,
                                        qp.initial_shr, qp.final_shr);
 
-  auto ir = nn::ImageRegion(0, 0, 0, args.Y.height, args.Y.width, args.Y.depth);
-  nn::Filter2D::Params akParams(args.Y, ir, VPU_INT8_ACC_PERIOD);
-
-  std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
   std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
   std::string afStr = afParams.serialise<nn::MatMulBinary::Params>();
   std::string otStr = otParams.serialise<nn::OT_int8_clamped::Params>();
 
-  abstractKernelParams.push_back(akpStr);
+  abstractKernelParams =
+      getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
+          args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);

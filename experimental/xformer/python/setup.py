@@ -33,13 +33,6 @@ REQUIRED_PACKAGES = [
     "numpy<2.0",
 ]
 
-# Get tag version from env variable
-# This will be in the format, vX.Y.Z
-# We need to remove the first character to get just the version number
-environment_variable_name = 'XMOS_AI_TOOLS_RELEASE_VERSION'
-VERSION_NUMBER = os.environ.get( environment_variable_name, "v0.1.0" )
-VERSION_NUMBER = VERSION_NUMBER[1:]
-
 # Force platform specific wheel.
 # https://stackoverflow.com/questions/45150304
 try:
@@ -69,8 +62,13 @@ class install_plat_lib(install):
 
 
 setup(
-    name="xmos-ai-tools",
-    version=VERSION_NUMBER,
+    name="xmos_ai_tools",
+    use_scm_version = {
+        "root": "../../..",
+        "relative_to": __file__,
+        "local_scheme": "no-local-version"
+    },
+    setup_requires=['setuptools_scm'],
     author="XMOS",
     author_email="support@xmos.com",
     license="LICENSE.txt",

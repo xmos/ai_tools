@@ -6,6 +6,7 @@
 #include "Transforms/Passes.h"
 #include "Utils/FileIO.h"
 
+#include "lib_tflite_micro/api/xcore_shared_config.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/Parser.h"
 #include "mlir/Pass/PassManager.h"
@@ -121,7 +122,8 @@ int main(int argc, char **argv) {
         "xcore-load-externally-if-larger option!");
   }
 
-  if (mlir::xcore::threadCountOption > 8) {
+  if (mlir::xcore::threadCountOption < 1 ||
+      mlir::xcore::threadCountOption > 8) {
     return failedMessage(
         "Please specify a thread count between one and eight!");
   }
@@ -173,8 +175,23 @@ int main(int argc, char **argv) {
   // Write modified flatbuffer to output file
   if (!outputFilename.empty()) {
     std::string outfilename(outputFilename);
-    if (failed(xcore::utils::writeMLIRToFlatBufferFile(outfilename, mod.get(),
-                                                       dontMinifyEnabled)))
+
+    // Prepare metadata
+    auto module = mod.get();
+    int requiredThreadCount = module->getAttr(xcRequiredThreadCountAttrName)
+                                  .cast<mlir::IntegerAttr>()
+                                  .getInt();
+    struct shared_config::xcore_metadata cfg;
+    cfg.required_thread_count = requiredThreadCount;
+    auto bufferData =
+        std::string((char *)&cfg, sizeof(shared_config::xcore_metadata));
+
+    std::map<std::string, std::string> metadata;
+    auto xcoreConfigMetadata =
+        std::make_pair(shared_config::xcoreMetadataName, bufferData);
+    metadata.insert(xcoreConfigMetadata);
+    if (failed(xcore::utils::writeMLIRToFlatBufferFile(
+            outfilename, module, metadata, dontMinifyEnabled)))
       return 1;
   }
 

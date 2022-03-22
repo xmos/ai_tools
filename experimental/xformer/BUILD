@@ -148,6 +148,7 @@ cc_binary(
     deps = [
         ":xcore_passes",
         ":utils",
+        "@lib_tflite_micro//:shared_header",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:StandardOps",
         "@llvm-project//mlir:QuantOps",

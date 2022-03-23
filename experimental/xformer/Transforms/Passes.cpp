@@ -30,6 +30,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   // Run canonicalization, which includes combining Reshapes
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(createTranslateToCustomOpPass());
+  pm.addPass(createReplaceStridedSlicePass());
 }
 
 void registerXCorePassPipeline() {

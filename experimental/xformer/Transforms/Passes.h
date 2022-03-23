@@ -30,6 +30,7 @@ std::unique_ptr<OperationPass<FuncOp>> createApplyXCPatternsPass();
 std::unique_ptr<OperationPass<FuncOp>> createApplyLoadConstantOpPatternsPass();
 std::unique_ptr<OperationPass<FuncOp>> createWriteFlashImagePass();
 std::unique_ptr<OperationPass<FuncOp>> createTranslateToCustomOpPass();
+std::unique_ptr<OperationPass<FuncOp>> createReplaceStridedSlicePass();
 
 //===----------------------------------------------------------------------===//
 // Registration

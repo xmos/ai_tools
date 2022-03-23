@@ -187,4 +187,18 @@ def XC_Bsign8Op : XC_Op<"bsign_8", [NoSideEffect]> {
   let results = (outs TensorOf<[I32]> : $output);
 }
 
+def XC_StridedSliceV3Op : XC_Op<"strided_slice_v3", [NoSideEffect]> {
+  let summary = "Strided Slice V3 op";
+
+  let description = [{Strided Slice V3 op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+
+    StrAttr:$memcpy_fn_param
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 #endif // XCORE_DIALECT

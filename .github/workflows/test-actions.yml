@@ -6,9 +6,9 @@ on:
       - develop
 
 jobs:
-  manylinux-release-wheel:
-    name: Build release wheels for manylinux2010
-    runs-on: ubuntu-18.04
+  macos-arm-release-wheel:
+    name: Build release wheels for macOS arm64
+    runs-on: macos-11
     strategy:
       matrix:
         python-version: [3.8]
@@ -23,34 +23,40 @@ jobs:
           path: |
             ~/.cache/bazelisk
             ~/.cache/bazel
-          key: ${{ runner.os }}-${{ env.cache-name }}
+          key: ${{ runner.os }}-arm-${{ env.cache-name }}
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0
           submodules: recursive
+          fetch-depth: 0
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Build manylinux2010 wheels
+      - name: Build macOS arm wheels
+        shell: bash
         run: |
-          set -x
-
+          python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
-          cd experimental/xformer/python
-          python setup.py --version
+          
+          cd third_party/lib_tflite_micro
+          make build
+                    
+          cd ../../experimental/xformer
+          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
+          
+          cd python
+          python setup.py bdist_wheel --plat-name macosx_11_0_arm64
           
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ runner.os }}-wheels
-          # auditwheel creates the output wheel in the wheelhouse folder
-          path: experimental/xformer/python/wheelhouse
+          name: ${{ runner.os }}-arm-wheels
+          path: experimental/xformer/python/dist
 
 
 
   publish-wheels:
     name: Publish wheels to TestPyPi
     if: ${{ always() }}
-    needs: [manylinux-release-wheel]
+    needs: [macos-arm-release-wheel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2

@@ -1,9 +1,11 @@
 name: xmos-ai-tools-test-actions
 
 on:
-  push:
-    branches:
-      - develop
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Provide a valid release tag version in the format vX.Y.Z"
+        required: true
 
 jobs:
   macos-arm-release-wheel:
@@ -39,12 +41,14 @@ jobs:
           
           cd third_party/lib_tflite_micro
           make build
-                    
-          cd ../../experimental/xformer
-          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
           
-          cd python
-          python setup.py bdist_wheel --plat-name macosx_11_0_arm64
+          file third_party/lib_tflite_micro/xtflm_interpreter/xtflm_interpreter/libs/macos/xtflm_python.1.0.1.dylib
+                    
+          #cd ../../experimental/xformer
+          #bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
+          
+          #cd python
+          #python setup.py bdist_wheel --plat-name macosx_11_0_arm64
           
       - uses: actions/upload-artifact@v2
         with:

@@ -40,7 +40,7 @@ jobs:
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
           cd third_party/lib_tflite_micro
-          make build VERBOSE=1
+          arch -arm64 make build VERBOSE=1
           
           file /Users/runner/work/ai_tools/ai_tools/third_party/lib_tflite_micro/xtflm_interpreter/xtflm_interpreter/libs/macos/xtflm_python.1.0.1.dylib
                     

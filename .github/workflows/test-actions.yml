@@ -46,11 +46,11 @@ jobs:
           
           file /Users/runner/work/ai_tools/ai_tools/third_party/lib_tflite_micro/xtflm_interpreter/xtflm_interpreter/libs/macos/xtflm_python.1.0.1.dylib
                     
-          #cd ../../experimental/xformer
-          #bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
+          cd ../../experimental/xformer
+          bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
           
-          #cd python
-          #python setup.py bdist_wheel --plat-name macosx_11_0_arm64
+          cd python
+          python setup.py bdist_wheel --plat-name macosx_11_0_arm64
           
       - uses: actions/upload-artifact@v2
         with:

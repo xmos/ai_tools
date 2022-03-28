@@ -5,7 +5,10 @@
 #include "Transforms/Options.h"
 #include "Transforms/Passes.h"
 #include "Utils/FileIO.h"
+#include "Version.h"
 
+#include "lib_nn/api/version.h"
+#include "lib_tflite_micro/api/version.h"
 #include "lib_tflite_micro/api/xcore_shared_config.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/Parser.h"
@@ -181,7 +184,19 @@ int main(int argc, char **argv) {
     int requiredThreadCount = module->getAttr(xcRequiredThreadCountAttrName)
                                   .cast<mlir::IntegerAttr>()
                                   .getInt();
+
     struct shared_config::xcore_metadata cfg;
+    // Store version info
+    cfg.lib_nn_major_version = lib_nn::major_version;
+    cfg.lib_nn_minor_version = lib_nn::minor_version;
+    cfg.lib_nn_patch_version = lib_nn::patch_version;
+    cfg.lib_tflite_micro_major_version = lib_tflite_micro::major_version;
+    cfg.lib_tflite_micro_minor_version = lib_tflite_micro::minor_version;
+    cfg.lib_tflite_micro_patch_version = lib_tflite_micro::patch_version;
+    cfg.xformer_major_version = xformer::majorVersion;
+    cfg.xformer_minor_version = xformer::minorVersion;
+    cfg.xformer_patch_version = xformer::patchVersion;
+    // Store number of threads needed to execute the model
     cfg.required_thread_count = requiredThreadCount;
     auto bufferData =
         std::string((char *)&cfg, sizeof(shared_config::xcore_metadata));

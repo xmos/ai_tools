@@ -144,11 +144,11 @@ cc_library(
 
 cc_binary(
     name = "xcore-opt",
-    srcs = ["XCoreOptMain.cpp"],
+    srcs = ["XCoreOptMain.cpp", "Version.h"],
     deps = [
         ":xcore_passes",
         ":utils",
-        "@lib_tflite_micro//:shared_header",
+        "@lib_tflite_micro//:shared_headers",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:StandardOps",
         "@llvm-project//mlir:QuantOps",

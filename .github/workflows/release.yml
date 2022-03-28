@@ -98,6 +98,7 @@ jobs:
       - name: Build macOS arm wheels
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG_VERSION }}
+          CMAKE_ENABLE_DARWIN_TARGET_ARM64: 1
         shell: bash
         run: |
           python --version
@@ -107,7 +108,7 @@ jobs:
           make build
                     
           cd ../../experimental/xformer
-          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
+          bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
           
           cd python
           python setup.py bdist_wheel --plat-name macosx_11_0_arm64

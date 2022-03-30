@@ -1,0 +1,20 @@
+--- tensorflow/compiler/mlir/lite/flatbuffer_export.cc	2022-03-28 16:22:27.000000000 +0100
++++ tensorflow/compiler/mlir/lite/flatbuffer_export.cc	2022-03-28 16:21:41.000000000 +0100
+@@ -1553,10 +1553,13 @@
+       BuildMetadata("min_runtime_version", std::string(kByteStringSize, '\0')));
+   for (const auto& kv : metadata_) {
+     const std::string& val = kv.second;
+-    // Only take the first kByteStringSize values.
+-    const int count = std::min(kByteStringSize, val.length());
+-    std::string value = std::string(kByteStringSize, '\0')
+-                            .assign(val.begin(), val.begin() + count);
++    if(val.length() % 16 != 0) {
++      module_.emitError(
++            "metadata string must be aligned to 16 bytes");
++        return llvm::None;
++      }
++    std::string value = std::string(val.length(), '\0')
++                            .assign(val.begin(), val.begin() + val.length());
+     metadata.push_back(BuildMetadata(kv.first, value));
+   }
+   return builder_.CreateVector(metadata);

@@ -11,13 +11,15 @@ from cv2 import cv2
 
 import tensorflow as tf
 import larq_compute_engine as lce
-from tflm_interpreter import TFLMInterpreter
+#from xtflm_interpreter import XTFLMInterpreter
+from xmos_ai_tools import xcore_tflm_host_interpreter as xtflm
+
 
 XFORMER2_PATH = (pathlib.Path(__file__).resolve().parents[0] / "bazel-bin" /
                  "xcore-opt")
 
 
-def get_xformed_model(model):
+def get_xformed_model(model, args):
     with tempfile.TemporaryDirectory(suffix=str(os.getpid())) as dirname:
         input_path = pathlib.Path(dirname) / "input.tflite"
 
@@ -26,6 +28,7 @@ def get_xformed_model(model):
 
         output_path = pathlib.Path(dirname) / "output.tflite"
         cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path),
+        "--xcore-thread-count=" + args.tc,
         #"--xcore-replace-avgpool-with-conv2d",
         #"--xcore-replace-with-conv2dv2",
         #"--xcore-translate-to-customop"
@@ -88,10 +91,10 @@ def test_inference(args):
 
     #print(repr(input_tensor))
     print("Invoking xformer to get converted model...")
-    xformed_model = get_xformed_model(model_content)
+    xformed_model = get_xformed_model(model_content, args)
 
     print("Creating TFLM XCore interpreter...")
-    ie = TFLMInterpreter(model_content=xformed_model)
+    ie = XTFLMInterpreter(model_content=xformed_model)
 
     if args.cifar:
         (_,_), (test_images,_) = tf.keras.datasets.cifar10.load_data()
@@ -108,9 +111,8 @@ def test_inference(args):
             input_tensor = np.expand_dims(test_images[test], axis=0)
         else:
             print("Creating random input...")
-            input_tensor = np.array(100 * np.random.random_sample(input_tensor_shape), dtype=input_tensor_type)
-            #input_tensor = np.array(100 * np.ones(input_tensor_shape), dtype=input_tensor_type)
-
+            #input_tensor = np.array(100 * np.random.random_sample(input_tensor_shape), dtype=input_tensor_type)
+            input_tensor = np.array(100 * np.ones(input_tensor_shape), dtype=input_tensor_type)
 
         if args.bnn:
             print("Invoking LCE interpreter...")
@@ -139,8 +141,8 @@ def test_inference(args):
         #     outputs2 = [outputs2]
         # print(outputs2)
 
-        ie.set_input_tensor(0, input_tensor)
         print("Invoking XCORE interpreter...")
+        ie.set_input_tensor(0, input_tensor)
         ie.invoke()
         xformer_outputs = []
         for i in range(num_of_outputs):
@@ -150,6 +152,10 @@ def test_inference(args):
         for i in range(num_of_outputs):
             print("Comparing output number " + str(i) + "...")
             try:
+                print("xformer output")
+                print(xformer_outputs[i])
+                print("compared output")
+                print(outputs[i])
                 np.testing.assert_equal(outputs[i], xformer_outputs[i])
             except Exception as e:
                 num_of_fails += 1
@@ -167,6 +173,7 @@ if __name__ == "__main__":
     parser.add_argument("--s", default=False, action='store_true', help="sleep for 5 seconds")
     parser.add_argument("--cifar", default=False, action='store_true', help="enable cifar test data")
     parser.add_argument("--n", default=1, help="num of runs")
+    parser.add_argument("--tc", help="thread count")
     args = parser.parse_args()
     
     num_of_fails = test_inference(args)

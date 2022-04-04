@@ -8,7 +8,7 @@ on:
         required: true
 
 jobs:
-  macos-arm-release-wheel:
+  windows-release-wheel:
     name: Build release wheels for windows
     runs-on: windows-2019
     strategy:
@@ -25,7 +25,7 @@ jobs:
           path: |
             ~/.cache/bazelisk
             ~/.cache/bazel
-          key: ${{ runner.os }}-arm-${{ env.cache-name }}
+          key: ${{ runner.os }}-${{ env.cache-name }}
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -40,24 +40,22 @@ jobs:
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           python -c "import sys; print(sys.executable)"
           
-          REM cd third_party/lib_tflite_micro/xtflm_interpreter
-          REM mkdir -p build
-          REM cd build
-          REM cmake ..
-          REM cmake --build . -t install --parallel --config Release
+          cd third_party/lib_tflite_micro/xtflm_interpreter
+          mkdir -p build
+          cd build
+          cmake ..
+          cmake --build . -t install --parallel --config Release
                               
-          REM cd ../../../../experimental/xformer
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          cd experimental/xformer
+          cd ../../../../experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"
+          bazelisk build //:xcore-opt --config=windows --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"
           
-          REM cd python
-          REM python setup.py bdist_wheel
+          cd python
+          python setup.py bdist_wheel
           
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ runner.os }}-arm-wheels
+          name: ${{ runner.os }}-wheels
           path: experimental/xformer/python/dist
 
 
@@ -65,7 +63,7 @@ jobs:
   publish-wheels:
     name: Publish wheels to TestPyPi
     if: ${{ always() }}
-    needs: [macos-arm-release-wheel]
+    needs: [windows-release-wheel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2
@@ -83,12 +81,18 @@ jobs:
           name: Linux-wheels
           path: Linux-wheels
         if: ${{ needs.manylinux-release-wheel.result == 'success' }}
+      - uses: actions/download-artifact@v2
+        with:
+          name: Windows-wheels
+          path: Windows-wheels
+        if: ${{ needs.windows-release-wheel.result == 'success' }}
       - run: |
           set -x
           mkdir -p dist
           cp macOS-wheels/*.whl dist/ || true
           cp macOS-arm-wheels/*.whl dist/ || true
           cp Linux-wheels/*.whl dist/ || true
+          cp Windows-wheels/*.whl dist/ || true
           ls -la dist/
           sha256sum dist/*.whl
       - name: Publish packages to TestPyPI

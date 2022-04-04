@@ -47,11 +47,8 @@ jobs:
           REM cmake --build . -t install --parallel --config Release
                               
           REM cd ../../../../experimental/xformer
-          REM cd experimental/xformer
-          REM bazelisk build //:xcore-opt
-          REM build --action_env PYTHON_BIN_PATH="C:/Python310/python.exe"
-          REM build --action_env PYTHON_LIB_PATH="C:/Python310/lib/site-packages"
-          REM build --python_path="C:/Python310/python.exe"
+          cd experimental/xformer
+          bazelisk build //:xcore-opt --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --python_path="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"
           
           REM cd python
           REM python setup.py bdist_wheel

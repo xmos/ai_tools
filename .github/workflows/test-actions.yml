@@ -33,6 +33,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1
+        with:
+          vs-version: '[16.11]'
       - name: Build windows wheels
         shell: cmd
         run: |
@@ -48,7 +52,7 @@ jobs:
                               
           REM cd ../../../../experimental/xformer
           cd experimental/xformer
-          bazelisk build //:xcore-opt --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --python_path="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"
+          bazelisk build //:xcore-opt --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"
           
           REM cd python
           REM python setup.py bdist_wheel

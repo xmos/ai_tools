@@ -30,6 +30,7 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+          ref: feature/buildwindows
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}

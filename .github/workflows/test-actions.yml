@@ -38,6 +38,7 @@ jobs:
         run: |
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
+          python -c "import sys; print(sys.executable)"
           
           REM cd third_party/lib_tflite_micro/xtflm_interpreter
           REM mkdir -p build
@@ -46,8 +47,11 @@ jobs:
           REM cmake --build . -t install --parallel --config Release
                               
           REM cd ../../../../experimental/xformer
-          cd experimental/xformer
-          bazelisk build //:xcore-opt
+          REM cd experimental/xformer
+          REM bazelisk build //:xcore-opt
+          REM build --action_env PYTHON_BIN_PATH="C:/Python310/python.exe"
+          REM build --action_env PYTHON_LIB_PATH="C:/Python310/lib/site-packages"
+          REM build --python_path="C:/Python310/python.exe"
           
           REM cd python
           REM python setup.py bdist_wheel

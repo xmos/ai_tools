@@ -47,9 +47,9 @@ jobs:
           REM cmake --build . -t install --parallel --config Release
                               
           REM cd ../../../../experimental/xformer
-          call "C:\Program Files\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           cd experimental/xformer
-          set BAZEL_VC=C:\Program Files\Microsoft Visual Studio\2019\Enterprise\VC
+          set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
           bazelisk build //:xcore-opt --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"
           
           REM cd python

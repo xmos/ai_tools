@@ -7,7 +7,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
-#include <iostream>
+#include "lib_nn/api/StridedSlice.hpp"
 
 namespace mlir {
 namespace xcore {
@@ -48,9 +48,9 @@ struct ReplaceStridedSlicePattern
     auto stridesValues =
         stridesValuesConstOp.value().template cast<DenseElementsAttr>();
 
-    auto width = inputType.getDimSize(2);
-    auto height = inputType.getDimSize(1);
-    auto channels = inputType.getDimSize(3);
+    auto inputHeight = inputType.getDimSize(1);
+    auto inputWidth = inputType.getDimSize(2);
+    auto inputDepth = inputType.getDimSize(3);
     auto begin_x = beginValues.template getValue<int32_t>({2});
     auto begin_y = beginValues.template getValue<int32_t>({1});
     auto end_x = endValues.template getValue<int32_t>({2});
@@ -58,40 +58,40 @@ struct ReplaceStridedSlicePattern
     auto stride_x = stridesValues.template getValue<int32_t>({2});
     auto stride_y = stridesValues.template getValue<int32_t>({1});
 
+    // args.X =
     auto image_geom =
-        nn::ImageGeometry(height, width, static_cast<int>(channels));
+        nn::ImageGeometry(inputHeight, inputWidth, static_cast<int>(inputDepth));
+    
     int x_diff = end_x - begin_x;
     int y_diff = end_y - begin_y;
-
+    // args.K =
     auto window_geom = nn::WindowGeometry(
-        {(y_diff / stride_y) + (y_diff % stride_y),
-         (x_diff / stride_x) + (x_diff % stride_x), static_cast<int>(channels)},
+        {y_diff,
+         x_diff, static_cast<int>(inputDepth)},
         {begin_y, begin_x}, {1, 1, 1}, {stride_y, stride_x});
 
-    nn::ImToColValid::Params imToColParams(image_geom, window_geom, 1);
+    nn::ImToColValid::Params imToColParams(image_geom, window_geom,static_cast<int>(inputDepth));
+    // nn::StridedSlice::Params ssParams(begin_y,begin_x);
 
-    std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
+    // std::string sspStr = ssParams.serialise<nn::StridedSlice::Params>();
+    std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
 
     llvm::SmallVector<std::string> strParams;
-    int scratchBytes = 0;
+
+    // strParams.push_back(sspStr);
     strParams.push_back(mfStr);
 
-    std::string memcpyFnParam;
+    std::string stridedSliceParam,memcpyFnParam;
+
+    // stridedSliceParam = strParams[0];
     memcpyFnParam = strParams[0];
 
-    // Create a string array attr from a vector of strings
-    auto getStringArrayAttr = [&](llvm::SmallVector<std::string> value) {
-      auto attrs = llvm::to_vector<8>(
-          llvm::map_range(value, [&](std::string v) -> Attribute {
-            return rewriter.getStringAttr(v);
-          }));
-      return rewriter.getArrayAttr(attrs);
-    };
-
     auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceV3Op>(
-        stridedSliceOp.getLoc(), stridedSliceOp.getType(),
-        stridedSliceOp.input(), rewriter.getStringAttr(memcpyFnParam));
-
+        stridedSliceOp.getLoc(), stridedSliceOp.getType(),stridedSliceOp.input(),
+        // rewriter.getStringAttr(stridedSliceParam),
+        rewriter.getI32IntegerAttr(begin_x),
+        rewriter.getI32IntegerAttr(begin_y),
+        rewriter.getStringAttr(memcpyFnParam));
     rewriter.replaceOp(stridedSliceOp, binaryObjectStridedSliceOp.output());
 
     // auto inputType =

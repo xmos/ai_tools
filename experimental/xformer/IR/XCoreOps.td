@@ -62,6 +62,37 @@ def XC_Conv2D_TypeAttr : StrEnumAttr<"Conv2DType", "conv2d type enum", [
   XC_BNN_Conv2D_ValidDirect_Int8, XC_BNN_Conv2D_ValidIndirect_Int8
 ]>;
 
+def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
+  let summary = "Strided Slice op";
+
+  let description = [{Strided Slice op.}];
+
+   let arguments = (ins
+    TensorOf<[QI8]>:$input,
+    TensorOf<[I32]>:$begin,
+    TensorOf<[I32]>:$end,
+    TensorOf<[I32]>:$strides
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_StridedSliceV3Op : XC_Op<"strided_slice_v3", [NoSideEffect]> {
+  let summary = "Strided Slice V3 op";
+
+  let description = [{Strided Slice V3 op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+
+    I32Attr:$begin_x,
+    I32Attr:$begin_y,
+    StrAttr:$memcpy_fn_param
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
   let summary = "Conv2D V2 op";
 
@@ -187,18 +218,6 @@ def XC_Bsign8Op : XC_Op<"bsign_8", [NoSideEffect]> {
   let results = (outs TensorOf<[I32]> : $output);
 }
 
-def XC_StridedSliceV3Op : XC_Op<"strided_slice_v3", [NoSideEffect]> {
-  let summary = "Strided Slice V3 op";
 
-  let description = [{Strided Slice V3 op.}];
-
-  let arguments = (ins
-    TensorOf<[QI8]>:$input,
-
-    StrAttr:$memcpy_fn_param
-  );
-
-  let results = (outs TensorOf<[QI8]> : $output);
-}
 
 #endif // XCORE_DIALECT

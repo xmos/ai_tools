@@ -17,6 +17,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   // Larq dialect
   pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
   pm.addPass(createApplyTFLPatternsPass());
+  pm.addPass(createReplaceStridedSlicePass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());
@@ -30,7 +31,6 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   // Run canonicalization, which includes combining Reshapes
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(createTranslateToCustomOpPass());
-  pm.addPass(createReplaceStridedSlicePass());
 }
 
 void registerXCorePassPipeline() {

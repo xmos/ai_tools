@@ -10,7 +10,7 @@ on:
 jobs:
   macos-arm-release-wheel:
     name: Build release wheels for windows
-    runs-on: windows-latest
+    runs-on: windows-2019
     strategy:
       matrix:
         python-version: [3.8]
@@ -39,17 +39,18 @@ jobs:
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
-          cd third_party/lib_tflite_micro/xtflm_interpreter
-          mkdir -p build
-          cd build
-          cmake ..
-          cmake --build . -t install --parallel --config Release
+          REM cd third_party/lib_tflite_micro/xtflm_interpreter
+          REM mkdir -p build
+          REM cd build
+          REM cmake ..
+          REM cmake --build . -t install --parallel --config Release
                               
-          cd ../../../../experimental/xformer
+          REM cd ../../../../experimental/xformer
+          cd experimental/xformer
           bazelisk build //:xcore-opt
           
-          cd python
-          python setup.py bdist_wheel
+          REM cd python
+          REM python setup.py bdist_wheel
           
       - uses: actions/upload-artifact@v2
         with:

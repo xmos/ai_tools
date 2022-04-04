@@ -1,14 +1,16 @@
 name: xmos-ai-tools-test-actions
 
 on:
-  push:
-    branches:
-      - develop
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Provide a valid release tag version in the format vX.Y.Z"
+        required: true
 
 jobs:
-  manylinux-release-wheel:
-    name: Build release wheels for manylinux2010
-    runs-on: ubuntu-18.04
+  macos-arm-release-wheel:
+    name: Build release wheels for windows
+    runs-on: windows-latest
     strategy:
       matrix:
         python-version: [3.8]
@@ -23,34 +25,43 @@ jobs:
           path: |
             ~/.cache/bazelisk
             ~/.cache/bazel
-          key: ${{ runner.os }}-${{ env.cache-name }}
+          key: ${{ runner.os }}-arm-${{ env.cache-name }}
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0
           submodules: recursive
+          fetch-depth: 0
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Build manylinux2010 wheels
+      - name: Build windows wheels
+        shell: cmd
         run: |
-          set -x
-
+          python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
-          cd experimental/xformer/python
-          python setup.py --version
+          
+          cd third_party/lib_tflite_micro/xtflm_interpreter
+          mkdir -p build
+          cd build
+          cmake ..
+          cmake --build . -t install --parallel --config Release
+                              
+          cd ../../../../experimental/xformer
+          bazelisk build //:xcore-opt
+          
+          cd python
+          python setup.py bdist_wheel
           
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ runner.os }}-wheels
-          # auditwheel creates the output wheel in the wheelhouse folder
-          path: experimental/xformer/python/wheelhouse
+          name: ${{ runner.os }}-arm-wheels
+          path: experimental/xformer/python/dist
 
 
 
   publish-wheels:
     name: Publish wheels to TestPyPi
     if: ${{ always() }}
-    needs: [manylinux-release-wheel]
+    needs: [macos-arm-release-wheel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2

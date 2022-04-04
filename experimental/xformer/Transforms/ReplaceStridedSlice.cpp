@@ -81,7 +81,6 @@ struct ReplaceStridedSlicePattern
 
     auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceV3Op>(
         stridedSliceOp.getLoc(), stridedSliceOp.getType(),stridedSliceOp.input(),
-        // rewriter.getStringAttr(stridedSliceParam),
         rewriter.getI32IntegerAttr(begin_x),
         rewriter.getI32IntegerAttr(begin_y),
         rewriter.getStringAttr(memcpyFnParam));
@@ -94,7 +93,6 @@ struct ReplaceStridedSlicePattern
 void ReplaceStridedSlice::runOnFunction() {
   auto *ctx = &getContext();
   auto func = getFunction();
-  std::cout << "StridedSlice Found \n";
   OwningRewritePatternList patterns(ctx);
   patterns.insert<ReplaceStridedSlicePattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));

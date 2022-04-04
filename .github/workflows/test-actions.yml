@@ -47,6 +47,7 @@ jobs:
           REM cmake --build . -t install --parallel --config Release
                               
           REM cd ../../../../experimental/xformer
+          vcvars64
           cd experimental/xformer
           bazelisk build //:xcore-opt --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"
           

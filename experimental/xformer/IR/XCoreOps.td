@@ -78,6 +78,30 @@ def XC_StridedSliceV3Op : XC_Op<"strided_slice_v3", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
+  let summary = "Conv2D V2 op";
+
+  let description = [{Conv2D V2 op.}];
+
+  let arguments = (ins
+    // I32 input is for BNNs
+    TensorOf<[QI8, I32]>:$input,
+
+    TensorOf<[I8]>:$weights,
+    TensorOf<[I16]>:$mulsbiases_or_thresholds,
+    StrAttr:$conv2d_kernel_type,
+    StrAttr:$memcpy_fn_param,
+    StrAttr:$aggregate_fn_param,
+    StrAttr:$output_transform_fn_param,
+    I32Attr:$scratch_bytes,
+    I32Attr:$thread_count,
+    StrArrayAttr:$abstract_kernel_params
+  );
+
+  // I32 output is for BNNs
+  let results = (outs TensorOf<[QI8, I32]> : $output);
+}
+
 def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [NoSideEffect]> {
   let summary = "Fake Conv2D op";
 

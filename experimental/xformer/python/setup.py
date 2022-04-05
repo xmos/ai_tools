@@ -12,11 +12,12 @@ import os
 # Find path to xcore-opt binary
 here = pathlib.Path(__file__).parent.resolve()
 exe_suffix = ".exe" if platform.system() == "Windows" else ""
-XCOREOPT_BINARY = pathlib.Path.joinpath(here.parent, "bazel-bin", "xcore-opt",
-                                        exe_suffix)
+XCOREOPT_BINARY = pathlib.Path.joinpath(
+    here.parent, "bazel-bin", "xcore-opt", exe_suffix
+)
 
 # Get the long description from the README file
-LONG_README = (here / 'README.md').read_text(encoding='utf-8')
+LONG_README = (here / "README.md").read_text(encoding="utf-8")
 
 # xtflm_interpreter path and libs from lib_tflite_micro
 XTFLM_INTERPRETER_LIBS = [
@@ -25,9 +26,17 @@ XTFLM_INTERPRETER_LIBS = [
     "/libs/macos/xtflm_python.dylib",
     "/libs/macos/xtflm_python.1.0.1.dylib",
 ]
-XTFLM_INTERPRETER_PATH = pathlib.Path.joinpath(here.parent.parent.parent, "third_party", "lib_tflite_micro", "xtflm_interpreter", "xtflm_interpreter")
+XTFLM_INTERPRETER_PATH = pathlib.Path.joinpath(
+    here.parent.parent.parent,
+    "third_party",
+    "lib_tflite_micro",
+    "xtflm_interpreter",
+    "xtflm_interpreter",
+)
 # adjust path to libs
-XTFLM_INTERPRETER_LIBS = [str(XTFLM_INTERPRETER_PATH) + x for x in XTFLM_INTERPRETER_LIBS]
+XTFLM_INTERPRETER_LIBS = [
+    str(XTFLM_INTERPRETER_PATH) + x for x in XTFLM_INTERPRETER_LIBS
+]
 # xtflm_interpreter requires numpy
 REQUIRED_PACKAGES = [
     "numpy<2.0",
@@ -47,8 +56,9 @@ try:
             python, abi, plat = _bdist_wheel.get_tag(self)
             # We don't contain any python extensions so are version agnostic
             # but still want to be platform specific.
-            python, abi = 'py3', 'none'
+            python, abi = "py3", "none"
             return python, abi, plat
+
 
 except ImportError:
     bdist_wheel = None
@@ -63,12 +73,12 @@ class install_plat_lib(install):
 
 setup(
     name="xmos_ai_tools",
-    use_scm_version = {
+    use_scm_version={
         "root": "../../..",
         "relative_to": __file__,
-        "local_scheme": "no-local-version"
+        "local_scheme": "no-local-version",
     },
-    setup_requires=['setuptools_scm'],
+    setup_requires=["setuptools_scm"],
     author="XMOS",
     author_email="support@xmos.com",
     license="LICENSE.txt",
@@ -96,13 +106,18 @@ setup(
     ],
     python_requires=">=3.7",
     install_requires=REQUIRED_PACKAGES,
-    package_dir={'xmos_ai_tools.xformer': 'src/xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter': str(XTFLM_INTERPRETER_PATH), 'xmos_ai_tools.keras': 'src/keras'},
-    packages=['xmos_ai_tools.xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter',  'xmos_ai_tools.keras'],  # Required
-    package_data={"": XTFLM_INTERPRETER_LIBS},
-    data_files=[('bin', [str(XCOREOPT_BINARY)])],
-    cmdclass={
-        'bdist_wheel': bdist_wheel,
-        'install': install_plat_lib,
+    package_dir={
+        "xmos_ai_tools.xformer": "src/xformer",
+        "xmos_ai_tools.xcore_tflm_host_interpreter": str(XTFLM_INTERPRETER_PATH),
+        "xmos_ai_tools.keras": "src/keras",
     },
+    packages=[
+        "xmos_ai_tools.xformer",
+        "xmos_ai_tools.xcore_tflm_host_interpreter",
+        "xmos_ai_tools.keras",
+    ],  # Required
+    package_data={"": XTFLM_INTERPRETER_LIBS},
+    data_files=[("bin", [str(XCOREOPT_BINARY)])],
+    cmdclass={"bdist_wheel": bdist_wheel, "install": install_plat_lib,},
     keywords="tensorflow binarized neural networks",
 )

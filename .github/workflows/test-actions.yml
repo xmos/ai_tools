@@ -34,7 +34,16 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Build windows wheels
+      - name: Configure pagefile
+        uses: al-cheb/configure-pagefile-action@v1.2
+        with:
+          minimum-size: 10GB
+          maximum-size: 20GB
+      - name: Set up pagefile
+        shell: pwsh
+        run: |
+          (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
+      - name: Build xcore-opt and xtflm-interpreter
         shell: cmd
         run: |
           python --version
@@ -51,11 +60,12 @@ jobs:
                               
           cd ../../../../experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_cpu_resources=1 --local_ram_resources=2048 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"
-          
-          cd python
+          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"  
+      - name: Build windows wheels
+        shell: cmd
+        run: |
+          cd experimental/xformer/python
           python setup.py bdist_wheel
-          
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels

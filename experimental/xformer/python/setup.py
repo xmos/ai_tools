@@ -96,8 +96,8 @@ setup(
     ],
     python_requires=">=3.7",
     install_requires=REQUIRED_PACKAGES,
-    package_dir={'xmos_ai_tools.xformer': 'src/xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter': str(XTFLM_INTERPRETER_PATH)},
-    packages=['xmos_ai_tools.xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter'],  # Required
+    package_dir={'xmos_ai_tools.xformer': 'src/xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter': str(XTFLM_INTERPRETER_PATH), 'xmos_ai_tools.keras': 'src/keras'},
+    packages=['xmos_ai_tools.xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter',  'xmos_ai_tools.keras'],  # Required
     package_data={"": XTFLM_INTERPRETER_LIBS},
     data_files=[('bin', [str(XCOREOPT_BINARY)])],
     cmdclass={

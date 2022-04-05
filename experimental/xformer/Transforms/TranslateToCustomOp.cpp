@@ -22,7 +22,6 @@ std::vector<uint8_t> StridedSliceV3Op::buildCustomOptions() {
   fbb.Int("begin_x", (int32_t)begin_x());
   fbb.Int("begin_y", (int32_t)begin_y());
   fbb.String("mp", memcpy_fn_param().str());
-  // fbb.String("ss", strided_slice_param().str());
 
   fbb.EndMap(rootMap);
   fbb.Finish();

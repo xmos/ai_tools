@@ -38,7 +38,7 @@ jobs:
         uses: al-cheb/configure-pagefile-action@v1.2
         with:
           minimum-size: 10GB
-          maximum-size: 12GB
+          maximum-size: 20GB
       - name: Set up pagefile
         run: |
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
@@ -59,7 +59,7 @@ jobs:
                               
           cd ../../../../experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_cpu_resources=1 --local_ram_resources=2048 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"
+          bazelisk build //:xcore-opt --jobs=1 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"
           
           cd python
           python setup.py bdist_wheel

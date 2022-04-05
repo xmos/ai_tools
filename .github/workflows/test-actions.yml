@@ -40,10 +40,11 @@ jobs:
           minimum-size: 10GB
           maximum-size: 20GB
       - name: Set up pagefile
+        shell: pwsh
         run: |
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
       - name: Build windows wheels
-        shell: pwsh
+        shell: cmd
         run: |
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir

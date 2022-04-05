@@ -41,6 +41,8 @@ jobs:
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           python -c "import sys; print(sys.executable)"
           
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          
           cd third_party/lib_tflite_micro/xtflm_interpreter
           mkdir -p build
           cd build

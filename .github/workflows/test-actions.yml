@@ -34,8 +34,16 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Configure pagefile
+        uses: al-cheb/configure-pagefile-action@v1.2
+        with:
+          minimum-size: 10GB
+          maximum-size: 12GB
+      - name: Set up pagefile
+        run: |
+          (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
       - name: Build windows wheels
-        shell: cmd
+        shell: pwsh
         run: |
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir

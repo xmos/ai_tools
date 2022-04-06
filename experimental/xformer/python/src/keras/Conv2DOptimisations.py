@@ -1,3 +1,5 @@
+from enum import unique, Enum
+
 # Types of Conv2D optimisations
 @unique
 class Conv2DOptimisation(Enum):

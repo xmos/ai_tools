@@ -1,3 +1,5 @@
+from enum import unique, Enum
+
 # Strictness Levels
 @unique
 class Strictness(Enum):

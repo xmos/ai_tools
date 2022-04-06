@@ -1,7 +1,7 @@
-from typing import Optional
 from enum import Enum, unique
 from sys import stderr
 from tensorflow.keras import Model, layers
+from typing import Optional
 
 from .Conv2DOptimisations import Conv2DOptimisation
 from .Strictness import Strictness

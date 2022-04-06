@@ -29,6 +29,8 @@ def __validate_conv2d_layer__(
     # xformer has 3to4 operator that pads 3 channels to 4
     if num_input_channels == 3 and num_filters % 4 == 0:
         num_input_channels = 4
+        message: str = "Input depth 3 will be padded to depth 4."
+        print_warning(layer_idx=idx, layer_name=layer.name, message=message)
 
     # Determine what optimisation will be made
     if num_filters % 4 != 0 or num_input_channels % 4 != 0:
@@ -53,7 +55,7 @@ def __validate_conv2d_layer__(
             raise XCoreUnoptimisedError(message, idx)
         print_warning(layer_idx=idx, layer_name=layer.name, message=message)
     elif current_optimisation == Conv2DOptimisation.VALID_INDIRECT:
-        message: str = f"Input depth is not a multiple of 32 or output depth is not a multiple of 16." "Valid Indirect will be used "
+        message: str = f"Input depth is not a multiple of 32 or output depth is not a multiple of 16. " "Valid Indirect will be used "
         if strictness == Strictness.ERROR:
             raise XCoreUnoptimisedError(message, idx)
         print_warning(layer_idx=idx, layer_name=layer.name, message=message)

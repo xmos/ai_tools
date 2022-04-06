@@ -23,6 +23,10 @@ def __validate_conv2d_layer__(
     is_padded: bool = layer.padding == "same"
     current_optimisation: Conv2DOptimisation
 
+    # xformer has 3to4 operator that pads 3 channels to 4
+    if num_input_channels == 3 and num_filters % 4 == 0:
+        num_input_channels = 4
+
     # Determine what optimisation will be made
     if num_filters % 4 != 0 or num_input_channels % 4 != 0:
         current_optimisation = Conv2DOptimisation.DEFAULT

@@ -155,10 +155,74 @@ jobs:
 
 
 
+  windows-release-wheel:
+    name: Build release wheels for windows
+    runs-on: windows-2019
+    strategy:
+      matrix:
+        python-version: [3.8]
+      fail-fast: false
+    steps:
+      # Caches and restores the bazelisk download directory, the bazel build directory.
+      - name: Cache bazel
+        uses: actions/cache@v2.1.4
+        env:
+          cache-name: bazel-cache
+        with:
+          path: |
+            ~/.cache/bazelisk
+            ~/.cache/bazel
+          key: ${{ runner.os }}-${{ env.cache-name }}
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Configure pagefile
+        uses: al-cheb/configure-pagefile-action@v1.2
+        with:
+          minimum-size: 10GB
+          maximum-size: 20GB
+      - name: Set up pagefile
+        shell: pwsh
+        run: |
+          (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
+      - name: Build xcore-opt and xtflm-interpreter
+        shell: cmd
+        run: |
+          python --version
+          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
+          python -c "import sys; print(sys.executable)"
+          
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          
+          cd third_party/lib_tflite_micro/xtflm_interpreter
+          mkdir -p build
+          cd build
+          cmake ..
+          cmake --build . -t install --parallel --config Release
+                              
+          cd ../../../../experimental/xformer
+          set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
+          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"  
+      - name: Build windows wheels
+        shell: cmd
+        run: |
+          cd experimental/xformer/python
+          python setup.py bdist_wheel
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ runner.os }}-wheels
+          path: experimental/xformer/python/dist
+
+
+
   publish-wheels:
     name: Publish wheels to PyPi
     if: ${{ always() }}
-    needs: [macos-release-wheel, macos-arm-release-wheel, manylinux-release-wheel]
+    needs: [macos-release-wheel, macos-arm-release-wheel, manylinux-release-wheel, windows-release-wheel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2
@@ -176,12 +240,18 @@ jobs:
           name: Linux-wheels
           path: Linux-wheels
         if: ${{ needs.manylinux-release-wheel.result == 'success' }}
+      - uses: actions/download-artifact@v2
+        with:
+          name: Windows-wheels
+          path: Windows-wheels
+        if: ${{ needs.windows-release-wheel.result == 'success' }}
       - run: |
           set -x
           mkdir -p dist
           cp macOS-wheels/*.whl dist/ || true
           cp macOS-arm-wheels/*.whl dist/ || true
           cp Linux-wheels/*.whl dist/ || true
+          cp Windows-wheels/*.whl dist/ || true
           ls -la dist/
           sha256sum dist/*.whl
       - name: Publish packages to PyPI

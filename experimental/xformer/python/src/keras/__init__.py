@@ -15,7 +15,10 @@ def print_warning(layer_idx: int, layer_name: str, message: str):
 
 # Run validation on individual layer
 def __validate_conv2d_layer__(
-        layer: layers.Conv2D, idx: int, strictness: Strictness, allow_padding: Optional[bool] = False
+    layer: layers.Conv2D,
+    idx: int,
+    strictness: Strictness,
+    allow_padding: Optional[bool] = False,
 ) -> None:
     num_filters: int = layer.filters
     channel_idx: int = 1 if layer.data_format == "channels_first" else 3
@@ -42,7 +45,9 @@ def __validate_conv2d_layer__(
         if strictness == Strictness.ERROR:
             raise XCoreUnoptimisedError(message, idx)
         print_warning(layer_idx=idx, layer_name=layer.name, message=message)
-    elif current_optimisation == Conv2DOptimisation.PADDED_INDIRECT and not allow_padding:
+    elif (
+        current_optimisation == Conv2DOptimisation.PADDED_INDIRECT and not allow_padding
+    ):
         message: str = f"Padding comes with a a significant performance hit. Consider whether it is truly needed."
         if strictness == Strictness.ERROR:
             raise XCoreUnoptimisedError(message, idx)
@@ -56,7 +61,7 @@ def __validate_conv2d_layer__(
 
 # Takes in a keras model and analyses it to make sure that any Conv2Ds can be optimised by xformer as much as possible.
 def validate_conv2d(
-        model: Model, strictness: Strictness, allow_padding: Optional[bool] = False
+    model: Model, strictness: Strictness, allow_padding: Optional[bool] = False
 ) -> None:
     for (idx, layer) in enumerate(model.layers):
         if type(layer) != layers.Conv2D:
@@ -66,7 +71,10 @@ def validate_conv2d(
 
 # Run validation on individual layer
 def __validate_depthwise_conv2d_layer__(
-        layer: layers.Conv2D, idx: int, strictness: Strictness, allow_padding: Optional[bool] = False
+    layer: layers.Conv2D,
+    idx: int,
+    strictness: Strictness,
+    allow_padding: Optional[bool] = False,
 ):
     num_filters: int = layer.filters
     channel_idx: int = 1 if layer.data_format == "channels_first" else 3
@@ -88,7 +96,9 @@ def __validate_depthwise_conv2d_layer__(
         if strictness == Strictness.ERROR:
             raise XCoreUnoptimisedError(message, idx)
         print_warning(message=message, layer_name=layer.name, layer_idx=idx)
-    elif current_optimisation == Conv2DOptimisation.PADDED_INDIRECT and not allow_padding:
+    elif (
+        current_optimisation == Conv2DOptimisation.PADDED_INDIRECT and not allow_padding
+    ):
         message: str = f"Padding comes with a a significant performance hit. Consider whether it is truly needed."
         if strictness == Strictness.ERROR:
             raise XCoreUnoptimisedError(message, idx)
@@ -97,7 +107,7 @@ def __validate_depthwise_conv2d_layer__(
 
 # Takes in a keras model and analyses it to make sure that any Conv2Ds can be optimised by xformer as much as possible.
 def validate_depthwise_conv2d(
-        model: Model, strictness: Strictness, allow_padding: Optional[bool] = False
+    model: Model, strictness: Strictness, allow_padding: Optional[bool] = False
 ) -> None:
     for (idx, layer) in enumerate(model.layers):
         if type(layer) != layers.DepthwiseConv2D:
@@ -106,7 +116,9 @@ def validate_depthwise_conv2d(
 
 
 # Validate all layers
-def validate(model: Model, strictness: Strictness, allow_padding: Optional[bool] = False) -> None:
+def validate(
+    model: Model, strictness: Strictness, allow_padding: Optional[bool] = False
+) -> None:
     for (idx, layer) in enumerate(model.layers):
         if type(layer) == layers.DepthwiseConv2D:
             __validate_depthwise_conv2d_layer__(layer, idx, strictness, allow_padding)

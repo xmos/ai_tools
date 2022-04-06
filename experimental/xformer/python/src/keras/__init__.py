@@ -34,7 +34,7 @@ def __validate_conv2d_layer__(
         current_optimisation = Conv2DOptimisation.VALID_INDIRECT
 
     if current_optimisation == Conv2DOptimisation.DEFAULT:
-        message: str = "Output and input depth must be a multiple of four. Reference design will be used."
+        message: str = "Output and input depth must be a multiple of four. Reference kernel will be used."
         if strictness == Strictness.ERROR:
             raise XCoreUnoptimisedError(message, idx)
         print_warning(layer_idx=idx, layer_name=layer.name, message=message)
@@ -80,7 +80,7 @@ def __validate_depthwise_conv2d_layer__(
 
     # Raise Errors or Warnings
     if current_optimisation == Conv2DOptimisation.DEFAULT:
-        message: str = "Output and input depth must be a multiple of four. Reference design will be used."
+        message: str = "Output and input depth must be a multiple of four. Reference kernel will be used."
         if strictness == Strictness.ERROR:
             raise XCoreUnoptimisedError(message, idx)
         print_warning(message=message, layer_name=layer.name, layer_idx=idx)

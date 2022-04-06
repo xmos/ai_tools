@@ -15,7 +15,7 @@ namespace xcore {
 std::vector<uint8_t> Bsign8Op::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Lookup8Op::buildCustomOptions() { return {}; }
 
-std::vector<uint8_t> StridedSliceV3Op::buildCustomOptions() {
+std::vector<uint8_t> StridedSliceOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
 
@@ -109,7 +109,7 @@ void TranslateToCustomOp::runOnFunction() {
   patterns.insert<RewriteToCustomOp<Conv2DV2Op>>(ctx);
   patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
-  patterns.insert<RewriteToCustomOp<StridedSliceV3Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<StridedSliceOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

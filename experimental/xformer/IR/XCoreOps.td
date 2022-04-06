@@ -62,10 +62,10 @@ def XC_Conv2D_TypeAttr : StrEnumAttr<"Conv2DType", "conv2d type enum", [
   XC_BNN_Conv2D_ValidDirect_Int8, XC_BNN_Conv2D_ValidIndirect_Int8
 ]>;
 
-def XC_StridedSliceV3Op : XC_Op<"strided_slice_v3", [NoSideEffect]> {
-  let summary = "Strided Slice V3 op";
+def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
+  let summary = "Strided Slice op";
 
-  let description = [{Strided Slice V3 op.}];
+  let description = [{Strided Slice op.}];
 
   let arguments = (ins
     TensorOf<[QI8]>:$input,

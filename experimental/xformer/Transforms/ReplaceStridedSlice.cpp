@@ -79,7 +79,7 @@ struct ReplaceStridedSlicePattern
 
     memcpyFnParam = strParams[0];
 
-    auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceV3Op>(
+    auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceOp>(
         stridedSliceOp.getLoc(), stridedSliceOp.getType(),stridedSliceOp.input(),
         rewriter.getI32IntegerAttr(begin_x),
         rewriter.getI32IntegerAttr(begin_y),

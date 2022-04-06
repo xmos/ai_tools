@@ -35,27 +35,27 @@ struct ReplaceStridedSlicePattern
     auto beginValuesConstOp =
         dyn_cast<mlir::ConstantOp>(stridedSliceOp.begin().getDefiningOp());
     auto beginValues =
-        beginValuesConstOp.value().template cast<DenseElementsAttr>();
+        beginValuesConstOp.value().cast <DenseElementsAttr>();
 
     auto endValuesConstOp =
         dyn_cast<mlir::ConstantOp>(stridedSliceOp.end().getDefiningOp());
     auto endValues =
-        endValuesConstOp.value().template cast<DenseElementsAttr>();
+        endValuesConstOp.value().cast <DenseElementsAttr>();
 
     auto stridesValuesConstOp =
         dyn_cast<mlir::ConstantOp>(stridedSliceOp.strides().getDefiningOp());
     auto stridesValues =
-        stridesValuesConstOp.value().template cast<DenseElementsAttr>();
+        stridesValuesConstOp.value().cast <DenseElementsAttr>();
 
     auto inputHeight = inputType.getDimSize(1);
     auto inputWidth = inputType.getDimSize(2);
     auto inputDepth = inputType.getDimSize(3);
-    auto begin_x = beginValues.template getValue<int32_t>({2});
-    auto begin_y = beginValues.template getValue<int32_t>({1});
-    auto end_x = endValues.template getValue<int32_t>({2});
-    auto end_y = endValues.template getValue<int32_t>({1});
-    auto stride_x = stridesValues.template getValue<int32_t>({2});
-    auto stride_y = stridesValues.template getValue<int32_t>({1});
+    auto begin_x = beginValues.getValue<int32_t>({2});
+    auto begin_y = beginValues.getValue<int32_t>({1});
+    auto end_x = endValues.getValue<int32_t>({2});
+    auto end_y = endValues.getValue<int32_t>({1});
+    auto stride_x = stridesValues.getValue<int32_t>({2});
+    auto stride_y = stridesValues.getValue<int32_t>({1});
 
     auto image_geom =
         nn::ImageGeometry(inputHeight, inputWidth, static_cast<int>(inputDepth));

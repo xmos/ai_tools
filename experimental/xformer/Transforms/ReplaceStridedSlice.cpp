@@ -28,7 +28,30 @@ struct ReplaceStridedSlicePattern
   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSliceOp,
                                 PatternRewriter &rewriter) const override {
 
-    // Extract args from the op
+    auto inputElementalType =
+        stridedSliceOp.input().getType().cast<ShapedType>().getElementType();
+    
+    // Check for invalid types and return
+    // Input type must be QI8
+    if (!(inputElementalType.isa<quant::QuantizedType>() &&
+          inputElementalType.cast<quant::QuantizedType>().isSigned() &&
+          inputElementalType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+    
+    auto outputElementalType =
+        stridedSliceOp.output().getType().cast<ShapedType>().getElementType();
+
+    // Output type must be QI8
+    if (!(outputElementalType.isa<quant::QuantizedType>() &&
+          outputElementalType.cast<quant::QuantizedType>().isSigned() &&
+          outputElementalType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+     // Extract args from the op
     auto inputType =
         stridedSliceOp.input().getType().dyn_cast<RankedTensorType>();
 

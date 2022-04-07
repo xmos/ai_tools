@@ -94,19 +94,11 @@ struct ReplaceStridedSlicePattern
 
     std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
 
-    llvm::SmallVector<std::string> strParams;
-
-    strParams.push_back(mfStr);
-
-    std::string memcpyFnParam;
-
-    memcpyFnParam = strParams[0];
-
     auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceOp>(
         stridedSliceOp.getLoc(), stridedSliceOp.getType(),stridedSliceOp.input(),
         rewriter.getI32IntegerAttr(beginX),
         rewriter.getI32IntegerAttr(beginY),
-        rewriter.getStringAttr(memcpyFnParam));
+        rewriter.getStringAttr(mfStr));
     rewriter.replaceOp(stridedSliceOp, binaryObjectStridedSliceOp.output());
 
     return success();

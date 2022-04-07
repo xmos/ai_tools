@@ -73,22 +73,22 @@ struct ReplaceStridedSlicePattern
     auto inputHeight = inputType.getDimSize(1);
     auto inputWidth = inputType.getDimSize(2);
     auto inputDepth = inputType.getDimSize(3);
-    auto begin_x = beginValues.getValue<int32_t>({2});
-    auto begin_y = beginValues.getValue<int32_t>({1});
-    auto end_x = endValues.getValue<int32_t>({2});
-    auto end_y = endValues.getValue<int32_t>({1});
-    auto stride_x = stridesValues.getValue<int32_t>({2});
-    auto stride_y = stridesValues.getValue<int32_t>({1});
+    auto beginX = beginValues.getValue<int32_t>({2});
+    auto beginY = beginValues.getValue<int32_t>({1});
+    auto endX= endValues.getValue<int32_t>({2});
+    auto endY= endValues.getValue<int32_t>({1});
+    auto strideX= stridesValues.getValue<int32_t>({2});
+    auto strideY = stridesValues.getValue<int32_t>({1});
 
     auto image_geom =
         nn::ImageGeometry(inputHeight, inputWidth, static_cast<int>(inputDepth));
     
-    int x_diff = end_x - begin_x;
-    int y_diff = end_y - begin_y;
+    int xDiff = endX - beginX;
+    int yDiff = endY - beginY;
     auto window_geom = nn::WindowGeometry(
-        {y_diff,
-         x_diff, static_cast<int>(inputDepth)},
-        {begin_y, begin_x}, {1, 1, 1}, {stride_y, stride_x});
+        {yDiff,
+         xDiff, static_cast<int>(inputDepth)},
+        {beginY, beginX}, {1, 1, 1}, {strideY, strideX});
 
     nn::ImToColValid::Params imToColParams(image_geom, window_geom,static_cast<int>(inputDepth));
 
@@ -104,8 +104,8 @@ struct ReplaceStridedSlicePattern
 
     auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceOp>(
         stridedSliceOp.getLoc(), stridedSliceOp.getType(),stridedSliceOp.input(),
-        rewriter.getI32IntegerAttr(begin_x),
-        rewriter.getI32IntegerAttr(begin_y),
+        rewriter.getI32IntegerAttr(beginX),
+        rewriter.getI32IntegerAttr(beginY),
         rewriter.getStringAttr(memcpyFnParam));
     rewriter.replaceOp(stridedSliceOp, binaryObjectStridedSliceOp.output());
 

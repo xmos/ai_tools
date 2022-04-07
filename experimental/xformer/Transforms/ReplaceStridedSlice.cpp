@@ -30,7 +30,7 @@ struct ReplaceStridedSlicePattern
 
     auto inputElementalType =
         stridedSliceOp.input().getType().cast<ShapedType>().getElementType();
-    
+
     // Check for invalid types and return
     // Input type must be QI8
     if (!(inputElementalType.isa<quant::QuantizedType>() &&
@@ -39,7 +39,7 @@ struct ReplaceStridedSlicePattern
                   .getStorageTypeIntegralWidth() == 8)) {
       return failure();
     }
-    
+
     auto outputElementalType =
         stridedSliceOp.output().getType().cast<ShapedType>().getElementType();
 
@@ -51,54 +51,50 @@ struct ReplaceStridedSlicePattern
       return failure();
     }
 
-     // Extract args from the op
+    // Extract args from the op
     auto inputType =
         stridedSliceOp.input().getType().dyn_cast<RankedTensorType>();
 
     auto beginValuesConstOp =
         dyn_cast<mlir::ConstantOp>(stridedSliceOp.begin().getDefiningOp());
-    auto beginValues =
-        beginValuesConstOp.value().cast <DenseElementsAttr>();
+    auto beginValues = beginValuesConstOp.value().cast<DenseElementsAttr>();
 
     auto endValuesConstOp =
         dyn_cast<mlir::ConstantOp>(stridedSliceOp.end().getDefiningOp());
-    auto endValues =
-        endValuesConstOp.value().cast <DenseElementsAttr>();
+    auto endValues = endValuesConstOp.value().cast<DenseElementsAttr>();
 
     auto stridesValuesConstOp =
         dyn_cast<mlir::ConstantOp>(stridedSliceOp.strides().getDefiningOp());
-    auto stridesValues =
-        stridesValuesConstOp.value().cast <DenseElementsAttr>();
+    auto stridesValues = stridesValuesConstOp.value().cast<DenseElementsAttr>();
 
     auto inputHeight = inputType.getDimSize(1);
     auto inputWidth = inputType.getDimSize(2);
     auto inputDepth = inputType.getDimSize(3);
     auto beginX = beginValues.getValue<int32_t>({2});
     auto beginY = beginValues.getValue<int32_t>({1});
-    auto endX= endValues.getValue<int32_t>({2});
-    auto endY= endValues.getValue<int32_t>({1});
-    auto strideX= stridesValues.getValue<int32_t>({2});
+    auto endX = endValues.getValue<int32_t>({2});
+    auto endY = endValues.getValue<int32_t>({1});
+    auto strideX = stridesValues.getValue<int32_t>({2});
     auto strideY = stridesValues.getValue<int32_t>({1});
 
-    auto image_geom =
-        nn::ImageGeometry(inputHeight, inputWidth, static_cast<int>(inputDepth));
-    
+    auto image_geom = nn::ImageGeometry(inputHeight, inputWidth,
+                                        static_cast<int>(inputDepth));
+
     int xDiff = endX - beginX;
     int yDiff = endY - beginY;
-    auto window_geom = nn::WindowGeometry(
-        {yDiff,
-         xDiff, static_cast<int>(inputDepth)},
-        {beginY, beginX}, {1, 1, 1}, {strideY, strideX});
+    auto window_geom =
+        nn::WindowGeometry({yDiff, xDiff, static_cast<int>(inputDepth)},
+                           {beginY, beginX}, {1, 1, 1}, {strideY, strideX});
 
-    nn::ImToColValid::Params imToColParams(image_geom, window_geom,static_cast<int>(inputDepth));
+    nn::ImToColValid::Params imToColParams(image_geom, window_geom,
+                                           static_cast<int>(inputDepth));
 
     std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
 
     auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceOp>(
-        stridedSliceOp.getLoc(), stridedSliceOp.getType(),stridedSliceOp.input(),
-        rewriter.getI32IntegerAttr(beginX),
-        rewriter.getI32IntegerAttr(beginY),
-        rewriter.getStringAttr(mfStr));
+        stridedSliceOp.getLoc(), stridedSliceOp.getType(),
+        stridedSliceOp.input(), rewriter.getI32IntegerAttr(beginX),
+        rewriter.getI32IntegerAttr(beginY), rewriter.getStringAttr(mfStr));
     rewriter.replaceOp(stridedSliceOp, binaryObjectStridedSliceOp.output());
 
     return success();

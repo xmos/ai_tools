@@ -120,7 +120,7 @@ std::unique_ptr<OperationPass<FuncOp>> createReplaceStridedSlicePass() {
 }
 
 static PassRegistration<ReplaceStridedSlice>
-    pass("xcore-replace-StridedSlice",
+    pass("xcore-replace-stridedslice",
          "Replace TFL StridedSlice with StridedSlice for XCore.");
 
 } // namespace xcore

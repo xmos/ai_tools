@@ -2,7 +2,11 @@ import tensorflow as tf
 import numpy as np
 import os
 
-inputs = tf.keras.Input(shape=(160,160,4),)
+height = 160
+width = 160
+channels = 4
+
+inputs = tf.keras.Input(shape=(height,width,channels),)
 x_0 = tf.strided_slice(inputs,begin=[0, 0, 0], end= [160, 80, 4],strides= [1, 1, 1])
 x_1 = tf.strided_slice(inputs,begin=[0, 80, 0], end= [160, 160, 4],strides= [1, 1, 1])
 x = tf.keras.layers.Concatenate(axis=1)([x_0,x_1])
@@ -15,7 +19,7 @@ model.save(saved_model_dir)
 
 def representative_dataset():
     for _ in range(100):
-      data = np.random.rand(1,160,160, 4)
+      data = np.random.rand(1,height,width,channels)
       yield [data.astype(np.float32)]
 
 converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)

@@ -1,14 +1,15 @@
 import tensorflow as tf
 import numpy as np
 import os
+from math import ceil
 
 height = 160
 width = 160
 channels = 4
 
 inputs = tf.keras.Input(shape=(height,width,channels),)
-x_0 = tf.strided_slice(inputs,begin=[0, 0, 0], end= [160, 80, 4],strides= [1, 1, 1])
-x_1 = tf.strided_slice(inputs,begin=[0, 80, 0], end= [160, 160, 4],strides= [1, 1, 1])
+x_0 = tf.strided_slice(inputs,begin=[0, 0, 0], end= [height, width//2, channels],strides= [1, 1, 1])
+x_1 = tf.strided_slice(inputs,begin=[0, ceil(width/2), 0], end= [height, width, channels],strides= [1, 1, 1])
 x = tf.keras.layers.Concatenate(axis=1)([x_0,x_1])
 outputs = tf.keras.layers.Flatten()(x)
 model = tf.keras.Model(inputs=inputs,outputs=[outputs])

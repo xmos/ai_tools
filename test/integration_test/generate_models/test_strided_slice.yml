@@ -5,3 +5,7 @@ default:
     height: 160
     width: 160
     channels: 4
+  1:
+    height: 150
+    width: 150
+    channels: 4

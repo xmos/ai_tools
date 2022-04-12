@@ -2,10 +2,16 @@ import tensorflow as tf
 import numpy as np
 import os
 from math import ceil
+import yaml
 
-height = 160
-width = 160
-channels = 4
+dir = os.path.dirname(__file__)
+
+with open(os.path.join(dir,'test_strided_slice.yml'), 'r') as file:
+	configs = yaml.safe_load(file)
+
+height = configs['default'][0]['height']
+width = configs['default'][0]['width']
+channels = configs['default'][0]['channels']
 
 inputs = tf.keras.Input(shape=(height,width,channels),)
 x_0 = tf.strided_slice(inputs,begin=[0, 0, 0], end= [height, width//2, channels],strides= [1, 1, 1])
@@ -14,7 +20,6 @@ x = tf.keras.layers.Concatenate(axis=1)([x_0,x_1])
 outputs = tf.keras.layers.Flatten()(x)
 model = tf.keras.Model(inputs=inputs,outputs=[outputs])
 
-dir = os.path.dirname(__file__)
 saved_model_dir = os.path.join(dir,"saved_model")
 model.save(saved_model_dir)
 

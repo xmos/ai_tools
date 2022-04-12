@@ -1,0 +1,7 @@
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
+default:
+  0:
+    height: 160
+    width: 160
+    channels: 4

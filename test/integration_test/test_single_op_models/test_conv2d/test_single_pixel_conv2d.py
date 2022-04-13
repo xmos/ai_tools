@@ -3,14 +3,11 @@
 
 import pytest
 
-from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.model_generation import Configuration
 
 from . import Conv2dGenericTestModelGenerator
 from . import (  # pylint: disable=unused-import
     test_output,
-    test_converted_single_op_model,
-    test_reference_model_regression,
 )
 
 
@@ -40,15 +37,6 @@ class SinglePixelConv2dTestModelGenerator(Conv2dGenericTestModelGenerator):
 
 GENERATOR = SinglePixelConv2dTestModelGenerator
 
-
-#  ----------------------------------------------------------------------------
-#                                   FIXTURES
-#  ----------------------------------------------------------------------------
-
-
-@pytest.fixture
-def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_fc
 
 
 if __name__ == "__main__":

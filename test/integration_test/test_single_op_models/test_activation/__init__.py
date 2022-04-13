@@ -8,8 +8,6 @@ from typing import Callable, Optional, Tuple
 from .. import (
     ChannelAgnosticOpTestModelGenerator,
     test_output,
-    test_converted_single_op_model,
-    test_reference_model_regression,
 )
 
 

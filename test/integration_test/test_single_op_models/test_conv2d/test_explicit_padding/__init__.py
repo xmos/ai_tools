@@ -5,15 +5,12 @@ import pytest
 import tensorflow as tf
 
 from tflite2xcore.utils import asserting_cast
-from tflite2xcore.xcore_schema import XCOREModel, ValidOpCodes, BuiltinOpCodes
 from tflite2xcore.model_generation import Configuration
 
 from .. import (
     PaddingMixin,
     AbstractConv2dTestModelGenerator,
     test_output,
-    test_converted_single_op_model,
-    test_idempotence,
 )
 
 
@@ -53,21 +50,3 @@ class ExplicitlyPaddedConv2dMixin(PaddingMixin, AbstractConv2dTestModelGenerator
             layers=[self._pad_layer(input_shape=self._input_shape), self._op_layer()]
         )
 
-
-#  ----------------------------------------------------------------------------
-#                                   TESTS
-#  ----------------------------------------------------------------------------
-
-
-@pytest.mark.skip_on_device
-def test_reference_model_regression(
-    reference_model: XCOREModel, reference_op_code: ValidOpCodes
-) -> None:
-    operators = reference_model.subgraphs[0].operators
-    assert len(operators) == 2
-    assert operators[0].operator_code.code is BuiltinOpCodes.PAD
-
-    op_code = operators[1].operator_code.code
-    assert (
-        op_code is reference_op_code
-    ), f"expected: {reference_op_code}, got: {op_code}"

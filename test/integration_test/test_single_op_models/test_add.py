@@ -7,12 +7,9 @@ import tensorflow as tf
 from typing import Optional, Tuple
 import random
 
-from tflite2xcore.xcore_schema import XCOREOpCodes
-
 from . import ChannelAgnosticOpTestModelGenerator
 from . import (  # pylint: disable=unused-import
     test_output,
-    test_converted_single_op_model,
 )
 
 
@@ -35,16 +32,6 @@ class AddModelGenerator(ChannelAgnosticOpTestModelGenerator):
 
 
 GENERATOR = AddModelGenerator
-
-
-#  ----------------------------------------------------------------------------
-#                                   FIXTURES
-#  ----------------------------------------------------------------------------
-
-
-@pytest.fixture
-def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_add_8
 
 
 if __name__ == "__main__":

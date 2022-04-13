@@ -37,11 +37,7 @@ integration_test:
 
 .PHONY: xformer2_test
 xformer2_integration_test:
-	cd test && pytest integration_test --cache-clear --collect-only -qq
-	# conv2d tests
-	cd test && pytest integration_test/test_single_op_models/test_conv2d --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
-	# bnn tests
-	cd test && pytest integration_test/test_single_op_models/test_binarized --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
+	cd test && pytest integration_test --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 
 #**************************
 # default build and test targets

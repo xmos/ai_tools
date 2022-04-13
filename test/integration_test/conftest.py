@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Dict, Type, Optional, Union, List
 
 from tflite2xcore.utils import dequantize
-from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.model_generation.utils import stringify_config
 
 from . import (
@@ -223,16 +222,6 @@ def run(
         pytest.skip()
 
     return runner
-
-
-@pytest.fixture
-def xcore_model(run: IntegrationTestRunner) -> XCOREModel:
-    return XCOREModel.deserialize(run._xcore_converter._model)
-
-
-@pytest.fixture
-def reference_model(run: DefaultIntegrationTestRunner) -> XCOREModel:
-    return XCOREModel.deserialize(run.get_xcore_reference_model())
 
 
 @pytest.fixture

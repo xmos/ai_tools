@@ -3,7 +3,6 @@
 
 import pytest
 
-from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes
 from tflite2xcore.model_generation import Configuration
 
 from . import (
@@ -13,8 +12,6 @@ from . import (
 )
 
 from . import (  # pylint: disable=unused-import
-    test_reference_model_regression,
-    test_converted_single_op_model,
     test_output,
 )
 
@@ -52,16 +49,6 @@ RUNNER = BConv2dInt8TestRunner
 @pytest.fixture
 def bitpacked_outputs() -> bool:
     return False
-
-
-@pytest.fixture
-def reference_op_code() -> ExternalOpCodes:
-    return ExternalOpCodes.LceBconv2d
-
-
-@pytest.fixture
-def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_bconv2d_int8
 
 
 if __name__ == "__main__":

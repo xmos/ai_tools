@@ -7,7 +7,6 @@ import tensorflow as tf
 from . import IntegrationTestModelGenerator
 
 from . import (  # pylint: disable=unused-import
-    test_idempotence,
     test_output,
 )
 

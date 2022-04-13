@@ -5,13 +5,9 @@ import pytest
 import tensorflow as tf
 from typing import Optional, Tuple
 
-from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes
-
 from . import ChannelAgnosticOpTestModelGenerator, PaddingMixin
 from . import (  # pylint: disable=unused-import
     test_output,
-    test_converted_single_op_model,
-    test_reference_model_regression,
 )
 
 
@@ -37,17 +33,6 @@ GENERATOR = PadTestModelGenerator
 @pytest.fixture
 def abs_output_tolerance() -> int:
     return 0
-
-
-@pytest.fixture
-def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_pad
-
-
-@pytest.fixture
-def reference_op_code() -> BuiltinOpCodes:
-    return BuiltinOpCodes.PAD
-
 
 if __name__ == "__main__":
     pytest.main()

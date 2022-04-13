@@ -5,13 +5,9 @@ import pytest
 import tensorflow as tf
 from typing import Callable
 
-from tflite2xcore.xcore_schema import BuiltinOpCodes
-
 from . import LUTActivationOpTestModelGenerator
 from . import (  # pylint: disable=unused-import
     test_output,
-    test_converted_single_op_model,
-    test_reference_model_regression,
 )
 
 
@@ -31,12 +27,6 @@ GENERATOR = ReluTestModelGenerator
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
-
-
-@pytest.fixture
-def reference_op_code() -> BuiltinOpCodes:
-    return BuiltinOpCodes.RELU
-
 
 if __name__ == "__main__":
     pytest.main()

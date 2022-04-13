@@ -20,7 +20,6 @@ from typing import (
 )
 
 from tflite2xcore.utils import unpack_bits
-from tflite2xcore.xcore_schema import XCOREModel
 from tflite2xcore.model_generation import (
     TFLiteModel,
     ModelGenerator,
@@ -431,11 +430,3 @@ def test_output(
         if not verbose:
             msg += "\nSet verbosity > 0 for more details."
         pytest.fail(msg, pytrace=False)
-
-
-@pytest.mark.skip_on_device
-@pytest.mark.skip_on_xformer2
-def test_idempotence(xcore_model: XCOREModel, run: IntegrationTestRunner) -> None:
-    run._identity_converter.convert()
-    identical_model = XCOREModel.deserialize(run._identity_converter._model)
-    assert xcore_model.is_equal(identical_model)

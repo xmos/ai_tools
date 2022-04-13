@@ -5,7 +5,6 @@ import pytest
 import tensorflow as tf
 import numpy as np
 
-from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes
 from tflite2xcore.model_generation import Configuration
 from tflite2xcore.model_generation.data_factories import InputInitializerDataFactory
 
@@ -16,8 +15,6 @@ from . import (
 )
 
 from . import (  # pylint: disable=unused-import
-    test_reference_model_regression,
-    test_converted_single_op_model,
     test_mean_abs_diffs,
 )
 
@@ -63,20 +60,6 @@ class BSignTestRunner(BinarizedSingleOpRunner):
 
 
 RUNNER = BSignTestRunner
-
-#  ----------------------------------------------------------------------------
-#                                   FIXTURES
-#  ----------------------------------------------------------------------------
-
-
-@pytest.fixture
-def reference_op_code() -> ExternalOpCodes:
-    return ExternalOpCodes.LceQuantize
-
-
-@pytest.fixture
-def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_bsign_8
 
 
 if __name__ == "__main__":

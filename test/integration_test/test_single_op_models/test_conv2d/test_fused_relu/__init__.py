@@ -8,8 +8,6 @@ from tflite2xcore.model_generation import Configuration
 from .. import (
     AbstractConv2dTestModelGenerator,
     test_output,
-    test_converted_single_op_model,
-    test_idempotence,
 )
 
 

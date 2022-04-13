@@ -8,8 +8,6 @@ from typing import Tuple, Optional
 
 from tflite2xcore.utils import asserting_cast
 from tflite2xcore.model_generation import Configuration
-from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import XCOREOpCodes, ValidOpCodes
 
 from .. import (
     IntegrationTestRunner,
@@ -19,7 +17,6 @@ from .. import (
     IntegrationTestModelGenerator,
     test_output,
     test_mean_abs_diffs,
-    test_idempotence,
 )
 
 
@@ -112,33 +109,3 @@ class FilterOpTestModelGenerator(ImageInputOpTestModelGenerator):
                 ) from e
             else:
                 raise
-
-
-#  ----------------------------------------------------------------------------
-#                                   TESTS
-#  ----------------------------------------------------------------------------
-
-
-@pytest.mark.skip_on_device
-@pytest.mark.skip_on_xformer2
-def test_converted_single_op_model(
-    xcore_model: XCOREModel, converted_op_code: XCOREOpCodes
-) -> None:
-    operators = xcore_model.subgraphs[0].operators
-    assert len(operators) == 1
-    op_code = operators[0].operator_code.code
-    assert (
-        op_code is converted_op_code
-    ), f"expected: {converted_op_code}, got: {op_code}"
-
-
-@pytest.mark.skip_on_device
-def test_reference_model_regression(
-    reference_model: XCOREModel, reference_op_code: ValidOpCodes
-) -> None:
-    operators = reference_model.subgraphs[0].operators
-    assert len(operators) == 1
-    op_code = operators[0].operator_code.code
-    assert (
-        op_code is reference_op_code
-    ), f"expected: {reference_op_code}, got: {op_code}"

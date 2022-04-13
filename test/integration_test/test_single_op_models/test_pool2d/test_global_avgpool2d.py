@@ -5,13 +5,9 @@ import pytest
 import tensorflow as tf
 from typing import Optional, Tuple
 
-from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes
-
 from . import ChannelPreservingOpTestModelGenerator
 from . import (  # pylint: disable=unused-import
     test_output as _test_output,
-    test_converted_single_op_model,
-    test_reference_model_regression,
 )
 
 
@@ -29,21 +25,6 @@ class GlobalAveragePooling2dTestModelGenerator(ChannelPreservingOpTestModelGener
 
 
 GENERATOR = GlobalAveragePooling2dTestModelGenerator
-
-
-#  ----------------------------------------------------------------------------
-#                                   FIXTURES
-#  ----------------------------------------------------------------------------
-
-
-@pytest.fixture
-def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_avgpool2d_global
-
-
-@pytest.fixture
-def reference_op_code() -> BuiltinOpCodes:
-    return BuiltinOpCodes.MEAN
 
 
 #  ----------------------------------------------------------------------------

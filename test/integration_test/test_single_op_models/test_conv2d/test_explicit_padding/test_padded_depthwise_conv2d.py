@@ -5,14 +5,8 @@ import pytest
 
 from ..test_depthwise_conv2d import DepthwiseConv2dTestModelGenerator
 from . import ExplicitlyPaddedConv2dMixin
-from ..test_depthwise_conv2d import (  # pylint: disable=unused-import
-    reference_op_code,
-    converted_op_code,
-)
 from . import (  # pylint: disable=unused-import
     test_output,
-    test_converted_single_op_model,
-    test_idempotence,
 )
 
 

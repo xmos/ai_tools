@@ -36,8 +36,6 @@ from tflite2xcore.model_generation.utils import parse_init_config
 
 from .. import (
     BinarizedTestRunner,
-    test_reference_model_regression,
-    test_converted_single_op_model,
     test_mean_abs_diffs,
     test_output,
 )
@@ -178,6 +176,10 @@ class LarqSingleOpConverter(LarqConverter):
 
     def convert(self) -> None:
         super().convert()
+        
+        # import pathlib
+        # with open(pathlib.Path("/Users/deepakpanickal/code/ai_tools/experimental/xformer/xformer_input1.tflite").resolve(), "wb") as fd:
+        #     fd.write(self._model)
 
         model_ir = XCOREModel.deserialize(self._model)
         pass_mgr = PassManager(model_ir)
@@ -194,6 +196,9 @@ class LarqSingleOpConverter(LarqConverter):
         pass_mgr.run_passes()
 
         self._model = model_ir.serialize()
+
+        # with open(pathlib.Path("/Users/deepakpanickal/code/ai_tools/experimental/xformer/xformer_input3.tflite").resolve(), "wb") as fd:
+        #     fd.write(self._model)
 
 
 #  ----------------------------------------------------------------------------

@@ -3,18 +3,13 @@
 
 import pytest
 
-from tflite2xcore.xcore_schema import XCOREOpCodes
 
-
-from .test_bconv2d_bin import reference_op_code  # pylint: disable=unused-import
 from .test_bconv2d_bin import (
     BConv2dBitpackedTestRunner,
     BConv2dBitpackedTestModelGenerator,
 )
 
 from . import (  # pylint: disable=unused-import
-    test_reference_model_regression,
-    test_converted_single_op_model,
     test_mean_abs_diffs,
 )
 
@@ -40,15 +35,6 @@ GENERATOR = BConv2dBitpackedDeepInTestModelGenerator
 
 
 RUNNER = BConv2dBitpackedTestRunner
-
-#  ----------------------------------------------------------------------------
-#                                   FIXTURES
-#  ----------------------------------------------------------------------------
-
-
-@pytest.fixture
-def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_bconv2d_bin_DI
 
 
 if __name__ == "__main__":

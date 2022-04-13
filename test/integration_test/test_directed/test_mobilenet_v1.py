@@ -9,18 +9,10 @@ from tensorflow.python.keras.utils import (  # pylint: disable=no-name-in-module
     data_utils,
 )
 
-from tflite2xcore.xcore_schema import (
-    XCOREModel,
-    XCOREOpCodes,
-    BuiltinOpCodes,
-    OperatorCode,
-    TensorType,
-)
 from tflite2xcore.model_generation import Configuration
 
 from . import IntegrationTestModelGenerator
 from . import (  # pylint: disable=unused-import
-    test_idempotence,
     test_output,
 )
 
@@ -144,52 +136,6 @@ def abs_output_tolerance() -> None:
 @pytest.fixture
 def implicit_tolerance_margin() -> float:
     return 0.15
-
-
-#  ----------------------------------------------------------------------------
-#                                   TESTS
-#  ----------------------------------------------------------------------------
-
-
-@pytest.mark.skip_on_xformer2
-@pytest.mark.skip_on_device
-def test_converted_model(xcore_model: XCOREModel, experimental_xformer2: bool) -> None:
-    subgraph = xcore_model.subgraphs[0]
-
-    # check tensors
-    assert len(subgraph.tensors) == 90
-
-    assert len(subgraph.inputs) == 1
-    input_tensor = subgraph.inputs[0]
-    assert input_tensor.type is TensorType.INT8
-    input_shape = input_tensor.shape
-    assert len(input_shape) == 4
-    assert input_shape[0] == 1
-    assert input_shape[3] == 3
-
-    assert len(subgraph.outputs) == 1
-    output_tensor = subgraph.outputs[0]
-    assert output_tensor.type is TensorType.INT8
-    assert output_tensor.shape == (1, 1000)
-
-    # check operators
-    assert len(subgraph.operators) == 31
-
-    # check only first op
-    assert len(input_tensor.consumers) == 1
-    assert input_tensor.consumers[0].operator_code.code is BuiltinOpCodes.PAD
-
-    opcode_cnt = xcore_model.count_operator_codes()
-    assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_1x1)] == 13
-    assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_depthwise)] == 13
-    assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_shallowin)] == 1
-    assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_avgpool2d_global)] == 1
-    assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_fc)] == 1
-    assert opcode_cnt[OperatorCode(BuiltinOpCodes.SOFTMAX, version=2)] == 1
-    if experimental_xformer2:
-        assert opcode_cnt[OperatorCode(BuiltinOpCodes.PAD, version=2)] == 1
-    else:
-        assert opcode_cnt[OperatorCode(BuiltinOpCodes.PAD)] == 1
 
 
 if __name__ == "__main__":

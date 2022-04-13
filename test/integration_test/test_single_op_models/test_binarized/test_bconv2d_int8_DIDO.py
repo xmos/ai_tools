@@ -3,16 +3,12 @@
 
 import pytest
 
-from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes
-
 from .test_bconv2d_int8 import BConv2dInt8TestModelGenerator
 from .test_bconv2d_int8 import (  # pylint: disable=unused-import
     bitpacked_outputs,
     RUNNER,
 )
 from . import (  # pylint: disable=unused-import
-    test_reference_model_regression,
-    test_converted_single_op_model,
     test_output,
 )
 
@@ -34,21 +30,6 @@ class BConv2dInt8DeepInDeepOutTestModelGenerator(BConv2dInt8TestModelGenerator):
 
 
 GENERATOR = BConv2dInt8DeepInDeepOutTestModelGenerator
-
-
-#  ----------------------------------------------------------------------------
-#                                   FIXTURES
-#  ----------------------------------------------------------------------------
-
-
-@pytest.fixture
-def reference_op_code() -> ExternalOpCodes:
-    return ExternalOpCodes.LceBconv2d
-
-
-@pytest.fixture
-def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_bconv2d_int8_DIDO
 
 
 if __name__ == "__main__":

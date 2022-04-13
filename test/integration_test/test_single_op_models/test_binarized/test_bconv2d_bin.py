@@ -5,7 +5,6 @@ import pytest
 import larq
 import tensorflow as tf
 
-from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes
 from tflite2xcore.model_generation import Configuration
 
 from . import (
@@ -15,8 +14,6 @@ from . import (
 )
 
 from . import (  # pylint: disable=unused-import
-    test_reference_model_regression,
-    test_converted_single_op_model,
     test_mean_abs_diffs,
 )
 
@@ -75,21 +72,6 @@ class BConv2dBitpackedTestRunner(BinarizedSingleOpRunner):
 
 
 RUNNER = BConv2dBitpackedTestRunner
-
-
-#  ----------------------------------------------------------------------------
-#                                   FIXTURES
-#  ----------------------------------------------------------------------------
-
-
-@pytest.fixture
-def reference_op_code() -> ExternalOpCodes:
-    return ExternalOpCodes.LceBconv2d
-
-
-@pytest.fixture
-def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_bconv2d_bin
 
 
 if __name__ == "__main__":

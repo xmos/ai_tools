@@ -7,13 +7,9 @@ from ..test_bconv2d_int8_DIDO import (  # pylint: disable=unused-import
     GENERATOR,
     RUNNER,
     bitpacked_outputs,
-    reference_op_code,
-    converted_op_code,
 )
 
 from . import (  # pylint: disable=unused-import
-    test_reference_model_regression,
-    test_converted_model,
     test_output,
 )
 

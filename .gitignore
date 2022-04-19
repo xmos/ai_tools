@@ -1,6 +1,5 @@
 # Editor cruft
 **/.vscode/
-**/.idea/
 
 # Python cruft
 **/*.pyc

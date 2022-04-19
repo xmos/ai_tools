@@ -123,8 +123,37 @@ class XCoreConverter(Converter):
                 with open(pathlib.Path(input_path).resolve(), "wb") as fd:
                     fd.write(model)
 
+                # get model dump path
+                model_dump_path = os.getenv('MODEL_DUMP_PATH')
+                if not model_dump_path:
+                    logger = logging.getLogger()
+                    logger.error("Model dump path not provided!")
+                model_dump_path= pathlib.Path(model_dump_path)
+                if(not model_dump_path.exists() or not model_dump_path.is_dir() or not model_dump_path.is_absolute()):
+                    logger = logging.getLogger()
+                    logger.error("Invalid model dump path - should be an absolute path to a directory!")
+
+                # extract current test name and count from pytest env
+                test = os.getenv('PYTEST_CURRENT_TEST')
+                test = test.split(':')[0]
+                test = test.rsplit('/', 1)[1]
+                test = test.split('.')[0]
+
+                # create dir for test
+                model_dump_path = model_dump_path.joinpath(test)
+                model_dump_path.mkdir(exist_ok=True)
+
+                test_count = os.getenv('PYTEST_CURRENT_TEST')
+                test_count = test_count.rsplit('[', 1)[1]
+                test_count = test_count.split(']', maxsplit=1)[0]
+                test_file_name = test + "_" + str(test_count) + ".tflite"
+                dump_path = model_dump_path.joinpath(test_file_name)
+                import shutil
+                shutil.copyfile(input_path, dump_path)
+
                 output_path = pathlib.Path(dirname) / "output.tflite"
-                cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path),"--xcore-flash-image-file", str(flash_image_file_path)]
+                cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path),"--xcore-flash-image-file",
+                str(flash_image_file_path), "--xcore-thread-count=5"]
                 p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
                 logger = logging.getLogger()
                 logger.debug(p.stdout)

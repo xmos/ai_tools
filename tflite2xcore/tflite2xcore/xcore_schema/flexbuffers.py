@@ -148,7 +148,7 @@ class FlexbufferBuilder:
 
 class FlexbufferParser:
     def __init__(self) -> None:
-        lib.parse_flexbuffer.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
+        lib.parse_flexbuffer.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t]
         lib.parse_flexbuffer.restype = ctypes.c_size_t
 
     def parse(self, buffer: bytes, size: int = 100000) -> Any:

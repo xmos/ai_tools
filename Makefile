@@ -30,14 +30,10 @@ tflite2xcore_dist:
 # integration test targets
 #**************************
 
-.PHONY: integration_test
-integration_test:
-	cd test && pytest integration_test --cache-clear --collect-only -qq
-	cd test && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
-
 .PHONY: xformer2_test
 xformer2_integration_test:
-	cd test && pytest integration_test --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n $(NUM_PROCS) --dist loadfile --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n $(NUM_PROCS) --dist loadfile --junitxml=integration_bnns_junit.xml
 
 #**************************
 # default build and test targets

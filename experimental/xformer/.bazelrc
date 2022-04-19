@@ -1,29 +1,62 @@
-# Clang 9 is required.
-#build --client_env=CC=clang
+# Needed for tensorflow
+build --experimental_repo_remote_exec
 
-# Disable warnings we don't care about.
-#build --copt=-Wno-unused-local-typedef
+# Auto pick OS-specific config
+build --enable_platform_specific_config
 
 # C++14 standard version is required.
-build --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
+build:linux --cxxopt=-std=c++14
+build:linux --host_cxxopt=-std=c++14
+build:macos --cxxopt=-std=c++14
+build:macos --host_cxxopt=-std=c++14
+build:windows --cxxopt=/std:c++14
+build:windows --host_cxxopt=/std:c++14
 
-# Necessary linker options.
-#build --linkopt=-pthread
-#build --linkopt=-ldl
-#build --linkopt=-lm
-#build --host_linkopt=-pthread
-#build --host_linkopt=-ldl
-#build --host_linkopt=-lm
+# Suppress C++ compiler warnings, otherwise build logs become 10s of MBs.
+build:linux --copt=-w
+build:linux --host_copt=-w
+build:macos --copt=-w
+build:windows --copt=/W0
 
-build --experimental_repo_remote_exec
-build --nocheck_visibility
+# Tensorflow uses M_* math constants that only get defined by MSVC headers if
+# _USE_MATH_DEFINES is defined.
+build:windows --copt=/D_USE_MATH_DEFINES
+build:windows --host_copt=/D_USE_MATH_DEFINES
 
-build:darwin_config --linkopt=-framework
-build:darwin_config --linkopt=Foundation
-build:darwin_config --linkopt=-framework
-build:darwin_config --linkopt=SystemConfiguration
-#build:linux_config --linkopt=-lm
-#build:linux_config --linkopt=-lrt
+# Make sure to include as little of windows.h as possible
+build:windows --copt=-DWIN32_LEAN_AND_MEAN
+build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
+build:windows --copt=-DNOGDI
+build:windows --host_copt=-DNOGDI
+
+# MSVC (Windows): Standards-conformant preprocessor mode
+# See https://docs.microsoft.com/en-us/cpp/preprocessor/preprocessor-experimental-overview
+build:windows --copt=/Zc:preprocessor
+build:windows --host_copt=/Zc:preprocessor
+
+# Misc build options we need for windows.
+build:windows --linkopt=/DEBUG
+build:windows --host_linkopt=/DEBUG
+build:windows --linkopt=/OPT:REF
+build:windows --host_linkopt=/OPT:REF
+build:windows --linkopt=/OPT:ICF
+build:windows --host_linkopt=/OPT:ICF
+
+# Verbose failure logs when something goes wrong
+build:windows --verbose_failures
+
+# Work around potential issues with large command lines on windows.
+# See: https://github.com/bazelbuild/bazel/issues/5163
+build:windows --features=compiler_param_file
+
+# On windows, we never cross compile
+build:windows --distinct_host_configuration=false
+
+# Link with these libs only on macos
+build:macos --linkopt=-framework
+build:macos --linkopt=Foundation
+build:macos --linkopt=-framework
+build:macos --linkopt=SystemConfiguration
 
 # Address sanitizer
 # CC=clang bazel build --config asan

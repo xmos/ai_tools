@@ -12,9 +12,8 @@ import os
 # Find path to xcore-opt binary
 here = pathlib.Path(__file__).parent.resolve()
 exe_suffix = ".exe" if platform.system() == "Windows" else ""
-XCOREOPT_BINARY = pathlib.Path.joinpath(
-    here.parent, "bazel-bin", "xcore-opt", exe_suffix
-)
+XCOREOPT_BINARY = pathlib.Path.joinpath(here.parent, "bazel-bin", "xcore-opt")
+XCOREOPT_BINARY = str(XCOREOPT_BINARY) + exe_suffix
 
 # Get the long description from the README file
 LONG_README = (here / "README.md").read_text(encoding="utf-8")
@@ -25,6 +24,7 @@ XTFLM_INTERPRETER_LIBS = [
     "/libs/linux/xtflm_python.so.1.0.1",
     "/libs/macos/xtflm_python.dylib",
     "/libs/macos/xtflm_python.1.0.1.dylib",
+    "/libs/windows/xtflm_python.dll"
 ]
 XTFLM_INTERPRETER_PATH = pathlib.Path.joinpath(
     here.parent.parent.parent,
@@ -106,10 +106,13 @@ setup(
     ],
     python_requires=">=3.7",
     install_requires=REQUIRED_PACKAGES,
-    package_dir={
-        "xmos_ai_tools.xformer": "src/xformer",
-        "xmos_ai_tools.xcore_tflm_host_interpreter": str(XTFLM_INTERPRETER_PATH),
-        "xmos_ai_tools.keras": "src/keras",
+    package_dir={'xmos_ai_tools.xformer': 'src/xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter': str(XTFLM_INTERPRETER_PATH), "xmos_ai_tools.keras": "src/keras",},
+    packages=['xmos_ai_tools.xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter'],  # Required
+    package_data={"": XTFLM_INTERPRETER_LIBS},
+    data_files=[('Scripts' if platform.system() == "Windows" else "bin", [XCOREOPT_BINARY])],
+    cmdclass={
+        'bdist_wheel': bdist_wheel,
+        'install': install_plat_lib,
     },
     packages=[
         "xmos_ai_tools.xformer",

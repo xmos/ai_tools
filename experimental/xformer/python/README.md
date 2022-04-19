@@ -42,7 +42,7 @@ for i in range(num_of_outputs):
 ```
 
 ### Using the Keras Model Validator
-This allows you to check whether you have missed any opportunities to slightly alter your model so that xformer can omtimise the model to better run on xcore.
+This allows you to check whether your model can be optimised by xformer. Refer to [the optimisation notebook](https://github.com/xmos/ai_tools/blob/develop/docs/optimise_for_xcore.ipynb) for details on what optimisations can be made.
 
 #### Parameters:
 

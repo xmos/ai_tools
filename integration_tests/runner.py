@@ -155,14 +155,12 @@ def test_model(request, filename):
                     xformer_outputs[i], output_scales[i], output_zero_points[i]
                 )
             np.set_printoptions(threshold=np.inf)
-            LOGGER.debug("xformer output")
-            LOGGER.debug(xformer_outputs[i])
-            LOGGER.debug("compared output")
-            LOGGER.debug(outputs[i])
+            LOGGER.debug("xformer output :\n{0}".format(xformer_outputs[i]))
+            LOGGER.debug("compared output :\n{0}".format(outputs[i]))
             try:
                 np.testing.assert_allclose(
-                    outputs[i],
                     xformer_outputs[i],
+                    outputs[i],
                     atol=ABSOLUTE_ERROR_TOLERANCE,
                 )
             except Exception as e:
@@ -173,8 +171,8 @@ def test_model(request, filename):
                     xformer_outputs[i],
                     atol=ABSOLUTE_ERROR_TOLERANCE,
                 )
-                LOGGER.error(np.where(d))
-                LOGGER.error(outputs[i][d])
-                LOGGER.error(xformer_outputs[i][d])
+                LOGGER.error("Mismatched element indices :\n{0}".format(np.flatnonzero(d)))
+                LOGGER.error("Mismatched elements from xformer output :\n{0}".format(xformer_outputs[i][d]))
+                LOGGER.error("Mismatched elements from compared output :\n{0}".format(outputs[i][d]))
                 LOGGER.error("Run #" + str(test) + " failed")
     assert num_of_fails == 0

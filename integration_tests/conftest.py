@@ -26,5 +26,4 @@ def pytest_generate_tests(metafunc):
     models_path = metafunc.config.getoption("models_path")
     filelist = glob.glob(str(models_path) + "/**/*.tflite", recursive=True)
     metafunc.parametrize("filename", filelist)
-    # if "stringinput" in metafunc.fixturenames:
-    #     metafunc.parametrize("stringinput", metafunc.config.getoption("stringinput"))
+

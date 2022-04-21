@@ -1,7 +1,7 @@
 import pathlib
 import logging
-from re import L
 import tempfile
+from _pytest.fixtures import FixtureRequest
 import numpy as np
 import os
 import subprocess
@@ -20,11 +20,11 @@ XFORMER2_PATH = (
 )
 
 
-def dequantize(arr: np.ndarray, scale: float, zero_point: int) -> np.ndarray:
+def dequantize(arr: np.ndarray, scale: float, zero_point: int) -> np.float32:
     return np.float32(arr.astype(np.int32) - np.int32(zero_point)) * np.float32(scale)
 
 
-def get_xformed_model(model) -> bytes:
+def get_xformed_model(model: bytes) -> bytes:
     with tempfile.TemporaryDirectory(suffix=str(os.getpid())) as dirname:
         input_path = pathlib.Path(dirname) / "input.tflite"
 
@@ -53,7 +53,7 @@ def get_xformed_model(model) -> bytes:
 
 
 # Run the model on Larq/TFLite interpreter and compare the output with xformed model on XCore TFLM
-def test_model(request, filename):
+def test_model(request: FixtureRequest, filename: str) -> None:
     if not XFORMER2_PATH.exists():
         LOGGER.error(
             "xcore-opt not found! Please build xformer before running integration tests!"
@@ -104,7 +104,9 @@ def test_model(request, filename):
         # input_tensor = np.array(
         #     np.random.uniform(-1, 1, input_tensor_shape), dtype=input_tensor_type
         # )
-        input_tensor = np.array(100 * np.random.random_sample(input_tensor_shape), dtype=input_tensor_type)
+        input_tensor = np.array(
+            100 * np.random.random_sample(input_tensor_shape), dtype=input_tensor_type
+        )
         # input_tensor = np.array(
         #    100 * np.ones(input_tensor_shape), dtype=input_tensor_type
         # )
@@ -171,8 +173,18 @@ def test_model(request, filename):
                     xformer_outputs[i],
                     atol=ABSOLUTE_ERROR_TOLERANCE,
                 )
-                LOGGER.error("Mismatched element indices :\n{0}".format(np.flatnonzero(d)))
-                LOGGER.error("Mismatched elements from xformer output :\n{0}".format(xformer_outputs[i][d]))
-                LOGGER.error("Mismatched elements from compared output :\n{0}".format(outputs[i][d]))
+                LOGGER.error(
+                    "Mismatched element indices :\n{0}".format(np.flatnonzero(d))
+                )
+                LOGGER.error(
+                    "Mismatched elements from xformer output :\n{0}".format(
+                        xformer_outputs[i][d]
+                    )
+                )
+                LOGGER.error(
+                    "Mismatched elements from compared output :\n{0}".format(
+                        outputs[i][d]
+                    )
+                )
                 LOGGER.error("Run #" + str(test) + " failed")
     assert num_of_fails == 0

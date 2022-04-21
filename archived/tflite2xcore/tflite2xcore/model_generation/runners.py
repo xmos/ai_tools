@@ -144,8 +144,9 @@ class Runner(ABC):
         example_idx = [example_idx] if isinstance(example_idx, int) else example_idx
         for key, arr in data.items():
             for j in example_idx:
-                with open(dirpath / f"example_{j}.{key}", "wb") as f:
-                    f.write(np.array(arr[j]).tobytes())
+                np.save(dirpath / f"example_{j}.{key}", arr[j])
+                # with open(dirpath / f"example_{j}.{key}", "wb") as f:
+                #     f.write(np.array(arr[j]).tobytes())
 
 
 class RunnerDependent(ABC):

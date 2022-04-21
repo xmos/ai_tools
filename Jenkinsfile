@@ -55,7 +55,7 @@ pipeline {
                 // create venv and install pip packages
                 sh "conda env create -q -p ai_tools_venv -f ./environment.yml"
                 sh """. activate ./ai_tools_venv &&
-                      pip install -e "./tflite2xcore[test,examples]"
+                      pip install -r requirements.txt"
                 """
                 // Install xmos tools version
                 sh "/XMOS/get_tools.py " + params.TOOLS_VERSION

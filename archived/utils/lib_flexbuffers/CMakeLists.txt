@@ -16,7 +16,8 @@ set(AI_TOOLS_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
 #**********************
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_C_FLAGS "-std=c99")
+set(CMAKE_CXX_FLAGS "-g -O0")
+set(CMAKE_C_FLAGS "-std=c99 -g -O0")
 
 #**********************
 # Build shared library

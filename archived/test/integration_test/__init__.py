@@ -198,6 +198,7 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         self._reference_float_evaluator.evaluate()
 
         self.rerun_post_cache()
+        self.dump(dirpath=Path("/Users/deepakpanickal/code/ai_tools/temp"), example_idx=1)
 
     def rerun_post_cache(self) -> None:
         super().rerun_post_cache()
@@ -222,8 +223,8 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         dump_models: bool = True,
         dump_visualizations: bool = True,
     ) -> None:
-        if dump_models:
-            self.dump_models(dirpath, visualize=dump_visualizations)
+        # if dump_models:
+        #     self.dump_models(dirpath, visualize=dump_visualizations)
 
         self.dump_data(
             dirpath,
@@ -374,7 +375,13 @@ def _compare_batched_arrays(
     for j, (arr, arr_ref, diff) in enumerate(zip(predicted, expected, diffs)):
         __log_deviations(diff, logging.DEBUG, msg=f"Example {j}")
         abs_diff = np.abs(diff)
+        logger = logging.getLogger()
         diff_idx = zip(*np.where(abs_diff > tolerance))
+        logger.log(logging.INFO, abs_diff)
+        logger.log(logging.INFO, tolerance)
+        logger.log(logging.INFO, list(diff_idx))
+
+
         failed_elements = [
             FailedElement(idx, diff[idx], arr_ref[idx], arr[idx]) for idx in diff_idx
         ]

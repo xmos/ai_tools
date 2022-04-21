@@ -1,12 +1,21 @@
 AI/ML tools repository
 ======================
 
-Summary
--------
-
-
 Installation
 ------------
+xmos-ai-tools is available on [PyPi](https://pypi.org/project/xmos-ai-tools/).
+It includes the MLIR-based XCore transformer(xformer) to optimize Tensorflow Lite models for XCore, and the XCore tflm interpreter to run the transformed models on host.
+It can be installed with the following command:
+```shell
+pip install xmos-ai-tools
+```
+If you want to install the latest development version, use:
+```shell
+pip install xmos-ai-tools --pre
+```
+
+Building xmos-ai-tools
+----------------------
 Some dependent libraries are included as git submodules.
 These can be obtained by cloning this repository with the following commands:
 ```shell
@@ -25,17 +34,12 @@ conda env create -p ./ai_tools_venv -f environment.yml
 conda activate ai_tools_venv/
 ```
 
-If installing on a machine with CUDA GPUs, follow the instructions at https://www.tensorflow.org/install/gpu#software_requirements to install the necessary drivers and libraries.
-```shell
-TODO: add and test instructions for GPU builds.
-```
-
 Build the libraries with default settings (see the [`Makefile`](Makefile) for more), run:
 ```shell
 make build
 ```
 
-Install the `xcore_interpreters` and `tflite2xcore` python packages using `pip` (preferably inside a venv):
+Install the `xcore_interpreters` python packages using `pip` (inside the conda venv):
 ```shell
 pip install -e "./third_party/lib_tflite_micro/xtflm_interpreter"
 pip install -e "./tflite2xcore[examples]"

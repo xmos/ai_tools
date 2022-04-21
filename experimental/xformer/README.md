@@ -4,16 +4,10 @@ Build instructions
 `Bazel` is used to build this program. The choice of build system is
 driven by the most complex dependency (Tensorflow). 
 
-Note before the first step ensure that you have installed the 
-`xcore_interpreters` and `tflite2xcore` python packages using 
-`pip`. This will ensure that the python requirements are installed.
-
-Also, before installing make sure that you have updated ai_tools
-including the submodules:
-
-    git pull
-    git submodule update --init --recursive
-
+Note before the first step ensure that you are in the conda venv as 
+mentioned [here](https://github.com/xmos/ai_tools#readme) and 
+have followed all steps including installing the necessary Python 
+packages from `requirements.txt`.
 
 With Bazel installed (check `.bazelversion` for current version),
 you can build with the following command (make sure you run it 

@@ -25,30 +25,32 @@ def dequantize(arr: np.ndarray, scale: float, zero_point: int) -> np.float32:
 
 
 def get_xformed_model(model: bytes) -> bytes:
-    with tempfile.TemporaryDirectory(suffix=str(os.getpid())) as dirname:
-        input_path = pathlib.Path(dirname) / "input.tflite"
+    # write input model to temporary file
+    input_file = tempfile.NamedTemporaryFile(delete=False)
+    input_file.write(model)
+    input_file.close()
+    # create another temp file for output model
+    output_file = tempfile.NamedTemporaryFile(delete=False)
+    cmd = [
+        str(XFORMER2_PATH),
+        str(input_file.name),
+        "-o",
+        str(output_file.name),
+        "--xcore-thread-count=5",
+        # "--xcore-replace-avgpool-with-conv2d",
+        # "--xcore-replace-with-conv2dv2",
+        # "--xcore-translate-to-customop"
+    ]
+    p = subprocess.run(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
+    )
+    LOGGER.info(p.stdout)
 
-        with open(pathlib.Path(input_path).resolve(), "wb") as fd:
-            fd.write(model)
-
-        output_path = pathlib.Path(dirname) / "output.tflite"
-        cmd = [
-            str(XFORMER2_PATH),
-            str(input_path),
-            "-o",
-            str(output_path),
-            "--xcore-thread-count=5",
-            # "--xcore-replace-avgpool-with-conv2d",
-            # "--xcore-replace-with-conv2dv2",
-            # "--xcore-translate-to-customop"
-        ]
-        p = subprocess.run(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
-        )
-        LOGGER.info(p.stdout)
-
-        with open(pathlib.Path(output_path).resolve(), "rb") as fd:
-            bits = bytes(fd.read())
+    # read output model content
+    bits = bytes(output_file.read())
+    output_file.close()
+    os.remove(input_file.name)
+    os.remove(output_file.name)
     return bits
 
 

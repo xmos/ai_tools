@@ -56,6 +56,12 @@ def get_xformed_model(model: bytes) -> bytes:
 
 # Run the model on Larq/TFLite interpreter and compare the output with xformed model on XCore TFLM
 def test_model(request: FixtureRequest, filename: str) -> None:
+    # for attaching a debugger
+    if request.config.getoption("s"):
+        import time
+
+        time.sleep(5)
+
     if not XFORMER2_PATH.exists():
         LOGGER.error(
             "xcore-opt not found! Please build xformer before running integration tests!"

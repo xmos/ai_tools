@@ -4,6 +4,12 @@ import pathlib
 
 def pytest_addoption(parser):
     parser.addoption(
+        "--s",
+        default=False,
+        action="store_true",
+        help="sleep for five seconds to attach a debugger",
+    )
+    parser.addoption(
         "--bnn", default=False, action="store_true", help="run binarized models"
     )
     parser.addoption(

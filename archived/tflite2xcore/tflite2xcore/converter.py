@@ -15,7 +15,7 @@ from tflite2xcore import transformation_passes as passes
 
 
 XFORMER2_PATH = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[3]
     / "experimental"
     / "xformer"
     / "bazel-bin"

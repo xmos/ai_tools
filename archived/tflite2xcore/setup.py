@@ -56,7 +56,7 @@ setuptools.setup(
     license="LICENSE.txt",
     keywords="xmos xcore",
     use_scm_version={
-        "root": "..",
+        "root": "../..",
         "relative_to": __file__,
         "version_scheme": "post-release",
     },

@@ -198,7 +198,6 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         self._reference_float_evaluator.evaluate()
 
         self.rerun_post_cache()
-        self.dump(dirpath=Path("/Users/deepakpanickal/code/ai_tools/temp"), example_idx=1)
 
     def rerun_post_cache(self) -> None:
         super().rerun_post_cache()

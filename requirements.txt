@@ -1,6 +1,6 @@
 numpy==1.19.2; platform_machine != 'arm64'
 tensorflow==2.6.2; platform_machine != 'arm64'
-numpy==1.22.3; sys_platform == 'darwin' and platform_machine == 'arm64'
+numpy==1.21.0; sys_platform == 'darwin' and platform_machine == 'arm64'
 tensorflow-macos==2.8.0; sys_platform == 'darwin' and platform_machine == 'arm64'
 pkgconfig==1.5.5
 pytest==7.0.1

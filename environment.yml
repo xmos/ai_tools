@@ -3,7 +3,8 @@ channels:
   - defaults
 dependencies:
   - bazel=4.0.0
-  - patch=2.7.5
-  - cmake=3.14.0
+  - patch=2.7.6
+  - cmake=3.22.3
   - make=4.2.1
   - python=3.8
+  - h5py=3.6.0

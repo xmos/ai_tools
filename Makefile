@@ -11,47 +11,23 @@ xcore_interpreters_build:
 	cd third_party/lib_tflite_micro/ && make build
 
 #**************************
-# tflite2xcore targets
-#**************************
-
-.PHONY: lib_flexbuffers_build
-lib_flexbuffers_build:
-	cd utils/lib_flexbuffers && bash build.sh
-
-.PHONY: tflite2xcore_unit_test
-tflite2xcore_unit_test:
-	tflite2xcore/tflite2xcore/tests/runtests.py tflite2xcore/tflite2xcore/tests -n $(NUM_PROCS) --junit
-
-.PHONY: tflite2xcore_dist
-tflite2xcore_dist:
-	cd tflite2xcore && bash build_dist.sh
-
-#**************************
 # integration test targets
 #**************************
 
-.PHONY: integration_test
-integration_test:
-	cd test && pytest integration_test --cache-clear --collect-only -qq
-	cd test && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
-
 .PHONY: xformer2_test
 xformer2_integration_test:
-	cd test && pytest integration_test --cache-clear --collect-only -qq
-	# conv2d tests
-	cd test && pytest integration_test/test_single_op_models/test_conv2d --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
-	# bnn tests
-	cd test && pytest integration_test/test_single_op_models/test_binarized --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n $(NUM_PROCS) --dist loadfile --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n $(NUM_PROCS) --dist loadfile --junitxml=integration_bnns_junit.xml
 
 #**************************
 # default build and test targets
 #**************************
 
 .PHONY: build
-build: lib_flexbuffers_build xcore_interpreters_build
+build: xcore_interpreters_build
 
 .PHONY: test
-test: tflite2xcore_unit_test integration_test
+test: xformer2_integration_test
 
 #**************************
 # other targets
@@ -64,7 +40,6 @@ submodule_update:
 .PHONY: clean
 clean:
 	cd third_party/lib_tflite_micro/ && make clean
-	rm -rf utils/lib_flexbuffers/build
 
 .PHONY: help
 help:
@@ -74,16 +49,12 @@ help:
 	$(info )
 	$(info primary targets:)
 	$(info   build                         Build all components)
-	$(info   test                          Run all tests (requires tflite2xcore[test] package))
+	$(info   test                          Run all tests)
 	$(info   clean                         Clean all build artifacts)
 	$(info )
 	$(info secondary targets:)
-	$(info   lib_flexbuffers_build         Build lib_flexbuffers)
 	$(info   xcore_interpreters_build      Build xcore_interpreters)
-	$(info   tflite2xcore_unit_test        Run tflite2xcore unit tests (requires tflite2xcore[test] package))
-	$(info   tflite2xcore_dist             Build tflite2xcore distribution (requires tflite2xcore[test] package))
-	$(info   integration_test              Run integration tests (requires tflite2xcore[test] package))
-	$(info   xformer2_test                 Run integration tests with xformer2 (experimental requires tflite2xcore[test] package))
+	$(info   xformer2_integration_test     Run integration tests with xformer2)
 	$(info )
 
 .PHONY: init_linux
@@ -142,14 +113,11 @@ build_release_windows:
 	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Windows/External/xformer
 
 TEST_SCRIPT= \
-(cd utils/lib_flexbuffers && bash build.sh) && \
-make tflite2xcore_dist&& \
-pip install -e "./tflite2xcore[test]"&& \
 (cd third_party/lib_tflite_micro/ && make build)&& \
 pip install -e "./third_party/lib_tflite_micro/xtflm_interpreter[test]"&& \
 (cd experimental/xformer && ../../bazel/bin/bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures)&& \
-(cd test && pytest integration_test --cache-clear --collect-only -qq&& \
-pytest integration_test/test_single_op_models/test_conv2d --only-experimental-xformer2 -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml)
+(pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n $(NUM_PROCS) --dist loadfile --junitxml=integration_non_bnns_junit.xml)&& \
+(pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n $(NUM_PROCS) --dist loadfile --junitxml=integration_bnns_junit.xml)
 
 .PHONY: test_linux
 test_linux:

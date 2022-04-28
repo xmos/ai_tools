@@ -7,7 +7,7 @@ import os
 import subprocess
 import larq_compute_engine as lce
 import tensorflow as tf
-from xtflm_interpreter import XTFLMInterpreter
+from xinterpreters import XCORE_TFLM_Host_Interpreter
 
 # This error tolerance works for the models we have currently
 # The maximum error we see is 1.037735
@@ -101,7 +101,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     LOGGER.info("Invoking xformer to get xformed model...")
     xformed_model = get_xformed_model(model_content)
     LOGGER.info("Creating TFLM XCore interpreter...")
-    ie = XTFLMInterpreter(model_content=xformed_model)
+    ie = XCORE_TFLM_Host_Interpreter()
+    ie.set_model(model_content = xformed_model)
 
     # Run tests
     num_of_fails = 0

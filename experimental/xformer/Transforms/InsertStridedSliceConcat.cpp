@@ -1,9 +1,6 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include "IR/XCoreOps.h"
-
-#include "lib_nn/api/MemCpyFn.hpp"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
@@ -22,29 +19,40 @@ struct InsertStridedSliceConcat
 };
 
 struct InsertStridedSliceConcatPattern
-    : public OpRewritePattern<TFL::StridedSliceOp> {
-  using OpRewritePattern<TFL::StridedSliceOp>::OpRewritePattern;
+    : public OpRewritePattern<TFL::Conv2DOp> {
+  using OpRewritePattern<TFL::Conv2DOp>::OpRewritePattern;
 
-  
+  LogicalResult matchAndRewrite(TFL::Conv2DOp conv2DOp,
+                                  PatternRewriter &rewriter) const override {
+                                    
+    auto 
+
+    auto newConv2DOp = rewriter.create<TFL::Conv2DOp>(
+        conv2DOp.getloc(), conv2DOp.gettype(),conv2DOp.input()
+        );
+    rewriter.replaceop(conv2DOp,newConv2DOp.output());
+
+    return success();
+  } 
 };
 
-void InsertStridedSliceConcat::runOnFunction() {
-  auto *ctx = &getContext();
-  auto func = getFunction();
+void InsertStridedSliceConcat::runonfunction() {
+  auto *ctx = &getcontext();
+  auto func = getfunction();
   OwningRewritePatternList patterns(ctx);
   patterns.insert<InsertStridedSliceConcatPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
-// Creates an instance of the InsertStridedSliceConcat pass.
-std::unique_ptr<OperationPass<FuncOp>> createInsertStridedSliceConcatPass() {
-  return std::make_unique<InsertStridedSliceConcat>();
+// creates an instance of the insertstridedsliceconcat pass.
+std::unique_ptr<operationpass<funcop>> createinsertstridedsliceconcatpass() {
+  return std::make_unique<insertstridedsliceconcat>();
 }
 
-static PassRegistration<InsertStridedSliceConcat>
+static passregistration<insertstridedsliceconcat>
     pass("xcore-insert-stridedslice-concat",
-         "Insert TFL StridedSlice and TFL Concat.");
+         "insert tfl stridedslice and tfl concat.");
 
 } // namespace xcore
 } // namespace mlir

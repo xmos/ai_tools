@@ -123,7 +123,8 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
       std::back_inserter(resultVector), [&](double n) {
         int32_t t =
             static_cast<int32_t>(round(n / outputScale)) + outputZeroPoint;
-        return static_cast<int8_t>(std::max({std::min({(int8_t)t, (int8_t)INT8_MAX}), (int8_t)INT8_MIN}));
+        return static_cast<int8_t>(std::max(
+            {std::min({(int8_t)t, (int8_t)INT8_MAX}), (int8_t)INT8_MIN}));
       });
 
   ShapedType lookupTableType =

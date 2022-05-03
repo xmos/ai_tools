@@ -28,6 +28,23 @@ std::vector<uint8_t> StridedSliceOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> PageOutOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("size", (int32_t)size()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
+std::vector<uint8_t> PageInOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() {
+    fbb.Int("addr", (int32_t)address());
+    fbb.Int("size", (int32_t)size());
+  });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
@@ -110,6 +127,8 @@ void TranslateToCustomOp::runOnFunction() {
   patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<StridedSliceOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<PageInOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<PageOutOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

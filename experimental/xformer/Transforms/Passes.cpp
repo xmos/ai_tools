@@ -17,11 +17,12 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   // Larq dialect
   pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
   pm.addPass(createApplyTFLPatternsPass());
+  pm.addPass(createApplyPagingPass());
   pm.addPass(createReplaceStridedSlicePass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
-  pm.addPass(createPad3to4Conv2DPass());
-  pm.addPass(createReplaceConv2DPass());
+  // pm.addPass(createPad3to4Conv2DPass());
+  // pm.addPass(createReplaceConv2DPass());
   pm.addPass(createApplyXCPatternsPass());
   // Add to pipeline only if flash image file option is provided
   if (!flashImageFilenameOption.empty()) {

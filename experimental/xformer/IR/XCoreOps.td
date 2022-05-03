@@ -203,4 +203,24 @@ def XC_Bsign8Op : XC_Op<"bsign_8", [NoSideEffect]> {
   let results = (outs TensorOf<[I32]> : $output);
 }
 
+def XC_PageInOp : XC_Op<"page_in", [NoSideEffect]> {
+  let summary = "Page in op";
+
+  let description = [{Page in op.}];
+
+  let arguments = (ins TensorOf<[I32]> : $input, I32Attr : $address, I32Attr : $size);
+
+  let results = (outs AnyTensor : $output);
+}
+
+def XC_PageOutOp : XC_Op<"page_out"> {
+  let summary = "Page out op";
+
+  let description = [{Page out op.}];
+
+  let arguments = (ins AnyTensor : $input, I32Attr : $size);
+
+  let results = (outs TensorOf<[I32]> : $output);
+}
+
 #endif // XCORE_DIALECT

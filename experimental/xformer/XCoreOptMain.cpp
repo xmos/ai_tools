@@ -181,9 +181,14 @@ int main(int argc, char **argv) {
 
     // Prepare metadata
     auto module = mod.get();
-    int requiredThreadCount = module->getAttr(xcRequiredThreadCountAttrName)
-                                  .cast<mlir::IntegerAttr>()
-                                  .getInt();
+    // If required thread count attr has been added to the module, use that or
+    // else use the value from the thread count option
+    auto requiredThreadCountAttr =
+        module->getAttr(xcRequiredThreadCountAttrName);
+    int requiredThreadCount =
+        requiredThreadCountAttr
+            ? requiredThreadCountAttr.cast<mlir::IntegerAttr>().getInt()
+            : mlir::xcore::threadCountOption;
 
     struct shared_config::xcore_metadata cfg;
     // Store version info

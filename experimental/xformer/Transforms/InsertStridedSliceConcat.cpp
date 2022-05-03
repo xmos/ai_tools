@@ -23,36 +23,48 @@ struct InsertStridedSliceConcatPattern
   using OpRewritePattern<TFL::Conv2DOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TFL::Conv2DOp conv2DOp,
-                                  PatternRewriter &rewriter) const override {
-                                    
-    auto 
+                                PatternRewriter &rewriter) const override {
+
+    bool op_spilt = true;
 
     auto newConv2DOp = rewriter.create<TFL::Conv2DOp>(
-        conv2DOp.getloc(), conv2DOp.gettype(),conv2DOp.input()
+        conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(),
+        conv2DOp.filter(),
+        conv2DOp.bias(),
+        conv2DOp.dilation_h_factor(),
+        conv2DOp.dilation_w_factor(),
+        conv2DOp.fused_activation_function(),
+        conv2DOp.padding(),
+        conv2DOp.stride_h(),
+        conv2DOp.stride_w(),
+        conv2DOp.
         );
-    rewriter.replaceop(conv2DOp,newConv2DOp.output());
+    
+    
+
+    rewriter.replaceOp(conv2DOp, newConv2DOp.output());
 
     return success();
-  } 
+  }
 };
 
-void InsertStridedSliceConcat::runonfunction() {
-  auto *ctx = &getcontext();
-  auto func = getfunction();
+void InsertStridedSliceConcat::runOnFunction() {
+  auto *ctx = &getContext();
+  auto func = getFunction();
   OwningRewritePatternList patterns(ctx);
   patterns.insert<InsertStridedSliceConcatPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
-// creates an instance of the insertstridedsliceconcat pass.
-std::unique_ptr<operationpass<funcop>> createinsertstridedsliceconcatpass() {
-  return std::make_unique<insertstridedsliceconcat>();
+// Creates an instance of the InsertStridedSliceConcat pass.
+std::unique_ptr<OperationPass<FuncOp>> createInsertStridedSliceConcatPass() {
+  return std::make_unique<InsertStridedSliceConcat>();
 }
 
-static passregistration<insertstridedsliceconcat>
-    pass("xcore-insert-stridedslice-concat",
-         "insert tfl stridedslice and tfl concat.");
+static PassRegistration<InsertStridedSliceConcat>
+    pass("insert-stridedslice-concat",
+         "InsertStridedSliceConcat.");
 
 } // namespace xcore
 } // namespace mlir

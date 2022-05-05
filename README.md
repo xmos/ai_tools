@@ -47,7 +47,7 @@ make build
 Install the necessary python packages and the `xtftlm_interpreter` python package using `pip` (inside the conda venv):
 ```shell
 pip install -r "./requirements.txt"
-pip install -e "./third_party/lib_tflite_micro/xtflm_interpreter"
+pip install -e "./third_party/lib_tflite_micro/xinterpreters"
 ```
 
 After following the above instructions, to build xformer, please follow the build instructions [here](https://github.com/xmos/ai_tools/tree/develop/experimental/xformer#readme)

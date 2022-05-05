@@ -24,7 +24,7 @@ pipeline {
 
     options { // plenty of things could go here
         timestamps()
-	// on develop discard builds after a certain number else keep forever
+    // on develop discard builds after a certain number else keep forever
         buildDiscarder(logRotator(
             numToKeepStr:         env.BRANCH_NAME ==~ /develop/ ? '100' : '',
             artifactNumToKeepStr: env.BRANCH_NAME ==~ /develop/ ? '100' : ''
@@ -81,17 +81,17 @@ pipeline {
                       bazel build --client_env=CC=clang --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
                 """
                 sh """. activate ./ai_tools_venv &&
-                      pip install -e "./third_party/lib_tflite_micro/xtflm_interpreter[test]"
+                      pip install -e "./third_party/lib_tflite_micro/xinterpreters"
                 """
             }
         }
         stage("Test") {
             steps {
                 // xformer2 unit tests
-		sh """. activate ./ai_tools_venv && cd experimental/xformer &&
+        sh """. activate ./ai_tools_venv && cd experimental/xformer &&
                       bazel test --client_env=CC=clang --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures
                 """
-		// xformer2 integration tests
+        // xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&
                       make xformer2_integration_test NUM_PROCS=8
                 """

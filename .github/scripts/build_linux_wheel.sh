@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -e -x
 
-pip install cmake
+pip install cmake setuptools-scm
+pip list
 cd third_party/lib_tflite_micro
 # Use gcc7 toolchain from the docker file to build tflm_interpreter
 #CC=/dt7/usr/bin/gcc CXX=/dt7/usr/bin/g++ make build

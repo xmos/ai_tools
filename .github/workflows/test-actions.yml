@@ -8,9 +8,9 @@ on:
         required: true
 
 jobs:
-  windows-release-wheel:
-    name: Build release wheels for windows
-    runs-on: windows-2019
+  manylinux-release-wheel:
+    name: Build release wheels for manylinux2010
+    runs-on: ubuntu-18.04
     strategy:
       matrix:
         python-version: [3.8]
@@ -30,53 +30,40 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-          ref: feature/buildwindows
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Configure pagefile
-        uses: al-cheb/configure-pagefile-action@v1.2
-        with:
-          minimum-size: 10GB
-          maximum-size: 20GB
-      - name: Set up pagefile
-        shell: pwsh
+      - name: Build manylinux2010 wheels
+        # The XMOS_AI_TOOLS_RELEASE_VERSION var is passed via docker to the
+        # python setup.py script to add the version info for the wheel file.
+        #
+        # auditwheel requires patchelf and repairs the created wheel file to 
+        # be compatible for manylinux.
         run: |
-          (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
-      - name: Build xcore-opt and xtflm-interpreter
-        shell: cmd
-        run: |
-          python --version
-          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
-          python -c "import sys; print(sys.executable)"
+          docker run \
+            -v ${PWD}:/ai_tools -w /ai_tools \
+            tensorflow/build:latest-python${{ matrix.python-version }} \
+            .github/scripts/build_linux_wheel.sh
           
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          
-          cd third_party/lib_tflite_micro/xtflm_interpreter
-          mkdir -p build
-          cd build
-          cmake ..
-          cmake --build . -t install --parallel --config Release
-                              
-          cd ../../../../experimental/xformer
-          set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"  
-      - name: Build windows wheels
-        shell: cmd
-        run: |
+          sudo apt-get -y -qq install patchelf --no-install-recommends
+          python -m pip install auditwheel --no-cache-dir
           cd experimental/xformer/python
-          python setup.py bdist_wheel
+          for f in dist/*.whl; do
+            auditwheel repair --plat manylinux2010_x86_64 $f
+          done
+          
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
-          path: experimental/xformer/python/dist
+          # auditwheel creates the output wheel in the wheelhouse folder
+          path: experimental/xformer/python/wheelhouse
 
 
 
   publish-wheels:
     name: Publish wheels to TestPyPi
     if: ${{ always() }}
-    needs: [windows-release-wheel]
+    needs: [manylinux-release-wheel]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2

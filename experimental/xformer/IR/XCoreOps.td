@@ -67,21 +67,6 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
 
   let description = [{Strided Slice op.}];
 
-   let arguments = (ins
-    TensorOf<[QI8]>:$input,
-    TensorOf<[I32]>:$begin,
-    TensorOf<[I32]>:$end,
-    TensorOf<[I32]>:$strides
-  );
-
-  let results = (outs TensorOf<[QI8]> : $output);
-}
-
-def XC_StridedSliceV3Op : XC_Op<"strided_slice_v3", [NoSideEffect]> {
-  let summary = "Strided Slice V3 op";
-
-  let description = [{Strided Slice V3 op.}];
-
   let arguments = (ins
     TensorOf<[QI8]>:$input,
 
@@ -217,7 +202,5 @@ def XC_Bsign8Op : XC_Op<"bsign_8", [NoSideEffect]> {
 
   let results = (outs TensorOf<[I32]> : $output);
 }
-
-
 
 #endif // XCORE_DIALECT

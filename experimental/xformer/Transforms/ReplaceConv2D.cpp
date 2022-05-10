@@ -171,7 +171,7 @@ void ReplaceConv2D::runOnFunction() {
   // This is stored as an attribute in the module and pushed as metadata into
   // the flatbuffer
   // TODO: When we multithread other ops, this can be moved into its own pass
-  int requiredThreadCount = -1;
+  int requiredThreadCount = 1;
   func.walk([&](Conv2DV2Op op) {
     int threadCount = op.thread_count();
     if (threadCount > requiredThreadCount) {

@@ -1,12 +1,26 @@
 AI/ML tools repository
 ======================
 
-Summary
--------
-
-
 Installation
 ------------
+`xmos-ai-tools` is available on [PyPi](https://pypi.org/project/xmos-ai-tools/).
+It includes:
+- the MLIR-based XCore optimizer(xformer) to optimize Tensorflow Lite models for XCore
+- the XCore tflm interpreter to run the transformed models on host
+
+It can be installed with the following command:
+```shell
+pip install xmos-ai-tools
+```
+If you want to install the latest development version, use:
+```shell
+pip install xmos-ai-tools --pre
+```
+
+Installing `xmos-ai-tools` will make the `xcore-opt` binary available in your shell to use directly, or you can use the Python interface as detailed [here](https://pypi.org/project/xmos-ai-tools/).
+
+Building xmos-ai-tools
+----------------------
 Some dependent libraries are included as git submodules.
 These can be obtained by cloning this repository with the following commands:
 ```shell
@@ -25,60 +39,15 @@ conda env create -p ./ai_tools_venv -f environment.yml
 conda activate ai_tools_venv/
 ```
 
-If installing on a machine with CUDA GPUs, follow the instructions at https://www.tensorflow.org/install/gpu#software_requirements to install the necessary drivers and libraries.
-```shell
-TODO: add and test instructions for GPU builds.
-```
-
-Build the libraries with default settings (see the [`Makefile`](Makefile) for more), run:
+Build the XCore host tflm interpreter libraries with default settings (see the [`Makefile`](Makefile) for more), run:
 ```shell
 make build
 ```
 
-Install the `xcore_interpreters` and `tflite2xcore` python packages using `pip` (preferably inside a venv):
+Install the necessary python packages and the `xtftlm_interpreter` python package using `pip` (inside the conda venv):
 ```shell
+pip install -r "./requirements.txt"
 pip install -e "./third_party/lib_tflite_micro/xtflm_interpreter"
-pip install -e "./tflite2xcore[examples]"
 ```
 
-To be able to run pytest(Integration tests)
-```shell
-pip install -e "./tflite2xcore[test]"
-```
-
-Docker Image
-------------
-
-The Dockerfile provided is used in the CI system but can serve as a guide to system setup.
-Installation of the XMOS tools requires connection to our network.
-
-```shell
-docker build -t xmos/ai_tools .
-docker run -it \
-    -v $(pwd):/ws \
-    -u $(id -u):$(id -g)  \
-    -w /ws  \
-    xmos/ai_tools \
-    bash -l
-```
-
-Note that this container will stop when you exit the shell
-For a persistent container:
- - add `-d` to the docker run command to start detached;
- - add `--name somename`;
- - enter with `docker exec -it somename bash -l`;
- - stop with `docker stop somename`.
-
-Then inside the container
-```shell
-# setup environment
-conda env create -p ai_tools_venv -f utils/environment.yml
-/XMOS/get_tools.py 15.0.6
-conda activate ./ai_tools_venv
-pip install -e "./third_party/lib_tflite_micro/xtflm_interpreter[test]"
-pip install -e "./tflite2xcore[examples,test,dev]"
-# activate tools (each new shell)
-module load tools/15.0.6
-# build all and run tests
-make build test
-```
+After following the above instructions, to build xformer, please follow the build instructions [here](https://github.com/xmos/ai_tools/tree/develop/experimental/xformer#readme)

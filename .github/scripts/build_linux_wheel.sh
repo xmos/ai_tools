@@ -2,6 +2,11 @@
 set -e -x
 
 pip install cmake
+# Have to add this option due to https://github.com/actions/checkout/issues/760
+# and https://github.blog/2022-04-12-git-security-vulnerability-announced/
+# This was preventing setuptools-scm from detecting the version as it uses git
+git config --global --add safe.directory /ai_tools
+git describe --tags
 cd third_party/lib_tflite_micro
 # Use gcc7 toolchain from the docker file to build tflm_interpreter
 CC=/dt7/usr/bin/gcc CXX=/dt7/usr/bin/g++ make build

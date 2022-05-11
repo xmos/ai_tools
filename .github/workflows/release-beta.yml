@@ -189,7 +189,7 @@ jobs:
         shell: pwsh
         run: |
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
-      - name: Build xcore-opt and xtflm-interpreter
+      - name: Build xcore-opt and xinterpreters
         shell: cmd
         run: |
           python --version
@@ -200,7 +200,7 @@ jobs:
           
           cd third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
           patch -p0 < ../../../patches/tflite-micro.patch
-          cd ../../../xtflm_interpreter
+          cd ../../../xinterpreters
           mkdir -p build
           cd build
           cmake ..

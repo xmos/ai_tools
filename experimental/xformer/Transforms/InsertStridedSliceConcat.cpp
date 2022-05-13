@@ -111,15 +111,12 @@ struct InsertStridedSliceConcatPattern
 
     memcpyFnParam = strParams[0];
 
-    rewriter.setInsertionPointAfter(conv2DOp);
-
-    auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceV3Op>(
+    auto stridedSliceOp = rewriter.create<StridedSliceOp>(
         conv2DOp.getLoc(),conv2DOp.getType(),conv2DOp.output(),
         rewriter.getI32IntegerAttr(begin_x),
         rewriter.getI32IntegerAttr(begin_y),
         rewriter.getStringAttr(memcpyFnParam));
 
-    // rewriter.insert(binaryObjectStridedSliceOp);
 
     return success();
   }

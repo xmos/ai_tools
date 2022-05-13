@@ -86,3 +86,19 @@ def : Pat<(TFL_ReshapeOp
 
 // Replace LQ_QuantizeOp with XC_bsign_8
 def : Pat<(LQ_QuantizeOp $input), (XC_Bsign8Op $input)>;
+
+def getMemcpyFnParam : NativeCodeCall<"getMemcpyFnParam($0)">;
+
+def getI32IntegerAttrZero : NativeCodeCall<"getI32IntegerAttrZero">;
+
+def HasNoFollowingStridedSlice : Constraint<CPred<"HasNoFollowingStridedSlice($0)">>;
+// First pass of op split
+// Insert StidedSliceOp
+def : Pat<( TFL_Conv2DOp:$conv_out $input, $filter, $bias,
+             $h_factor, $w_factor, TFL_AF_None, $padding,
+              $stride_h, $stride_w),
+            (XC_StridedSliceOp (TFL_Conv2DOp $input, $filter,
+             $bias, $h_factor, $w_factor, TFL_AF_None, $padding,
+              $stride_h, $stride_w), (getI32IntegerAttrZero),
+             (getI32IntegerAttrZero), $h_factor), 
+            [(HasNoFollowingStridedSlice $conv_out)]>;

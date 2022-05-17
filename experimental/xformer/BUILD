@@ -1,91 +1,133 @@
-load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
+load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-gentbl(
+td_library(
+    name = "xc_dialect_td",
+    srcs = [
+        "IR/XCoreOps.td"
+    ],
+    includes = ["external/org_tensorflow"],
+    deps = [
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
+td_library(
+    name = "tfl_patterns_td",
+    srcs = [
+        "Transforms/TFLPatterns.td",
+    ],
+    includes = ["external/org_tensorflow", "external/lce"],
+    deps = [
+        "@lce//larq_compute_engine/mlir:lce_ops_td_file",
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
+td_library(
+    name = "xc_patterns_td",
+    srcs = [
+        "Transforms/XCPatterns.td",
+    ],
+    includes = ["external/org_tensorflow", "external/lce"],
+    deps = [
+        ":xc_dialect_td",
+        "@lce//larq_compute_engine/mlir:lce_ops_td_file",
+    ],
+)
+
+td_library(
+    name = "load_constant_op_patterns_td",
+    srcs = [
+        "Transforms/LoadConstantOpPatterns.td",
+    ],
+    includes = ["external/org_tensorflow"],
+    deps = [
+        ":xc_dialect_td",
+    ],
+)
+
+td_library(
+    name = "conv_patterns_td",
+    srcs = [
+        "Transforms/ConvPatterns.td",
+    ],
+    includes = ["external/org_tensorflow"],
+    deps = [
+        ":xc_dialect_td",
+    ],
+)
+
+gentbl_cc_library(
     name = "xc_ops_inc_gen",
     tbl_outs = [
-        ("-gen-enum-decls", "IR/XCoreEnumOps.h.inc"),
-        ("-gen-enum-defs", "IR/XCoreEnumOps.cpp.inc"),
-        ("-gen-op-decls", "IR/XCoreOps.h.inc"),
-        ("-gen-op-defs", "IR/XCoreOps.cpp.inc"),
-        ("-gen-dialect-decls -dialect=xc", "IR/XCoreDialect.h.inc"),
-        ("-gen-dialect-doc", "IR/XCoreOps.md"),
+        (["-gen-enum-decls"], "IR/XCoreEnumOps.h.inc"),
+        (["-gen-enum-defs"], "IR/XCoreEnumOps.cpp.inc"),
+        (["-gen-op-decls"], "IR/XCoreOps.h.inc"),
+        (["-gen-op-defs"], "IR/XCoreOps.cpp.inc"),
+        (["-gen-dialect-decls", "-dialect=xc"], "IR/XCoreDialect.h.inc"),
+        (["-gen-dialect-defs", "-dialect=xc"], "IR/XCoreDialect.cpp.inc"),
+        (["-gen-dialect-doc"], "IR/XCoreOps.md"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "IR/XCoreOps.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
-        "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    deps = [
+        ":xc_dialect_td",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "xc_patterns_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "Transforms/GeneratedXCPatterns.inc"),
+        (["-gen-rewriters"], "Transforms/GeneratedXCPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "Transforms/XCPatterns.td",
-    td_includes = ["external/org_tensorflow", "external/lce"],
-    td_srcs = [
-        "IR/XCoreOps.td",
-        "@lce//larq_compute_engine/mlir:lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    deps = [
+        ":xc_patterns_td",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "tfl_patterns_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "Transforms/GeneratedTFLPatterns.inc"),
+        (["-gen-rewriters"], "Transforms/GeneratedTFLPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "Transforms/TFLPatterns.td",
-    td_includes = ["external/org_tensorflow", "external/lce"],
-    td_srcs = [
-        "@lce//larq_compute_engine/mlir:lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    deps = [
+        ":tfl_patterns_td",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "load_constant_op_patterns_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "Transforms/GeneratedLoadConstantOpPatterns.inc"),
+        (["-gen-rewriters"], "Transforms/GeneratedLoadConstantOpPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "Transforms/LoadConstantOpPatterns.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
-        "IR/XCoreOps.td",
-        "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    deps = [
+        ":load_constant_op_patterns_td",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "conv_patterns_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "Transforms/GeneratedConvPatterns.inc"),
+        (["-gen-rewriters"], "Transforms/GeneratedConvPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "Transforms/ConvPatterns.td",
-    td_includes = ["external/org_tensorflow"],
-    td_srcs = [
-        "IR/XCoreOps.td",
-        "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    deps = [
+        ":conv_patterns_td",
     ],
 )
 
@@ -96,6 +138,7 @@ cc_library(
         "IR/XCoreEnumOps.cpp.inc",
         "IR/XCoreOps.cpp",
         "IR/XCoreDialect.h.inc",
+        "IR/XCoreDialect.cpp.inc",
         "IR/XCoreOps.cpp.inc",
         "IR/XCoreOps.h.inc",
         "Transforms/GeneratedXCPatterns.inc",

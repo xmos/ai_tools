@@ -76,6 +76,10 @@ namespace {
 /// This pass translates XCore ops to TFLite custom ops.
 struct TranslateToCustomOp
     : public PassWrapper<TranslateToCustomOp, FunctionPass> {
+  StringRef getArgument() const final { return "xcore-translate-to-customop"; }
+  StringRef getDescription() const final {
+    return "Translate to custom ops in TensorFlow Lite dialect";
+  }
   void runOnFunction() override;
 };
 
@@ -121,9 +125,7 @@ std::unique_ptr<OperationPass<FuncOp>> createTranslateToCustomOpPass() {
   return std::make_unique<TranslateToCustomOp>();
 }
 
-static PassRegistration<TranslateToCustomOp>
-    pass("xcore-translate-to-customop",
-         "Translate to custom ops in TensorFlow Lite dialect");
+static PassRegistration<TranslateToCustomOp> pass;
 
 } // namespace xcore
 } // namespace mlir

@@ -19,16 +19,16 @@ XCOREOPT_BINARY = str(XCOREOPT_BINARY) + exe_suffix
 LONG_README = (here / 'README.md').read_text(encoding='utf-8')
 
 # xtflm_interpreter path and libs from lib_tflite_micro
-XTFLM_INTERPRETER_LIBS = [
+XINTERPRETER_HOST_LIBS = [
     "/libs/linux/xtflm_python.so",
     "/libs/linux/xtflm_python.so.1.0.1",
     "/libs/macos/xtflm_python.dylib",
     "/libs/macos/xtflm_python.1.0.1.dylib",
     "/libs/windows/xtflm_python.dll"
 ]
-XTFLM_INTERPRETER_PATH = pathlib.Path.joinpath(here.parent.parent.parent, "third_party", "lib_tflite_micro", "xtflm_interpreter", "xtflm_interpreter")
+XINTERPRETER_HOST_PATH = pathlib.Path.joinpath(here.parent.parent.parent, "third_party", "lib_tflite_micro", "xinterpreters", "xinterpreters", "host")
 # adjust path to libs
-XTFLM_INTERPRETER_LIBS = [str(XTFLM_INTERPRETER_PATH) + x for x in XTFLM_INTERPRETER_LIBS]
+XINTERPRETER_HOST_LIBS = [str(XINTERPRETER_HOST_PATH) + x for x in XINTERPRETER_HOST_LIBS]
 # xtflm_interpreter requires numpy
 REQUIRED_PACKAGES = [
     "numpy<2.0",
@@ -97,9 +97,9 @@ setup(
     ],
     python_requires=">=3.7",
     install_requires=REQUIRED_PACKAGES,
-    package_dir={'xmos_ai_tools.xformer': 'src/xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter': str(XTFLM_INTERPRETER_PATH)},
-    packages=['xmos_ai_tools.xformer', 'xmos_ai_tools.xcore_tflm_host_interpreter'],  # Required
-    package_data={"": XTFLM_INTERPRETER_LIBS},
+    package_dir={'xmos_ai_tools.xformer': 'src/xformer', 'xmos_ai_tools': str(XINTERPRETER_HOST_PATH)},
+    packages=['xmos_ai_tools.xformer', 'xmos_ai_tools'],  # Required
+    package_data={"": XINTERPRETER_HOST_LIBS},
     data_files=[('Scripts' if platform.system() == "Windows" else "bin", [XCOREOPT_BINARY])],
     cmdclass={
         'bdist_wheel': bdist_wheel,

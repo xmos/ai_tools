@@ -31,9 +31,10 @@ This will print all options available to pass to xformer. To see hidden options,
 
 ### Using the xcore tflm host interpreter
 ```
-from xmos_ai_tools import xcore_tflm_host_interpreter as xtflm
+from xmos_ai_tools import xcore_tflm_host_interpreter
 
-ie = xtflm.XTFLMInterpreter(model_content=xformed_model)
+ie = xcore_tflm_host_interpreter()
+ie.set_model(model_content=xformed_model)
 ie.set_input_tensor(0, input_tensor)
 ie.invoke()
 xformer_outputs = []

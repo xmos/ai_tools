@@ -1,0 +1,11 @@
+--- larq_compute_engine/mlir/BUILD	2022-05-18 13:21:40.000000000 +0100
++++ larq_compute_engine/mlir/BUILD	2022-05-18 13:22:23.000000000 +0100
+@@ -9,7 +9,7 @@
+ td_library(
+     name = "lce_ops_td_file",
+     srcs = ["ir/lce_ops.td"],
+-    includes = ["/external/org_tensorflow"],
++    includes = ["/../../external/org_tensorflow"],
+     deps = [
+         "@llvm-project//mlir:SideEffectTdFiles",
+         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",

@@ -74,6 +74,11 @@ new_local_repository(
 ########################### larq compute engine ################################
 http_archive(
     name = "lce",
+    patch_args = ["-p0"],
+    patch_tool = "patch",
+    patches = [
+          "//patches:tf_include.patch",
+    ],
     sha256 = "61f956bebce552406d338c3311995473f47c13105caa0cfea1a85bb047c27286",
     strip_prefix = "compute-engine-0.7.0",
     urls = [

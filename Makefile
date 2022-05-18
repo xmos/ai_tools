@@ -8,7 +8,7 @@ NUM_PROCS := 4
 
 .PHONY: xcore_interpreters_build
 xcore_interpreters_build:
-	cd third_party/lib_tflite_micro/ && make build
+	cd xmos_ai_tools/xmos_ai_tools/xinterpreters/host/ && make install
 
 #**************************
 # integration test targets
@@ -39,7 +39,7 @@ submodule_update:
 
 .PHONY: clean
 clean:
-	cd third_party/lib_tflite_micro/ && make clean
+	cd xmos_ai_tools/xmos_ai_tools/xinterpreters/host/ && make clean
 
 .PHONY: help
 help:
@@ -113,8 +113,9 @@ build_release_windows:
 	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Windows/External/xformer
 
 TEST_SCRIPT= \
-(cd third_party/lib_tflite_micro/ && make build)&& \
-pip install -e "./third_party/lib_tflite_micro/xtflm_interpreter[test]"&& \
+(cd xmos_ai_tools/src/xinterpreters/host/ && make build)&& \
+(cd xmos_ai_tools && python3 setup.py bdist_wheel &&\
+pip install ./xmos_ai_tools/dist/*"&& \
 (cd experimental/xformer && ../../bazel/bin/bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures)&& \
 (pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n $(NUM_PROCS) --dist loadfile --junitxml=integration_non_bnns_junit.xml)&& \
 (pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n $(NUM_PROCS) --dist loadfile --junitxml=integration_bnns_junit.xml)

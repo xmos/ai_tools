@@ -7,7 +7,7 @@ import os
 import subprocess
 import larq_compute_engine as lce
 import tensorflow as tf
-from xinterpreters import xcore_tflm_host_interpreter
+from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
 
 # This error tolerance works for the models we have currently
 # The maximum error we see is 1.037735

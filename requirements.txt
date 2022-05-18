@@ -6,3 +6,6 @@ pkgconfig==1.5.5
 pytest==7.0.1
 pytest-xdist==2.5.0
 larq-compute-engine==0.6.2
+opencv-python>=4.4
+flatbuffers<2.0,>=1.12
+tflite==2.4.0

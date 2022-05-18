@@ -17,7 +17,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   // Larq dialect
   pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
   pm.addPass(createApplyTFLPatternsPass());
-  pm.addPass(createInsertStridedSliceConcatPass());
+  pm.addPass(createApplyOpSplitPatternsPass());
   pm.addPass(createReplaceStridedSlicePass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());

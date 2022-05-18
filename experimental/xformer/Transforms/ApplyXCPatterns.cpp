@@ -40,56 +40,6 @@ bool hasNoFollowingConv2D(Value outputVal) {
   return true;
 }
 
-bool HasNoFollowingStridedSlice(Value outputVal) {
-  if (outputVal.hasOneUse()) {
-    if (llvm::isa<TFL::CustomOp>(*outputVal.getUsers().begin())) {
-      auto op = dyn_cast<TFL::CustomOp>(*outputVal.getUsers().begin());
-      if (op.custom_code().startswith("XC_strided_slice"))
-        return false;
-    }
-  }
-  return true;
-}
-
-IntegerAttr getI32IntegerAttrZero(PatternRewriter &rewriter) { 
-   return rewriter.getI32IntegerAttr(0);
-} 
-
-// StringAttr getMemcpyFnParam(PatternRewriter &rewriter, Value outputVal) {
-//   // Extract args from the op
-//   auto outputType =
-//       outputVal.getType().dyn_cast<RankedTensorType>();
-//   auto outputHeight = outputType.getDimSize(1);
-//   auto outputWidth = outputType.getDimSize(2);
-//   auto outputDepth = outputType.getDimSize(3);
-
-//   auto inputHeight = outputHeight;
-//   auto inputWidth = outputWidth;
-//   auto inputDepth = outputDepth;
-//   auto beginY = 0;
-//   auto beginX = 0;
-//   auto endY = outputHeight;
-//   auto endX = outputWidth;
-//   auto strideY = 1;
-//   auto strideX = 1;
-
-//   auto image_geom = nn::ImageGeometry(inputHeight, inputWidth,
-//                                         static_cast<int>(inputDepth));
-
-//   int xDiff = endX - beginX;
-//   int yDiff = endY - beginY;
-//   auto window_geom =
-//       nn::WindowGeometry({yDiff, xDiff, static_cast<int>(inputDepth)},
-//                           {beginY, beginX}, {1, 1, 1}, {strideY, strideX});
-
-//   nn::ImToColValid::Params imToColParams(image_geom, window_geom,
-//                                           static_cast<int>(inputDepth));
-
-//   std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
-
-//   return rewriter.getStringAttr(mfStr);
-// }
-
 IntegerAttr getPadValue(PatternRewriter &rewriter, Value inputVal) {
   auto inputType = inputVal.getType().cast<ShapedType>();
   auto elementType = inputType.getElementType();

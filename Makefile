@@ -8,7 +8,7 @@ NUM_PROCS := 4
 
 .PHONY: xcore_interpreters_build
 xcore_interpreters_build:
-	cd xmos_ai_tools/xmos_ai_tools/xinterpreters/host/ && make install
+	cd python/xmos_ai_tools/xinterpreters/host/ && make install
 
 #**************************
 # integration test targets
@@ -39,7 +39,7 @@ submodule_update:
 
 .PHONY: clean
 clean:
-	cd xmos_ai_tools/xmos_ai_tools/xinterpreters/host/ && make clean
+	cd python/xmos_ai_tools/xinterpreters/host/ && make clean
 
 .PHONY: help
 help:

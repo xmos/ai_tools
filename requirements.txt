@@ -9,3 +9,5 @@ larq-compute-engine==0.6.2
 opencv-python>=4.4
 flatbuffers<2.0,>=1.12
 tflite==2.4.0
+pyusb>=1.2.1
+

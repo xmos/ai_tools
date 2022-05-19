@@ -17,12 +17,11 @@ class xcore_tflm_base_interpreter(ABC):
         Initialises the list of models attached to the interpreter.
         """
         self.models = []
-        return
 
     @abstractmethod
     def initialise_interpreter(self, model_index=0) -> None:
-        """! Abstract meothd initialising an interpreter with the model  that has model_index.
-        @param model_index  The model to target, for interpreters that support multiple models
+        """! Abstract initialising interpreter with model associated with model_index.
+        @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
         return
@@ -62,7 +61,7 @@ class xcore_tflm_base_interpreter(ABC):
         return
 
     @abstractmethod
-    def invoke(self) -> None:
+    def invoke(self, model_index=0) -> None:
         """! Abstract method for invoking the model and starting inference of the current
         state of the tensors.
         """
@@ -106,9 +105,9 @@ class xcore_tflm_base_interpreter(ABC):
 
         # Select correct model from model list
         modelBuf = None
-        for model in self.models:
-            if model.tile == model_index:
-                modelBuf = Model.GetRootAsModel(model.model_content, 0)
+        model = self.get_model(model_index)
+        modelBuf = Model.GetRootAsModel(model.model_content, 0)
+
         # Get index of specific input tensor
         tensorIndex = modelBuf.Subgraphs(0).Inputs(input_index)
 
@@ -118,10 +117,10 @@ class xcore_tflm_base_interpreter(ABC):
         elif tensorType == TensorType.INT32:
             tensorSize = 4  # int32 is 4 bytes
         else:
+            print(tensorType)
             self._check_status(1)
 
         # Calculate tensor size by multiplying shape elements
-        tensorSize = 1
         for i in range(0, modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeLength()):
             tensorSize = tensorSize * modelBuf.Subgraphs(0).Tensors(tensorIndex).Shape(
                 i
@@ -140,9 +139,8 @@ class xcore_tflm_base_interpreter(ABC):
 
         # Select correct model from model list
         modelBuf = None
-        for model in self.models:
-            if model.tile == model_index:
-                modelBuf = Model.GetRootAsModel(model.model_content, 0)
+        model = self.get_model(model_index)
+        modelBuf = Model.GetRootAsModel(model.model_content, 0)
 
         # Get index of specific output tensor
         tensorIndex = modelBuf.Subgraphs(0).Outputs(output_index)
@@ -153,6 +151,7 @@ class xcore_tflm_base_interpreter(ABC):
         elif tensorType == TensorType.INT32:
             tensorSize = 4  # int32 is 4 bytes
         else:
+            print(tensorType)
             self._check_status(1)
 
         # Calculate tensor size by multiplying shape elements
@@ -175,9 +174,8 @@ class xcore_tflm_base_interpreter(ABC):
 
         # Select correct model from model list
         modelBuf = None
-        for model in self.models:
-            if model.tile == model_index:
-                modelBuf = Model.GetRootAsModel(model.model_content, 0)
+        model = self.get_model(model_index)
+        modelBuf = Model.GetRootAsModel(model.model_content, 0)
 
         tensorIndex = modelBuf.Subgraphs(0).Inputs(input_index)
 
@@ -215,9 +213,8 @@ class xcore_tflm_base_interpreter(ABC):
 
         # Select correct model from models list
         modelBuf = None
-        for model in self.models:
-            if model.tile == model_index:
-                modelBuf = Model.GetRootAsModel(model.model_content, 0)
+        model = self.get_model(model_index)
+        modelBuf = Model.GetRootAsModel(model.model_content, 0)
 
         # Output tensor is last tensor
         tensorIndex = modelBuf.Subgraphs(0).Outputs(output_index)
@@ -250,6 +247,8 @@ class xcore_tflm_base_interpreter(ABC):
         params_path=None,
         params_content=None,
         model_index=0,
+        secondary_memory=False,
+        flash=False,
     ) -> None:
         """! Adds a model to the interpreter's list of models.
         @param model_path The path to the model file (.tflite), alternative to model_content.
@@ -274,6 +273,8 @@ class xcore_tflm_base_interpreter(ABC):
                         params_path,
                         params_content,
                         model_index,
+                        secondary_memory,
+                        flash,
                     )
                     tile_found = True
                     break
@@ -286,9 +287,16 @@ class xcore_tflm_base_interpreter(ABC):
                         params_path,
                         params_content,
                         model_index,
+                        secondary_memory,
+                        flash,
                     )
                 )
             self.initialise_interpreter(model_index)
+
+    def get_model(self, model_index=0):
+        for model in self.models:
+            if model.tile == model_index:
+                return model
 
     class modelData:
         """! The model data class
@@ -296,7 +304,14 @@ class xcore_tflm_base_interpreter(ABC):
         """
 
         def __init__(
-            self, model_path, model_content, params_path, params_content, model_index
+            self,
+            model_path,
+            model_content,
+            params_path,
+            params_content,
+            model_index,
+            secondary_memory,
+            flash,
         ):
             """! Model data initializer.
             Sets up variables, generates a list of operators used in the model,
@@ -313,6 +328,8 @@ class xcore_tflm_base_interpreter(ABC):
             self.params_path = params_path
             self.params_content = params_content
             self.tile = model_index
+            self.secondary_memory = secondary_memory
+            self.flash = flash
             self.opList = []
             self.pathToContent()
             self.modelToOpList()

@@ -11,6 +11,15 @@ xcore_interpreters_build:
 	cd python/xmos_ai_tools/xinterpreters/host/ && make install
 
 #**************************
+# xinterpreters smoke_test
+#**************************
+
+.PHONY: xinterpreters_smoke_test
+xinterpreters_smoke_test:
+	cd python/xmos_ai_tools/xinterpreters/host/ && make install && make test
+	cd python/xmos_ai_tools/xinterpreters/device/ && make test
+
+#**************************
 # integration test targets
 #**************************
 

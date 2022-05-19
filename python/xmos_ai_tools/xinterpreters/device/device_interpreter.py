@@ -204,7 +204,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
 
         try:
             # Download model to device
-            self._download_data(cmd, model_bytes, engine_num=engine_num)
+            self._download_data(cmd, model_bytes, engine_num=model_index)
         except IOError:
             print("IO Error\n")
             raise IOError

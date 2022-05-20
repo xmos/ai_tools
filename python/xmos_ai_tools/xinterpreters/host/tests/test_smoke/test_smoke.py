@@ -14,7 +14,7 @@ with open("./detection_0.raw", "rb") as fd:
 
 # check that arena usage calcuation is correct
 print(ie.tensor_arena_size())
-#assert ie.tensor_arena_size() == 901376
+# assert ie.tensor_arena_size() == 901376
 
 ie.set_input_tensor(data=img, input_index=0, model_index=0)
 ie.invoke()

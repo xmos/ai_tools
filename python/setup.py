@@ -48,7 +48,7 @@ try:
             python, abi, plat = _bdist_wheel.get_tag(self)
             # We don't contain any python extensions so are version agnostic
             # but still want to be platform specific.
-            python, abi = 'py3', 'none'
+            python, abi = "py3", "none"
             return python, abi, plat
 
 except ImportError:

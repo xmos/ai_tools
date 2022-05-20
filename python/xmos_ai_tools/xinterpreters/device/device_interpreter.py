@@ -2,7 +2,9 @@
 # XMOS Public License: Version 1
 from abc import abstractmethod
 
-from xmos_ai_tools.xinterpreters.base.base_interpreter import xcore_tflm_base_interpreter
+from xmos_ai_tools.xinterpreters.base.base_interpreter import (
+    xcore_tflm_base_interpreter,
+)
 import xmos_ai_tools.xinterpreters.device.aisrv_cmd as aisrv_cmd
 
 XCORE_IE_MAX_BLOCK_SIZE = 512

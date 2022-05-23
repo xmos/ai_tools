@@ -8,11 +8,11 @@ from math import sqrt
 
 from xmos_ai_tools.xinterpreters import xcore_tflm_usb_interpreter
 
-# from xmos_ai_tools import xformer as xf
+from xmos_ai_tools import xformer as xf
 
-# source_model = "./model_quant.tflite"
+source_model = "./source_model.tflite"
 xcore_model = "./xcore_model.tflite"
-# xf.convert(source_model, xcore_model, params=None)
+xf.convert(source_model, xcore_model, params=None)
 
 
 def quantize(arr, scale, zero_point, dtype=np.int8):

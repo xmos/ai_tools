@@ -54,13 +54,13 @@ jobs:
           cd ../../experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
           
-          cd python
+          cd ../../python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
           
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
-          path: experimental/xformer/python/dist
+          path: python/dist
 
 
 
@@ -105,13 +105,13 @@ jobs:
           cd ../../experimental/xformer
           bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
           
-          cd python
+          cd ../../python
           python setup.py bdist_wheel --plat-name macosx_11_0_arm64
           
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-arm-wheels
-          path: experimental/xformer/python/dist
+          path: python/dist
           
   
 
@@ -155,7 +155,7 @@ jobs:
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
           python -m pip install auditwheel --no-cache-dir
-          cd experimental/xformer/python
+          cd python
           for f in dist/*.whl; do
             auditwheel repair --plat manylinux2010_x86_64 $f
           done
@@ -164,7 +164,7 @@ jobs:
         with:
           name: ${{ runner.os }}-wheels
           # auditwheel creates the output wheel in the wheelhouse folder
-          path: experimental/xformer/python/wheelhouse
+          path: python/wheelhouse
 
 
 
@@ -228,10 +228,10 @@ jobs:
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG_VERSION }}
         run: |
-          cd experimental/xformer/python
+          cd python
           python setup.py bdist_wheel
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
-          path: experimental/xformer/python/dist
+          path: python/dist
 

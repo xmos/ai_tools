@@ -24,5 +24,5 @@ cd ../../experimental/xformer
 bazel build //:xcore-opt --linkopt=-lrt --crosstool_top=@org_tensorflow//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda11.2:toolchain
 
 # Build python wheel
-cd python
+cd ../../python
 python setup.py bdist_wheel

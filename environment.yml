@@ -8,3 +8,4 @@ dependencies:
   - make=4.2.1
   - python=3.8
   - h5py=3.6.0
+  - libusb=1.0.26

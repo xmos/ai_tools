@@ -18,6 +18,10 @@ struct ApplyTFLPatterns : public PassWrapper<ApplyTFLPatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
+  StringRef getArgument() const final { return "xcore-apply-tflpatterns"; }
+  StringRef getDescription() const final {
+    return "Apply generated TFL optimization patterns.";
+  }
   void runOnFunction() override;
 };
 
@@ -91,9 +95,7 @@ std::unique_ptr<OperationPass<FuncOp>> createApplyTFLPatternsPass() {
   return std::make_unique<ApplyTFLPatterns>();
 }
 
-static PassRegistration<ApplyTFLPatterns>
-    pass("xcore-apply-tflpatterns",
-         "Apply generated TFL optimization patterns.");
+static PassRegistration<ApplyTFLPatterns> pass;
 
 } // namespace xcore
 } // namespace mlir

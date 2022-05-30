@@ -52,8 +52,8 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
     biases = biasQConstOp.value().template cast<DenseElementsAttr>();
   } else {
     auto biasConstOp =
-        dyn_cast<mlir::ConstantOp>(conv2DOp.bias().getDefiningOp());
-    biases = biasConstOp.value().template cast<DenseElementsAttr>();
+        dyn_cast<mlir::arith::ConstantOp>(conv2DOp.bias().getDefiningOp());
+    biases = biasConstOp.getValue().template cast<DenseElementsAttr>();
   }
   auto biasVector =
       std::vector<int32_t>{biases.template getValues<int32_t>().begin(),
@@ -98,19 +98,19 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   int64_t padTop, padBottom, padLeft, padRight;
 
   if (conv2DOp.padding() == "EXPLICIT") {
-    auto paddingValuesConstOp =
-        dyn_cast<mlir::ConstantOp>(conv2DOp.padding_values().getDefiningOp());
+    auto paddingValuesConstOp = dyn_cast<mlir::arith::ConstantOp>(
+        conv2DOp.padding_values().getDefiningOp());
     auto paddingValues =
-        paddingValuesConstOp.value().template cast<DenseElementsAttr>();
+        paddingValuesConstOp.getValue().template cast<DenseElementsAttr>();
     // The padding values for the PadOp are stored as a 4x2 tensor
     // 0,0 and 0,1 is for the batch dimension and 3,0, and 3,1 for the
     // channel/depth
     // 1,0 and 1,1 is top and bottom, and 2,0 and 2,1 is
     // left and right which are the padding values we need
-    padTop = paddingValues.template getValue<int32_t>({1, 0});
-    padBottom = paddingValues.template getValue<int32_t>({1, 1});
-    padLeft = paddingValues.template getValue<int32_t>({2, 0});
-    padRight = paddingValues.template getValue<int32_t>({2, 1});
+    padTop = paddingValues.template getValues<int32_t>()[{1, 0}];
+    padBottom = paddingValues.template getValues<int32_t>()[{1, 1}];
+    padLeft = paddingValues.template getValues<int32_t>()[{2, 0}];
+    padRight = paddingValues.template getValues<int32_t>()[{2, 1}];
   } else {
     tensorflow::Padding opPadding = conv2DOp.padding() == "VALID"
                                         ? tensorflow::Padding::VALID

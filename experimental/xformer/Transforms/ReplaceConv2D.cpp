@@ -108,14 +108,14 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
       {static_cast<long long>(weightsData.size())}, rewriter.getIntegerType(8));
   auto weightsAttr = DenseElementsAttr::get<int8_t>(weightsType, weightsData);
   auto weightsConstantOp =
-      rewriter.create<mlir::ConstantOp>(conv2DOp.getLoc(), weightsAttr);
+      rewriter.create<ConstantOp>(conv2DOp.getLoc(), weightsAttr);
 
   ShapedType mulsBiasesOrThresholdsType = RankedTensorType::get(
       {static_cast<long long>(mulsBiasesOrThresholdsData.size())},
       rewriter.getIntegerType(16));
   auto mulsBiasesOrThresholdsAttr = DenseElementsAttr::get<int16_t>(
       mulsBiasesOrThresholdsType, mulsBiasesOrThresholdsData);
-  auto mulsBiasesOrThresholdsConstantOp = rewriter.create<mlir::ConstantOp>(
+  auto mulsBiasesOrThresholdsConstantOp = rewriter.create<ConstantOp>(
       conv2DOp.getLoc(), mulsBiasesOrThresholdsAttr);
 
   // Create the Conv2DV2 Op with the params and kernel type
@@ -140,6 +140,10 @@ struct ReplaceConv2D : public PassWrapper<ReplaceConv2D, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry
         .insert<TFL::TensorFlowLiteDialect, XCoreDialect, lq::LarqDialect>();
+  }
+  StringRef getArgument() const final { return "xcore-replace-conv2d"; }
+  StringRef getDescription() const final {
+    return "Replace Conv2D with XC Conv2D pass";
   }
   void runOnFunction() override;
 };
@@ -191,8 +195,7 @@ std::unique_ptr<OperationPass<FuncOp>> createReplaceConv2DPass() {
   return std::make_unique<ReplaceConv2D>();
 }
 
-static PassRegistration<ReplaceConv2D>
-    pass("xcore-replace-conv2d", "Replace Conv2D with XC Conv2D pass.");
+static PassRegistration<ReplaceConv2D> pass;
 
 } // namespace xcore
 } // namespace mlir

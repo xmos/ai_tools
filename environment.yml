@@ -2,7 +2,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - bazel=4.0.0
+  - bazel=4.2.1
   - patch=2.7.6
   - cmake=3.22.3
   - make=4.2.1

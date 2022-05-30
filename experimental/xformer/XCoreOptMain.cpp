@@ -107,6 +107,7 @@ int main(int argc, char **argv) {
   // Initialize dialects.
   MLIRContext context;
   context.loadDialect<StandardOpsDialect>();
+  context.loadDialect<arith::ArithmeticDialect>();
   context.loadDialect<quant::QuantizationDialect>();
   context.loadDialect<TFL::TensorFlowLiteDialect>();
   context.loadDialect<xcore::XCoreDialect>();

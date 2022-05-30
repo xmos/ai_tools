@@ -1,13 +1,12 @@
-numpy==1.19.2; platform_machine != 'arm64'
-tensorflow==2.6.2; platform_machine != 'arm64'
-numpy==1.22.3; sys_platform == 'darwin' and platform_machine == 'arm64'
+tensorflow==2.8.0; platform_machine != 'arm64'
 tensorflow-macos==2.8.0; sys_platform == 'darwin' and platform_machine == 'arm64'
+numpy>=1.20
 pkgconfig==1.5.5
+protobuf==3.20.1
 pytest==7.0.1
 pytest-xdist==2.5.0
-larq-compute-engine==0.6.2
 opencv-python>=4.4
 flatbuffers<2.0,>=1.12
 tflite==2.4.0
 pyusb>=1.2.1
-
+larq-compute-engine==0.7.0

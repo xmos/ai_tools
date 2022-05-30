@@ -81,8 +81,8 @@ pipeline {
                       bazel build --client_env=CC=clang --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
                 """
                 sh """. activate ./ai_tools_venv &&
-                      (cd xmos_ai_tools && python3 setup.py bdist_wheel) &&
-                      pip install ./xmos_ai_tools/dist/* &&
+                      (cd python && python3 setup.py bdist_wheel) &&
+                      pip install ./python/dist/* &&
                       pip install -r "./requirements.txt"
                 """
             }

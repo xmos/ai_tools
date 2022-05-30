@@ -5,4 +5,8 @@ pkgconfig==1.5.5
 protobuf==3.20.1
 pytest==7.0.1
 pytest-xdist==2.5.0
+opencv-python>=4.4
+flatbuffers<2.0,>=1.12
+tflite==2.4.0
+pyusb>=1.2.1
 larq-compute-engine==0.7.0

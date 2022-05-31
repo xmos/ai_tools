@@ -108,6 +108,8 @@ jobs:
           cd ../../experimental/xformer
           bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
           
+          pwd
+          
           cd ../../python
           python setup.py bdist_wheel --plat-name macosx_11_0_arm64
           

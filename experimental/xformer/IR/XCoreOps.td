@@ -78,6 +78,22 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_ConcatOp : XC_Op<"concat", [NoSideEffect]> {
+  let summary = "Concat op";
+
+  let description = [{"Concat op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input0,
+    TensorOf<[QI8]>:$input1,
+
+    StrAttr:$memcpy_fn_param0,
+    StrAttr:$memcpy_fn_param1
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
   let summary = "Conv2D V2 op";
 

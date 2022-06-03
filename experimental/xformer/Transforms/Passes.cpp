@@ -18,6 +18,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
   pm.addPass(createApplyTFLPatternsPass());
   pm.addPass(createReplaceStridedSlicePass());
+  pm.addPass(createReplaceConcatPass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());

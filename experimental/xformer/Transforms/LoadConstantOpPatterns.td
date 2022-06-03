@@ -1,7 +1,7 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-// This is the second pattern definition file for XCore.
+include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "mlir/Dialect/StandardOps/IR/Ops.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 
@@ -12,7 +12,7 @@ def ShouldBeLoadedExternally
 
 def : Pat<(XC_Conv2DV2Op
            : $output $input,
-             (ConstantOp
+             (Arith_ConstantOp
               : $weights_op $weights_attr),
              $mulsbiases_or_thresholds, $conv2d_kernel_type, $memcpy_fn_params,
              $aggregate_fn_params, $output_transform_fn_params, $scratch_bytes,
@@ -25,7 +25,7 @@ def : Pat<(XC_Conv2DV2Op
 
 def : Pat<(XC_Conv2DV2Op
            : $output $input, $weights,
-             (ConstantOp
+             (Arith_ConstantOp
               : $mulsbiases_or_thresholds_op $mulsbiases_or_thresholds_attr),
              $conv2d_kernel_type, $memcpy_fn_params, $aggregate_fn_params,
              $output_transform_fn_params, $scratch_bytes, $thread_count,
@@ -37,7 +37,7 @@ def : Pat<(XC_Conv2DV2Op
            $abstract_kernel_params),
           [(ShouldBeLoadedExternally $mulsbiases_or_thresholds_attr)]>;
 
-foreach constOp = [ConstantOp, TFL_ConstOp] in {
+foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
 def:
   Pat<(TFL_Conv2DOp $input,
        (constOp

@@ -15,6 +15,12 @@ struct ReplaceAvgPoolWithConv2D
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
+  StringRef getArgument() const final {
+    return "xcore-replace-avgpool-with-conv2d";
+  }
+  StringRef getDescription() const final {
+    return "Replace TFL Avgpool with Conv2D operations.";
+  }
   void runOnFunction() override;
 };
 
@@ -125,9 +131,7 @@ std::unique_ptr<OperationPass<FuncOp>> createReplaceAvgPoolWithConv2DPass() {
   return std::make_unique<ReplaceAvgPoolWithConv2D>();
 }
 
-static PassRegistration<ReplaceAvgPoolWithConv2D>
-    pass("xcore-replace-avgpool-with-conv2d",
-         "Replace TFL Avgpool with Conv2D operations.");
+static PassRegistration<ReplaceAvgPoolWithConv2D> pass;
 
 } // namespace xcore
 } // namespace mlir

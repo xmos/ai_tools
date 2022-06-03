@@ -11,7 +11,7 @@ from cv2 import cv2
 
 import tensorflow as tf
 import larq_compute_engine as lce
-from xinterpreters import xcore_tflm_host_interpreter
+from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
 
 
 XFORMER2_PATH = (pathlib.Path(__file__).resolve().parents[0] / "bazel-bin" /

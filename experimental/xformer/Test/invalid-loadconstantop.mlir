@@ -2,10 +2,10 @@
 
 // expected-error@+1 {{Flash image file option should be provided to run this pass!}}
 func @invalid(%arg0: tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>) -> tensor<?x32x!quant.uniform<i8:f32, 0.037329975515604019:-13>> attributes {tf.entry_function = {inputs = "flatten_input", outputs = "Identity"}} {
-  %cst = constant dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 0]> : tensor<10xi8>
-  %cst_0 = constant dense<[[11, 12, 13, 14, 15, 16, 17, 18, 19, 10]]> : tensor<1x10xi16>
-  %cst_1 = constant dense<[-1, 1, 1, 32]> : tensor<4xi64>
-  %cst_2 = constant dense<[-1, 32]> : tensor<2xi64>
+  %cst = arith.constant dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 0]> : tensor<10xi8>
+  %cst_0 = arith.constant dense<[[11, 12, 13, 14, 15, 16, 17, 18, 19, 10]]> : tensor<1x10xi16>
+  %cst_1 = arith.constant dense<[-1, 1, 1, 32]> : tensor<4xi64>
+  %cst_2 = arith.constant dense<[-1, 32]> : tensor<2xi64>
   %0 = "tfl.pseudo_const"() {value = dense<[-1, 32]> : tensor<2xi32>} : () -> tensor<2xi32>
   %1 = "tfl.reshape"(%arg0, %0) : (tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>, tensor<2xi32>) -> tensor<?x32x!quant.uniform<i8:f32, 0.0078160231932997704>>
   %2 = "tfl.reshape"(%1, %cst_1) : (tensor<?x32x!quant.uniform<i8:f32, 0.0078160231932997704>>, tensor<4xi64>) -> tensor<?x1x1x32x!quant.uniform<i8:f32, 0.0078160231932997704>>

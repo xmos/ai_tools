@@ -18,6 +18,10 @@ struct ReplaceStridedSlice
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
+  StringRef getArgument() const final { return "xcore-replace-stridedslice"; }
+  StringRef getDescription() const final {
+    return "Replace TFL StridedSlice with StridedSlice for XCore.";
+  }
   void runOnFunction() override;
 };
 
@@ -55,27 +59,28 @@ struct ReplaceStridedSlicePattern
     auto inputType =
         stridedSliceOp.input().getType().dyn_cast<RankedTensorType>();
 
-    auto beginValuesConstOp =
-        dyn_cast<mlir::ConstantOp>(stridedSliceOp.begin().getDefiningOp());
-    auto beginValues = beginValuesConstOp.value().cast<DenseElementsAttr>();
+    auto beginValuesConstOp = dyn_cast<mlir::arith::ConstantOp>(
+        stridedSliceOp.begin().getDefiningOp());
+    auto beginValues = beginValuesConstOp.getValue().cast<DenseElementsAttr>();
 
     auto endValuesConstOp =
-        dyn_cast<mlir::ConstantOp>(stridedSliceOp.end().getDefiningOp());
-    auto endValues = endValuesConstOp.value().cast<DenseElementsAttr>();
+        dyn_cast<mlir::arith::ConstantOp>(stridedSliceOp.end().getDefiningOp());
+    auto endValues = endValuesConstOp.getValue().cast<DenseElementsAttr>();
 
-    auto stridesValuesConstOp =
-        dyn_cast<mlir::ConstantOp>(stridedSliceOp.strides().getDefiningOp());
-    auto stridesValues = stridesValuesConstOp.value().cast<DenseElementsAttr>();
+    auto stridesValuesConstOp = dyn_cast<mlir::arith::ConstantOp>(
+        stridedSliceOp.strides().getDefiningOp());
+    auto stridesValues =
+        stridesValuesConstOp.getValue().cast<DenseElementsAttr>();
 
     auto inputHeight = inputType.getDimSize(1);
     auto inputWidth = inputType.getDimSize(2);
     auto inputDepth = inputType.getDimSize(3);
-    auto beginX = beginValues.getValue<int32_t>({2});
-    auto beginY = beginValues.getValue<int32_t>({1});
-    auto endX = endValues.getValue<int32_t>({2});
-    auto endY = endValues.getValue<int32_t>({1});
-    auto strideX = stridesValues.getValue<int32_t>({2});
-    auto strideY = stridesValues.getValue<int32_t>({1});
+    auto beginX = beginValues.getValues<int32_t>()[2];
+    auto beginY = beginValues.getValues<int32_t>()[1];
+    auto endX = endValues.getValues<int32_t>()[2];
+    auto endY = endValues.getValues<int32_t>()[1];
+    auto strideX = stridesValues.getValues<int32_t>()[2];
+    auto strideY = stridesValues.getValues<int32_t>()[1];
 
     auto image_geom = nn::ImageGeometry(inputHeight, inputWidth,
                                         static_cast<int>(inputDepth));
@@ -115,9 +120,7 @@ std::unique_ptr<OperationPass<FuncOp>> createReplaceStridedSlicePass() {
   return std::make_unique<ReplaceStridedSlice>();
 }
 
-static PassRegistration<ReplaceStridedSlice>
-    pass("xcore-replace-stridedslice",
-         "Replace TFL StridedSlice with StridedSlice for XCore.");
+static PassRegistration<ReplaceStridedSlice> pass;
 
 } // namespace xcore
 } // namespace mlir

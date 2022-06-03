@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 // This is the optimization pattern definition file for XCore.
+include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "mlir/Dialect/StandardOps/IR/Ops.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
@@ -18,7 +19,8 @@ def getLookupTable
 // def:
 //   Pat<(activationOp
 //             : $output TensorOf<[QI8]>:$input),
-//             (XC_Lookup8Op $input, (ConstantOp (getLookupTable $output)))>;
+//             (XC_Lookup8Op $input, (Arith_ConstantOp (getLookupTable
+//             $output)))>;
 // }
 
 // Pad pattern

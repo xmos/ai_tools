@@ -60,6 +60,10 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         self.connect()
         super().__init__()
 
+    def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
+        """! Exit calls close function to delete interpreter"""
+        self.close()
+
     def initialise_interpreter(self, model_index=0) -> None:
         """! Abstract initialising interpreter with model associated with model_index.
         @param model_index The engine to target, for interpreters that support multiple models
@@ -432,6 +436,11 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
         self._out_ep.write(bytes([aisrv_cmd.CMD_START_INFER, model_index, 0]), 1000)
         # Send out a 0 length packet
         self._out_ep.write(bytes([]), 1000)
+
+    def close(self, model_index=0) -> None:
+        import usb 
+        usb.util.dispose_resources(self._dev)
+        return
 
     def start_acquire_single(self, sx, ex, sy, ey, rw, rh, engine_num=0):
         # Send cmd

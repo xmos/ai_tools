@@ -28,6 +28,10 @@ xf.print_help()
 ```
 This will print all options available to pass to xformer. To see hidden options, run `print_help(show_hidden=True)`
 
+To create a parameters file and a tflite model suitable for loading to flash, use the "xcore-flash-image-file" option.
+```python
+xf.convert("example_int8_model.tflite", "xcore_optimised_example_int8_flash_model.tflite", params={"xcore-flash-image-file ": "./xcore_params.params"})
+```
 
 ### xinterpreters
 ```python

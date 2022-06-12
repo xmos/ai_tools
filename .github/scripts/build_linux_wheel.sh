@@ -25,7 +25,8 @@ CC=/dt7/usr/bin/gcc CXX=/dt7/usr/bin/g++ make build
 #/usr/bin/ld: bazel-out/k8-fastbuild/bin/external/com_google_absl/absl/base/libbase.a(sysinfo.pic.o): in function `absl::lts_20210324::base_internal::ReadMonotonicClockNanos()':
 #sysinfo.cc:(.text+0x156): undefined reference to `clock_gettime'
 cd experimental/xformer
-bazel build //:xcore-opt --linkopt=-lrt --crosstool_top=@ubuntu18.04-gcc8_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain
+bazel build //:xcore-opt --linkopt=-lrt --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain
+
 
 # Build python wheel
 cd ../../python

@@ -157,7 +157,7 @@ jobs:
         run: |
           docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
             -v ${PWD}:/ai_tools -w /ai_tools \
-            tensorflow/build:latest-python${{ matrix.python-version }} \
+            tensorflow/build:2.8-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
@@ -219,15 +219,15 @@ jobs:
           
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           
-          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
+          cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
           patch -p0 < ../../../patches/tflite-micro.patch
-          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/host
+          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/host
           mkdir -p build
           cd build
           cmake ..
           cmake --build . -t install --parallel --config Release
                               
-          cd $GITHUB_WORKSPACE/experimental/xformer
+          cd %GITHUB_WORKSPACE%/experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
           bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"  
       - name: Build windows wheels

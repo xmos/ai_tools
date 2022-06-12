@@ -51,13 +51,13 @@ jobs:
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
-          cd third_party/lib_tflite_micro
+          cd ${{ env.GITHUB_WORKSPACE }}/third_party/lib_tflite_micro
           make build
                     
-          cd ../../experimental/xformer
+          cd ${{ env.GITHUB_WORKSPACE }}/experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
           
-          cd ../../python
+          cd ${{ env.GITHUB_WORKSPACE }}/python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
           
       - uses: actions/upload-artifact@v2

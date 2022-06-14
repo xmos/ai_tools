@@ -20,7 +20,8 @@ def convert(
             if str(val) == "" or val is None:
                 args.append(flag)
             else:
-                args.append(f"{flag} {val}")
+                args.append(f"{flag}")
+                args.append(f"{val}")
 
     args.append(str(filename))
 

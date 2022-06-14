@@ -7,11 +7,14 @@ import os
 import subprocess
 import larq_compute_engine as lce
 import tensorflow as tf
-from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
+from xmos_ai_tools.xinterpreters import (
+    xcore_tflm_host_interpreter,
+    xcore_tflm_usb_interpreter,
+)
 
 # This error tolerance works for the models we have currently
 # The maximum error we see is 1.037735
-ABSOLUTE_ERROR_TOLERANCE = 1.04
+ABSOLUTE_ERROR_TOLERANCE = 1.6
 LOGGER = logging.getLogger(__name__)
 XFORMER2_PATH = (
     pathlib.Path(__file__)
@@ -100,9 +103,16 @@ def test_model(request: FixtureRequest, filename: str) -> None:
 
     LOGGER.info("Invoking xformer to get xformed model...")
     xformed_model = get_xformed_model(model_content)
+
+    testing_device = request.config.getoption("device")
+
     LOGGER.info("Creating TFLM XCore interpreter...")
-    ie = xcore_tflm_host_interpreter()
-    ie.set_model(model_content=xformed_model)
+    if testing_device:
+        ie = xcore_tflm_usb_interpreter()
+    else:
+        ie = xcore_tflm_host_interpreter()
+
+    ie.set_model(model_content=xformed_model, secondary_memory=False)
 
     # Run tests
     num_of_fails = 0
@@ -148,12 +158,21 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                 output_zero_points.append(quant_params["zero_points"])
 
         LOGGER.info("Invoking XCORE interpreter...")
-        ie.set_input_tensor(input_tensor, 0)
+
+        if testing_device:
+            ie.set_input_tensor(bytes(input_tensor), 0)
+        else:
+            ie.set_input_tensor(input_tensor, 0)
         ie.invoke()
         xformer_outputs = []
         for i in range(num_of_outputs):
-            xformer_outputs.append(ie.get_output_tensor(i))
-
+            if testing_device:
+                xformer_outputs.append(
+                    np.reshape(np.asarray(ie.get_output_tensor(i)), outputs[i].shape)
+                )
+            else:
+                xformer_outputs.append(ie.get_output_tensor(i))
+        LOGGER.info(type(xformer_outputs[0]))
         # Compare outputs
         for i in range(num_of_outputs):
             LOGGER.info("Comparing output number " + str(i) + "...")
@@ -196,4 +215,6 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                     )
                 )
                 LOGGER.error("Run #" + str(test) + " failed")
+    if testing_device:
+        ie.close()
     assert num_of_fails == 0

@@ -95,7 +95,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         return
 
     def get_output_tensor(
-        self, output_index=0, tensor=None, model_index=0
+        self, output_index=0, tensor=None, model_index=0, bpi=1
     ) -> "Output tensor data":
         """! Abstract for reading the data in the output tensor of a model.
         @param output_index  The index of output tensor to target.
@@ -115,7 +115,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         assert type(data_read) == list
         assert type(data_read[0]) == int
 
-        return self.bytes_to_ints(data_read)
+        return self.bytes_to_ints(data_read, bpi)
 
     def get_input_tensor(self, input_index=0, model_index=0) -> "Input tensor data":
         """! Abstract for reading the data in the input tensor of a model.

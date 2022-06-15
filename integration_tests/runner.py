@@ -1,4 +1,4 @@
-import pathlib
+import pathlib, shutil
 import logging
 import tempfile
 from _pytest.fixtures import FixtureRequest
@@ -47,6 +47,7 @@ def get_xformed_model(model: bytes) -> bytes:
     p = subprocess.run(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
     )
+    shutil.copy(output_file.name, "../../output.tflite")
     LOGGER.info(p.stdout)
 
     # read output model content
@@ -112,7 +113,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     else:
         ie = xcore_tflm_host_interpreter()
 
-    ie.set_model(model_content=xformed_model, secondary_memory=False)
+    ie.set_model(model_content=xformed_model, secondary_memory=True)
 
     # Run tests
     num_of_fails = 0
@@ -167,9 +168,14 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         xformer_outputs = []
         for i in range(num_of_outputs):
             if testing_device:
-                xformer_outputs.append(
-                    np.reshape(np.asarray(ie.get_output_tensor(i)), outputs[i].shape)
-                )
+                if ie.get_output_details(i)['dtype'] == 'int32':
+                    xformer_outputs.append(
+                    np.reshape(np.asarray(ie.get_output_tensor(i, bpi=4)), outputs[i].shape)
+                    )
+                else:
+                    xformer_outputs.append(
+                        np.reshape(np.asarray(ie.get_output_tensor(i)), outputs[i].shape)
+                    )
             else:
                 xformer_outputs.append(ie.get_output_tensor(i))
         LOGGER.info(type(xformer_outputs[0]))

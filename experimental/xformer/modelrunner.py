@@ -5,7 +5,7 @@ import tempfile
 import sys
 import subprocess
 import numpy as np
-import pathlib
+import pathlib, shutil
 import argparse
 from cv2 import cv2
 
@@ -36,6 +36,7 @@ def get_xformed_model(model, args):
                            stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT,
                            check=True)
+        shutil.copy(output_path, "../../output.tflite")
         print(p.stdout)
 
         with open(pathlib.Path(output_path).resolve(), "rb") as fd:
@@ -155,9 +156,14 @@ def test_inference(args):
         xformer_outputs = []
         for i in range(num_of_outputs):
             if args.device:
-                xformer_outputs.append(
-                    np.reshape(np.asarray(ie.get_output_tensor(i)), outputs[i].shape)
-                )
+                if ie.get_output_details(i)['dtype'] == 'int32':
+                    xformer_outputs.append(
+                    np.reshape(np.asarray(ie.get_output_tensor(i, bpi=4)), outputs[i].shape)
+                    )
+                else:
+                    xformer_outputs.append(
+                        np.reshape(np.asarray(ie.get_output_tensor(i)), outputs[i].shape)
+                    )
             else:
                 xformer_outputs.append(ie.get_output_tensor(i))
 

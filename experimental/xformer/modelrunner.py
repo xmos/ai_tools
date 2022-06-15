@@ -36,7 +36,6 @@ def get_xformed_model(model, args):
                            stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT,
                            check=True)
-        shutil.copy(output_path, "../../output.tflite")
         print(p.stdout)
 
         with open(pathlib.Path(output_path).resolve(), "rb") as fd:

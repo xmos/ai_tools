@@ -47,7 +47,6 @@ def get_xformed_model(model: bytes) -> bytes:
     p = subprocess.run(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
     )
-    shutil.copy(output_file.name, "../../output.tflite")
     LOGGER.info(p.stdout)
 
     # read output model content

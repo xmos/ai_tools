@@ -50,4 +50,4 @@ Install the necessary python packages and the `xtftlm_interpreter` python packag
 pip install -r "./requirements.txt"
 ```
 
-After following the above instructions, to build xformer, please follow the build instructions [here](https://github.com/xmos/ai_tools/tree/develop/experimental/xformer#readme)
+After following the above instructions, to build xformer, please follow the build instructions [here](https://github.com/xmos/ai_tools/tree/develop/experimental/xformer#readme).

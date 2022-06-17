@@ -8,7 +8,7 @@ namespace xformer {
 
 unsigned majorVersion = 0;
 unsigned minorVersion = 1;
-unsigned patchVersion = 7;
+unsigned patchVersion = 8;
 
 } // namespace xformer
 

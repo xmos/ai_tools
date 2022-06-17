@@ -53,19 +53,21 @@ jobs:
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
-          cd third_party/lib_tflite_micro
+          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
+          make build
+          cd $GITHUB_WORKSPACE
           make build
                     
-          cd ../../experimental/xformer
+          cd $GITHUB_WORKSPACE/experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
           
-          cd python
+          cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
           
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
-          path: experimental/xformer/python/dist
+          path: python/dist
 
 
 
@@ -104,19 +106,21 @@ jobs:
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
-          cd third_party/lib_tflite_micro
+          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
+          make build
+          cd $GITHUB_WORKSPACE
           make build
                     
-          cd ../../experimental/xformer
+          cd $GITHUB_WORKSPACE/experimental/xformer
           bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
           
-          cd python
+          cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat-name macosx_11_0_arm64
           
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-arm-wheels
-          path: experimental/xformer/python/dist
+          path: python/dist
           
   
 
@@ -155,12 +159,12 @@ jobs:
         run: |
           docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.TAG_VERSION }} \
             -v ${PWD}:/ai_tools -w /ai_tools \
-            tensorflow/build:latest-python${{ matrix.python-version }} \
+            tensorflow/build:2.8-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
           python -m pip install auditwheel --no-cache-dir
-          cd experimental/xformer/python
+          cd python
           for f in dist/*.whl; do
             auditwheel repair --plat manylinux2010_x86_64 $f
           done
@@ -169,7 +173,7 @@ jobs:
         with:
           name: ${{ runner.os }}-wheels
           # auditwheel creates the output wheel in the wheelhouse folder
-          path: experimental/xformer/python/wheelhouse
+          path: python/wheelhouse
 
 
 
@@ -217,15 +221,15 @@ jobs:
           
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           
-          cd third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
+          cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
           patch -p0 < ../../../patches/tflite-micro.patch
-          cd ../../../xinterpreters
+          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/host
           mkdir -p build
           cd build
           cmake ..
           cmake --build . -t install --parallel --config Release
                               
-          cd ../../../../experimental/xformer
+          cd %GITHUB_WORKSPACE%/experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
           bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"  
       - name: Build windows wheels
@@ -233,12 +237,12 @@ jobs:
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG_VERSION }}
         run: |
-          cd experimental/xformer/python
+          cd python
           python setup.py bdist_wheel
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
-          path: experimental/xformer/python/dist
+          path: python/dist
 
 
 

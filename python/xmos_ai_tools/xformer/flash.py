@@ -115,3 +115,8 @@ class FlashBuilder:
         with open(filename, 'wb') as output_fd:
             output_fd.write(output)
 
+def generate_flash(model_file, params_file, output_file):
+    fb = FlashBuilder()
+    fb.add_model(0, filename=model_file)
+    fb.add_params(0, filename=params_file)
+    fb.flash_file(output_file)

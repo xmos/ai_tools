@@ -37,7 +37,7 @@ def get_xformed_model(model, args):
                            stderr=subprocess.STDOUT,
                            check=True)
         print(p.stdout)
-
+        shutil.copy(output_path, "./test.tflite")
         with open(pathlib.Path(output_path).resolve(), "rb") as fd:
             bits = bytes(fd.read())
     return bits
@@ -98,7 +98,7 @@ def test_inference(args):
         ie = xcore_tflm_usb_interpreter()
     else:
         ie = xcore_tflm_host_interpreter()
-    ie.set_model(model_content=xformed_model, secondary_memory=False)
+    ie.set_model(model_content=xformed_model, secondary_memory=True)
 
     if args.cifar:
         (_,_), (test_images,_) = tf.keras.datasets.cifar10.load_data()
@@ -146,25 +146,12 @@ def test_inference(args):
         # print(outputs2)
 
         print("Invoking XCORE interpreter...")
-        if args.device:
-            ie.set_input_tensor(bytes(input_tensor), 0)
-        else:
-            ie.set_input_tensor(input_tensor, 0)
+        ie.set_input_tensor(input_tensor, 0)
         ie.get_input_details()
         ie.invoke()
         xformer_outputs = []
         for i in range(num_of_outputs):
-            if args.device:
-                if ie.get_output_details(i)['dtype'] == 'int32':
-                    xformer_outputs.append(
-                    np.reshape(np.asarray(ie.get_output_tensor(i, bpi=4)), outputs[i].shape)
-                    )
-                else:
-                    xformer_outputs.append(
-                        np.reshape(np.asarray(ie.get_output_tensor(i)), outputs[i].shape)
-                    )
-            else:
-                xformer_outputs.append(ie.get_output_tensor(i))
+            xformer_outputs.append(ie.get_output_tensor(i))
 
         # Compare outputs
         for i in range(num_of_outputs):

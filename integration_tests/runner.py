@@ -158,25 +158,12 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                 output_zero_points.append(quant_params["zero_points"])
 
         LOGGER.info("Invoking XCORE interpreter...")
-
-        if testing_device:
-            ie.set_input_tensor(bytes(input_tensor), 0)
-        else:
-            ie.set_input_tensor(input_tensor, 0)
+        ie.set_input_tensor(input_tensor, 0)
         ie.invoke()
         xformer_outputs = []
         for i in range(num_of_outputs):
-            if testing_device:
-                if ie.get_output_details(i)['dtype'] == 'int32':
-                    xformer_outputs.append(
-                    np.reshape(np.asarray(ie.get_output_tensor(i, bpi=4)), outputs[i].shape)
-                    )
-                else:
-                    xformer_outputs.append(
-                        np.reshape(np.asarray(ie.get_output_tensor(i)), outputs[i].shape)
-                    )
-            else:
-                xformer_outputs.append(ie.get_output_tensor(i))
+            xformer_outputs.append(ie.get_output_tensor(i))
+            
         LOGGER.info(type(xformer_outputs[0]))
         # Compare outputs
         for i in range(num_of_outputs):
@@ -199,6 +186,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                     atol=ABSOLUTE_ERROR_TOLERANCE,
                 )
             except Exception as e:
+                print(ie.get_output_details(0))
                 num_of_fails += 1
                 LOGGER.error(e)
                 d = ~np.isclose(

@@ -14,7 +14,7 @@ For example:
 ```python
 from xmos_ai_tools import xformer as xf
 
-xf.convert("example_int8_model.tflite", "xcore_optimised_example_int8_model.tflite", {
+xf.convert("example_int8_model.tflite", "xcore_optimised_int8_model.tflite", {
     "mlir-disable-threading": None,
     "xcore-reduce-memory": None,
 })
@@ -30,14 +30,14 @@ This will print all options available to pass to xformer. To see hidden options,
 
 To create a parameters file and a tflite model suitable for loading to flash, use the "xcore-flash-image-file" option.
 ```python
-xf.convert("example_int8_model.tflite", "xcore_optimised_example_int8_flash_model.tflite", {
+xf.convert("example_int8_model.tflite", "xcore_optimised_int8_flash_model.tflite", {
     "xcore-flash-image-file ": "./xcore_params.params",
 })
 ```
 
 To use combine these files created by the code above into a .out file use the generate_flash() function
 ```python
-xf.generate_flash("xcore_optimised_example_int8_flash_model.tflite",  "xcore_params.params", "xcore_flash_binary.out")
+xf.generate_flash("xcore_optimised_int8_flash_model.tflite",  "xcore_params.params", "xcore_flash_binary.out")
 ```
 
 ### xinterpreters

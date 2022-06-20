@@ -35,6 +35,11 @@ xf.convert("example_int8_model.tflite", "xcore_optimised_example_int8_flash_mode
 })
 ```
 
+To use combine these files created by the code above into a .out file use the generate_flash() function
+```python
+xf.generate_flash("xcore_optimised_example_int8_flash_model.tflite",  "xcore_params.params", "xcore_flash_binary.out")
+```
+
 ### xinterpreters
 ```python
 from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter

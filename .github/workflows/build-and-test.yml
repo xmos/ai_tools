@@ -59,13 +59,17 @@ jobs:
           
           cd ../../python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
-          
+      - name: Test macOS wheels
+        run: |
+          pip install python/dist/*
+          make build
+          make test
+
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
           path: python/dist
-
-
+ 
 
   macos-arm-release-wheel:
     name: Build release wheels for macOS arm64

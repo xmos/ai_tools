@@ -2,8 +2,6 @@ import subprocess
 import typing
 from pathlib import Path
 from typing import Union, List, Optional
-import sys
-import argparse
 from .flash import generate_flash
 
 

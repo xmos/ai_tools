@@ -82,6 +82,8 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
                       tflite::ops::micro::xcore::Register_Conv2D_V2());
   resolver->AddCustom(tflite::ops::micro::xcore::Strided_Slice_OpCode,
                       tflite::ops::micro::xcore::Register_Strided_Slice());
+  resolver->AddCustom(tflite::ops::micro::xcore::Copy_Into_Tensor_OpCode,
+                      tflite::ops::micro::xcore::Register_Copy_Into_Tensor());
   resolver->AddCustom(tflite::ops::micro::xcore::Load_Flash_OpCode,
                       tflite::ops::micro::xcore::Register_LoadFromFlash());
   resolver->AddCustom(tflite::ops::micro::xcore::Bsign_8_OpCode,

@@ -79,17 +79,46 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-def XC_ConcatOp : XC_Op<"concat", [NoSideEffect]> {
-  let summary = "Concat op";
+def XC_CopyIntoTensorOp : XC_Op<"copy_into_tensor", [NoSideEffect]> {
+  let summary = "Copy Into Tensor op";
 
-  let description = [{"Concat op.}];
+  let description = [{"Copy Into Tensor op.}];
 
   let arguments = (ins
     TensorOf<[QI8]>:$input0,
+    TensorOf<[I8]>:$input1,
+    
+    I32Attr:$offset,
+
+    StrAttr:$memcpy_fn_param
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_ConnectorOp : XC_Op<"connector", [NoSideEffect]> {
+  let summary = "connector op";
+
+  let description = [{"connector op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input0,
+    TensorOf<[QI8]>:$input1
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_PassThruOp : XC_Op<"pass_thru", [NoSideEffect]> {
+  let summary = "pass thru op";
+
+  let description = [{"pass thru op.}];
+
+  let arguments = (ins
+    TensorOf<[I8]>:$input0,
     TensorOf<[QI8]>:$input1,
 
-    StrAttr:$memcpy_fn_param0,
-    StrAttr:$memcpy_fn_param1
+    StrAttr:$memcpy_fn_param
   );
 
   let results = (outs TensorOf<[QI8]> : $output);

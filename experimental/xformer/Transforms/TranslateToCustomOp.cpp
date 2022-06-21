@@ -28,12 +28,22 @@ std::vector<uint8_t> StridedSliceOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
-std::vector<uint8_t> ConcatOp::buildCustomOptions() {
+std::vector<uint8_t> CopyIntoTensorOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
 
-  fbb.String("mp0", memcpy_fn_param0().str());
-  fbb.String("mp1", memcpy_fn_param1().str());
+  fbb.String("mp", memcpy_fn_param().str());
+
+  fbb.EndMap(rootMap);
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+std::vector<uint8_t> ConnectorOp::buildCustomOptions() { return {}; }
+std::vector<uint8_t> PassThruOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  auto rootMap = fbb.StartMap();
+
+  fbb.String("mp", memcpy_fn_param().str());
 
   fbb.EndMap(rootMap);
   fbb.Finish();
@@ -126,6 +136,9 @@ void TranslateToCustomOp::runOnFunction() {
   patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<StridedSliceOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<CopyIntoTensorOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<ConnectorOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<PassThruOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

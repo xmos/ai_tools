@@ -32,23 +32,14 @@ std::vector<uint8_t> CopyIntoTensorOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
 
-  fbb.String("mp", memcpy_fn_param().str());
+  fbb.Int("offset", (int32_t)offset());
 
   fbb.EndMap(rootMap);
   fbb.Finish();
   return fbb.GetBuffer();
 }
 std::vector<uint8_t> ConnectorOp::buildCustomOptions() { return {}; }
-std::vector<uint8_t> PassThruOp::buildCustomOptions() {
-  flexbuffers::Builder fbb;
-  auto rootMap = fbb.StartMap();
-
-  fbb.String("mp", memcpy_fn_param().str());
-
-  fbb.EndMap(rootMap);
-  fbb.Finish();
-  return fbb.GetBuffer();
-}
+std::vector<uint8_t> PassThruOp::buildCustomOptions() { return {}; }
 
 std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
   flexbuffers::Builder fbb;

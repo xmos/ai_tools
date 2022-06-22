@@ -88,9 +88,7 @@ def XC_CopyIntoTensorOp : XC_Op<"copy_into_tensor", [NoSideEffect]> {
     TensorOf<[QI8]>:$input0,
     TensorOf<[I8]>:$input1,
     
-    I32Attr:$offset,
-
-    StrAttr:$memcpy_fn_param
+    I32Attr:$offset
   );
 
   let results = (outs TensorOf<[QI8]> : $output);
@@ -116,9 +114,7 @@ def XC_PassThruOp : XC_Op<"pass_thru", [NoSideEffect]> {
 
   let arguments = (ins
     TensorOf<[I8]>:$input0,
-    TensorOf<[QI8]>:$input1,
-
-    StrAttr:$memcpy_fn_param
+    TensorOf<[QI8]>:$input1
   );
 
   let results = (outs TensorOf<[QI8]> : $output);

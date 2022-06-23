@@ -61,8 +61,10 @@ jobs:
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
       - name: Test macOS wheels
         run: |
-          pip install python/dist/*
           pip install -r ./requirements.txt
+          cd python
+          pip install .
+          cd ..          
           make test
 
       - uses: actions/upload-artifact@v2

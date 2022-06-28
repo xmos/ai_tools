@@ -60,7 +60,7 @@ jobs:
           cd ../..
           make build
           
-          cd ../../python
+          cd python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
       - name: Test macOS wheels
         run: |

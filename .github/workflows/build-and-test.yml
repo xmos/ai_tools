@@ -62,9 +62,9 @@ jobs:
       - name: Test macOS wheels
         run: |
           pip install -r ./requirements.txt
-          cd python
-          pip install .
-          cd ..          
+          cd python/dist
+          pip install *
+          cd ../..          
           make test
 
       - uses: actions/upload-artifact@v2

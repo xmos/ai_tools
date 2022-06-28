@@ -57,6 +57,9 @@ jobs:
           cd ../../experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
           
+          cd ../..
+          make build
+          
           cd ../../python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
       - name: Test macOS wheels

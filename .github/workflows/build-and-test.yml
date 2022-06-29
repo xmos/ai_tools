@@ -119,7 +119,7 @@ jobs:
           bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
           
           cd ../../python
-          python setup.py bdist_wheel --plat-name macosx_11_0_arm64
+          python setup.py bdist_wheel --plat-name any
           
       - name: Test macOS arm wheels
         env:

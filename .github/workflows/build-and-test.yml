@@ -175,7 +175,7 @@ jobs:
         run: |
           docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
             -v ${PWD}:/ai_tools -w /ai_tools \
-            tensorflow/build:latest-python${{ matrix.python-version }} \
+            tensorflow/build:2.8-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
@@ -185,10 +185,14 @@ jobs:
             auditwheel repair --plat manylinux2010_x86_64 $f
           done
           
-      - name: Test manylinux wheels
+      - name: Test manylinux arm wheels
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
+          CMAKE_ENABLE_DARWIN_TARGET_ARM64: 1
+        shell: bash
         run: |
           pip install -r ./requirements.txt
-          cd python/dist
+          cd python/wheelhouse
           pip install *
           cd ../..          
           make test
@@ -198,7 +202,6 @@ jobs:
           name: ${{ runner.os }}-wheels
           # auditwheel creates the output wheel in the wheelhouse folder
           path: python/wheelhouse
-
 
 
   windows-release-wheel:

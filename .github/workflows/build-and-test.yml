@@ -139,7 +139,6 @@ jobs:
           path: python/dist
           
   
-
   manylinux-release-wheel:
     name: Build release wheels for manylinux2010
     runs-on: ubuntu-18.04
@@ -149,15 +148,15 @@ jobs:
       fail-fast: false
     steps:
       # Caches and restores the bazelisk download directory, the bazel build directory.
-      #- name: Cache bazel
-      #  uses: actions/cache@v2.1.4
-      #  env:
-       #   cache-name: bazel-cache
-       # with:
-       #   path: |
-       #     ~/.cache/bazelisk
-        #    ~/.cache/bazel
-        #  key: ${{ runner.os }}-${{ env.cache-name }}
+      - name: Cache bazel
+        uses: actions/cache@v2.1.4
+        env:
+          cache-name: bazel-cache
+        with:
+          path: |
+            ~/.cache/bazelisk
+            ~/.cache/bazel
+          key: ${{ runner.os }}-${{ env.cache-name }}
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -173,7 +172,7 @@ jobs:
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
-          docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
+          docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.TAG_VERSION }} \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:2.8-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
@@ -185,10 +184,9 @@ jobs:
             auditwheel repair --plat manylinux2010_x86_64 $f
           done
           
-      - name: Test manylinux arm wheels
+      - name: Test manylinux wheels
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
-          CMAKE_ENABLE_DARWIN_TARGET_ARM64: 1
         shell: bash
         run: |
           pip install -r ./requirements.txt
@@ -202,6 +200,7 @@ jobs:
           name: ${{ runner.os }}-wheels
           # auditwheel creates the output wheel in the wheelhouse folder
           path: python/wheelhouse
+
 
 
   windows-release-wheel:
@@ -248,26 +247,29 @@ jobs:
           
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           
-          cd third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
+          cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
           patch -p0 < ../../../patches/tflite-micro.patch
-          cd ../../../xinterpreters
+          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/host
           mkdir -p build
           cd build
           cmake ..
           cmake --build . -t install --parallel --config Release
                               
-          cd ../../../../experimental/xformer
+          cd %GITHUB_WORKSPACE%/experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
           bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"  
       - name: Build windows wheels
         shell: cmd
         env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG_VERSION }}
         run: |
           cd python
           python setup.py bdist_wheel
           
       - name: Test windows wheels
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
+        shell: bash
         run: |
           pip install -r ./requirements.txt
           cd python/dist
@@ -279,4 +281,3 @@ jobs:
         with:
           name: ${{ runner.os }}-wheels
           path: python/dist
-

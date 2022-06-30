@@ -1,11 +1,8 @@
 name: xmos-ai-tools-release-beta
 
 on:
-  pull_request_target:
-    types:
-      - closed
-    branches:
-      - develop
+  workflow_dispatch:
+
 jobs:
   manylinux-release-wheel:
     if: github.event.pull_request.merged == true

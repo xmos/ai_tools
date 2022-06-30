@@ -174,7 +174,7 @@ jobs:
         run: |
           docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.TAG_VERSION }} \
             -v ${PWD}:/ai_tools -w /ai_tools \
-            tensorflow/build:2.8-python${{ matrix.python-version }} \
+            tensorflow/build:3.8-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
@@ -254,6 +254,15 @@ jobs:
         run: |
           cd python
           python setup.py bdist_wheel
+          
+      - name: Test windows wheels
+        run: |
+          pip install -r ./requirements.txt
+          cd python/dist
+          pip install *
+          cd ../..          
+          make test
+          
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels

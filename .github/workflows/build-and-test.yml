@@ -129,7 +129,7 @@ jobs:
         run: |
           pip install -r ./requirements.txt
           cd python/dist
-          pip install *
+          pip install *.whl
           cd ../..          
           make test
           
@@ -259,7 +259,7 @@ jobs:
         run: |
           pip install -r ./requirements.txt
           cd python/dist
-          pip install *
+          pip install *.whl
           cd ../..          
           make test
           

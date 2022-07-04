@@ -116,6 +116,8 @@ class xcore_tflm_base_interpreter(ABC):
             tensorSize = 1  # int8 is 1 byte
         elif tensorType == TensorType.INT32:
             tensorSize = 4  # int32 is 4 bytes
+        elif tensorType == TensorType.FLOAT32:
+            tensorSize = 4  # float32 is 4 bytes
         else:
             print(tensorType)
             self._check_status(1)
@@ -150,6 +152,8 @@ class xcore_tflm_base_interpreter(ABC):
             tensorSize = 1  # int8 is 1 byte
         elif tensorType == TensorType.INT32:
             tensorSize = 4  # int32 is 4 bytes
+        elif tensorType == TensorType.FLOAT32:
+            tensorSize = 4  # float32 is 4 bytes
         else:
             print(tensorType)
             self._check_status(1)
@@ -184,6 +188,10 @@ class xcore_tflm_base_interpreter(ABC):
             dtype = "int8"
         elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
             dtype = "int32"
+        elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+            dtype = "float32"
+        else:
+            dtype = modelBuf.Subgraphs(0).Tensors(tensorIndex).Type()
 
         details = {
             "index": tensorIndex,
@@ -224,6 +232,10 @@ class xcore_tflm_base_interpreter(ABC):
             dtype = "int8"
         elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
             dtype = "int32"
+        elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+            dtype = "float32"
+        else:
+            dtype = modelBuf.Subgraphs(0).Tensors(tensorIndex).Type()
 
         details = {
             "index": tensorIndex,

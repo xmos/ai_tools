@@ -5,13 +5,13 @@ import tempfile
 import sys
 import subprocess
 import numpy as np
-import pathlib
+import pathlib, shutil
 import argparse
 from cv2 import cv2
 
 import tensorflow as tf
 import larq_compute_engine as lce
-from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
+from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter, xcore_tflm_usb_interpreter
 
 
 XFORMER2_PATH = (pathlib.Path(__file__).resolve().parents[0] / "bazel-bin" /
@@ -37,7 +37,7 @@ def get_xformed_model(model, args):
                            stderr=subprocess.STDOUT,
                            check=True)
         print(p.stdout)
-
+        shutil.copy(output_path, "./test.tflite")
         with open(pathlib.Path(output_path).resolve(), "rb") as fd:
             bits = bytes(fd.read())
     return bits
@@ -92,9 +92,13 @@ def test_inference(args):
     print("Invoking xformer to get converted model...")
     xformed_model = get_xformed_model(model_content, args)
 
+
     print("Creating TFLM XCore interpreter...")
-    ie = xcore_tflm_host_interpreter()
-    ie.set_model(model_content=xformed_model)
+    if args.device:
+        ie = xcore_tflm_usb_interpreter()
+    else:
+        ie = xcore_tflm_host_interpreter()
+    ie.set_model(model_content=xformed_model, secondary_memory=True)
 
     if args.cifar:
         (_,_), (test_images,_) = tf.keras.datasets.cifar10.load_data()
@@ -163,6 +167,8 @@ def test_inference(args):
                 print(e)
                 print("Run #" + str(test) + " failed")
             #np.testing.assert_equal(outputs[i], outputs2[i])
+    if args.device:
+        ie.close()    
     return num_of_fails
 
 
@@ -171,6 +177,7 @@ if __name__ == "__main__":
     parser.add_argument("model", help="provide model tflite file")
     parser.add_argument("--input", help="input file")
     parser.add_argument("--bnn", default=False, action='store_true', help="run bnn")
+    parser.add_argument("--device", default=False, action='store_true', help="run on xcore")
     parser.add_argument("--s", default=False, action='store_true', help="sleep for 5 seconds")
     parser.add_argument("--cifar", default=False, action='store_true', help="enable cifar test data")
     parser.add_argument("--n", default=1, help="num of runs")

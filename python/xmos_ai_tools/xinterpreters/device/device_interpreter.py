@@ -1,6 +1,7 @@
 # Copyright 2022 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 from abc import abstractmethod
+import numpy as np
 
 from xmos_ai_tools.xinterpreters.base.base_interpreter import (
     xcore_tflm_base_interpreter,
@@ -60,6 +61,10 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         self.connect()
         super().__init__()
 
+    def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
+        """! Exit calls close function to delete interpreter"""
+        self.close()
+
     def initialise_interpreter(self, model_index=0) -> None:
         """! Abstract initialising interpreter with model associated with model_index.
         @param model_index The engine to target, for interpreters that support multiple models
@@ -81,9 +86,13 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
+        if self.get_input_details(input_index)['dtype'] == 'int32' or self.get_input_details(input_index)['dtype'] == 'float32':
+            bpi = 4
+        else:
+            bpi= 1
         self._download_data(
             aisrv_cmd.CMD_SET_INPUT_TENSOR,
-            data,
+            self.bytes_to_ints(bytes(data), bpi),
             tensor_num=input_index,
             engine_num=model_index,
         )
@@ -91,8 +100,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         return
 
     def get_output_tensor(
-        self, output_index=0, tensor=None, model_index=0
-    ) -> "Output tensor data":
+        self, output_index=0, tensor=None, model_index=0) -> "Output tensor data":
         """! Abstract for reading the data in the output tensor of a model.
         @param output_index  The index of output tensor to target.
         @param tensor Tensor of correct shape to write into (optional)
@@ -100,6 +108,10 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         running concurrently. Defaults to 0 for use with a single model.
         @return The data that was stored in the output tensor.
         """
+        if self.get_output_details(output_index)['dtype'] == 'int32' or self.get_output_details(output_index)['dtype'] == 'float32':
+            bpi = 4
+        else:
+            bpi= 1
         output_length = self.get_output_tensor_size(output_index, model_index)
         data_read = self._upload_data(
             aisrv_cmd.CMD_GET_OUTPUT_TENSOR,
@@ -110,8 +122,9 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
 
         assert type(data_read) == list
         assert type(data_read[0]) == int
-
-        return self.bytes_to_ints(data_read)
+        output = self.bytes_to_ints(data_read, bpi)
+        print(self.get_output_details(output_index)["shape"])
+        return np.reshape(np.asarray(output), self.get_output_details(output_index)["shape"])
 
     def get_input_tensor(self, input_index=0, model_index=0) -> "Input tensor data":
         """! Abstract for reading the data in the input tensor of a model.
@@ -432,6 +445,11 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
         self._out_ep.write(bytes([aisrv_cmd.CMD_START_INFER, model_index, 0]), 1000)
         # Send out a 0 length packet
         self._out_ep.write(bytes([]), 1000)
+
+    def close(self, model_index=0) -> None:
+        import usb 
+        usb.util.dispose_resources(self._dev)
+        return
 
     def start_acquire_single(self, sx, ex, sy, ey, rw, rh, engine_num=0):
         # Send cmd

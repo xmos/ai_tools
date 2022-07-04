@@ -236,7 +236,7 @@ jobs:
 
 
   macos-release-wheel2:
-    name: Build release wheels for macOS
+    name: Build release wheels for macOS 2
     runs-on: macos-latest
     strategy:
       matrix:
@@ -280,6 +280,14 @@ jobs:
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
           
+      - name: Test macOS wheels
+        run: |
+          pip install -r ./requirements.txt
+          cd python/dist
+          pip install *
+          cd ../..          
+          make test
+          
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
@@ -288,7 +296,7 @@ jobs:
 
 
   macos-arm-release-wheel2:
-    name: Build release wheels for macOS arm64
+    name: Build release wheels for macOS arm64 2
     runs-on: macos-11
     strategy:
       matrix:
@@ -332,6 +340,14 @@ jobs:
           
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat-name macosx_11_0_arm64
+     
+      - name: Test macos-arm wheels
+        run: |
+          pip install -r ./requirements.txt
+          cd python/dist
+          pip install *
+          cd ../..          
+          make test
           
       - uses: actions/upload-artifact@v2
         with:
@@ -341,7 +357,7 @@ jobs:
   
 
   manylinux-release-wheel2:
-    name: Build release wheels for manylinux2010
+    name: Build release wheels for manylinux2010 2
     runs-on: ubuntu-18.04
     strategy:
       matrix:
@@ -385,6 +401,14 @@ jobs:
             auditwheel repair --plat manylinux2010_x86_64 $f
           done
           
+      - name: Test linux wheels
+        run: |
+          pip install -r ./requirements.txt
+          cd python/wheelhouse
+          pip install *
+          cd ../..          
+          make test
+          
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels
@@ -394,7 +418,7 @@ jobs:
 
 
   windows-release-wheel2:
-    name: Build release wheels for windows
+    name: Build release wheels for windows 2
     runs-on: windows-2019
     strategy:
       matrix:
@@ -455,6 +479,15 @@ jobs:
         run: |
           cd python
           python setup.py bdist_wheel
+          
+      - name: Test windows wheels
+        run: |
+          pip install -r ./requirements.txt
+          cd python/dist
+          pip install *
+          cd ../..          
+          make test
+          
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}-wheels

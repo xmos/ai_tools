@@ -78,15 +78,7 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
   resolver->AddConv2D();
   resolver->AddQuantize();
   resolver->AddDepthwiseConv2D();
-  resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_V2_OpCode,
-                      tflite::ops::micro::xcore::Register_Conv2D_V2());
-  resolver->AddCustom(tflite::ops::micro::xcore::Strided_Slice_OpCode,
-                      tflite::ops::micro::xcore::Register_Strided_Slice());
-  resolver->AddCustom(tflite::ops::micro::xcore::Load_Flash_OpCode,
-                      tflite::ops::micro::xcore::Register_LoadFromFlash());
-  resolver->AddCustom(tflite::ops::micro::xcore::Bsign_8_OpCode,
-                      tflite::ops::micro::xcore::Register_BSign_8());
-
+  tflite::ops::micro::xcore::RegisterXCOps(resolver);
   add_lib_vision_ops(resolver);
 
   return ie;

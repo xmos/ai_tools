@@ -108,10 +108,11 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         running concurrently. Defaults to 0 for use with a single model.
         @return The data that was stored in the output tensor.
         """
-        if self.get_output_details(output_index)['dtype'] == 'int32' or self.get_output_details(output_index)['dtype'] == 'float32':
+        output_type = self.get_output_details(output_index)['dtype']
+        if output_type == 'int32' or output_type == 'float32':
             bpi = 4
         else:
-            bpi= 1
+            bpi = 1
         output_length = self.get_output_tensor_size(output_index, model_index)
         data_read = self._upload_data(
             aisrv_cmd.CMD_GET_OUTPUT_TENSOR,
@@ -122,8 +123,12 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
 
         assert type(data_read) == list
         assert type(data_read[0]) == int
-        output = self.bytes_to_ints(data_read, bpi)
-        print(self.get_output_details(output_index)["shape"])
+        if output_type == "float32":
+            float_ = True 
+        else:
+            float_ = False
+        output = self.bytes_to_ints(data_read, bpi, float_=float_)
+
         return np.reshape(np.asarray(output), self.get_output_details(output_index)["shape"])
 
     def get_input_tensor(self, input_index=0, model_index=0) -> "Input tensor data":
@@ -224,7 +229,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             print("IO Error\n")
             raise IOError
 
-    def bytes_to_ints(self, data_bytes, bpi=1):
+    def bytes_to_ints(self, data_bytes, bpi=1, float_=False):
         """! Convert variable byte array to integers.
         @param data_bytes Byte Array.
         @param bpi Bytes per integer (eg 1 for int8, 4 for int32).
@@ -232,10 +237,17 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         output_data_int = []
 
         # TODO better way of doing this?
-        for i in range(0, len(data_bytes), bpi):
-            x = data_bytes[i : i + bpi]
-            y = int.from_bytes(x, byteorder="little", signed=True)
-            output_data_int.append(y)
+        if float_:
+            import struct
+            for i in range(0, len(data_bytes), bpi):
+                x = data_bytes[i : i + bpi]
+                y = struct.unpack('f', x)
+                output_data_int.append(y)
+        else:
+            for i in range(0, len(data_bytes), bpi):
+                x = data_bytes[i : i + bpi]
+                y = int.from_bytes(x, byteorder="little", signed=True)
+                output_data_int.append(y)
 
         return output_data_int
 

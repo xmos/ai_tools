@@ -1,20 +1,18 @@
-name: xmos-ai-tools-release
+name: xmos-ai-tools-build-and-test
 
 on:
-  release:
-    types: [published]
-    tags:
-      - v*
   workflow_dispatch:
     inputs:
       version:
-        description: "Provide a valid release tag version in the format vX.Y.Z"
+        description: "Provide a valid branch or commit hash"
         required: true
 
-# Either we triggered a workflow providing a version or published a new release
 # Save the tag version in an environment variable
+# The pretend version is used for the wheel as the
+# tag version might be a branch name or commit hash
 env:
-  TAG_VERSION: ${{ github.event.inputs.version == 0 && github.ref_name || github.event.inputs.version }}
+  TAG_VERSION: ${{ github.event.inputs.version }}
+  PRETEND_VERSION: 0.1.1
 
 
 
@@ -47,7 +45,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS wheels
         env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG_VERSION }}
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
         shell: bash
         run: |
           python --version
@@ -99,7 +97,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Build macOS arm wheels
         env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG_VERSION }}
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
           CMAKE_ENABLE_DARWIN_TARGET_ARM64: 1
         shell: bash
         run: |
@@ -157,7 +155,7 @@ jobs:
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
-          docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.TAG_VERSION }} \
+          docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:2.8-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
@@ -235,7 +233,7 @@ jobs:
       - name: Build windows wheels
         shell: cmd
         env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG_VERSION }}
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
         run: |
           cd python
           python setup.py bdist_wheel
@@ -243,46 +241,3 @@ jobs:
         with:
           name: ${{ runner.os }}-wheels
           path: python/dist
-
-
-
-  publish-wheels:
-    name: Publish wheels to PyPi
-    if: ${{ always() }}
-    needs: [macos-release-wheel, macos-arm-release-wheel, manylinux-release-wheel, windows-release-wheel]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: macOS-wheels
-          path: macOS-wheels
-        if: ${{ needs.macos-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v2
-        with:
-          name: macOS-arm-wheels
-          path: macOS-arm-wheels
-        if: ${{ needs.macos-arm-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v2
-        with:
-          name: Linux-wheels
-          path: Linux-wheels
-        if: ${{ needs.manylinux-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v2
-        with:
-          name: Windows-wheels
-          path: Windows-wheels
-        if: ${{ needs.windows-release-wheel.result == 'success' }}
-      - run: |
-          set -x
-          mkdir -p dist
-          cp macOS-wheels/*.whl dist/ || true
-          cp macOS-arm-wheels/*.whl dist/ || true
-          cp Linux-wheels/*.whl dist/ || true
-          cp Windows-wheels/*.whl dist/ || true
-          ls -la dist/
-          sha256sum dist/*.whl
-      - name: Publish packages to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}

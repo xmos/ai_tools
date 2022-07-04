@@ -103,8 +103,8 @@ setup(
         ("Scripts" if platform.system() == "Windows" else "bin", [XCOREOPT_BINARY])
     ],
     cmdclass={
-        'bdist_wheel': bdist_wheel,
-        'install': install_plat_lib,
+        "bdist_wheel": bdist_wheel,
+        "install": install_plat_lib,
     },
     keywords="tensorflow binarized neural networks",
 )

@@ -126,9 +126,10 @@ jobs:
       - name: Test macos-arm wheels
         run: |
           pip install -r ./requirements.txt
-          cd python/dist
-          pip install *
-          cd ../..          
+          pip debug --verbose
+          cd python
+          pip install .
+          cd ..          
           make test
           
       - uses: actions/upload-artifact@v2
@@ -186,9 +187,10 @@ jobs:
       - name: Test linux wheels
         run: |
           pip install -r ./requirements.txt
-          cd python/wheelhouse
-          sudo pip install *
-          cd ../..          
+          pip debug --verbose
+          cd python
+          sudo pip install .
+          cd ..   
           sudo make test
           
       - uses: actions/upload-artifact@v2
@@ -265,9 +267,10 @@ jobs:
       - name: Test windows wheels
         run: |
           pip install -r ./requirements.txt
-          cd python/dist
-          FOR %f in (*) DO @pip install %f
-          cd ../..          
+          pip debug --verbose
+          cd python
+          pip install .
+          cd ..        
           make test
           
       - uses: actions/upload-artifact@v2

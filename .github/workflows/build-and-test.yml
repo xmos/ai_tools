@@ -127,10 +127,9 @@ jobs:
         run: |
           pip install -r ./requirements.txt
           pip debug --verbose
-          cd python
-          pip install .
-          cd ..          
-          make test
+          cd python/dist
+          pip install *
+          cd ../..       
           
       - uses: actions/upload-artifact@v2
         with:
@@ -188,10 +187,9 @@ jobs:
         run: |
           pip install -r ./requirements.txt
           pip debug --verbose
-          cd python
-          sudo pip install .
-          cd ..   
-          sudo make test
+          cd python/dist
+          sudo -H pip install *
+          cd ../..
           
       - uses: actions/upload-artifact@v2
         with:
@@ -268,10 +266,9 @@ jobs:
         run: |
           pip install -r ./requirements.txt
           pip debug --verbose
-          cd python
-          pip install .
-          cd ..        
-          make test
+          cd python/dist
+          pip install *
+          cd ../..   
           
       - uses: actions/upload-artifact@v2
         with:

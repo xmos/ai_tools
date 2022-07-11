@@ -103,7 +103,6 @@ struct HoistQuantizeAboveConcatPattern
       newQuantizeOp = rewriter.create<TFL::QuantizeOp>(
           quantizeOp.getLoc(), newQType.getValue(), concatOp.getOperand(i),
           newQType);
-      int m = 0;
       quantizeOps.push_back(newQuantizeOp.getResult());
     }
 

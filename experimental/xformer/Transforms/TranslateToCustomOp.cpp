@@ -28,7 +28,7 @@ std::vector<uint8_t> StridedSliceOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
-std::vector<uint8_t> CopyIntoTensorOp::buildCustomOptions() {
+std::vector<uint8_t> CopyIntoOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
 
@@ -127,7 +127,7 @@ void TranslateToCustomOp::runOnFunction() {
   patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<StridedSliceOp>>(ctx);
-  patterns.insert<RewriteToCustomOp<CopyIntoTensorOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<CopyIntoOp>>(ctx);
   patterns.insert<RewriteToCustomOp<ConnectorOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PassThruOp>>(ctx);
 

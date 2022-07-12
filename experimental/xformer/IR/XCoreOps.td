@@ -79,10 +79,10 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-def XC_CopyIntoTensorOp : XC_Op<"copy_into_tensor", [NoSideEffect]> {
-  let summary = "Copy Into Tensor op";
+def XC_CopyIntoOp : XC_Op<"copy_into", [NoSideEffect]> {
+  let summary = "Copy Into op";
 
-  let description = [{"Copy Into Tensor op.}];
+  let description = [{"Copy Into op.}];
 
   let arguments = (ins
     TensorOf<[QI8]>:$input0,

@@ -63,17 +63,17 @@ struct ReplaceConcatPattern
     int32_t offset0 = 0;
     int32_t offset1 = inputWidth0;
 
-    auto copyIntoTensorOp0 = rewriter.create<CopyIntoTensorOp>(
+    auto copyIntoOp0 = rewriter.create<CopyIntoOp>(
         concatOp.getLoc(), concatOp.getType(),
         input0, concatTensorOp, offset0 );
 
-    auto copyIntoTensorOp1  = rewriter.create<CopyIntoTensorOp>(
+    auto copyIntoOp1  = rewriter.create<CopyIntoOp>(
         concatOp.getLoc(), concatOp.getType(),
           input1, concatTensorOp, offset1);
     
     auto connectorOp0  = rewriter.create<ConnectorOp>(
         concatOp.getLoc(), concatOp.getType(),
-          copyIntoTensorOp0, copyIntoTensorOp1 );
+          copyIntoOp0, copyIntoOp1 );
 
     auto passThruOp  = rewriter.create<PassThruOp>(
         concatOp.getLoc(), concatOp.getType(),

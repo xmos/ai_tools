@@ -260,15 +260,16 @@ jobs:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
         run: |
           cd python
-          python setup.py bdist_wheel
+          python setup.py bdist_wheel --plat win_amd64
           
       - name: Test windows wheels
         run: |
           pip install -r ./requirements.txt
           pip debug --verbose
           cd python/dist
-          pip install *
-          cd ../..   
+          pip install xmos_ai_tools-0.1.1-py3-none-win_amd64.whl
+          cd ../..
+          make test
           
       - uses: actions/upload-artifact@v2
         with:

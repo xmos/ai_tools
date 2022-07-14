@@ -28,21 +28,21 @@ class xcore_tflm_base_interpreter(ABC):
         return
 
     @abstractmethod
-    def set_input_tensor(self, data, input_index=0, model_index=0) -> None:
+    def set_tensor(self, data, tensor_index=0, model_index=0) -> None:
         """! Abstract method for writing the input tensor of a model.
         @param data  The blob of data to set the tensor to.
-        @param input_index  The index of input tensor to target. Defaults to 0.
+        @param tensor_index  The index of input tensor to target. Defaults to 0.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
         return
 
     @abstractmethod
-    def get_output_tensor(
-        self, output_index=0, model_index=0, tensor=None
+    def get_tensor(
+        self, tensor_index=0, model_index=0, tensor=None
     ) -> "Output tensor data":
         """! Abstract method for reading data from the output tensor of a model.
-        @param output_index  The index of output tensor to target.
+        @param tensor_index  The index of output tensor to target.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         @param tensor  Tensor of correct shape to write into (optional).

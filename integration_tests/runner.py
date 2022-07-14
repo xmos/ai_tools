@@ -11,17 +11,12 @@ from xmos_ai_tools.xinterpreters import (
     xcore_tflm_host_interpreter,
     xcore_tflm_usb_interpreter,
 )
+from xmos_ai_tools import xformer
 
 # This error tolerance works for the models we have currently
 # The maximum error we see is 1.037735
 ABSOLUTE_ERROR_TOLERANCE = 1.6
 LOGGER = logging.getLogger(__name__)
-XFORMER2_PATH = (
-    pathlib.Path(__file__)
-    .resolve()
-    .parent.parent.joinpath("experimental", "xformer", "bazel-bin", "xcore-opt")
-)
-
 
 def dequantize(arr: np.ndarray, scale: float, zero_point: int) -> np.float32:
     return np.float32(arr.astype(np.int32) - np.int32(zero_point)) * np.float32(scale)
@@ -34,20 +29,10 @@ def get_xformed_model(model: bytes) -> bytes:
     input_file.close()
     # create another temp file for output model
     output_file = tempfile.NamedTemporaryFile(delete=False)
-    cmd = [
-        str(XFORMER2_PATH),
-        str(input_file.name),
-        "-o",
-        str(output_file.name),
-        "--xcore-thread-count=5",
-        # "--xcore-replace-avgpool-with-conv2d",
-        # "--xcore-replace-with-conv2dv2",
-        # "--xcore-translate-to-customop"
-    ]
-    p = subprocess.run(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
-    )
-    LOGGER.info(p.stdout)
+
+    xformer.convert(str(input_file.name), str(output_file.name), {
+    "xcore-thread-count": 5,
+})
 
     # read output model content
     bits = bytes(output_file.read())
@@ -65,11 +50,6 @@ def test_model(request: FixtureRequest, filename: str) -> None:
 
         time.sleep(5)
 
-    if not XFORMER2_PATH.exists():
-        LOGGER.error(
-            "xcore-opt not found! Please build xformer before running integration tests!"
-        )
-        assert False
     model_path = pathlib.Path(filename).resolve()
     if not model_path.exists():
         LOGGER.error("model file not found!")

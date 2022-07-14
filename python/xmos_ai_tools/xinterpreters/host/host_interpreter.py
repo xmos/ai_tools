@@ -169,7 +169,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         """
         l = self.get_output_tensor_size(tensor_index)
         if tensor is None:
-            tensor_details = self.get_output_details(tensor_index)
+            tensor_details = self.get_output_details(model_index)[tensor_index]
             tensor = np.zeros(tensor_details["shape"], dtype=tensor_details["dtype"])
         else:
             l2 = len(tensor.tobytes())
@@ -188,7 +188,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         running concurrently. Defaults to 0 for use with a single model.
         @return The data that was stored in the output tensor.
         """
-        tensor_details = self.get_input_details(input_index)
+        tensor_details = self.get_input_details(model_index)[input_index]
         tensor = np.zeros(tensor_details["shape"], dtype=tensor_details["dtype"])
         data_ptr = tensor.ctypes.data_as(ctypes.c_void_p)
 

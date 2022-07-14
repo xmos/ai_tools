@@ -123,13 +123,14 @@ jobs:
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat-name macosx_11_0_arm64
      
-     # - name: Test macos-arm wheels
-      #  run: |
-       #   pip install -r ./requirements.txt
-       #   pip debug --verbose
-       #   cd python/dist
-       #  pip install *
-       #   cd ../..       
+      - name: Test macos-arm wheels
+        run: |
+          pip install -r ./requirements.txt
+          pip debug --verbose
+          cd python/dist
+          pip install *
+          cd ../..       
+          make test
           
       - uses: actions/upload-artifact@v2
         with:
@@ -190,6 +191,7 @@ jobs:
           cd python/dist
           pip install *
           cd ../..
+          make test
           
       - uses: actions/upload-artifact@v2
         with:

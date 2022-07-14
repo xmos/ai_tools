@@ -126,7 +126,6 @@ jobs:
       - name: Test macos-arm wheels
         run: |
           pip install -r ./requirements.txt
-          pip debug --verbose
           cd python/dist
           pip install *
           cd ../..       
@@ -187,8 +186,7 @@ jobs:
       - name: Test linux wheels
         run: |
           pip install -r ./requirements.txt
-          pip debug --verbose
-          cd python/dist
+          cd python/wheelhouse
           pip install *
           cd ../..
           make test
@@ -267,7 +265,6 @@ jobs:
       - name: Test windows wheels
         run: |
           pip install -r ./requirements.txt
-          pip debug --verbose
           cd python/dist
           pip install xmos_ai_tools-0.1.1-py3-none-win_amd64.whl
           cd ../..

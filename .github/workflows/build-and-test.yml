@@ -189,7 +189,7 @@ jobs:
           cd python/wheelhouse
           pip install *
           cd ../..
-          make test
+          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_add -n 4 --dist loadfile --junitxml=integration_bnns_junit.xml
           
       - uses: actions/upload-artifact@v2
         with:

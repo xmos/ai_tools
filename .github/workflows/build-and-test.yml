@@ -268,7 +268,7 @@ jobs:
           cd python/dist
           pip install xmos_ai_tools-0.1.1-py3-none-win_amd64.whl
           cd ../..
-          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 4 --dist loadfile --junitxml=integration_bnns_junit.xml
+          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_add -n 4 --dist loadfile --junitxml=integration_bnns_junit.xml
           
       - uses: actions/upload-artifact@v2
         with:

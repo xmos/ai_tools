@@ -28,6 +28,12 @@ def : Pat<(TFL_QuantizeOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh,
            $qtype),
           (TFL_Conv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw)>;
 
+def : Pat<(TFL_QuantizeOp(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf,
+                          $p, $sh, $sw, $dm),
+           $qtype),
+          (TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw,
+           $dm)>;
+
 // Get padding values and output type as two return values
 def GetBConv2DPaddingValues
     : NativeCodeCall<"getBConv2DPaddingValues($_builder, "

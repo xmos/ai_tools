@@ -79,9 +79,9 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         )
         return
 
-    def set_input_tensor(self, data, input_index=0, model_index=0) -> None:
+    def set_tensor(self, data, tensor_index=0, model_index=0) -> None:
         """! Abstract for writing the input tensor of a model.
-        @param input_index  The index of input tensor to target.
+        @param tensor_index  The index of input tensor to target.
         @param data  The blob of data to set the tensor to.
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
@@ -92,31 +92,28 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             bpi= 1
         self._download_data(
             aisrv_cmd.CMD_SET_INPUT_TENSOR,
-            self.bytes_to_ints(bytes(data), bpi),
-            tensor_num=input_index,
+            data,
+            tensor_num=tensor_index,
             engine_num=model_index,
         )
         print("Setting Input Tensor")
         return
 
-    def get_output_tensor(
-        self, output_index=0, tensor=None, model_index=0) -> "Output tensor data":
+    def get_tensor(
+        self, tensor_index=0, tensor=None, model_index=0
+    ) -> "Output tensor data":
         """! Abstract for reading the data in the output tensor of a model.
-        @param output_index  The index of output tensor to target.
+        @param tensor_index  The index of output tensor to target.
         @param tensor Tensor of correct shape to write into (optional)
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         @return The data that was stored in the output tensor.
         """
-        if self.get_output_details(output_index)['dtype'] == 'int32' or self.get_output_details(output_index)['dtype'] == 'float32':
-            bpi = 4
-        else:
-            bpi= 1
-        output_length = self.get_output_tensor_size(output_index, model_index)
+        output_length = self.get_output_tensor_size(tensor_index, model_index)
         data_read = self._upload_data(
             aisrv_cmd.CMD_GET_OUTPUT_TENSOR,
             output_length,
-            tensor_num=output_index,
+            tensor_num=tensor_index,
             engine_num=model_index,
         )
 

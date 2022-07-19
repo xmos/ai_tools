@@ -158,13 +158,12 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                 output_zero_points.append(quant_params["zero_points"])
 
         LOGGER.info("Invoking XCORE interpreter...")
-        ie.set_input_tensor(input_tensor, 0)
+        ie.set_tensor(input_tensor, 0)
         ie.invoke()
         xformer_outputs = []
         for i in range(num_of_outputs):
-            xformer_outputs.append(ie.get_output_tensor(i))
-            
-        LOGGER.info(type(xformer_outputs[0]))
+            xformer_outputs.append(ie.get_tensor(i))
+
         # Compare outputs
         for i in range(num_of_outputs):
             LOGGER.info("Comparing output number " + str(i) + "...")

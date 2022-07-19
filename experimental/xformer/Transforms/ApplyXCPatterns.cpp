@@ -83,17 +83,17 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
       op->getOperand(0).getType().dyn_cast<RankedTensorType>();
   auto inputQType =
       inputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
-  auto inputScale = inputQType.getScale();
-  auto inputZeroPoint = inputQType.getZeroPoint();
+  double inputScale = inputQType.getScale();
+  int64_t inputZeroPoint = inputQType.getZeroPoint();
 
   // Get output scale and output zero point
   RankedTensorType outputType =
       op->getResult(0).getType().dyn_cast<RankedTensorType>();
   auto outputQType =
       outputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
-  auto outputScale = outputQType.getScale();
+  double outputScale = outputQType.getScale();
   assert(outputScale != 0 && "Output scale of zero is not supported!");
-  auto outputZeroPoint = outputQType.getZeroPoint();
+  int64_t outputZeroPoint = outputQType.getZeroPoint();
 
   // Dequantize the input vector
   llvm::SmallVector<double, 0> dequantizedVector;

@@ -15,7 +15,7 @@ from xmos_ai_tools import xformer
 
 # This error tolerance works for the models we have currently
 # The maximum error we see is 1.037735
-ABSOLUTE_ERROR_TOLERANCE = 1.6
+ABSOLUTE_ERROR_TOLERANCE = 1.04
 LOGGER = logging.getLogger(__name__)
 
 def dequantize(arr: np.ndarray, scale: float, zero_point: int) -> np.float32:
@@ -144,7 +144,6 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         for i in range(num_of_outputs):
             xformer_outputs.append(ie.get_output_tensor(i))
             
-        LOGGER.info(type(xformer_outputs[0]))
         # Compare outputs
         for i in range(num_of_outputs):
             LOGGER.info("Comparing output number " + str(i) + "...")
@@ -166,7 +165,6 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                     atol=ABSOLUTE_ERROR_TOLERANCE,
                 )
             except Exception as e:
-                print(ie.get_output_details(0))
                 num_of_fails += 1
                 LOGGER.error(e)
                 d = ~np.isclose(

@@ -1,4 +1,4 @@
-import pathlib, shutil
+import pathlib
 import logging
 import tempfile
 from _pytest.fixtures import FixtureRequest

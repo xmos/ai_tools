@@ -5,7 +5,7 @@ import tempfile
 import sys
 import subprocess
 import numpy as np
-import pathlib, shutil
+import pathlib
 import argparse
 from cv2 import cv2
 

@@ -117,6 +117,8 @@ class xcore_tflm_base_interpreter(ABC):
             tensorSize = 1  # int8 is 1 byte
         elif tensorType == TensorType.INT32:
             tensorSize = 4  # int32 is 4 bytes
+        elif tensorType == TensorType.FLOAT32:
+            tensorSize = 4  # float32 is 4 bytes
         else:
             print(tensorType)
             self._check_status(1)
@@ -151,6 +153,8 @@ class xcore_tflm_base_interpreter(ABC):
             tensorSize = 1  # int8 is 1 byte
         elif tensorType == TensorType.INT32:
             tensorSize = 4  # int32 is 4 bytes
+        elif tensorType == TensorType.FLOAT32:
+            tensorSize = 4  # float32 is 4 bytes
         else:
             print(tensorType)
             self._check_status(1)
@@ -188,9 +192,9 @@ class xcore_tflm_base_interpreter(ABC):
                 dtype = np.int8
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
-            #print(modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeSignatureAsNumpy())
-            #print(modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeSignature(1))
-            #print(dir(modelBuf.Subgraphs(0).Tensors(tensorIndex)))
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+                dtype = np.float32
+
             details = {
                 "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[1:].strip(
                     "'"
@@ -213,6 +217,7 @@ class xcore_tflm_base_interpreter(ABC):
             inputsList.append(details)
 
         return inputsList
+
 
     def get_output_details(
         self, model_index=0
@@ -241,6 +246,8 @@ class xcore_tflm_base_interpreter(ABC):
                 dtype = np.int8
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+                dtype = np.float32
 
             details = {
                 "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[1:].strip(

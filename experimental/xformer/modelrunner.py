@@ -37,7 +37,6 @@ def get_xformed_model(model, args):
                            stderr=subprocess.STDOUT,
                            check=True)
         print(p.stdout)
-        shutil.copy(output_path, "./test.tflite")
         with open(pathlib.Path(output_path).resolve(), "rb") as fd:
             bits = bytes(fd.read())
     return bits

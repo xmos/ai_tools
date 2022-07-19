@@ -41,7 +41,9 @@ struct ReplaceConcatPattern
     auto inputType0 = input0.getType().dyn_cast<RankedTensorType>();
     auto inputType1 = input1.getType().dyn_cast<RankedTensorType>();
     
-    auto inputWidth0 = inputType0.getDimSize(2);
+    auto inputWidth1 = inputType0.getDimSize(1);
+    auto inputWidth2 = inputType0.getDimSize(2);
+    auto inputWidth3 = inputType0.getDimSize(3);
    
     auto outputType =
         concatOp.output().getType().dyn_cast<RankedTensorType>();
@@ -61,7 +63,7 @@ struct ReplaceConcatPattern
       rewriter.create<ConstantOp>(concatOp.getLoc(), concatTensorAttr);
     
     int32_t offset0 = 0;
-    int32_t offset1 = inputWidth0;
+    int32_t offset1 = inputWidth1*inputWidth2*inputWidth3;
 
     auto copyIntoOp0 = rewriter.create<CopyIntoOp>(
         concatOp.getLoc(), concatOp.getType(),

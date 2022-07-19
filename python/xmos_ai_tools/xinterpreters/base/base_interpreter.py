@@ -192,9 +192,9 @@ class xcore_tflm_base_interpreter(ABC):
                 dtype = np.int8
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
-            #print(modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeSignatureAsNumpy())
-            #print(modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeSignature(1))
-            #print(dir(modelBuf.Subgraphs(0).Tensors(tensorIndex)))
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+                dtype = np.float32
+
             details = {
                 "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[1:].strip(
                     "'"
@@ -246,6 +246,8 @@ class xcore_tflm_base_interpreter(ABC):
                 dtype = np.int8
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+                dtype = np.float32
 
             details = {
                 "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[1:].strip(

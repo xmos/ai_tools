@@ -86,7 +86,8 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
-        if self.get_input_details(input_index)['dtype'] == 'int32' or self.get_input_details(input_index)['dtype'] == 'float32':
+        output_type = self.get_output_details(output_index)['dtype']
+        if output_type == np.int32 or output_type == np.float32:
             bpi = 4
         else:
             bpi= 1
@@ -111,7 +112,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         @return The data that was stored in the output tensor.
         """
         output_type = self.get_output_details(output_index)['dtype']
-        if output_type == 'int32' or output_type == 'float32':
+        if output_type == np.int32 or output_type == np.float32:
             bpi = 4
         else:
             bpi = 1

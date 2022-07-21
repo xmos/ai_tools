@@ -14,14 +14,14 @@ def getLookupTable
     : NativeCodeCall<"getLookupTable($_builder, $0.getDefiningOp())">;
 
 // TODO: DPK
-// foreach activationOp =
-//     [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp] in {
-// def:
-//   Pat<(activationOp
-//             : $output TensorOf<[QI8]>:$input),
-//             (XC_Lookup8Op $input, (Arith_ConstantOp (getLookupTable
-//             $output)))>;
-// }
+foreach activationOp =
+    [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp] in {
+def:
+   Pat<(activationOp
+            : $output TensorOf<[QI8]>:$input),
+            (XC_LookupOp $input, (Arith_ConstantOp (getLookupTable
+            $output)))>;
+}
 
 // Pad pattern
 // We only support padding for 4 dimensions

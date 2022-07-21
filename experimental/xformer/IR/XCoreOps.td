@@ -148,7 +148,7 @@ def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-def XC_Lookup8Op : XC_Op<"lookup_8", [NoSideEffect]> {
+def XC_Lookup8Op : XC_Op<"lookup", [NoSideEffect]> {
   let summary = "Lookup table op";
 
   let description = [{Lookup table op.}];

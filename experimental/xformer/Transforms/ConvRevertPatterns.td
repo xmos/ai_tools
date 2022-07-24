@@ -14,8 +14,8 @@ def : Pat<(XC_FakeConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $pv, $sh, $sw),
 // XC_FakeDepthwiseConv2D -> TFL_DepthwiseConv2D()
 def : Pat<(XC_FakeDepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $pv,
            $sh, $sw, $dm),
-          (TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, TFL_PAD_Valid,
-           $sh, $sw, $dm)>;
+          (TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw,
+           $dm)>;
 
 def getPadOpOutputType
     : NativeCodeCall<

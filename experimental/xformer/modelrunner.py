@@ -145,7 +145,7 @@ def test_inference(args):
         # print(outputs2)
 
         print("Invoking XCORE interpreter...")
-        ie.set_tensor(input_tensor, 0)
+        ie.set_tensor(0, input_tensor)
         ie.get_input_details()
         ie.invoke()
         xformer_outputs = []

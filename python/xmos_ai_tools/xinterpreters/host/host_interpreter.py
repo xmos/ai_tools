@@ -141,7 +141,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         if XTFLMInterpreterStatus(status) is XTFLMInterpreterStatus.ERROR:
             raise RuntimeError("Unable to initialize interpreter")
 
-    def set_tensor(self, data, tensor_index=0, model_index=0) -> None:
+    def set_tensor(self, tensor_index, data, model_index=0) -> None:
         """! Write the input tensor of a model.
         @param data  The blob of data to set the tensor to.
         @param tensor_index  The index of input tensor to target. Defaults to 0.

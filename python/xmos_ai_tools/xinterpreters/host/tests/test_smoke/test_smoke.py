@@ -16,7 +16,7 @@ with open("./detection_0.raw", "rb") as fd:
 print(ie.tensor_arena_size())
 # assert ie.tensor_arena_size() == 901376
 
-ie.set_tensor(data=img, tensor_index=0, model_index=0)
+ie.set_tensor(tensor_index=0, data=img, model_index=0)
 ie.invoke()
 
 answer1 = ie.get_tensor(tensor_index=0, model_index=0, tensor=None)

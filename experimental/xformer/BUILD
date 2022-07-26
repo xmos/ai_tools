@@ -68,6 +68,18 @@ td_library(
     ],
 )
 
+td_library(
+    name = "conv_revert_patterns_td",
+    srcs = [
+        "Transforms/ConvRevertPatterns.td",
+    ],
+    includes = ["external/org_tensorflow"],
+    deps = [
+        ":xc_dialect_td",
+        "@llvm-project//mlir:ArithmeticOpsTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "xc_ops_inc_gen",
     tbl_outs = [
@@ -134,6 +146,18 @@ gentbl_cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "conv_revert_patterns_inc_gen",
+    tbl_outs = [
+        (["-gen-rewriters"], "Transforms/GeneratedConvRevertPatterns.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "Transforms/ConvRevertPatterns.td",
+    deps = [
+        ":conv_revert_patterns_td",
+    ],
+)
+
 cc_library(
     name = "xcore_passes",
     srcs = glob(["Transforms/*.cpp"]) + [
@@ -147,7 +171,8 @@ cc_library(
         "Transforms/GeneratedXCPatterns.inc",
         "Transforms/GeneratedTFLPatterns.inc",
         "Transforms/GeneratedLoadConstantOpPatterns.inc",
-        "Transforms/GeneratedConvPatterns.inc"
+        "Transforms/GeneratedConvPatterns.inc",
+        "Transforms/GeneratedConvRevertPatterns.inc"
     ],
     hdrs = [
         "Transforms/ConvPatterns.h",
@@ -163,6 +188,7 @@ cc_library(
         ":tfl_patterns_inc_gen",
         ":load_constant_op_patterns_inc_gen",
         ":conv_patterns_inc_gen",
+        ":conv_revert_patterns_inc_gen",
         "@lce//larq_compute_engine/mlir:larq_compute_engine_translate_tflite",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",

@@ -150,7 +150,26 @@ struct ReplaceConv2D : public PassWrapper<ReplaceConv2D, FunctionPass> {
 
 bool shouldReduceMemory() { return reduceMemoryOption; }
 
+Type getPadOpOutputType(PatternRewriter &rewriter, Value input,
+                        std::vector<int32_t> paddingValues) {
+  auto inputType = input.getType().dyn_cast<RankedTensorType>();
+  int batch = inputType.getDimSize(0) + paddingValues[0] + paddingValues[1];
+  int height = inputType.getDimSize(1) + paddingValues[2] + paddingValues[3];
+  int width = inputType.getDimSize(2) + paddingValues[4] + paddingValues[5];
+  int depth = inputType.getDimSize(3) + paddingValues[6] + paddingValues[7];
+
+  RankedTensorType outputType = RankedTensorType::get(
+      {batch, height, width, depth}, inputType.getElementType());
+  return outputType;
+}
+
+namespace convpatterns {
 #include "Transforms/GeneratedConvPatterns.inc"
+}
+
+namespace convrevertpatterns {
+#include "Transforms/GeneratedConvRevertPatterns.inc"
+}
 
 void ReplaceConv2D::runOnFunction() {
   auto *ctx = &getContext();
@@ -161,7 +180,7 @@ void ReplaceConv2D::runOnFunction() {
   // and for handling issues such as EXPLICIT padding which is not supported in
   // TFL Conv ops
   OwningRewritePatternList patterns1(ctx);
-  populateWithGenerated(patterns1);
+  convpatterns::populateWithGenerated(patterns1);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns1));
 
   // Replace with XC Conv2D op
@@ -169,6 +188,11 @@ void ReplaceConv2D::runOnFunction() {
   patterns2.insert<ReplaceConv2DPattern, ReplaceDepthwiseConv2DPattern,
                    ReplaceBConv2DPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
+
+  // Revert remaining XC Fake Conv ops back to TFL Conv2D ops
+  OwningRewritePatternList patterns3(ctx);
+  convrevertpatterns::populateWithGenerated(patterns3);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns3));
 
   // We walk through all Conv2DV2 ops in the graph and find the maximum required
   // thread count

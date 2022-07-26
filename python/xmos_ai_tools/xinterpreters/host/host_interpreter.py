@@ -46,7 +46,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
     """
 
     def __init__(
-        self, max_tensor_arena_size=MAX_TENSOR_ARENA_SIZE, max_model_size=50000000
+        self, max_tensor_arena_size=MAX_TENSOR_ARENA_SIZE
     ) -> None:
         """! Host interpreter initializer.
         Sets up functions from the cdll, and calls to cdll function to create a new interpreter.
@@ -111,7 +111,6 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         self._max_tensor_arena_size = max_tensor_arena_size
         self._op_states = []
 
-        self.obj = lib.new_interpreter(max_model_size)
 
         super().__init__()
 
@@ -127,6 +126,8 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
+        max_model_size=50000000
+        self.obj = lib.new_interpreter(max_model_size)
         currentModel = None
         for model in self.models:
             if model.tile == model_index:

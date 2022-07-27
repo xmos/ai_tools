@@ -168,9 +168,27 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         @param tensor  Tensor of correct shape to write into (optional).
         @return  The data that was stored in the output tensor.
         """
-        l = self.get_output_tensor_size(tensor_index)
+        outputs = self.get_output_details(model_index)
+        inputs = self.get_input_details(model_index)
+        type_ = None
+        for output in outputs:
+            count = 0
+            if tensor_index == output["index"]:
+                tensor_details = output
+                type_ = "output"
+                break
+            count = count + 1
+        if type_ == None:
+            for input_ in inputs:
+                count = 0
+                if tensor_index == input_["index"]:
+                    tensor_details = input_
+                    type_ = "input"
+                    break
+                count = count + 1
+
+        l = self.get_tensor_size(tensor_index)
         if tensor is None:
-            tensor_details = self.get_output_details(model_index)[tensor_index]
             tensor = np.zeros(tensor_details["shape"], dtype=tensor_details["dtype"])
         else:
             l2 = len(tensor.tobytes())
@@ -178,7 +196,10 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
                 print("ERROR: mismatching size in get_output_tensor %d vs %d" % (l, l2))
 
         data_ptr = tensor.ctypes.data_as(ctypes.c_void_p)
-        self._check_status(lib.get_output_tensor(self.obj, tensor_index, data_ptr, l))
+        if type_ == "input":
+            self._check_status(lib.get_input_tensor(self.obj, count, data_ptr, l))
+        elif type_ == "output":
+            self._check_status(lib.get_output_tensor(self.obj, count, data_ptr, l))
         return tensor
 
     def get_input_tensor(self, input_index=0, model_index=0) -> "Input tensor data":

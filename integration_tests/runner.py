@@ -142,7 +142,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         ie.invoke()
         xformer_outputs = []
         for i in range(num_of_outputs):
-            xformer_outputs.append(ie.get_tensor(i))
+            xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]["index"]))
 
         # Compare outputs
         for i in range(num_of_outputs):

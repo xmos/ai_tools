@@ -166,6 +166,39 @@ class xcore_tflm_base_interpreter(ABC):
             )
         return tensorSize
 
+    def get_tensor_size(
+        self, tensor_index=0, model_index=0
+    ) -> "Size of a tensor":
+        """! Read the size of the input tensor from the model.
+        @param input_index  The index of input tensor to target.
+        @param model_index The model to target, for interpreters that support multiple models
+        running concurrently. Defaults to 0 for use with a single model.
+        @return The size of the input tensor as an integer.
+        """
+
+        # Select correct model from model list
+        modelBuf = None
+        model = self.get_model(model_index)
+        modelBuf = Model.GetRootAsModel(model.model_content, 0)
+
+        tensorType = modelBuf.Subgraphs(0).Tensors(tensor_index).Type()
+        if tensorType == TensorType.INT8:
+            tensorSize = 1  # int8 is 1 byte
+        elif tensorType == TensorType.INT32:
+            tensorSize = 4  # int32 is 4 bytes
+        elif tensorType == TensorType.FLOAT32:
+            tensorSize = 4  # float32 is 4 bytes
+        else:
+            print(tensorType)
+            self._check_status(1)
+
+        # Calculate tensor size by multiplying shape elements
+        for i in range(0, modelBuf.Subgraphs(0).Tensors(tensor_index).ShapeLength()):
+            tensorSize = tensorSize * modelBuf.Subgraphs(0).Tensors(tensor_index).Shape(
+                i
+            )
+        return tensorSize
+
     def get_input_details(
         self, model_index=0
     ) -> "Details of input tensor":

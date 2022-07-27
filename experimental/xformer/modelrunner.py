@@ -150,7 +150,7 @@ def test_inference(args):
         ie.invoke()
         xformer_outputs = []
         for i in range(num_of_outputs):
-            xformer_outputs.append(ie.get_tensor(i))
+            xformer_outputs.append(ie.get_tensor(ie.get_output_details()[0]["index"]))
 
         # Compare outputs
         for i in range(num_of_outputs):

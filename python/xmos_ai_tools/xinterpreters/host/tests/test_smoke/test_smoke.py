@@ -45,44 +45,24 @@ for test in range(0, 10):
     assert(tflite_out.all() == xcore_out_2.all())
 
 
+tflite_in_details = interpreter.get_input_details()
+tflite_out_details = interpreter.get_output_details()
+xcore_in_details = ie.get_input_details()
+xcore_out_details = ie.get_output_details()
 
+assert(tflite_in_details[0]["name"] == xcore_in_details[0]["name"])
+assert(tflite_out_details[0]["name"] == xcore_out_details[0]["name"])
+assert(tflite_in_details[0]["index"] == xcore_in_details[0]["index"])
+assert(tflite_out_details[0]["index"] == xcore_out_details[0]["index"])
+assert(tflite_in_details[0]["shape"].all() == xcore_in_details[0]["shape"].all())
+assert(tflite_out_details[0]["shape"].all() == xcore_out_details[0]["shape"].all())
+assert(tflite_in_details[0]["dtype"] == xcore_in_details[0]["dtype"])
+assert(tflite_out_details[0]["dtype"] == xcore_out_details[0]["dtype"])
+assert(tflite_in_details[0]["quantization"] == xcore_in_details[0]["quantization"])
+assert(tflite_out_details[0]["quantization"] == xcore_out_details[0]["quantization"])
 
-
-# ie = xcore_tflm_host_interpreter()
-# #Set Model combination 1
-# ie.set_model(model_path="./smoke_model.tflite", params_path="./smoke_model.params")
-# ie.set_tensor(tensor_index=0, data=img, model_index=0)
-# ie.invoke()
-# assert(out_golden_1 == bytes(ie.get_tensor(tensor_index=0, model_index=0, tensor=None)))
-# assert(out_golden_2 == bytes(ie.get_tensor(tensor_index=1, model_index=0, tensor=None)))
-
-# #Set Model combination 2
-# ie.set_model(model_path="./smoke_model.tflite", params_content=params_content)
-# ie.set_tensor(tensor_index=0, data=img, model_index=0)
-# ie.invoke()
-# assert(out_golden_1 == bytes(ie.get_tensor(tensor_index=0, model_index=0, tensor=None)))
-# assert(out_golden_2 == bytes(ie.get_tensor(tensor_index=1, model_index=0, tensor=None)))
-
-# #Set Model combination 3
-# ie.set_model(model_content=model_content, params_path="./smoke_model.params")
-# ie.set_tensor(tensor_index=0, data=img, model_index=0)
-# ie.invoke()
-# assert(out_golden_1 == bytes(ie.get_tensor(tensor_index=0, model_index=0, tensor=None)))
-# assert(out_golden_2 == bytes(ie.get_tensor(tensor_index=1, model_index=0, tensor=None)))
-
-# #Set Model combination 4
-# ie.set_model(model_content=model_content, params_content=params_content)
-# ie.set_tensor(tensor_index=0, data=img, model_index=0)
-# ie.invoke()
-# assert(out_golden_1 == bytes(ie.get_tensor(tensor_index=0, model_index=0, tensor=None)))
-# assert(out_golden_2 == bytes(ie.get_tensor(tensor_index=1, model_index=0, tensor=None)))
-
-
-# in_details = ie.get_input_details()
-# out_details = ie.get_output_details()
-
-# # check that arena usage calcuation is correct
-# assert ie.tensor_arena_size() == 901376
+# check that arena usage calcuation is correct
+assert ie.tensor_arena_size() == 2063792
 
 
 

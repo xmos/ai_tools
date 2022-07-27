@@ -31,7 +31,7 @@ for test in range(0, 10):
     interpreter.invoke()
     tflite_out = interpreter.get_tensor(interpreter.get_output_details()[0]["index"])
 
-    ie.set_model(model_path="./smoke_model_1.tflite")
+    ie.set_model(model_path="./smoke_model.tflite")
     ie.set_tensor(0, input_tensor)
     ie.invoke()
     xcore_out_1 = ie.get_tensor(ie.get_output_details()[0]["index"])

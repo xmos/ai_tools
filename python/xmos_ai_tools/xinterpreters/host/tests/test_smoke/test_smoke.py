@@ -3,7 +3,6 @@
 
 import sys, os
 import numpy as np
-import cv2
 import tensorflow as tf
 
 from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter

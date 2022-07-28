@@ -28,8 +28,8 @@ xinterpreters_smoke_test_device:
 
 .PHONY: xformer2_test
 xformer2_integration_test:
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n $(NUM_PROCS) --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n $(NUM_PROCS) --dist loadfile --junitxml=integration_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n 8 --dist loadfile --junitxml=integration_bnns_junit.xml
 
 #**************************
 # default build and test targets
@@ -40,7 +40,7 @@ build: xcore_interpreters_build
 
 .PHONY: test
 test: xinterpreters_smoke_test_host
-test: xformer2_integration_test NUM_PROCS=4
+test: xformer2_integration_test
 
 #**************************
 # other targets

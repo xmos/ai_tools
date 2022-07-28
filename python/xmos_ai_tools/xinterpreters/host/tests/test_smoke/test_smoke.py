@@ -61,7 +61,9 @@ assert(tflite_out_details[0]["dtype"] == xcore_out_details[0]["dtype"])
 assert(tflite_in_details[0]["quantization"] == xcore_in_details[0]["quantization"])
 assert(tflite_out_details[0]["quantization"] == xcore_out_details[0]["quantization"])
 
+
 # check that arena usage calcuation is correct
+print(ie.tensor_arena_size())
 assert ie.tensor_arena_size() == 2063792
 
 

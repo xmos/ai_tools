@@ -7,7 +7,7 @@ import subprocess
 import numpy as np
 import pathlib
 import argparse
-from cv2 import cv2
+import cv2
 
 import tensorflow as tf
 import larq_compute_engine as lce

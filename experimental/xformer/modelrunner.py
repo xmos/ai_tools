@@ -7,7 +7,7 @@ import subprocess
 import numpy as np
 import pathlib
 import argparse
-from cv2 import cv2
+# from cv2 import cv2
 
 import tensorflow as tf
 import larq_compute_engine as lce
@@ -26,6 +26,8 @@ def get_xformed_model(model, args):
             fd.write(model)
 
         output_path = pathlib.Path(dirname) / "output.tflite"
+        if args.tc is None:
+            args.tc ="1"
         cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path),
         "--xcore-thread-count=" + args.tc,
         #"--xcore-replace-avgpool-with-conv2d",
@@ -114,8 +116,9 @@ def test_inference(args):
             input_tensor = np.expand_dims(test_images[test], axis=0)
         else:
             print("Creating random input...")
-            #input_tensor = np.array(100 * np.random.random_sample(input_tensor_shape), dtype=input_tensor_type)
-            input_tensor = np.array(100 * np.ones(input_tensor_shape), dtype=input_tensor_type)
+            np.random.seed(0)
+            input_tensor = np.array(100 * np.random.random_sample(input_tensor_shape), dtype=input_tensor_type)
+            # input_tensor = np.array(100 * np.ones(input_tensor_shape), dtype=input_tensor_type)
 
         if args.bnn:
             print("Invoking LCE interpreter...")

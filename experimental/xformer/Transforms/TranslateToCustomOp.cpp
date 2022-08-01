@@ -28,6 +28,19 @@ std::vector<uint8_t> StridedSliceOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> CopyIntoOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  auto rootMap = fbb.StartMap();
+
+  fbb.Int("offset", (int32_t)offset());
+
+  fbb.EndMap(rootMap);
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+std::vector<uint8_t> ConnectorOp::buildCustomOptions() { return {}; }
+std::vector<uint8_t> PassThruOp::buildCustomOptions() { return {}; }
+
 std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
@@ -114,6 +127,9 @@ void TranslateToCustomOp::runOnFunction() {
   patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<StridedSliceOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<CopyIntoOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<ConnectorOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<PassThruOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

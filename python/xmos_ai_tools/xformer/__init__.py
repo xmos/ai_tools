@@ -2,6 +2,7 @@ import subprocess
 import typing
 from pathlib import Path
 from typing import Union, List, Optional
+from .flash import generate_flash
 
 
 def convert(
@@ -20,7 +21,8 @@ def convert(
             if str(val) == "" or val is None:
                 args.append(flag)
             else:
-                args.append(f"{flag} {val}")
+                args.append(f"{flag}")
+                args.append(f"{val}")
 
     args.append(str(filename))
 

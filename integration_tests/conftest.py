@@ -13,6 +13,9 @@ def pytest_addoption(parser):
         "--bnn", default=False, action="store_true", help="run binarized models"
     )
     parser.addoption(
+        "--device", default=False, action="store_true", help="run tests on xcore"
+    )
+    parser.addoption(
         "--number_of_samples",
         default=100,
         action="store",

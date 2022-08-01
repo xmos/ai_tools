@@ -18,6 +18,12 @@ struct ApplyLoadConstantOpPatterns
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
+  StringRef getArgument() const final {
+    return "xcore-apply-loadconstantop-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Apply load constant op optimization patterns.";
+  }
   void runOnFunction() override;
 };
 
@@ -56,9 +62,7 @@ std::unique_ptr<OperationPass<FuncOp>> createApplyLoadConstantOpPatternsPass() {
   return std::make_unique<ApplyLoadConstantOpPatterns>();
 }
 
-static PassRegistration<ApplyLoadConstantOpPatterns>
-    pass("xcore-apply-loadconstantop-patterns",
-         "Apply load constant op optimization patterns.");
+static PassRegistration<ApplyLoadConstantOpPatterns> pass;
 
 } // namespace xcore
 } // namespace mlir

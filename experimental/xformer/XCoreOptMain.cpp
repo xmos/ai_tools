@@ -46,6 +46,27 @@ cl::opt<bool> reduceMemoryOption(
         "Try to reduce memory usage by possibly increasing execution time."),
     cl::init(true));
 
+// This option is to provide an error threshold.
+// The maximum average error between the reference and quantised
+// implementations of the output transform over each channel is used to decide
+// if to replace TFL Conv ops with XC Conv ops.
+// The average is defined over the range of non-saturating
+// accumulators, i.e. accumulators that do not reach a saturating output in the
+// int8 space. The error calcualated is the maximum average for all of the
+// channels.
+cl::opt<double> convQuantErrorThresholdOption(
+    "xcore-conv-err-threshold",
+    cl::desc("Defaults to TFL Conv ops if channel quantization error is more "
+             "than the provided threshold "
+             "(default = 0.25)."),
+    cl::init(0.25));
+
+cl::opt<bool> convForceErrorCheckOption(
+    "xcore-force-conv-err-full-check",
+    cl::desc("Enable higher precision(more time-consuming) check for "
+             "calculating channel quantization error."),
+    cl::init(false));
+
 } // namespace xcore
 } // namespace mlir
 
@@ -107,6 +128,7 @@ int main(int argc, char **argv) {
   // Initialize dialects.
   MLIRContext context;
   context.loadDialect<StandardOpsDialect>();
+  context.loadDialect<arith::ArithmeticDialect>();
   context.loadDialect<quant::QuantizationDialect>();
   context.loadDialect<TFL::TensorFlowLiteDialect>();
   context.loadDialect<xcore::XCoreDialect>();

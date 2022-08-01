@@ -29,6 +29,8 @@ struct TFLConvArgs {
   nn::ImageGeometry X;
   nn::WindowGeometry K;
   llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
+  double quantErrorThreshold;
+  bool quantErrorFullCheckEnabled;
 };
 
 struct BConvArgs {
@@ -182,20 +184,21 @@ private:
   LogicalResult getConv2DPaddedIndirectParams(
       const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
-      std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
-      int &scratchBytes) const;
+      std::vector<int8_t> &weightsData, int &scratchBytes) const;
 
   LogicalResult getConv2DValidIndirectParams(
       const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
-      std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
-      int &scratchBytes) const;
+      std::vector<int8_t> &weightsData, int &scratchBytes) const;
 
   LogicalResult getConv2DValidDirectParams(
       const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
-      std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
-      int &scratchBytes) const;
+      std::vector<int8_t> &weightsData, int &scratchBytes) const;
+
+  LogicalResult
+  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr,
+                           std::vector<int16_t> &mulsBiasesData) const;
 };
 
 //
@@ -226,14 +229,16 @@ private:
   LogicalResult getDepthwiseConv2DValidDirectParams(
       const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
-      std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
-      int &scratchBytes) const;
+      std::vector<int8_t> &weightsData, int &scratchBytes) const;
 
   LogicalResult getDepthwiseConv2DPaddedIndirectParams(
       const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
-      std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
-      int &scratchBytes) const;
+      std::vector<int8_t> &weightsData, int &scratchBytes) const;
+
+  LogicalResult
+  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr,
+                           std::vector<int16_t> &mulsBiasesData) const;
 };
 
 template <typename Filter2DParams>

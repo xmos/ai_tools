@@ -7,6 +7,7 @@ Installation
 It includes:
 - the MLIR-based XCore optimizer(xformer) to optimize Tensorflow Lite models for XCore
 - the XCore tflm interpreter to run the transformed models on host
+- the XCore tflm interpreter to run the transformed models on an xcore device connected over usb or spi
 
 It can be installed with the following command:
 ```shell
@@ -47,7 +48,6 @@ make build
 Install the necessary python packages and the `xtftlm_interpreter` python package using `pip` (inside the conda venv):
 ```shell
 pip install -r "./requirements.txt"
-pip install -e "./third_party/lib_tflite_micro/xinterpreters"
 ```
 
-After following the above instructions, to build xformer, please follow the build instructions [here](https://github.com/xmos/ai_tools/tree/develop/experimental/xformer#readme)
+After following the above instructions, to build xformer, please follow the build instructions [here](https://github.com/xmos/ai_tools/tree/develop/experimental/xformer#readme).

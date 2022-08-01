@@ -16,11 +16,11 @@ with open("./detection_0.raw", "rb") as fd:
 print(ie.tensor_arena_size())
 # assert ie.tensor_arena_size() == 901376
 
-ie.set_input_tensor(data=img, input_index=0, model_index=0)
+ie.set_tensor(data=img, tensor_index=0, model_index=0)
 ie.invoke()
 
-answer1 = ie.get_output_tensor(output_index=0, model_index=0, tensor=None)
-answer2 = ie.get_output_tensor(output_index=1, model_index=0, tensor=None)
+answer1 = ie.get_tensor(tensor_index=0, model_index=0, tensor=None)
+answer2 = ie.get_tensor(tensor_index=1, model_index=0, tensor=None)
 with open("./out0", "wb") as fd:
     fd.write(answer1)
 with open("./out1", "wb") as fd:

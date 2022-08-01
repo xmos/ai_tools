@@ -7,18 +7,16 @@ import os
 import subprocess
 import larq_compute_engine as lce
 import tensorflow as tf
-from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
+from xmos_ai_tools.xinterpreters import (
+    xcore_tflm_host_interpreter,
+    xcore_tflm_usb_interpreter,
+)
+from xmos_ai_tools import xformer
 
 # This error tolerance works for the models we have currently
 # The maximum error we see is 1.037735
 ABSOLUTE_ERROR_TOLERANCE = 1.04
 LOGGER = logging.getLogger(__name__)
-XFORMER2_PATH = (
-    pathlib.Path(__file__)
-    .resolve()
-    .parent.parent.joinpath("experimental", "xformer", "bazel-bin", "xcore-opt")
-)
-
 
 def dequantize(arr: np.ndarray, scale: float, zero_point: int) -> np.float32:
     return np.float32(arr.astype(np.int32) - np.int32(zero_point)) * np.float32(scale)
@@ -31,20 +29,10 @@ def get_xformed_model(model: bytes) -> bytes:
     input_file.close()
     # create another temp file for output model
     output_file = tempfile.NamedTemporaryFile(delete=False)
-    cmd = [
-        str(XFORMER2_PATH),
-        str(input_file.name),
-        "-o",
-        str(output_file.name),
-        "--xcore-thread-count=5",
-        # "--xcore-replace-avgpool-with-conv2d",
-        # "--xcore-replace-with-conv2dv2",
-        # "--xcore-translate-to-customop"
-    ]
-    p = subprocess.run(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
-    )
-    LOGGER.info(p.stdout)
+
+    xformer.convert(str(input_file.name), str(output_file.name), {
+    "xcore-thread-count": 5,
+})
 
     # read output model content
     bits = bytes(output_file.read())
@@ -62,11 +50,6 @@ def test_model(request: FixtureRequest, filename: str) -> None:
 
         time.sleep(5)
 
-    if not XFORMER2_PATH.exists():
-        LOGGER.error(
-            "xcore-opt not found! Please build xformer before running integration tests!"
-        )
-        assert False
     model_path = pathlib.Path(filename).resolve()
     if not model_path.exists():
         LOGGER.error("model file not found!")
@@ -100,9 +83,16 @@ def test_model(request: FixtureRequest, filename: str) -> None:
 
     LOGGER.info("Invoking xformer to get xformed model...")
     xformed_model = get_xformed_model(model_content)
+
+    testing_device = request.config.getoption("device")
+
     LOGGER.info("Creating TFLM XCore interpreter...")
-    ie = xcore_tflm_host_interpreter()
-    ie.set_model(model_content=xformed_model)
+    if testing_device:
+        ie = xcore_tflm_usb_interpreter()
+    else:
+        ie = xcore_tflm_host_interpreter()
+
+    ie.set_model(model_content=xformed_model, secondary_memory=True)
 
     # Run tests
     num_of_fails = 0
@@ -148,11 +138,11 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                 output_zero_points.append(quant_params["zero_points"])
 
         LOGGER.info("Invoking XCORE interpreter...")
-        ie.set_input_tensor(input_tensor, 0)
+        ie.set_tensor(input_tensor, 0)
         ie.invoke()
         xformer_outputs = []
         for i in range(num_of_outputs):
-            xformer_outputs.append(ie.get_output_tensor(i))
+            xformer_outputs.append(ie.get_tensor(i))
 
         # Compare outputs
         for i in range(num_of_outputs):
@@ -196,4 +186,6 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                     )
                 )
                 LOGGER.error("Run #" + str(test) + " failed")
+    if testing_device:
+        ie.close()
     assert num_of_fails == 0

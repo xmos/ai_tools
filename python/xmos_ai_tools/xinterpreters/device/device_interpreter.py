@@ -104,7 +104,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
                     type_ = "input"
                     break
                 count = count + 1
-        tensor_type = tensor_details['dtype']
+        tensor_type = tensor_details["dtype"]
         if tensor_type == np.int32 or tensor_type == np.float32:
             bpi = 4
         else:
@@ -113,7 +113,6 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             aisrv_cmd.CMD_SET_INPUT_TENSOR,
             self.bytes_to_ints(bytes(data), bpi),
             tensor_num=count,
-
             engine_num=model_index,
         )
         print("Setting Input Tensor")
@@ -147,13 +146,13 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
                     type_ = "input"
                     break
                 count = count + 1
-        tensor_type = tensor_details['dtype']
+        tensor_type = tensor_details["dtype"]
         if tensor_type == np.int32 or tensor_type == np.float32:
             bpi = 4
         else:
             bpi = 1
         tensor_length = self.get_tensor_size(tensor_index, model_index)
-        
+
         data_read = self._upload_data(
             aisrv_cmd.CMD_GET_OUTPUT_TENSOR,
             tensor_length,
@@ -164,7 +163,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         assert type(data_read) == list
         assert type(data_read[0]) == int
         if tensor_type == "float32":
-            float_ = True 
+            float_ = True
         else:
             float_ = False
         output = self.bytes_to_ints(data_read, bpi, float_=float_)
@@ -279,9 +278,10 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         # TODO better way of doing this?
         if float_:
             import struct
+
             for i in range(0, len(data_bytes), bpi):
                 x = data_bytes[i : i + bpi]
-                y = struct.unpack('f', x)
+                y = struct.unpack("f", x)
                 output_data_int.append(y)
         else:
             for i in range(0, len(data_bytes), bpi):
@@ -499,7 +499,8 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
         self._out_ep.write(bytes([]), 1000)
 
     def close(self, model_index=0) -> None:
-        import usb 
+        import usb
+
         usb.util.dispose_resources(self._dev)
         return
 

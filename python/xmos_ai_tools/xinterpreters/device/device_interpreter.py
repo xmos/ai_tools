@@ -79,23 +79,40 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         )
         return
 
-    def set_tensor(self, data, tensor_index=0, model_index=0) -> None:
+    def set_tensor(self, tensor_index, data, model_index=0) -> None:
         """! Abstract for writing the input tensor of a model.
         @param tensor_index  The index of input tensor to target.
         @param data  The blob of data to set the tensor to.
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
-        output_type = self.get_output_details(output_index)['dtype']
-        if output_type == np.int32 or output_type == np.float32:
+        outputs = self.get_output_details(model_index)
+        inputs = self.get_input_details(model_index)
+        type_ = None
+        for output in outputs:
+            count = 0
+            if tensor_index == output["index"]:
+                tensor_details = output
+                type_ = "output"
+                break
+            count = count + 1
+        if type_ == None:
+            for input_ in inputs:
+                count = 0
+                if tensor_index == input_["index"]:
+                    tensor_details = input_
+                    type_ = "input"
+                    break
+                count = count + 1
+        tensor_type = tensor_details["dtype"]
+        if tensor_type == np.int32 or tensor_type == np.float32:
             bpi = 4
         else:
-            bpi= 1
+            bpi = 1
         self._download_data(
             aisrv_cmd.CMD_SET_INPUT_TENSOR,
             self.bytes_to_ints(bytes(data), bpi),
-            tensor_num=input_index,
-
+            tensor_num=count,
             engine_num=model_index,
         )
         print("Setting Input Tensor")
@@ -111,29 +128,47 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         running concurrently. Defaults to 0 for use with a single model.
         @return The data that was stored in the output tensor.
         """
-        output_type = self.get_output_details(output_index)['dtype']
-        if output_type == np.int32 or output_type == np.float32:
+        outputs = self.get_output_details(model_index)
+        inputs = self.get_input_details(model_index)
+        type_ = None
+        for output in outputs:
+            count = 0
+            if tensor_index == output["index"]:
+                tensor_details = output
+                type_ = "output"
+                break
+            count = count + 1
+        if type_ == None:
+            for input_ in inputs:
+                count = 0
+                if tensor_index == input_["index"]:
+                    tensor_details = input_
+                    type_ = "input"
+                    break
+                count = count + 1
+        tensor_type = tensor_details["dtype"]
+        if tensor_type == np.int32 or tensor_type == np.float32:
             bpi = 4
         else:
             bpi = 1
-        output_length = self.get_output_tensor_size(output_index, model_index)
-        
+        tensor_length = self.get_tensor_size(tensor_index, model_index)
+
         data_read = self._upload_data(
             aisrv_cmd.CMD_GET_OUTPUT_TENSOR,
-            output_length,
-            tensor_num=tensor_index,
+            tensor_length,
+            tensor_num=count,
             engine_num=model_index,
         )
 
         assert type(data_read) == list
         assert type(data_read[0]) == int
-        if output_type == "float32":
-            float_ = True 
+        if tensor_type == "float32":
+            float_ = True
         else:
             float_ = False
         output = self.bytes_to_ints(data_read, bpi, float_=float_)
 
-        return np.reshape(np.asarray(output), self.get_output_details(output_index)["shape"])
+        return np.reshape(np.asarray(output), tensor_details["shape"])
 
     def get_input_tensor(self, input_index=0, model_index=0) -> "Input tensor data":
         """! Abstract for reading the data in the input tensor of a model.
@@ -243,9 +278,10 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         # TODO better way of doing this?
         if float_:
             import struct
+
             for i in range(0, len(data_bytes), bpi):
                 x = data_bytes[i : i + bpi]
-                y = struct.unpack('f', x)
+                y = struct.unpack("f", x)
                 output_data_int.append(y)
         else:
             for i in range(0, len(data_bytes), bpi):
@@ -463,7 +499,8 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
         self._out_ep.write(bytes([]), 1000)
 
     def close(self, model_index=0) -> None:
-        import usb 
+        import usb
+
         usb.util.dispose_resources(self._dev)
         return
 

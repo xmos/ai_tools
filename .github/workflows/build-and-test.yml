@@ -75,69 +75,6 @@ jobs:
           name: ${{ runner.os }}-wheels
           path: python/dist
 
-
-
-  macos-arm-release-wheel:
-    name: Build release wheels for macOS arm64
-    runs-on: macos-11
-    strategy:
-      matrix:
-        python-version: [3.8]
-      fail-fast: false
-    steps:
-      # Caches and restores the bazelisk download directory, the bazel build directory.
-      - name: Cache bazel
-        uses: actions/cache@v2.1.4
-        env:
-          cache-name: bazel-cache
-        with:
-          path: |
-            ~/.cache/bazelisk
-            ~/.cache/bazel
-          key: ${{ runner.os }}-arm-${{ env.cache-name }}
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-          fetch-depth: 0
-          ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Build macOS arm wheels
-        env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
-          CMAKE_ENABLE_DARWIN_TARGET_ARM64: 1
-        shell: bash
-        run: |
-          python --version
-          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
-          
-          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
-          make build
-          cd $GITHUB_WORKSPACE
-          make build
-                    
-          cd $GITHUB_WORKSPACE/experimental/xformer
-          bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
-          
-          cd $GITHUB_WORKSPACE/python
-          python setup.py bdist_wheel --plat-name any
-     
-      - name: Test macos-arm wheels
-        run: |
-          pip install -r ./requirements.txt
-          cd python/dist
-          pip install *
-          cd ../..       
-          make test
-          
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ runner.os }}-arm-wheels
-          path: python/dist
-          
-  
-
   manylinux-release-wheel:
     name: Build release wheels for manylinux2010 
     runs-on: ubuntu-18.04

@@ -28,7 +28,7 @@ class xcore_tflm_base_interpreter(ABC):
         return
 
     @abstractmethod
-    def set_tensor(self, data, tensor_index=0, model_index=0) -> None:
+    def set_tensor(self, tensor_index, data, model_index=0) -> None:
         """! Abstract method for writing the input tensor of a model.
         @param data  The blob of data to set the tensor to.
         @param tensor_index  The index of input tensor to target. Defaults to 0.
@@ -166,9 +166,38 @@ class xcore_tflm_base_interpreter(ABC):
             )
         return tensorSize
 
-    def get_input_details(
-        self, model_index=0
-    ) -> "Details of input tensor":
+    def get_tensor_size(self, tensor_index=0, model_index=0) -> "Size of a tensor":
+        """! Read the size of the input tensor from the model.
+        @param input_index  The index of input tensor to target.
+        @param model_index The model to target, for interpreters that support multiple models
+        running concurrently. Defaults to 0 for use with a single model.
+        @return The size of the input tensor as an integer.
+        """
+
+        # Select correct model from model list
+        modelBuf = None
+        model = self.get_model(model_index)
+        modelBuf = Model.GetRootAsModel(model.model_content, 0)
+
+        tensorType = modelBuf.Subgraphs(0).Tensors(tensor_index).Type()
+        if tensorType == TensorType.INT8:
+            tensorSize = 1  # int8 is 1 byte
+        elif tensorType == TensorType.INT32:
+            tensorSize = 4  # int32 is 4 bytes
+        elif tensorType == TensorType.FLOAT32:
+            tensorSize = 4  # float32 is 4 bytes
+        else:
+            print(tensorType)
+            self._check_status(1)
+
+        # Calculate tensor size by multiplying shape elements
+        for i in range(0, modelBuf.Subgraphs(0).Tensors(tensor_index).ShapeLength()):
+            tensorSize = tensorSize * modelBuf.Subgraphs(0).Tensors(tensor_index).Shape(
+                i
+            )
+        return tensorSize
+
+    def get_input_details(self, model_index=0) -> "Details of input tensor":
         """! Reads the input tensor details from the model.
         @param input_index  The index of input tensor to target.
         @param model_index The model to target, for interpreters that support multiple models
@@ -192,36 +221,51 @@ class xcore_tflm_base_interpreter(ABC):
                 dtype = np.int8
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
-            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+            elif (
+                modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32
+            ):
                 dtype = np.float32
 
             details = {
-                "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[1:].strip(
-                    "'"
-                ),
+                "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[
+                    1:
+                ].strip("'"),
                 "index": tensorIndex,
                 "shape": modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeAsNumpy(),
-                "shape_signature": modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeSignatureAsNumpy(),
+                "shape_signature": modelBuf.Subgraphs(0)
+                .Tensors(tensorIndex)
+                .ShapeSignatureAsNumpy(),
                 "dtype": dtype,
                 "quantization": (
                     modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().Scale(0),
-                    modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().ZeroPoint(0),
+                    modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ZeroPoint(0),
                 ),
                 "quantization_parameters": {
-                    'scales': modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().ScaleAsNumpy(),
-                    'zero_points': modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().ZeroPointAsNumpy(),
-                    'quantized_dimension': modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().QuantizedDimension(),
+                    "scales": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ScaleAsNumpy(),
+                    "zero_points": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ZeroPointAsNumpy(),
+                    "quantized_dimension": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .QuantizedDimension(),
                 },
-                    'sparsity_parameters': {modelBuf.Subgraphs(0).Tensors(tensorIndex).Sparsity()},
+                "sparsity_parameters": {
+                    modelBuf.Subgraphs(0).Tensors(tensorIndex).Sparsity()
+                },
             }
             inputsList.append(details)
 
         return inputsList
 
-
-    def get_output_details(
-        self, model_index=0
-    ) -> "Details of output tensor":
+    def get_output_details(self, model_index=0) -> "Details of output tensor":
         """! Reads the output tensor details from the model.
         @param output_index  The index of output tensor to target.
         @param model_index The model to target, for interpreters that support multiple models
@@ -246,27 +290,45 @@ class xcore_tflm_base_interpreter(ABC):
                 dtype = np.int8
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
-            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+            elif (
+                modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32
+            ):
                 dtype = np.float32
 
             details = {
-                "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[1:].strip(
-                    "'"
-                ),
+                "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[
+                    1:
+                ].strip("'"),
                 "index": tensorIndex,
                 "shape": modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeAsNumpy(),
-                "shape_signature": modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeSignatureAsNumpy(),
+                "shape_signature": modelBuf.Subgraphs(0)
+                .Tensors(tensorIndex)
+                .ShapeSignatureAsNumpy(),
                 "dtype": dtype,
                 "quantization": (
                     modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().Scale(0),
-                    modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().ZeroPoint(0),
+                    modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ZeroPoint(0),
                 ),
                 "quantization_parameters": {
-                    'scales': modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().ScaleAsNumpy(),
-                    'zero_points': modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().ZeroPointAsNumpy(),
-                    'quantized_dimension': modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().QuantizedDimension(),
+                    "scales": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ScaleAsNumpy(),
+                    "zero_points": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ZeroPointAsNumpy(),
+                    "quantized_dimension": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .QuantizedDimension(),
                 },
-                    'sparsity_parameters': {modelBuf.Subgraphs(0).Tensors(tensorIndex).Sparsity()},
+                "sparsity_parameters": {
+                    modelBuf.Subgraphs(0).Tensors(tensorIndex).Sparsity()
+                },
             }
             outputsList.append(details)
 

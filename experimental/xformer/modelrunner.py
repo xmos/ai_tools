@@ -7,7 +7,7 @@ import subprocess
 import numpy as np
 import pathlib
 import argparse
-from cv2 import cv2
+import cv2
 
 import tensorflow as tf
 import larq_compute_engine as lce
@@ -145,12 +145,12 @@ def test_inference(args):
         # print(outputs2)
 
         print("Invoking XCORE interpreter...")
-        ie.set_tensor(input_tensor, 0)
+        ie.set_tensor(0, input_tensor)
         ie.get_input_details()
         ie.invoke()
         xformer_outputs = []
         for i in range(num_of_outputs):
-            xformer_outputs.append(ie.get_tensor(i))
+            xformer_outputs.append(ie.get_tensor(ie.get_output_details()[0]["index"]))
 
         # Compare outputs
         for i in range(num_of_outputs):

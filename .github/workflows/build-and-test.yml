@@ -52,8 +52,10 @@ jobs:
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
+          make clean
           make build
           cd $GITHUB_WORKSPACE
+          make clean
           make build
                     
           cd $GITHUB_WORKSPACE/experimental/xformer

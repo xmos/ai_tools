@@ -12,6 +12,8 @@ from xmos_ai_tools.xinterpreters import (
     xcore_tflm_usb_interpreter,
 )
 from xmos_ai_tools import xformer
+import gc
+gc.enable()
 
 # This error tolerance works for the models we have currently
 # The maximum error we see is 1.037735

@@ -48,14 +48,13 @@ jobs:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
         shell: bash
         run: |
+          make clean
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
-          make clean
           make build
           cd $GITHUB_WORKSPACE
-          make clean
           make build
                     
           cd $GITHUB_WORKSPACE/experimental/xformer
@@ -110,6 +109,7 @@ jobs:
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
+          make clean
           docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:2.8-python${{ matrix.python-version }} \

@@ -28,6 +28,12 @@ def : Pat<(TFL_QuantizeOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh,
            $qtype),
           (TFL_Conv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw)>;
 
+def : Pat<(TFL_QuantizeOp(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf,
+                          $p, $sh, $sw, $dm),
+           $qtype),
+          (TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw,
+           $dm)>;
+
 // Get padding values and output type as two return values
 def GetBConv2DPaddingValues
     : NativeCodeCall<"getBConv2DPaddingValues($_builder, "
@@ -46,11 +52,10 @@ def GetBConv2DPaddingValues
 // at the edge of the output tensor."
 def : Pat<(LQ_Bconv2dOp
            : $output $input, $f, $m, $b, $t, $cin, $dh, $dw, $faf,
-             ConstantAttr<I32Attr, "1">, ConstantAttr<StrAttr, "SAME">, $sh,
-             $sw),
+             ConstantAttr<I32Attr, "1">, TFL_PAD_Same, $sh, $sw),
           (LQ_Bconv2dOp(TFL_PadOp $input,
                         (GetBConv2DPaddingValues
                          : $ret__0 $output),
                         (returnType $ret__1)),
            $f, $m, $b, $t, $cin, $dh, $dw, $faf, ConstantAttr<I32Attr, "0">,
-           ConstantAttr<StrAttr, "VALID">, $sh, $sw)>;
+           TFL_PAD_Valid, $sh, $sw)>;

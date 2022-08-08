@@ -8,3 +8,6 @@
 [submodule "third_party/lib_nn"]
 	path = third_party/lib_nn
 	url = git@github.com:xmos/lib_nn.git
+[submodule "third_party/aisrv"]
+	path = third_party/aisrv
+	url = git@github.com:xmos/aisrv.git

@@ -124,8 +124,8 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
 
   // Get filter values
   auto filterConstOp =
-      dyn_cast<mlir::ConstantOp>(conv2DOp.filter().getDefiningOp());
-  auto filter = filterConstOp.value().cast<DenseElementsAttr>();
+      dyn_cast<mlir::arith::ConstantOp>(conv2DOp.filter().getDefiningOp());
+  auto filter = filterConstOp.getValue().cast<DenseElementsAttr>();
   auto filterVector = std::vector<int32_t>{filter.getValues<int32_t>().begin(),
                                            filter.getValues<int32_t>().end()};
 
@@ -134,24 +134,24 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
   std::vector<int32_t> thresholdVector;
   if (binaryOutput) {
     // Get threshold values
-    auto thresholdConstOp =
-        dyn_cast<mlir::ConstantOp>(conv2DOp.output_threshold().getDefiningOp());
-    auto threshold = thresholdConstOp.value().cast<DenseElementsAttr>();
+    auto thresholdConstOp = dyn_cast<mlir::arith::ConstantOp>(
+        conv2DOp.output_threshold().getDefiningOp());
+    auto threshold = thresholdConstOp.getValue().cast<DenseElementsAttr>();
     thresholdVector =
         std::vector<int32_t>{threshold.getValues<int32_t>().begin(),
                              threshold.getValues<int32_t>().end()};
   } else {
     // Get bias values
-    auto biasConstOp = dyn_cast<mlir::ConstantOp>(
+    auto biasConstOp = dyn_cast<mlir::arith::ConstantOp>(
         conv2DOp.post_activation_bias().getDefiningOp());
-    auto biases = biasConstOp.value().cast<DenseElementsAttr>();
+    auto biases = biasConstOp.getValue().cast<DenseElementsAttr>();
     biasVector = std::vector<float>{biases.getValues<float>().begin(),
                                     biases.getValues<float>().end()};
 
     // Get multiplier values
-    auto multiplierConstOp = dyn_cast<mlir::ConstantOp>(
+    auto multiplierConstOp = dyn_cast<mlir::arith::ConstantOp>(
         conv2DOp.post_activation_multiplier().getDefiningOp());
-    auto multipliers = multiplierConstOp.value().cast<DenseElementsAttr>();
+    auto multipliers = multiplierConstOp.getValue().cast<DenseElementsAttr>();
     multiplierVector =
         std::vector<float>{multipliers.getValues<float>().begin(),
                            multipliers.getValues<float>().end()};

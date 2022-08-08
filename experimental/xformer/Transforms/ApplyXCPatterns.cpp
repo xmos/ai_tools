@@ -19,6 +19,10 @@ struct ApplyXCPatterns : public PassWrapper<ApplyXCPatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
+  StringRef getArgument() const final { return "xcore-apply-xcpatterns"; }
+  StringRef getDescription() const final {
+    return "Apply generated XC optimization patterns.";
+  }
   void runOnFunction() override;
 };
 
@@ -80,17 +84,17 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
       op->getOperand(0).getType().dyn_cast<RankedTensorType>();
   auto inputQType =
       inputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
-  auto inputScale = inputQType.getScale();
-  auto inputZeroPoint = inputQType.getZeroPoint();
+  double inputScale = inputQType.getScale();
+  int64_t inputZeroPoint = inputQType.getZeroPoint();
 
   // Get output scale and output zero point
   RankedTensorType outputType =
       op->getResult(0).getType().dyn_cast<RankedTensorType>();
   auto outputQType =
       outputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
-  auto outputScale = outputQType.getScale();
+  double outputScale = outputQType.getScale();
   assert(outputScale != 0 && "Output scale of zero is not supported!");
-  auto outputZeroPoint = outputQType.getZeroPoint();
+  int64_t outputZeroPoint = outputQType.getZeroPoint();
 
   // Dequantize the input vector
   llvm::SmallVector<double, 0> dequantizedVector;
@@ -124,7 +128,8 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
       std::back_inserter(resultVector), [&](double n) {
         int32_t t =
             static_cast<int32_t>(round(n / outputScale)) + outputZeroPoint;
-        return static_cast<int8_t>(std::max({std::min({(int8_t)t, (int8_t)INT8_MAX}), (int8_t)INT8_MIN}));
+        return static_cast<int8_t>(std::max(
+            {std::min({(int8_t)t, (int8_t)INT8_MAX}), (int8_t)INT8_MIN}));
       });
 
   ShapedType lookupTableType =
@@ -150,8 +155,7 @@ std::unique_ptr<OperationPass<FuncOp>> createApplyXCPatternsPass() {
   return std::make_unique<ApplyXCPatterns>();
 }
 
-static PassRegistration<ApplyXCPatterns>
-    pass("xcore-apply-xcpatterns", "Apply generated XC optimization patterns.");
+static PassRegistration<ApplyXCPatterns> pass;
 
 } // namespace xcore
 } // namespace mlir

@@ -18,6 +18,10 @@ struct ApplyTFLPatterns : public PassWrapper<ApplyTFLPatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
+  StringRef getArgument() const final { return "xcore-apply-tflpatterns"; }
+  StringRef getDescription() const final {
+    return "Apply generated TFL optimization patterns.";
+  }
   void runOnFunction() override;
 };
 
@@ -75,13 +79,59 @@ SmallVector<Value, 2> getBConv2DPaddingValues(PatternRewriter &rewriter,
   return SmallVector<Value, 2>({paddingOp, outputTypeOp});
 }
 
+struct HoistQuantizeAboveConcatPattern
+    : public OpRewritePattern<TFL::QuantizeOp> {
+  using OpRewritePattern<TFL::QuantizeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::QuantizeOp quantizeOp,
+                                PatternRewriter &rewriter) const override {
+    // Parent op must be concat
+    auto concatOp =
+        dyn_cast<TFL::ConcatenationOp>(quantizeOp.input().getDefiningOp());
+    if (!concatOp) {
+      return failure();
+    }
+
+    SmallVector<Value> quantizeOps;
+    TFL::QuantizeOp newQuantizeOp;
+    for (int i = 0; i < concatOp->getNumOperands(); ++i) {
+      auto newQType = quant::CastQuantizedTypeAttrFromExpressedType(
+          rewriter, quantizeOp.qtypeAttr(),
+          quant::QuantizedType::castToExpressedType(
+              concatOp.getOperand(i).getType()),
+          -1);
+      newQuantizeOp = rewriter.create<TFL::QuantizeOp>(
+          quantizeOp.getLoc(), newQType.getValue(), concatOp.getOperand(i),
+          newQType);
+      quantizeOps.push_back(newQuantizeOp.getResult());
+    }
+
+    // We use one of the quantizeops to get the output element type with the new
+    // quantized parameters.
+    // All of them have the same quantization parameters
+    RankedTensorType newOutputType = RankedTensorType::get(
+        concatOp.output().getType().cast<RankedTensorType>().getShape(),
+        newQuantizeOp.output().getType().cast<ShapedType>().getElementType());
+
+    auto newConcatOp = rewriter.create<TFL::ConcatenationOp>(
+        concatOp.getLoc(), newOutputType, quantizeOps, concatOp.axis(),
+        concatOp.fused_activation_function());
+
+    rewriter.replaceOp(quantizeOp, newConcatOp.output());
+
+    return success();
+  }
+};
+
 #include "Transforms/GeneratedTFLPatterns.inc"
 
 void ApplyTFLPatterns::runOnFunction() {
-  OwningRewritePatternList patterns(&getContext());
+  auto *ctx = &getContext();
+  OwningRewritePatternList patterns(ctx);
   auto func = getFunction();
 
   populateWithGenerated(patterns);
+  patterns.insert<HoistQuantizeAboveConcatPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
@@ -91,9 +141,7 @@ std::unique_ptr<OperationPass<FuncOp>> createApplyTFLPatternsPass() {
   return std::make_unique<ApplyTFLPatterns>();
 }
 
-static PassRegistration<ApplyTFLPatterns>
-    pass("xcore-apply-tflpatterns",
-         "Apply generated TFL optimization patterns.");
+static PassRegistration<ApplyTFLPatterns> pass;
 
 } // namespace xcore
 } // namespace mlir

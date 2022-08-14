@@ -21,6 +21,7 @@ LOGGER = logging.getLogger(__name__)
 
 LIB_TFLM_DIR_PATH = (pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_tflite_micro")
 TFLM_INCLUDE_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "tflite-micro")
+FLATBUFFERS_INCLUDE_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "flatbuffers", "include")
 TFLMC_DIR_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "tflite_micro_compiler")
 TFLMC_BUILD_DIR_PATH = pathlib.Path.joinpath(TFLMC_DIR_PATH, "build")
 TFLMC_EXE_PATH = pathlib.Path.joinpath(TFLMC_BUILD_DIR_PATH, "tflite_micro_compiler")
@@ -59,8 +60,10 @@ def get_tflmc_model_exe(model, dirname):
     cmd = ["clang++",
     "-DTF_LITE_DISABLE_X86_NEON",
     "-DTF_LITE_STATIC_MEMORY",
+    "-DNO_INTERPRETER",
     "-std=c++14",
     "-I" + str(TFLM_INCLUDE_PATH),
+    "-I" + str(FLATBUFFERS_INCLUDE_PATH),
     "-I" + dirname,
     "-I" + os.getenv("CONDA_PREFIX") + "/include",
     "-g",
@@ -171,8 +174,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         tflmc_model_exe = get_tflmc_model_exe(model_content, tflmc_temp_dirname.name)
     else:    
         LOGGER.info("Invoking xformer to get xformed model...")
-        #xformed_model = get_xformed_model(model_content)
-        xformed_model = model_content
+        xformed_model = get_xformed_model(model_content)
         LOGGER.info("Creating TFLM XCore interpreter...")
         if testing_device_option:
             ie = xcore_tflm_usb_interpreter()
@@ -243,14 +245,14 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         # Compare outputs
         for i in range(num_of_outputs):
             LOGGER.info("Comparing output number " + str(i) + "...")
-            # if quantized output, we dequantize it before comparing
-            # if output_scales[i]:
-            #     outputs[i] = dequantize(
-            #         outputs[i], output_scales[i], output_zero_points[i]
-            #     )
-            #     xformer_outputs[i] = dequantize(
-            #         xformer_outputs[i], output_scales[i], output_zero_points[i]
-            #     )
+            #if quantized output, we dequantize it before comparing
+            if output_scales[i]:
+                outputs[i] = dequantize(
+                    outputs[i], output_scales[i], output_zero_points[i]
+                )
+                xformer_outputs[i] = dequantize(
+                    xformer_outputs[i], output_scales[i], output_zero_points[i]
+                )
             np.set_printoptions(threshold=np.inf)
             LOGGER.debug("xformer output :\n{0}".format(xformer_outputs[i]))
             LOGGER.debug("compared output :\n{0}".format(outputs[i]))

@@ -3,7 +3,7 @@
 
 // This is the optimization pattern definition file for XCore.
 include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
-include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/Dialect/Func/IR/FuncOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
 
@@ -16,7 +16,7 @@ def getLookupTable
 foreach activationOp =
     [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp] in {
 def:
-   Pat<(activationOp
+  Pat<(activationOp
             : $output TensorOf<[QI8]>:$input),
             (XC_LookupOp $input, (Arith_ConstantOp (getLookupTable
             $output)))>;

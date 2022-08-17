@@ -2,7 +2,11 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - bazel=4.2.1
+  - bazel=5.2.0
+  # openjdk 11.0.15 is included to address bazel crash
+  # https://github.com/bazelbuild/bazel/issues/14548
+  # remove this when fixed
+  - openjdk=11.0.15
   - patch=2.7.6
   - cmake=3.22.3
   - make=4.2.1

@@ -14,7 +14,9 @@ namespace xcore {
 namespace {
 // Replace TFL StridedSlice with StridedSlice for XCore.
 struct ReplaceStridedSlice
-    : public PassWrapper<ReplaceStridedSlice, FunctionPass> {
+    : public PassWrapper<ReplaceStridedSlice, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReplaceStridedSlice)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
@@ -22,7 +24,7 @@ struct ReplaceStridedSlice
   StringRef getDescription() const final {
     return "Replace TFL StridedSlice with StridedSlice for XCore.";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 struct ReplaceStridedSlicePattern
@@ -59,28 +61,24 @@ struct ReplaceStridedSlicePattern
     auto inputType =
         stridedSliceOp.input().getType().dyn_cast<RankedTensorType>();
 
-    auto beginValuesConstOp = dyn_cast<mlir::arith::ConstantOp>(
-        stridedSliceOp.begin().getDefiningOp());
-    auto beginValues = beginValuesConstOp.getValue().cast<DenseElementsAttr>();
+    DenseElementsAttr beginAttr;
+    matchPattern(stridedSliceOp.begin(), m_Constant(&beginAttr));
 
-    auto endValuesConstOp =
-        dyn_cast<mlir::arith::ConstantOp>(stridedSliceOp.end().getDefiningOp());
-    auto endValues = endValuesConstOp.getValue().cast<DenseElementsAttr>();
+    DenseElementsAttr endAttr;
+    matchPattern(stridedSliceOp.end(), m_Constant(&endAttr));
 
-    auto stridesValuesConstOp = dyn_cast<mlir::arith::ConstantOp>(
-        stridedSliceOp.strides().getDefiningOp());
-    auto stridesValues =
-        stridesValuesConstOp.getValue().cast<DenseElementsAttr>();
+    DenseElementsAttr stridesAttr;
+    matchPattern(stridedSliceOp.strides(), m_Constant(&stridesAttr));
 
     auto inputHeight = inputType.getDimSize(1);
     auto inputWidth = inputType.getDimSize(2);
     auto inputDepth = inputType.getDimSize(3);
-    auto beginX = beginValues.getValues<int32_t>()[2];
-    auto beginY = beginValues.getValues<int32_t>()[1];
-    auto endX = endValues.getValues<int32_t>()[2];
-    auto endY = endValues.getValues<int32_t>()[1];
-    auto strideX = stridesValues.getValues<int32_t>()[2];
-    auto strideY = stridesValues.getValues<int32_t>()[1];
+    auto beginX = beginAttr.getValues<int32_t>()[2];
+    auto beginY = beginAttr.getValues<int32_t>()[1];
+    auto endX = endAttr.getValues<int32_t>()[2];
+    auto endY = endAttr.getValues<int32_t>()[1];
+    auto strideX = stridesAttr.getValues<int32_t>()[2];
+    auto strideY = stridesAttr.getValues<int32_t>()[1];
 
     auto image_geom = nn::ImageGeometry(inputHeight, inputWidth,
                                         static_cast<int>(inputDepth));
@@ -106,17 +104,17 @@ struct ReplaceStridedSlicePattern
   }
 };
 
-void ReplaceStridedSlice::runOnFunction() {
+void ReplaceStridedSlice::runOnOperation() {
   auto *ctx = &getContext();
-  auto func = getFunction();
-  OwningRewritePatternList patterns(ctx);
+  func::FuncOp func = getOperation();
+  RewritePatternSet patterns(ctx);
   patterns.insert<ReplaceStridedSlicePattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
 // Creates an instance of the ReplaceStridedSlice pass.
-std::unique_ptr<OperationPass<FuncOp>> createReplaceStridedSlicePass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceStridedSlicePass() {
   return std::make_unique<ReplaceStridedSlice>();
 }
 

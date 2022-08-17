@@ -14,7 +14,10 @@ namespace xcore {
 
 namespace {
 // Apply generated TFL patterns.
-struct ApplyTFLPatterns : public PassWrapper<ApplyTFLPatterns, FunctionPass> {
+struct ApplyTFLPatterns
+    : public PassWrapper<ApplyTFLPatterns, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ApplyTFLPatterns)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
@@ -22,7 +25,7 @@ struct ApplyTFLPatterns : public PassWrapper<ApplyTFLPatterns, FunctionPass> {
   StringRef getDescription() const final {
     return "Apply generated TFL optimization patterns.";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 SmallVector<Value, 2> getBConv2DPaddingValues(PatternRewriter &rewriter,
@@ -61,7 +64,8 @@ SmallVector<Value, 2> getBConv2DPaddingValues(PatternRewriter &rewriter,
 
   RankedTensorType type = RankedTensorType::get({4, 2}, rewriter.getI32Type());
   auto attr = DenseIntElementsAttr::get(type, paddingValues);
-  auto paddingOp = rewriter.create<ConstantOp>(conv2DOp->getLoc(), type, attr);
+  auto paddingOp =
+      rewriter.create<arith::ConstantOp>(conv2DOp->getLoc(), type, attr);
 
   // Obtain the output type so that we can use it to denote the returnType for
   // the PadOp in Tablegen DRR
@@ -72,9 +76,9 @@ SmallVector<Value, 2> getBConv2DPaddingValues(PatternRewriter &rewriter,
   std::vector<int32_t> dummy(batch * outputHeight * outputWidth * depth, 0);
   RankedTensorType outputType = RankedTensorType::get(
       {batch, outputHeight, outputWidth, depth}, rewriter.getI32Type());
-  auto outputTypeOp =
-      rewriter.create<ConstantOp>(conv2DOp->getLoc(), outputType,
-                                  DenseIntElementsAttr::get(outputType, dummy));
+  auto outputTypeOp = rewriter.create<arith::ConstantOp>(
+      conv2DOp->getLoc(), outputType,
+      DenseIntElementsAttr::get(outputType, dummy));
 
   return SmallVector<Value, 2>({paddingOp, outputTypeOp});
 }
@@ -125,10 +129,10 @@ struct HoistQuantizeAboveConcatPattern
 
 #include "Transforms/GeneratedTFLPatterns.inc"
 
-void ApplyTFLPatterns::runOnFunction() {
+void ApplyTFLPatterns::runOnOperation() {
   auto *ctx = &getContext();
-  OwningRewritePatternList patterns(ctx);
-  auto func = getFunction();
+  RewritePatternSet patterns(ctx);
+  func::FuncOp func = getOperation();
 
   populateWithGenerated(patterns);
   patterns.insert<HoistQuantizeAboveConcatPattern>(ctx);
@@ -137,7 +141,7 @@ void ApplyTFLPatterns::runOnFunction() {
 } // namespace
 
 // Creates an instance of the ApplyTFLPatterns pass.
-std::unique_ptr<OperationPass<FuncOp>> createApplyTFLPatternsPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createApplyTFLPatternsPass() {
   return std::make_unique<ApplyTFLPatterns>();
 }
 

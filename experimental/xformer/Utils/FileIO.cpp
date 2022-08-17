@@ -71,17 +71,17 @@ writeMLIRToFlatBufferFile(std::string &filename, mlir::ModuleOp module,
   }
 }
 
-mlir::OwningModuleRef readFlatBufferFileToMLIR(std::string &filename,
-                                               mlir::MLIRContext *context) {
+mlir::OwningOpRef<mlir::ModuleOp>
+readFlatBufferFileToMLIR(std::string &filename, mlir::MLIRContext *context) {
   std::string errorMessage;
   auto inputFile = openInputFile(filename, &errorMessage);
   if (!inputFile) {
     emitError(UnknownLoc::get(context)) << errorMessage;
-    return mlir::OwningModuleRef(nullptr);
+    return mlir::OwningOpRef<mlir::ModuleOp>(nullptr);
   }
 
   auto loc = mlir::FileLineColLoc::get(context, filename, 0, 0);
-  OwningModuleRef mod =
+  mlir::OwningOpRef<mlir::ModuleOp> mod =
       tflite::FlatBufferToMlir(absl::string_view(inputFile->getBufferStart(),
                                                  inputFile->getBufferSize()),
                                context, loc);

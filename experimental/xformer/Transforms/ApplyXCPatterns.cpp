@@ -14,7 +14,10 @@ namespace xcore {
 
 namespace {
 // Apply generated XC patterns.
-struct ApplyXCPatterns : public PassWrapper<ApplyXCPatterns, FunctionPass> {
+struct ApplyXCPatterns
+    : public PassWrapper<ApplyXCPatterns, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ApplyXCPatterns)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
@@ -22,7 +25,7 @@ struct ApplyXCPatterns : public PassWrapper<ApplyXCPatterns, FunctionPass> {
   StringRef getDescription() const final {
     return "Apply generated XC optimization patterns.";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 // TODO: Remove when we have fusing of Pad and Conv2D in xformer2
@@ -140,9 +143,9 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
 
 #include "Transforms/GeneratedXCPatterns.inc"
 
-void ApplyXCPatterns::runOnFunction() {
-  OwningRewritePatternList patterns(&getContext());
-  auto func = getFunction();
+void ApplyXCPatterns::runOnOperation() {
+  RewritePatternSet patterns(&getContext());
+  func::FuncOp func = getOperation();
 
   populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
@@ -150,7 +153,7 @@ void ApplyXCPatterns::runOnFunction() {
 } // namespace
 
 // Creates an instance of the ApplyXCPatterns pass.
-std::unique_ptr<OperationPass<FuncOp>> createApplyXCPatternsPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createApplyXCPatternsPass() {
   return std::make_unique<ApplyXCPatterns>();
 }
 

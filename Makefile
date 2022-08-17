@@ -28,12 +28,9 @@ xinterpreters_smoke_test_device:
 
 .PHONY: xformer2_test
 xformer2_integration_test:
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_add -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_avgpool2d -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_conv2d -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_conv2d_1x1 -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_conv2d_shallowin -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_custom_relu_conv2d -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/1 -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/2 -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/3 -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
 	pytest integration_tests/runner.py --models_path integration_tests/models/bnns/test_bconv2d_bin --bnn -n 8 --dist loadfile --junitxml=integration_bnns_junit.xml
 
 #**************************

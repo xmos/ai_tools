@@ -79,6 +79,47 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_CopyIntoOp : XC_Op<"copy_into", [NoSideEffect]> {
+  let summary = "Copy Into op";
+
+  let description = [{"Copy Into op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input0,
+    TensorOf<[I8]>:$input1,
+    
+    I32Attr:$offset
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_ConnectorOp : XC_Op<"connector", [NoSideEffect]> {
+  let summary = "connector op";
+
+  let description = [{"connector op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input0,
+    TensorOf<[QI8]>:$input1
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_PassThruOp : XC_Op<"pass_thru", [NoSideEffect]> {
+  let summary = "pass thru op";
+
+  let description = [{"pass thru op.}];
+
+  let arguments = (ins
+    TensorOf<[I8]>:$input0,
+    TensorOf<[QI8]>:$input1
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
   let summary = "Conv2D V2 op";
 

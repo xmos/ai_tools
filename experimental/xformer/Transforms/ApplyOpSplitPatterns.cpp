@@ -47,6 +47,14 @@ IntegerAttr getI32IntegerAttrZero(PatternRewriter &rewriter) {
   return rewriter.getI32IntegerAttr(zeroValue);
 } 
 
+mlir::OperandRange getValues(mlir::OperandRange values) { 
+  return values;
+} 
+
+mlir::OperandRange getValues(mlir::OperandRange values) { 
+  return values;
+} 
+
 StringAttr getMemcpyFnParam(PatternRewriter &rewriter, Value outputVal) {
   // Extract args from the op
   auto outputType =
@@ -82,6 +90,69 @@ StringAttr getMemcpyFnParam(PatternRewriter &rewriter, Value outputVal) {
   return rewriter.getStringAttr(mfStr);
 }
 
+static Value createOpSplitBlock(PatternRewriter &rewriter, Operation *op,
+                                Value conv_out  ,
+                                Value input  ,
+  Value filter  ,
+  Value bias  ,
+    IntegerAttr dilation_h_factor  ,
+    IntegerAttr dilation_w_factor  ,
+   StringAttr fused_activation_function  ,
+   StringAttr padding  ,
+    IntegerAttr stride_h  ,
+    IntegerAttr stride_w ) {
+
+  //  auto new_conv_out = rewriter.create<mlir::TFL::Conv2DOp>(
+  //     op->getLoc(), conv_out.getType(),  input  ,
+  //   filter  ,
+  //   bias  ,
+  //     dilation_h_factor  ,
+  //     dilation_w_factor  ,
+  //    fused_activation_function  ,
+  //    padding  ,
+  //     stride_h  ,
+  //     stride_w );
+
+      int beginX = 0;
+      int beginY = 0;
+
+      // Extract args from the op
+  auto outputType =
+      conv_out.getType().dyn_cast<RankedTensorType>();
+  auto outputHeight = outputType.getDimSize(1);
+  auto outputWidth = outputType.getDimSize(2);
+  auto outputDepth = outputType.getDimSize(3);
+
+  auto inputHeight = outputHeight;
+  auto inputWidth = outputWidth;
+  auto inputDepth = outputDepth;
+  // auto beginY = 0;
+  // auto beginX = 0;
+  auto endY = outputHeight;
+  auto endX = outputWidth;
+  auto strideY = 1;
+  auto strideX = 1;
+
+  auto image_geom = nn::ImageGeometry(inputHeight, inputWidth,
+                                        static_cast<int>(inputDepth));
+
+  int xDiff = endX - beginX;
+  int yDiff = endY - beginY;
+  auto window_geom =
+      nn::WindowGeometry({yDiff, xDiff, static_cast<int>(inputDepth)},
+                          {beginY, beginX}, {1, 1, 1}, {strideY, strideX});
+
+  nn::ImToColValid::Params imToColParams(image_geom, window_geom,
+                                          static_cast<int>(inputDepth));
+
+  std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
+
+  return rewriter.create<mlir::xcore::StridedSliceOp>(
+     op->getLoc(), conv_out.getType(),
+        conv_out, rewriter.getI32IntegerAttr(beginX),
+        rewriter.getI32IntegerAttr(beginY), rewriter.getStringAttr(mfStr));
+}
+
 #include "Transforms/GeneratedOpSplitPatterns.inc"
 
 void ApplyOpSplitPatterns::runOnFunction() {
@@ -91,6 +162,10 @@ void ApplyOpSplitPatterns::runOnFunction() {
   populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
+
+  
+
+
 } // namespace
 
 // Creates an instance of the ApplyOpSplitPatterns pass.

@@ -186,7 +186,6 @@ cc_library(
         "IR/XCoreOps.cpp.inc",
         "IR/XCoreOps.h.inc",
         "Transforms/GeneratedXCPatterns.inc",
-        "Transforms/GeneratedOpSplitPatterns.inc",
         "Transforms/GeneratedTFLPatterns.inc",
         "Transforms/GeneratedLoadConstantOpPatterns.inc",
         "Transforms/GeneratedConvPatterns.inc",

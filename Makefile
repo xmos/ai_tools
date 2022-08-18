@@ -16,7 +16,7 @@ xcore_interpreters_build:
 
 .PHONY: xinterpreters_smoke_test_host
 xinterpreters_smoke_test_host:
-	#cd python/xmos_ai_tools/xinterpreters/host/ && make install && make test
+	cd python/xmos_ai_tools/xinterpreters/host/ && make install && make test
 
 .PHONY: xinterpreters_smoke_test_device
 xinterpreters_smoke_test_device:

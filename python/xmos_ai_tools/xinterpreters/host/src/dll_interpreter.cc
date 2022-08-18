@@ -36,7 +36,6 @@ void add_lib_vision_ops(
   resolver->AddRound();
   resolver->AddStridedSlice();
   resolver->AddSub();
-  resolver->AddTranspose();
   resolver->AddGather();
   resolver->AddFullyConnected();
   resolver->AddTranspose();

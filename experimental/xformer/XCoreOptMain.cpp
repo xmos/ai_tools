@@ -11,7 +11,7 @@
 #include "lib_tflite_micro/api/version.h"
 #include "lib_tflite_micro/api/xcore_shared_config.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "llvm/Support/InitLLVM.h"
@@ -71,7 +71,7 @@ cl::opt<bool> convForceErrorCheckOption(
 } // namespace mlir
 
 LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
-                              const OwningModuleRef &mod,
+                              const OwningOpRef<ModuleOp> &mod,
                               MLIRContext *context) {
   PassManager pm(context, mlir::OpPassManager::Nesting::Implicit);
   applyPassManagerCLOptions(pm);
@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
 
   // Initialize dialects.
   MLIRContext context;
-  context.loadDialect<StandardOpsDialect>();
+  context.loadDialect<func::FuncDialect>();
   context.loadDialect<arith::ArithmeticDialect>();
   context.loadDialect<quant::QuantizationDialect>();
   context.loadDialect<TFL::TensorFlowLiteDialect>();
@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
   }
 
   // Parse input.
-  OwningModuleRef mod;
+  OwningOpRef<ModuleOp> mod;
   SourceMgr sourceMgr;
   if (mlirIOEnabled) {
     // Parse the MLIR input file.
@@ -164,7 +164,7 @@ int main(int argc, char **argv) {
       return failedMessage(errorMessage);
     }
     sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
-    mod = parseSourceFile(sourceMgr, &context);
+    mod = parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
   } else {
     // Read flatbuffer and convert to serialized MLIR string.
     mod = xcore::utils::readFlatBufferFileToMLIR(inputFilename, &context);
@@ -203,9 +203,10 @@ int main(int argc, char **argv) {
 
     // Prepare metadata
     auto module = mod.get();
-    int requiredThreadCount = module->getAttr(xcRequiredThreadCountAttrName)
-                                  .cast<mlir::IntegerAttr>()
-                                  .getInt();
+    int requiredThreadCount = 1;
+    if (auto attr = module->getAttr(xcRequiredThreadCountAttrName)) {
+      requiredThreadCount = attr.cast<mlir::IntegerAttr>().getInt();
+    }
 
     struct shared_config::xcore_metadata cfg;
     // Store version info

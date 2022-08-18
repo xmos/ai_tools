@@ -3,17 +3,6 @@ package(
 )
 
 cc_library(
-    name = "libnn_lib2",
-    hdrs = glob(["lib_nn/api/*.h*"]) + 
-           glob(["lib_nn/api/geom/*.h*"]) + 
-           glob(["lib_nn/src/asm/*.h*"]) + 
-           glob(["lib_nn/src/*.h*"]),
-    srcs = ["lib_nn.dylib"],
-    deps = [],
-)
-
-
-cc_library(
     name = "libnn_lib",
     hdrs = glob(["lib_nn/api/*.h*"]) + 
            glob(["lib_nn/api/geom/*.h*"]) + 

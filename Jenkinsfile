@@ -74,6 +74,9 @@ pipeline {
                 // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv && //
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./ai_tools_venv &&
+                      cd third_party/lib_tflite_micro &&
+                      make build &&
+                      cd ../.. &&
                       make clean &&
                       make build
                 """

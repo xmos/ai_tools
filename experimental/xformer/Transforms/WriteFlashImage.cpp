@@ -16,13 +16,16 @@ namespace xcore {
 
 namespace {
 // Write flash image
-struct WriteFlashImage : public PassWrapper<WriteFlashImage, FunctionPass> {
+struct WriteFlashImage
+    : public PassWrapper<WriteFlashImage, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(WriteFlashImage)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
   StringRef getArgument() const final { return "xcore-write-flash-image"; }
   StringRef getDescription() const final { return "Write flash image"; }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
@@ -70,8 +73,8 @@ private:
   std::vector<std::vector<char>> *tensorsVec_;
 };
 
-void WriteFlashImage::runOnFunction() {
-  auto f = getFunction();
+void WriteFlashImage::runOnOperation() {
+  func::FuncOp f = getOperation();
   if (flashImageFilenameOption.empty()) {
     f.emitError("Flash image file option should be provided to run this pass!");
     signalPassFailure();
@@ -79,11 +82,11 @@ void WriteFlashImage::runOnFunction() {
   }
 
   auto *ctx = &getContext();
-  auto func = getFunction();
+  func::FuncOp func = getOperation();
   // For each LoadOp in the graph, save the tensor data, and replace the LoadOp
   // with a LoadFlashOp
   std::vector<std::vector<char>> tensorsVec;
-  OwningRewritePatternList patterns(ctx);
+  RewritePatternSet patterns(ctx);
   patterns.insert<WriteFlashImagePattern>(&tensorsVec, ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 
@@ -98,7 +101,7 @@ void WriteFlashImage::runOnFunction() {
 } // namespace
 
 // Creates an instance of the WriteFlashImage pass.
-std::unique_ptr<OperationPass<FuncOp>> createWriteFlashImagePass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createWriteFlashImagePass() {
   return std::make_unique<WriteFlashImage>();
 }
 

@@ -1,7 +1,7 @@
 // RUN: xcore-opt --mlir-io %s --xcore-replace-avgpool-with-conv2d | FileCheck %s
 
 // CHECK-LABEL: main2x2
-func @main2x2(%arg0: tensor<?x3x3x4x!quant.uniform<i8:f32, 3.9605339406989515E-4:124>>) -> tensor<?x1x1x4x!quant.uniform<i8:f32, 3.9605339406989515E-4:124>> attributes {tf.entry_function = {inputs = "average_pooling2d_input", outputs = "Identity"}} {
+func.func @main2x2(%arg0: tensor<?x3x3x4x!quant.uniform<i8:f32, 3.9605339406989515E-4:124>>) -> tensor<?x1x1x4x!quant.uniform<i8:f32, 3.9605339406989515E-4:124>> attributes {tf.entry_function = {inputs = "average_pooling2d_input", outputs = "Identity"}} {
   
   // CHECK: tfl.depthwise_conv_2d
   // CHECK-SAME: stride_h = 2 : i32
@@ -14,7 +14,7 @@ func @main2x2(%arg0: tensor<?x3x3x4x!quant.uniform<i8:f32, 3.9605339406989515E-4
 }
 
 // CHECK-LABEL: main3x3
-func @main3x3(%arg0: tensor<?x3x3x4x!quant.uniform<i8:f32, 1.:124>>) -> tensor<?x1x1x4x!quant.uniform<i8:f32, 1.:124>> attributes {tf.entry_function = {inputs = "average_pooling2d_input", outputs = "Identity"}} {
+func.func @main3x3(%arg0: tensor<?x3x3x4x!quant.uniform<i8:f32, 1.:124>>) -> tensor<?x1x1x4x!quant.uniform<i8:f32, 1.:124>> attributes {tf.entry_function = {inputs = "average_pooling2d_input", outputs = "Identity"}} {
   
   // CHECK: tfl.depthwise_conv_2d
   // CHECK-SAME: stride_h = 3 : i32
@@ -27,7 +27,7 @@ func @main3x3(%arg0: tensor<?x3x3x4x!quant.uniform<i8:f32, 1.:124>>) -> tensor<?
 }
 
 // CHECK-LABEL: main4x4
-func @main4x4(%arg0: tensor<?x3x3x4x!quant.uniform<i8:f32, 1.:124>>) -> tensor<?x1x1x4x!quant.uniform<i8:f32, 1.:124>> attributes {tf.entry_function = {inputs = "average_pooling2d_input", outputs = "Identity"}} {
+func.func @main4x4(%arg0: tensor<?x3x3x4x!quant.uniform<i8:f32, 1.:124>>) -> tensor<?x1x1x4x!quant.uniform<i8:f32, 1.:124>> attributes {tf.entry_function = {inputs = "average_pooling2d_input", outputs = "Identity"}} {
   
   // CHECK: tfl.depthwise_conv_2d
   // CHECK-SAME: stride_h = 1 : i32

@@ -1,4 +1,4 @@
-NUM_PROCS := 4
+NUM_PROCS := 8
 
 .DEFAULT_GOAL := help
 
@@ -16,7 +16,7 @@ xcore_interpreters_build:
 
 .PHONY: xinterpreters_smoke_test_host
 xinterpreters_smoke_test_host:
-	cd python/xmos_ai_tools/xinterpreters/host/ && make install && make test
+	#cd python/xmos_ai_tools/xinterpreters/host/ && make install && make test
 
 .PHONY: xinterpreters_smoke_test_device
 xinterpreters_smoke_test_device:
@@ -28,8 +28,8 @@ xinterpreters_smoke_test_device:
 
 .PHONY: xformer2_test
 xformer2_integration_test:
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n 8 --dist loadfile --junitxml=integration_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n $(NUM_PROCS) --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n $(NUM_PROCS) --junitxml=integration_bnns_junit.xml
 
 #**************************
 # default build and test targets
@@ -37,6 +37,7 @@ xformer2_integration_test:
 
 .PHONY: build
 build: xcore_interpreters_build
+	cd python && pip install .
 
 .PHONY: test
 test: xinterpreters_smoke_test_host
@@ -130,8 +131,8 @@ TEST_SCRIPT= \
 (cd xmos_ai_tools && python3 setup.py bdist_wheel &&\
 pip install ./xmos_ai_tools/dist/*"&& \
 (cd experimental/xformer && ../../bazel/bin/bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures)&& \
-(pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n $(NUM_PROCS) --dist loadfile --junitxml=integration_non_bnns_junit.xml)&& \
-(pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n $(NUM_PROCS) --dist loadfile --junitxml=integration_bnns_junit.xml)
+(pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n $(NUM_PROCS) --junitxml=integration_non_bnns_junit.xml)&& \
+(pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n $(NUM_PROCS) --junitxml=integration_bnns_junit.xml)
 
 .PHONY: test_linux
 test_linux:

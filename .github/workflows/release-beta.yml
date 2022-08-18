@@ -143,7 +143,7 @@ jobs:
         run: |
           docker run \
             -v ${PWD}:/ai_tools -w /ai_tools \
-            tensorflow/build:2.10.0rc0-python${{ matrix.python-version }} \
+            tensorflow/build:2.10-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
           
           sudo apt-get -y -qq install patchelf --no-install-recommends

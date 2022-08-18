@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 set -e -x
 
-python -m ensurepip --upgrade
+# get latest pip
+pip uninstall pip --yes
+wget https://bootstrap.pypa.io/get-pip.py
+python get-pip.py
 pip install cmake
+
 # Have to add this option due to https://github.com/actions/checkout/issues/760
 # and https://github.blog/2022-04-12-git-security-vulnerability-announced/
 # This was preventing setuptools-scm from detecting the version as it uses git
 git config --global --add safe.directory /ai_tools
 git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
 git describe --tags
+
 cd third_party/lib_tflite_micro
 # Use gcc9 toolchain from the docker file and apply patch
 CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make build

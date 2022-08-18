@@ -37,7 +37,6 @@ xformer2_integration_test:
 
 .PHONY: build
 build: xcore_interpreters_build
-	cd python && pip install .
 
 .PHONY: test
 test: xinterpreters_smoke_test_host

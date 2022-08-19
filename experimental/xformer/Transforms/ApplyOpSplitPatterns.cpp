@@ -47,13 +47,13 @@ IntegerAttr getI32IntegerAttrZero(PatternRewriter &rewriter) {
   return rewriter.getI32IntegerAttr(zeroValue);
 } 
 
-mlir::OperandRange getValues(mlir::OperandRange values) { 
-  return values;
-} 
+// mlir::OperandRange getValues(mlir::OperandRange values) { 
+//   return values;
+// } 
 
-mlir::OperandRange getValues(mlir::OperandRange values) { 
-  return values;
-} 
+// mlir::OperandRange getValues(mlir::OperandRange values) { 
+//   return values;
+// } 
 
 StringAttr getMemcpyFnParam(PatternRewriter &rewriter, Value outputVal) {
   // Extract args from the op
@@ -174,7 +174,8 @@ std::unique_ptr<OperationPass<FuncOp>> createApplyOpSplitPatternsPass() {
 }
 
 static PassRegistration<ApplyOpSplitPatterns>
-    pass("xcore-apply-opslitpatterns", "Apply generated OpSplit optimization patterns.");
+    pass();
+    // pass("xcore-apply-opslitpatterns", "Apply generated OpSplit optimization patterns.");
 
 } // namespace xcore
 } // namespace mlir

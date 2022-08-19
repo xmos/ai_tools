@@ -113,17 +113,13 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "opsplit_patterns_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "Transforms/GeneratedOpSplitPatterns.inc"),
+        (["-gen-rewriters"], "Transforms/GeneratedOpSplitPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "Transforms/OpSplitPatterns.td",
-    td_includes = ["external/org_tensorflow", "external/lce"],
-    td_srcs = [
-        "IR/XCoreOps.td",
-        "@lce//larq_compute_engine/mlir:lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    deps = [
+        ":xc_dialect_td",
+        "@llvm-project//mlir:ArithmeticOpsTdFiles",
     ],
 )
 
@@ -189,7 +185,8 @@ cc_library(
         "Transforms/GeneratedTFLPatterns.inc",
         "Transforms/GeneratedLoadConstantOpPatterns.inc",
         "Transforms/GeneratedConvPatterns.inc",
-        "Transforms/GeneratedConvRevertPatterns.inc"
+        "Transforms/GeneratedConvRevertPatterns.inc",
+        "Transforms/GeneratedOpSplitPatterns.inc"
     ],
     hdrs = [
         "Transforms/ConvPatterns.h",

@@ -64,3 +64,4 @@ assert tflite_out_details[0]["quantization"] == xcore_out_details[0]["quantizati
 
 
 print(ie.tensor_arena_size())
+# assert ie.tensor_arena_size() == 2058656

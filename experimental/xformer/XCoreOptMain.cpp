@@ -67,6 +67,20 @@ cl::opt<bool> convForceErrorCheckOption(
              "calculating channel quantization error."),
     cl::init(false));
 
+cl::opt<unsigned> convMultiplierFactorOption(
+    "xcore-conv-multiplier-factor",
+    cl::desc("Specify the multiplier factor for conv above which the "
+             "multipliers would be clamped "
+             "(default = UINT32_MAX)."),
+    cl::init(UINT32_MAX));
+
+cl::opt<unsigned> convMultiplierWarningFactorOption(
+    "xcore-conv-multiplier-warning-factor",
+    cl::desc("Warn if the dynamic range for the multiplier factor for conv is "
+             "larger than this factor"
+             "(default = 30)."),
+    cl::init(30));
+
 } // namespace xcore
 } // namespace mlir
 
@@ -173,6 +187,9 @@ int main(int argc, char **argv) {
     }
   }
 
+  // Disable printing op on diagnostics such as error, remark, warning
+  context.printOpOnDiagnostic(false);
+
   // Run transformations
   if (verifyDiagnosticsEnabled) {
     SourceMgrDiagnosticVerifierHandler sourceMgrHandler(sourceMgr, &context);
@@ -181,6 +198,7 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else {
+    SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
     if (failed(runPassPipeline(passPipeline, mod, &context))) {
       return 1;
     }

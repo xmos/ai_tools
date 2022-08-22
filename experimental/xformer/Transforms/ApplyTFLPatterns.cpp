@@ -91,7 +91,7 @@ struct HoistQuantizeAboveConcatPattern
                                 PatternRewriter &rewriter) const override {
     // Parent op must be concat
     auto concatOp =
-        dyn_cast<TFL::ConcatenationOp>(quantizeOp.input().getDefiningOp());
+        dyn_cast_or_null<TFL::ConcatenationOp>(quantizeOp.input().getDefiningOp());
     if (!concatOp) {
       return failure();
     }

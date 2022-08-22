@@ -3,6 +3,7 @@
 
 #include "Transforms/ConvPatterns.h"
 #include "Transforms/Options.h"
+#include "Utils/Diagnostics.h"
 
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
@@ -89,6 +90,33 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
     auto scale = isPerChannelQuantized ? filterScales[i] : filterScale;
     assert(outputScale != 0 && "outputScale should not be zero!");
     effectiveOutputScaleVector.push_back(inputScale * scale / outputScale);
+  }
+
+  // Clamp multipliers
+  // one number very low, clamp that one
+  // 
+  //float minVal = *std::min_element(effectiveOutputScaleVector.begin(), effectiveOutputScaleVector.end());
+  float minVal = std::accumulate(effectiveOutputScaleVector.begin(), effectiveOutputScaleVector.end(), 0.0) / effectiveOutputScaleVector.size();
+  for (int i = 0; i < effectiveOutputScaleVector.size(); ++i) {
+    float tmp = std::min(effectiveOutputScaleVector[i],
+                         minVal * convMultiplierFactorOption);
+    if (tmp != effectiveOutputScaleVector[i]) {
+      // Mention which numbers have been clamped
+      std::stringstream msg;
+      msg << "CLAMPED conv multiplier index " << i << " from " << std::fixed
+          << std::setprecision(18) << effectiveOutputScaleVector[i] << " to "
+          << tmp << std::endl;
+      conv2DOp.emitRemark(utils::getMsgWithLocPrefix(conv2DOp, msg.str()));
+      effectiveOutputScaleVector[i] = tmp;
+    }
+  }
+  float maxVal = *std::max_element(effectiveOutputScaleVector.begin(),
+                                   effectiveOutputScaleVector.end());
+  if (maxVal > minVal * convMultiplierWarningFactorOption) {
+    // Warn if there is a large factor
+    std::stringstream msg;
+    msg << "\nDynamic range for this conv's multipliers are larger than ideal! \nInspect and clamp using --xcore-conv-multiplier-factor if necessary!" << std::endl;
+    conv2DOp.emitWarning(utils::getMsgWithLocPrefix(conv2DOp, msg.str()));
   }
 
   // Find padding values
@@ -233,6 +261,8 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulsAndBiases, qp, args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
+    std::cout<<quantError<<"\n";
+    args.convOp->emitWarning()<<quantError<<"\n";
     return failure();
   }
 
@@ -401,6 +431,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulsAndBiases, qp, args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
+    std::cout<<quantError<<"\n";
     return failure();
   }
 

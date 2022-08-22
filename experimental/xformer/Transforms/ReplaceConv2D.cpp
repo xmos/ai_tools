@@ -31,6 +31,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
 
   // Extract common args from the op
   ArgsType args;
+  args.convOp = conv2DOp.getOperation();
   auto inputType =
       conv2DOp.input().getType().template dyn_cast<RankedTensorType>();
   auto outputType =

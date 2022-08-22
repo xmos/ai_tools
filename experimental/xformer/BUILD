@@ -179,6 +179,7 @@ cc_library(
         "Transforms/ConvPatterns.h",
         "Transforms/Options.h",
         "Transforms/Passes.h",
+        "Utils/Diagnostics.h",
         "Utils/FileIO.h",
         "Utils/ThreadSupport.h",
         "IR/XCoreOps.h",

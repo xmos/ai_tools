@@ -93,30 +93,24 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   }
 
   // Clamp multipliers
-  // one number very low, clamp that one
-  // 
-  //float minVal = *std::min_element(effectiveOutputScaleVector.begin(), effectiveOutputScaleVector.end());
-  float minVal = std::accumulate(effectiveOutputScaleVector.begin(), effectiveOutputScaleVector.end(), 0.0) / effectiveOutputScaleVector.size();
+  float minVal = *std::min_element(effectiveOutputScaleVector.begin(),
+                                   effectiveOutputScaleVector.end());
+  // float avgVal = std::accumulate(effectiveOutputScaleVector.begin(),
+  // effectiveOutputScaleVector.end(), 0.0) /
+  effectiveOutputScaleVector.size();
   for (int i = 0; i < effectiveOutputScaleVector.size(); ++i) {
     float tmp = std::min(effectiveOutputScaleVector[i],
                          minVal * convMultiplierFactorOption);
     if (tmp != effectiveOutputScaleVector[i]) {
       // Mention which numbers have been clamped
       std::stringstream msg;
-      msg << "CLAMPED conv multiplier index " << i << " from " << std::fixed
+      msg << std::endl
+          << "CLAMPED conv multiplier index " << i << " from " << std::fixed
           << std::setprecision(18) << effectiveOutputScaleVector[i] << " to "
           << tmp << std::endl;
       conv2DOp.emitRemark(utils::getMsgWithLocPrefix(conv2DOp, msg.str()));
       effectiveOutputScaleVector[i] = tmp;
     }
-  }
-  float maxVal = *std::max_element(effectiveOutputScaleVector.begin(),
-                                   effectiveOutputScaleVector.end());
-  if (maxVal > minVal * convMultiplierWarningFactorOption) {
-    // Warn if there is a large factor
-    std::stringstream msg;
-    msg << "\nDynamic range for this conv's multipliers are larger than ideal! \nInspect and clamp using --xcore-conv-multiplier-factor if necessary!" << std::endl;
-    conv2DOp.emitWarning(utils::getMsgWithLocPrefix(conv2DOp, msg.str()));
   }
 
   // Find padding values
@@ -126,11 +120,10 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   if (conv2DOp.padding() == "EXPLICIT") {
     DenseElementsAttr paddingAttr;
     matchPattern(conv2DOp.padding_values(), m_Constant(&paddingAttr));
-    // The padding values for the PadOp are stored as a 4x2 tensor
-    // 0,0 and 0,1 is for the batch dimension and 3,0, and 3,1 for the
-    // channel/depth
-    // 1,0 and 1,1 is top and bottom, and 2,0 and 2,1 is
-    // left and right which are the padding values we need
+    // The padding values for the PadOp are stored as a 4x2 tensor 0,0 and 0,1
+    // is for the batch dimension and 3,0, and 3,1 for the channel/depth 1,0 and
+    // 1,1 is top and bottom, and 2,0 and 2,1 is left and right which are the
+    // padding values we need
     padTop = paddingAttr.template getValues<int32_t>()[{1, 0}];
     padBottom = paddingAttr.template getValues<int32_t>()[{1, 1}];
     padLeft = paddingAttr.template getValues<int32_t>()[{2, 0}];
@@ -261,8 +254,15 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulsAndBiases, qp, args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
-    std::cout<<quantError<<"\n";
-    args.convOp->emitWarning()<<quantError<<"\n";
+    std::stringstream msg;
+    msg << "Quantization error of " << quantError
+        << " larger than set threshold of " << args.quantErrorThreshold
+        << ", therefore reverting to reference Conv2D op!" << std::endl
+        << "Inspect the output, and if suitable, set a "
+           "higher threshold with --xcore-conv-err-threshold."
+        << std::endl;
+    args.convOp->emitWarning(
+        utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
     return failure();
   }
 
@@ -431,7 +431,15 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulsAndBiases, qp, args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
-    std::cout<<quantError<<"\n";
+    std::stringstream msg;
+    msg << "Quantization error of " << quantError
+        << " larger than set threshold of " << args.quantErrorThreshold
+        << ", therefore reverting to reference DepthwiseConv2D op!" << std::endl
+        << "Inspect the output, and if suitable, set a "
+           "higher threshold with --xcore-conv-err-threshold."
+        << std::endl;
+    args.convOp->emitWarning(
+        utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
     return failure();
   }
 

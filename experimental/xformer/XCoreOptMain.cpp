@@ -69,17 +69,12 @@ cl::opt<bool> convForceErrorCheckOption(
 
 cl::opt<unsigned> convMultiplierFactorOption(
     "xcore-conv-multiplier-factor",
-    cl::desc("Specify the multiplier factor for conv above which the "
-             "multipliers would be clamped "
+    cl::desc("If the dynamic range for multipliers is too large, quantization "
+             "error increases. This option is a temporary solution to set all "
+             "the multipliers to be clamped to a specified multiple of the "
+             "minimum multiplier."
              "(default = UINT32_MAX)."),
     cl::init(UINT32_MAX));
-
-cl::opt<unsigned> convMultiplierWarningFactorOption(
-    "xcore-conv-multiplier-warning-factor",
-    cl::desc("Warn if the dynamic range for the multiplier factor for conv is "
-             "larger than this factor"
-             "(default = 30)."),
-    cl::init(30));
 
 } // namespace xcore
 } // namespace mlir

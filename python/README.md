@@ -53,7 +53,7 @@ ie.invoke()
 
 xformer_outputs = []
 for i in range(num_of_outputs):
-    xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]["index"]))
+    xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]['index']))
 ```
 Device Interpreter (USB)
 ```python
@@ -67,5 +67,5 @@ ie.invoke()
 
 xformer_outputs = []
 for i in range(num_of_outputs):
-    xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]["index"]))
+    xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]['index']))
 ```

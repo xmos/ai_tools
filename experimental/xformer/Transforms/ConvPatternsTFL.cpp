@@ -97,7 +97,7 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
                                    effectiveOutputScaleVector.end());
   // float avgVal = std::accumulate(effectiveOutputScaleVector.begin(),
   // effectiveOutputScaleVector.end(), 0.0) /
-  effectiveOutputScaleVector.size();
+  // effectiveOutputScaleVector.size();
   for (int i = 0; i < effectiveOutputScaleVector.size(); ++i) {
     float tmp = std::min(effectiveOutputScaleVector[i],
                          minVal * convMultiplierFactorOption);

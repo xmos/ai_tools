@@ -168,16 +168,16 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         outputs = self.get_output_details(model_index)
         inputs = self.get_input_details(model_index)
         type_ = None
+        count = 0
         for output in outputs:
-            count = 0
             if tensor_index == output["index"]:
                 tensor_details = output
                 type_ = "output"
                 break
             count = count + 1
         if type_ == None:
+            count = 0
             for input_ in inputs:
-                count = 0
                 if tensor_index == input_["index"]:
                     tensor_details = input_
                     type_ = "input"

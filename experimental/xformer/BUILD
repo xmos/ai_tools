@@ -179,6 +179,7 @@ cc_library(
         "Transforms/ConvPatterns.h",
         "Transforms/Options.h",
         "Transforms/Passes.h",
+        "Utils/Diagnostics.h",
         "Utils/FileIO.h",
         "Utils/ThreadSupport.h",
         "IR/XCoreOps.h",
@@ -190,6 +191,7 @@ cc_library(
         ":load_constant_op_patterns_inc_gen",
         ":conv_patterns_inc_gen",
         ":conv_revert_patterns_inc_gen",
+        ":utils",
         "@lce//larq_compute_engine/mlir:larq_compute_engine_translate_tflite",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
@@ -220,7 +222,6 @@ cc_binary(
     srcs = ["XCoreOptMain.cpp", "Version.h"],
     deps = [
         ":xcore_passes",
-        ":utils",
         "@lib_tflite_micro//:shared_headers",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:FuncDialect",

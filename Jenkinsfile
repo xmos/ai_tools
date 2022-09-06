@@ -105,9 +105,9 @@ pipeline {
                 junit "**/*_junit.xml"
         // regression test for xmos_ai_tools juypiter notebooks
                 sh """. activate ./ai_tools_venv &&
-                    pip install ./python/xmos_ai_tools
+                    pip install ./python/
                     pip install pytest nbmake
-                    pytest --nbmake ./docs/**/*ipynb
+                    pytest --nbmake ./docs/*.ipynb
                 """
             }
         }

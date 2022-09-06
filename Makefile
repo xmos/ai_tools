@@ -27,13 +27,13 @@ xinterpreters_smoke_test_device:
 
 .PHONY: xformer2_test
 xformer2_integration_test:
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/1 -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/2 -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/3 -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/4 -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/5 -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/6 -n 8 --dist loadfile --junitxml=integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/bnns/test_bconv2d_bin --bnn -n 8 --dist loadfile --junitxml=integration_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/1 -n $(NUM_PROCS) --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/2 -n $(NUM_PROCS) --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/3 -n $(NUM_PROCS) --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/4 -n $(NUM_PROCS) --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/5 -n $(NUM_PROCS) --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/6 -n $(NUM_PROCS) --junitxml=integration_non_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/bnns/test_bconv2d_bin --bnn -n $(NUM_PROCS) --junitxml=integration_bnns_junit.xml
 
 #**************************
 # default build and test targets

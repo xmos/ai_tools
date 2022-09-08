@@ -43,12 +43,13 @@ xf.generate_flash("xcore_optimised_int8_flash_model.tflite",  "xcore_params.para
 ### xinterpreters
 
 Host Interpreter
+
 ```python
 from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
 
 ie = xcore_tflm_host_interpreter()
-ie.set_model(model_path = xcore_model)
-ie.set_tensor(ie.get_input_details()[0]['index'], data = input)
+ie.set_model(model_path=xcore_model)
+ie.set_tensor(ie.get_input_details()[0]['index'], value=input)
 ie.invoke()
 
 xformer_outputs = []
@@ -56,13 +57,14 @@ for i in range(num_of_outputs):
     xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]['index']))
 ```
 Device Interpreter (USB)
+
 ```python
 from xmos_ai_tools.xinterpreters import xcore_tflm_usb_interpreter
 from xmos_ai_tools.xinterpreters import xcore_tflm_spi_interpreter
 
 ie = xcore_tflm_usb_interpreter()
-ie.set_model(model_path = xcore_model, secondary_memory = False, flash = False)
-ie.set_tensor(ie.get_input_details()[0]['index'], data = input)
+ie.set_model(model_path=xcore_model, secondary_memory=False, flash=False)
+ie.set_tensor(ie.get_input_details()[0]['index'], value=input)
 ie.invoke()
 
 xformer_outputs = []

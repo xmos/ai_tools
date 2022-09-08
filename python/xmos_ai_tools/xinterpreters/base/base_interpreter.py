@@ -2,7 +2,7 @@
 # XMOS Public License: Version 1
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Union, Type, Optional, Any, List, Tuple
+from typing import Union, Type, Optional, Any, List, Tuple, Dict
 
 from numpy import ndarray
 from tflite import opcode2name

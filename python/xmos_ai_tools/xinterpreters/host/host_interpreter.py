@@ -3,11 +3,10 @@
 import sys
 import ctypes
 import numpy as np
-from enum import Enum
 from pathlib import Path
 
 from xmos_ai_tools.xinterpreters.base.base_interpreter import (
-    xcore_tflm_base_interpreter,
+    xcore_tflm_base_interpreter, XTFLMInterpreterStatus,
 )
 
 # DLL path for different platforms
@@ -33,12 +32,6 @@ from xmos_ai_tools.xinterpreters.host.exceptions import (
 )
 
 MAX_TENSOR_ARENA_SIZE = 10000000
-
-
-class XTFLMInterpreterStatus(Enum):
-    OK = 0
-    ERROR = 1
-
 
 class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
     """! The xcore interpreters host class.

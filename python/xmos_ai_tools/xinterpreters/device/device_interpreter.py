@@ -1,7 +1,10 @@
 # Copyright 2022 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 from abc import abstractmethod
+from typing import List, Union, Tuple, Optional, Any
+
 import numpy as np
+from numpy import ndarray
 
 from xmos_ai_tools.xinterpreters.base.base_interpreter import (
     xcore_tflm_base_interpreter,
@@ -86,24 +89,15 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
-        outputs = self.get_output_details(model_index)
-        inputs = self.get_input_details(model_index)
-        type_ = None
-        for output in outputs:
-            count = 0
-            if tensor_index == output["index"]:
-                tensor_details = output
-                type_ = "output"
-                break
-            count = count + 1
-        if type_ == None:
-            for input_ in inputs:
-                count = 0
-                if tensor_index == input_["index"]:
-                    tensor_details = input_
-                    type_ = "input"
-                    break
-                count = count + 1
+        count: Optional[int]
+        tensor_details: Optional[dict[str, Any]]
+        tensors = self.get_output_details() + self.get_input_details()
+
+        count, tensor_details = next(filter(lambda x: tensor_index == x[1]["index"], enumerate(tensors)), (None, None))
+
+        if count is None or tensor_details is None:
+            raise IndexError
+
         tensor_type = tensor_details["dtype"]
         if tensor_type == np.int32 or tensor_type == np.float32:
             bpi = 4
@@ -118,9 +112,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         print("Setting Input Tensor")
         return
 
-    def get_tensor(
-        self, tensor_index=0, tensor=None, model_index=0
-    ) -> "Output tensor data":
+    def get_tensor(self, tensor_index: int = 0, tensor = None, model_index: int = 0) -> ndarray:
         """! Abstract for reading the data in the output tensor of a model.
         @param tensor_index  The index of output tensor to target.
         @param tensor Tensor of correct shape to write into (optional)
@@ -128,24 +120,16 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         running concurrently. Defaults to 0 for use with a single model.
         @return The data that was stored in the output tensor.
         """
-        outputs = self.get_output_details(model_index)
-        inputs = self.get_input_details(model_index)
-        type_ = None
-        for output in outputs:
-            count = 0
-            if tensor_index == output["index"]:
-                tensor_details = output
-                type_ = "output"
-                break
-            count = count + 1
-        if type_ == None:
-            for input_ in inputs:
-                count = 0
-                if tensor_index == input_["index"]:
-                    tensor_details = input_
-                    type_ = "input"
-                    break
-                count = count + 1
+
+        count: Optional[int]
+        tensor_details: Optional[dict[str, Any]]
+        tensors = self.get_output_details() + self.get_input_details()
+
+        count, tensor_details = next(filter(lambda x: tensor_index == x[1]["index"], enumerate(tensors)), (None, None))
+
+        if count is None or tensor_details is None:
+            raise IndexError
+
         tensor_type = tensor_details["dtype"]
         if tensor_type == np.int32 or tensor_type == np.float32:
             bpi = 4
@@ -170,13 +154,13 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
 
         return np.reshape(np.asarray(output), tensor_details["shape"])
 
-    def get_input_tensor(self, input_index=0, model_index=0) -> "Input tensor data":
+    def get_input_tensor(self, input_index=0, model_index=0) -> List[Union[int, Tuple[float]]]:
         """! Abstract for reading the data in the input tensor of a model.
-        @param output_index  The index of output tensor to target.
+        @param input_index  The index of output tensor to target.
         @param tensor Tensor of correct shape to write into (optional)
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
-        @return The data that was stored in the output tensor.
+        @return The data that was stored in the input tensor.
         """
         # Retrieve result from device
         input_length = self.get_input_tensor_size(input_index, model_index)
@@ -196,27 +180,28 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
     def invoke(self, model_index=0) -> None:
         pass
 
+    @abstractmethod
     def close(self, model_index=0) -> None:
         """! Abstract deleting the interpreter
         @params model_index Defines which interpreter to target in systems with multiple
         """
         return
 
-    def tensor_arena_size(self) -> "Size of tensor arena":
+    def tensor_arena_size(self) -> int:
         """! Abstract to read the size of the tensor arena required
         @return size of the tensor arena as an integer
         """
-        return
+        raise NotImplementedError
 
     def _check_status(self, status):
         """! Abstract to read a status code and raise an exception
         @param status Status code
         """
-        return
+        raise NotImplementedError
 
     def print_memory_plan(self) -> None:
         """! Abstract to print a plan of memory allocation"""
-        return
+        raise NotImplementedError
 
     # Internal Device Interpreter Functions
 
@@ -231,7 +216,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         pass
 
     def download_model(
-        self, model_bytes, secondary_memory=False, flash=False, model_index=0
+            self, model_bytes, secondary_memory=False, flash=False, model_index=0
     ):
         """! Download a model on to the device.
         @param model_bytes  The byte array containing the model.
@@ -268,7 +253,8 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             print("IO Error\n")
             raise IOError
 
-    def bytes_to_ints(self, data_bytes, bpi=1, float_=False):
+    # [Salman] There is an issue for this: https://github.com/xmos/ai_tools/issues/658
+    def bytes_to_ints(self, data_bytes: bytes, bpi=1, float_=False) -> List[Union[int, Tuple[float]]]:
         """! Convert variable byte array to integers.
         @param data_bytes Byte Array.
         @param bpi Bytes per integer (eg 1 for int8, 4 for int32).
@@ -280,18 +266,18 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             import struct
 
             for i in range(0, len(data_bytes), bpi):
-                x = data_bytes[i : i + bpi]
+                x = data_bytes[i: i + bpi]
                 y = struct.unpack("f", x)
                 output_data_int.append(y)
         else:
             for i in range(0, len(data_bytes), bpi):
-                x = data_bytes[i : i + bpi]
+                x = data_bytes[i: i + bpi]
                 y = int.from_bytes(x, byteorder="little", signed=True)
                 output_data_int.append(y)
 
         return output_data_int
 
-    def read_debug_log(self):
+    def read_debug_log(self) -> str:
         """! Read the debug log on device (TFLM Error Reporter)."""
         debug_string = self._upload_data(
             aisrv_cmd.CMD_GET_DEBUG_LOG, 256
@@ -300,7 +286,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         r = bytearray(debug_string).decode("utf8", errors="replace")
         return r
 
-    def read_times(self, model_index=0):
+    def read_times(self, model_index=0) ->  list[Union[int, tuple[float]]]:
         """! Read the operator timings from a completed inference.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
@@ -315,6 +301,14 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
 
         return times_ints
 
+    @abstractmethod
+    def _upload_data(self, cmd, length, sign=False, tensor_num=0, engine_num=0):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _download_data(self, cmd, data_bytes, tensor_num=0, engine_num=0):
+        raise NotImplementedError
+
 
 class xcore_tflm_spi_interpreter(xcore_tflm_device_interpreter):
     def __init__(self, bus=0, device=0, speed=7800000):
@@ -326,7 +320,7 @@ class xcore_tflm_spi_interpreter(xcore_tflm_device_interpreter):
         self._dummy_byte_count = len(self._dummy_bytes)
         super().__init__()
 
-    def _download_data(self, cmd, data_bytes):
+    def _download_data(self, cmd, data_bytes, tensor_num=0, engine_num=0):
         data_len = len(data_bytes)
         data_index = 0
         data_ints = self.bytes_to_ints(data_bytes)
@@ -334,7 +328,7 @@ class xcore_tflm_spi_interpreter(xcore_tflm_device_interpreter):
         while data_len >= self._max_block_size:
             self._wait_for_device()
             to_send = [cmd]
-            to_send.extend(data_ints[data_index : data_index + self._max_block_size])
+            to_send.extend(data_ints[data_index: data_index + self._max_block_size])
 
             data_len = data_len - self._max_block_size
             data_index = data_index + self._max_block_size
@@ -344,15 +338,15 @@ class xcore_tflm_spi_interpreter(xcore_tflm_device_interpreter):
         # Note, send a 0 length if size % XCORE_IE_MAX_BLOCK_SIZE == 0
         status = self._wait_for_device()
         to_send = [cmd]
-        to_send.extend(data_ints[data_index : data_index + data_len])
+        to_send.extend(data_ints[data_index: data_index + data_len])
         self._dev.xfer(to_send)
 
-    def _upload_data(self, cmd, length):
+    def _upload_data(self, cmd, length, sign=False, tensor_num=0, engine_num=0):
         self._wait_for_device()
         to_send = self._construct_packet(cmd, length + 1)
         r = self._dev.xfer(to_send)
 
-        r = r[self._dummy_byte_count :]
+        r = r[self._dummy_byte_count:]
         return r[:length]
 
     def _clear_error(self):
@@ -390,7 +384,7 @@ class xcore_tflm_spi_interpreter(xcore_tflm_device_interpreter):
 
             if status != 1:  # TODO STATUS_BUSY
                 if status == 0x04:  # TODO STATUS_ERROR_NO_MODEL
-                    raise NoModel()
+                    raise NoModelError()
                 elif status == 0x08:  # TODO STATUS_ERROR_MODEL_ERR
                     raise ModelError()
                 elif status == 0x10:  # TODO STATUS_ERROR_INFER_ERR
@@ -458,7 +452,6 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
 
         self._dev = None
         while self._dev is None:
-
             # TODO - more checks that we have the right device..
             self._dev = usb.core.find(idVendor=0x20B1, idProduct=0xA15E)
 
@@ -476,14 +469,14 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
                 intf,
                 # match the first OUT endpoint
                 custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress)
-                == usb.util.ENDPOINT_OUT,
+                                       == usb.util.ENDPOINT_OUT,
             )
 
             self._in_ep = usb.util.find_descriptor(
                 intf,
                 # match the first IN endpoint
                 custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress)
-                == usb.util.ENDPOINT_IN,
+                                       == usb.util.ENDPOINT_IN,
             )
 
             assert self._out_ep is not None

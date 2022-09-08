@@ -26,7 +26,7 @@ class xcore_tflm_base_interpreter(ABC):
         self.models: List[xcore_tflm_base_interpreter.modelData] = []
 
     @abstractmethod
-    def initialise_interpreter(self, model_index=0) -> None:
+    def initialise_interpreter(self, model_index: int=0) -> None:
         """! Abstract initialising interpreter with model associated with model_index.
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
@@ -34,9 +34,9 @@ class xcore_tflm_base_interpreter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_tensor(self, tensor_index: int, data, model_index: int = 0) -> None:
+    def set_tensor(self, tensor_index: int, value, model_index: int = 0) -> None:
         """! Abstract method for writing the input tensor of a model.
-        @param data  The blob of data to set the tensor to.
+        @param value  The blob of data to set the tensor to.
         @param tensor_index  The index of input tensor to target. Defaults to 0.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
@@ -45,7 +45,7 @@ class xcore_tflm_base_interpreter(ABC):
 
     @abstractmethod
     def get_tensor(
-        self, tensor_index: int = 0, model_index: int = 0, tensor = None
+        self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None
     ) -> ndarray:
         """! Abstract method for reading data from the output tensor of a model.
         @param tensor_index  The index of output tensor to target.
@@ -201,7 +201,7 @@ class xcore_tflm_base_interpreter(ABC):
             )
         return tensorSize
 
-    def get_input_details(self, model_index: int = 0) -> List[dict[str, Any]]:
+    def get_input_details(self, model_index: int = 0) -> List[Dict[str, Any]]:
         """! Reads the input tensor details from the model.
         @param input_index  The index of input tensor to target.
         @param model_index The model to target, for interpreters that support multiple models
@@ -271,7 +271,7 @@ class xcore_tflm_base_interpreter(ABC):
 
     def get_output_details(
             self, model_index: int = 0
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """! Reads the output tensor details from the model.
         @param output_index  The index of output tensor to target.
         @param model_index The model to target, for interpreters that support multiple models

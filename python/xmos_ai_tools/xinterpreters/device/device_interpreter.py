@@ -1,15 +1,15 @@
 # Copyright 2022 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 from abc import abstractmethod
-from typing import List, Union, Tuple, Optional, Any
+from typing import List, Union, Tuple, Optional, Any, Dict
 
 import numpy as np
 from numpy import ndarray
 
+import xmos_ai_tools.xinterpreters.device.aisrv_cmd as aisrv_cmd
 from xmos_ai_tools.xinterpreters.base.base_interpreter import (
     xcore_tflm_base_interpreter,
 )
-import xmos_ai_tools.xinterpreters.device.aisrv_cmd as aisrv_cmd
 
 XCORE_IE_MAX_BLOCK_SIZE = 512
 
@@ -68,7 +68,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         """! Exit calls close function to delete interpreter"""
         self.close()
 
-    def initialise_interpreter(self, model_index=0) -> None:
+    def initialise_interpreter(self, model_index: int=0) -> None:
         """! Abstract initialising interpreter with model associated with model_index.
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
@@ -82,18 +82,19 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         )
         return
 
-    def set_tensor(self, tensor_index, data, model_index=0) -> None:
+    def set_tensor(self, tensor_index, value: ndarray, model_index=0) -> None:
         """! Abstract for writing the input tensor of a model.
         @param tensor_index  The index of input tensor to target.
-        @param data  The blob of data to set the tensor to.
+        @param value  The blob of data to set the tensor to.
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
         count: Optional[int]
-        tensor_details: Optional[dict[str, Any]]
-        tensors = self.get_output_details() + self.get_input_details()
-
-        count, tensor_details = next(filter(lambda x: tensor_index == x[1]["index"], enumerate(tensors)), (None, None))
+        tensor_details: Optional[Dict[str, Any]]
+        count, tensor_details = next(
+            filter(lambda x: x[1] == tensor_index, self.get_input_details()),
+            (None, None)
+        )
 
         if count is None or tensor_details is None:
             raise IndexError
@@ -105,14 +106,14 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             bpi = 1
         self._download_data(
             aisrv_cmd.CMD_SET_INPUT_TENSOR,
-            self.bytes_to_ints(bytes(data), bpi),
+            self.bytes_to_ints(bytes(value), bpi),
             tensor_num=count,
             engine_num=model_index,
         )
         print("Setting Input Tensor")
         return
 
-    def get_tensor(self, tensor_index: int = 0, tensor = None, model_index: int = 0) -> ndarray:
+    def get_tensor(self, tensor_index: int = 0, tensor: ndarray =None, model_index: int = 0) -> ndarray:
         """! Abstract for reading the data in the output tensor of a model.
         @param tensor_index  The index of output tensor to target.
         @param tensor Tensor of correct shape to write into (optional)
@@ -122,10 +123,11 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         """
 
         count: Optional[int]
-        tensor_details: Optional[dict[str, Any]]
-        tensors = self.get_output_details() + self.get_input_details()
-
-        count, tensor_details = next(filter(lambda x: tensor_index == x[1]["index"], enumerate(tensors)), (None, None))
+        tensor_details: Optional[Dict[str, Any]]
+        count, tensor_details = next(
+            filter(lambda x: x[1] == tensor_index, self.get_output_details()),
+            (None, None)
+        )
 
         if count is None or tensor_details is None:
             raise IndexError
@@ -157,7 +159,6 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
     def get_input_tensor(self, input_index=0, model_index=0) -> List[Union[int, Tuple[float]]]:
         """! Abstract for reading the data in the input tensor of a model.
         @param input_index  The index of output tensor to target.
-        @param tensor Tensor of correct shape to write into (optional)
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         @return The data that was stored in the input tensor.
@@ -286,7 +287,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         r = bytearray(debug_string).decode("utf8", errors="replace")
         return r
 
-    def read_times(self, model_index=0) ->  list[Union[int, tuple[float]]]:
+    def read_times(self, model_index=0) -> list[Union[int, tuple[float]]]:
         """! Read the operator timings from a completed inference.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.

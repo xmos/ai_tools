@@ -1,5 +1,6 @@
 # Copyright 2022 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
+import sys
 from abc import abstractmethod
 from typing import List, Union, Tuple, Optional, Any, Dict
 
@@ -97,6 +98,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         )
 
         if count is None or tensor_details is None:
+            print(f"No tensor at index {tensor_index} found.", sys.stderr)
             raise IndexError
 
         tensor_type = tensor_details["dtype"]
@@ -130,6 +132,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         )
 
         if count is None or tensor_details is None:
+            print(f"No tensor at index {tensor_index} found.", sys.stderr)
             raise IndexError
 
         tensor_type = tensor_details["dtype"]

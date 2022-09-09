@@ -128,6 +128,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
                 currentModel = model
 
         if currentModel is None:
+            print(f"No model at index {model_index} found.", sys.stderr)
             raise IndexError
 
         assert currentModel.model_content is not None
@@ -175,7 +176,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         )
 
         if count is None or tensor_details is None:
-            print(f"No tensor at index {tensor_index} found.")
+            print(f"No tensor at index {tensor_index} found.", sys.stderr)
             raise IndexError
 
         length = self.get_tensor_size(tensor_index)

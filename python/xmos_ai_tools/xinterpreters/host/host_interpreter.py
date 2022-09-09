@@ -2,7 +2,7 @@
 # XMOS Public License: Version 1
 import sys
 import ctypes
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 import numpy as np
 from pathlib import Path
@@ -104,7 +104,6 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         ]
 
         self._max_tensor_arena_size = max_tensor_arena_size
-        self._op_states = []
 
         super().__init__()
 
@@ -151,13 +150,13 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         running concurrently. Defaults to 0 for use with a single model.
         """
         if isinstance(value, np.ndarray):
-            value = value.tobytes()
-        l = len(value)
-        l2 = self.get_input_tensor_size(tensor_index)
-        if l != l2:
-            print("ERROR: mismatching size in set_input_tensor %d vs %d" % (l, l2))
+            val = value.tobytes()
+        length = len(val)
+        length2 = self.get_input_tensor_size(tensor_index)
+        if length != length2:
+            print("ERROR: mismatching size in set_input_tensor %d vs %d" % (length, length2))
 
-        self._check_status(lib.set_input_tensor(self.obj, tensor_index, value, l))
+        self._check_status(lib.set_input_tensor(self.obj, tensor_index, val, length))
 
     def get_tensor(self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None) -> ndarray:
         """! Read data from the output tensor of a model.
@@ -178,22 +177,21 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         if count is None or tensor_details is None:
             raise IndexError
 
-        l = self.get_tensor_size(tensor_index)
+        length = self.get_tensor_size(tensor_index)
         if tensor is None:
             tensor = np.zeros(tensor_details["shape"], dtype=tensor_details["dtype"])
         else:
-            l2 = len(tensor.tobytes())
-            if l2 != l:
-                print("ERROR: mismatching size in get_output_tensor %d vs %d" % (l, l2))
+            length = len(tensor.tobytes())
+            if length != length:
+                print("ERROR: mismatching size in get_output_tensor %d vs %d" % (length, length))
 
         data_ptr = tensor.ctypes.data_as(ctypes.c_void_p)
-        self._check_status(lib.get_output_tensor(self.obj, count, data_ptr, l))
+        self._check_status(lib.get_output_tensor(self.obj, count, data_ptr, length))
         return tensor
 
     def get_input_tensor(self, input_index: int = 0, model_index: int = 0) -> ndarray:
         """! Read the data in the input tensor of a model.
         @param input_index  The index of input tensor to target.
-        @param tensor Tensor of correct shape to write into (optional).
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         @return The data that was stored in the output tensor.

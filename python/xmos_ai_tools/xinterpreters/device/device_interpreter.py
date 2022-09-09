@@ -217,7 +217,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         pass
 
     def download_model(
-            self, model_bytes, secondary_memory=False, flash=False, model_index=0
+            self, model_bytes: bytearray, secondary_memory: bool = False, flash: bool = False, model_index: int = 0
     ):
         """! Download a model on to the device.
         @param model_bytes  The byte array containing the model.
@@ -288,7 +288,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         r = bytearray(debug_string).decode("utf8", errors="replace")
         return r
 
-    def read_times(self, model_index=0) -> List[Union[int, Tuple[float]]]:
+    def read_times(self, model_index: int = 0) -> List[Union[int, Tuple[float]]]:
         """! Read the operator timings from a completed inference.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.

@@ -262,8 +262,8 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         """
         output_data_int = []
 
-        def get_converter(float_: bool):
-            if float_:
+        def get_converter(is_float: bool):
+            if is_float:
                 import struct
                 return lambda bytes_: struct.unpack("f", bytes_)
             else:

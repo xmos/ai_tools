@@ -271,7 +271,7 @@ class xcore_tflm_base_interpreter(ABC):
 
     def get_output_details(
             self, model_index: int = 0
-    ) -> list[Dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
         """! Reads the output tensor details from the model.
         @param output_index  The index of output tensor to target.
         @param model_index The model to target, for interpreters that support multiple models

@@ -287,7 +287,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         r = bytearray(debug_string).decode("utf8", errors="replace")
         return r
 
-    def read_times(self, model_index=0) -> list[Union[int, tuple[float]]]:
+    def read_times(self, model_index=0) -> List[Union[int, tuple[float]]]:
         """! Read the operator timings from a completed inference.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.

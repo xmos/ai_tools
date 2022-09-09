@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Union, Type, Optional, Any, List, Tuple, Dict
 
-from numpy import ndarray, signedinteger, floating
+from numpy import ndarray
 from tflite import opcode2name
 from tflite.Model import Model
 from tflite.TensorType import TensorType
@@ -55,10 +55,9 @@ class xcore_tflm_base_interpreter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_input_tensor(self, input_index: int = 0, model_index: int = 0) -> List[Union[int, Tuple[float]]]:
+    def get_input_tensor(self, input_index: int = 0, model_index: int = 0) -> Union[ndarray, List[Union[int, Tuple[float]]]]:
         """! Abstract for reading the data in the input tensor of a model.
         @param input_index  The index of input tensor to target.
-        @param tensor Tensor of correct shape to write into (optional).
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         @return The data that was stored in the input tensor.
@@ -107,7 +106,6 @@ class xcore_tflm_base_interpreter(ABC):
         """
 
         # Select correct model from model list
-        modelBuf = None
         model = self.get_model(model_index)
         modelBuf = Model.GetRootAsModel(model.model_content, 0)
 
@@ -115,6 +113,8 @@ class xcore_tflm_base_interpreter(ABC):
         tensorIndex = modelBuf.Subgraphs(0).Inputs(input_index)
 
         tensorType = modelBuf.Subgraphs(0).Tensors(tensorIndex).Type()
+
+        tensorSize: int
         if tensorType == TensorType.INT8:
             tensorSize = 1  # int8 is 1 byte
         elif tensorType == TensorType.INT32:
@@ -124,6 +124,7 @@ class xcore_tflm_base_interpreter(ABC):
         else:
             print(tensorType)
             self._check_status(XTFLMInterpreterStatus.ERROR)
+            tensorSize = 0
 
         # Calculate tensor size by multiplying shape elements
         for i in range(0, modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeLength()):
@@ -151,6 +152,8 @@ class xcore_tflm_base_interpreter(ABC):
         tensorIndex = modelBuf.Subgraphs(0).Outputs(output_index)
 
         tensorType = modelBuf.Subgraphs(0).Tensors(tensorIndex).Type()
+
+        tensorSize: int
         if tensorType == TensorType.INT8:
             tensorSize = 1  # int8 is 1 byte
         elif tensorType == TensorType.INT32:
@@ -160,6 +163,7 @@ class xcore_tflm_base_interpreter(ABC):
         else:
             print(tensorType)
             self._check_status(XTFLMInterpreterStatus.ERROR)
+            tensorSize = 0
 
         # Calculate tensor size by multiplying shape elements
         for i in range(0, modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeLength()):
@@ -201,7 +205,6 @@ class xcore_tflm_base_interpreter(ABC):
 
     def get_input_details(self, model_index: int = 0) -> List[Dict[str, Any]]:
         """! Reads the input tensor details from the model.
-        @param input_index  The index of input tensor to target.
         @param model_index The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         @return Tensor details, including the index, name, shape, data type, and quantization
@@ -226,6 +229,8 @@ class xcore_tflm_base_interpreter(ABC):
                 dtype = np.int32
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
                 dtype = np.float32
+            else:
+                raise Exception
 
             details = {
                 "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[
@@ -278,7 +283,6 @@ class xcore_tflm_base_interpreter(ABC):
         """
 
         # Select correct model from models list
-        modelBuf = None
         model = self.get_model(model_index)
         modelBuf = Model.GetRootAsModel(model.model_content, 0)
 

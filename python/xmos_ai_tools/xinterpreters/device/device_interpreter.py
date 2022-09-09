@@ -1,7 +1,7 @@
 # Copyright 2022 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 from abc import abstractmethod
-from typing import List, Union, Tuple, Optional, Any, Dict, Callable
+from typing import List, Union, Tuple, Optional, Any, Dict
 
 import numpy as np
 from numpy import ndarray

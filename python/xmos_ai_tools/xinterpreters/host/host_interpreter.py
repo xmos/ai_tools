@@ -175,6 +175,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         )
 
         if count is None or tensor_details is None:
+            print(f"No tensor at index {tensor_index} found.")
             raise IndexError
 
         length = self.get_tensor_size(tensor_index)

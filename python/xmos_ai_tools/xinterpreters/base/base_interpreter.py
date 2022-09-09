@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Union, Type, Optional, Any, List, Tuple, Dict
 
-from numpy import ndarray
+from numpy import ndarray, signedinteger, floating
 from tflite import opcode2name
 from tflite.Model import Model
 from tflite.TensorType import TensorType
@@ -44,9 +44,7 @@ class xcore_tflm_base_interpreter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_tensor(
-        self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None
-    ) -> ndarray:
+    def get_tensor(self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None) -> ndarray:
         """! Abstract method for reading data from the output tensor of a model.
         @param tensor_index  The index of output tensor to target.
         @param model_index  The model to target, for interpreters that support multiple models
@@ -125,7 +123,7 @@ class xcore_tflm_base_interpreter(ABC):
             tensorSize = 4  # float32 is 4 bytes
         else:
             print(tensorType)
-            self._check_status(1)
+            self._check_status(XTFLMInterpreterStatus.ERROR)
 
         # Calculate tensor size by multiplying shape elements
         for i in range(0, modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeLength()):
@@ -161,7 +159,7 @@ class xcore_tflm_base_interpreter(ABC):
             tensorSize = 4  # float32 is 4 bytes
         else:
             print(tensorType)
-            self._check_status(1)
+            self._check_status(XTFLMInterpreterStatus.ERROR)
 
         # Calculate tensor size by multiplying shape elements
         for i in range(0, modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeLength()):
@@ -192,7 +190,7 @@ class xcore_tflm_base_interpreter(ABC):
             tensorSize = 4  # float32 is 4 bytes
         else:
             print(tensorType)
-            self._check_status(1)
+            self._check_status(XTFLMInterpreterStatus.ERROR)
 
         # Calculate tensor size by multiplying shape elements
         for i in range(0, modelBuf.Subgraphs(0).Tensors(tensor_index).ShapeLength()):
@@ -221,13 +219,12 @@ class xcore_tflm_base_interpreter(ABC):
             tensorIndex = modelBuf.Subgraphs(0).Inputs(input_)
 
             # Generate dictioary of tensor details
+            dtype: Union[Type[Any]]
             if modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT8:
                 dtype = np.int8
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
-            elif (
-                modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32
-            ):
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
                 dtype = np.float32
 
             details = {
@@ -291,14 +288,13 @@ class xcore_tflm_base_interpreter(ABC):
             # Output tensor is last tensor
             tensorIndex = modelBuf.Subgraphs(0).Outputs(output_)
 
-            # Generate dictioary of tensor details
+            dtype: Union[Type[Any]]
+            # Generate dictionary of tensor details
             if modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT8:
                 dtype = np.int8
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
-            elif (
-                modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32
-            ):
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
                 dtype = np.float32
 
             details = {
@@ -430,7 +426,7 @@ class xcore_tflm_base_interpreter(ABC):
             self.tile: int = model_index
             self.secondary_memory = secondary_memory
             self.flash = flash
-            self.opList = []
+            self.opList: List[str] = []
             self.pathToContent()
             self.modelToOpList()
 
@@ -458,12 +454,12 @@ class xcore_tflm_base_interpreter(ABC):
             """! Reads model and params paths to content (byte arrays)"""
 
             # Check if path exists but not content
-            if self.model_content == None and self.model_path != None:
+            if self.model_content is None and self.model_path is not None:
                 with open(self.model_path, "rb") as input_fd:
                     self.model_content = input_fd.read()
 
             # Check if params_path exits but not params_content
-            if self.params_content == None and self.params_path != None:
+            if self.params_content is None and self.params_path is not None:
                 with open(self.params_path, "rb") as input_fd2:
                     self.params_content = input_fd2.read()
             # If no params, set to empty byte array

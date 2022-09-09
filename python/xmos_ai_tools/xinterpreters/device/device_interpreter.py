@@ -1,7 +1,7 @@
 # Copyright 2022 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 from abc import abstractmethod
-from typing import List, Union, Tuple, Optional, Any, Dict
+from typing import List, Union, Tuple, Optional, Any, Dict, Callable
 
 import numpy as np
 from numpy import ndarray
@@ -68,7 +68,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         """! Exit calls close function to delete interpreter"""
         self.close()
 
-    def initialise_interpreter(self, model_index: int=0) -> None:
+    def initialise_interpreter(self, model_index: int = 0) -> None:
         """! Abstract initialising interpreter with model associated with model_index.
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
@@ -92,7 +92,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         count: Optional[int]
         tensor_details: Optional[Dict[str, Any]]
         count, tensor_details = next(
-            filter(lambda x: x[1] == tensor_index, self.get_input_details()),
+            filter(lambda x: x[1] == tensor_index, enumerate(self.get_input_details())),
             (None, None)
         )
 
@@ -113,7 +113,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         print("Setting Input Tensor")
         return
 
-    def get_tensor(self, tensor_index: int = 0, tensor: ndarray =None, model_index: int = 0) -> ndarray:
+    def get_tensor(self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None) -> ndarray:
         """! Abstract for reading the data in the output tensor of a model.
         @param tensor_index  The index of output tensor to target.
         @param tensor Tensor of correct shape to write into (optional)
@@ -125,7 +125,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         count: Optional[int]
         tensor_details: Optional[Dict[str, Any]]
         count, tensor_details = next(
-            filter(lambda x: x[1] == tensor_index, self.get_output_details()),
+            filter(lambda x: x[1] == tensor_index, enumerate(self.get_output_details())),
             (None, None)
         )
 
@@ -262,19 +262,19 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         """
         output_data_int = []
 
-        # TODO better way of doing this?
-        if float_:
-            import struct
+        def get_converter(float_: bool):
+            if float_:
+                import struct
+                return lambda bytes_: struct.unpack("f", bytes_)
+            else:
+                return lambda bytes_: int.from_bytes(bytes_, byteorder="little", signed=True)
 
-            for i in range(0, len(data_bytes), bpi):
-                x = data_bytes[i: i + bpi]
-                y = struct.unpack("f", x)
-                output_data_int.append(y)
-        else:
-            for i in range(0, len(data_bytes), bpi):
-                x = data_bytes[i: i + bpi]
-                y = int.from_bytes(x, byteorder="little", signed=True)
-                output_data_int.append(y)
+        convert = get_converter(float_)
+
+        for i in range(0, len(data_bytes), bpi):
+            x = data_bytes[i: i + bpi]
+            y = convert(x)
+            output_data_int.append(y)
 
         return output_data_int
 
@@ -287,7 +287,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         r = bytearray(debug_string).decode("utf8", errors="replace")
         return r
 
-    def read_times(self, model_index=0) -> List[Union[int, tuple[float]]]:
+    def read_times(self, model_index=0) -> List[Union[int, Tuple[float]]]:
         """! Read the operator timings from a completed inference.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
@@ -303,11 +303,11 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         return times_ints
 
     @abstractmethod
-    def _upload_data(self, cmd, length, sign=False, tensor_num=0, engine_num=0):
+    def _upload_data(self, cmd, length, sign=False, tensor_num=0, engine_num=0) -> bytes:
         raise NotImplementedError
 
     @abstractmethod
-    def _download_data(self, cmd, data_bytes, tensor_num=0, engine_num=0):
+    def _download_data(self, cmd, data_bytes, tensor_num=0, engine_num=0) -> bytes:
         raise NotImplementedError
 
 

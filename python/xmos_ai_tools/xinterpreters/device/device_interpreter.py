@@ -262,6 +262,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         """
         output_data_int = []
 
+        # TODO better way of doing this?
         def get_converter(is_float: bool):
             if is_float:
                 import struct

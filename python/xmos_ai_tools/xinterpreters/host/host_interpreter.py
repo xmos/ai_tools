@@ -142,15 +142,15 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         if XTFLMInterpreterStatus(status) is XTFLMInterpreterStatus.ERROR:
             raise RuntimeError("Unable to initialize interpreter")
 
-    def set_tensor(self, tensor_index, value: ndarray, model_index=0) -> None:
+    def set_tensor(self, tensor_index: int, value: ndarray, model_index=0) -> None:
         """! Write the input tensor of a model.
         @param value  The blob of data to set the tensor to.
         @param tensor_index  The index of input tensor to target. Defaults to 0.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
-        if isinstance(value, np.ndarray):
-            val = value.tobytes()
+        val = value.tobytes()
+
         length = len(val)
         length2 = self.get_input_tensor_size(tensor_index)
         if length != length2:
@@ -170,7 +170,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         count: Optional[int]
         tensor_details: Optional[Dict[str, Any]]
         count, tensor_details = next(
-            filter(lambda x: x[1] == tensor_index, enumerate(self.get_output_details())),
+            filter(lambda x: x[1]["index"] == tensor_index, enumerate(self.get_output_details())),
             (None, None)
         )
 

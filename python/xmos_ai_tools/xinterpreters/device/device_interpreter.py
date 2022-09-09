@@ -92,7 +92,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         count: Optional[int]
         tensor_details: Optional[Dict[str, Any]]
         count, tensor_details = next(
-            filter(lambda x: x[1] == tensor_index, enumerate(self.get_input_details())),
+            filter(lambda x: x[1]["index"] == tensor_index, enumerate(self.get_input_details())),
             (None, None)
         )
 
@@ -125,7 +125,7 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         count: Optional[int]
         tensor_details: Optional[Dict[str, Any]]
         count, tensor_details = next(
-            filter(lambda x: x[1] == tensor_index, enumerate(self.get_output_details())),
+            filter(lambda x: x[1]["index"] == tensor_index, enumerate(self.get_output_details())),
             (None, None)
         )
 

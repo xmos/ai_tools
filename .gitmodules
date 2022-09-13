@@ -4,7 +4,7 @@
 	ignore = dirty
 [submodule "third_party/lib_tflite_micro"]
 	path = third_party/lib_tflite_micro
-	url = git@github.com:xmos/lib_tflite_micro.git
+	url = git@github.com:panickal-xmos/lib_tflite_micro.git
 [submodule "third_party/lib_nn"]
 	path = third_party/lib_nn
 	url = git@github.com:xmos/lib_nn.git

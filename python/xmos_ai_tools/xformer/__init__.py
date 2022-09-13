@@ -10,7 +10,7 @@ def convert(
     outfile: Union[str, Path],
     params: Optional[typing.Dict[str, Optional[str]]],
 ) -> int:
-    args: List[Optional[str]] = ["xcore-opt", "-o", str(outfile)]
+    args: List[str] = ["xcore-opt", "-o", str(outfile)]
 
     if params is not None:
         for key, val in params.items():

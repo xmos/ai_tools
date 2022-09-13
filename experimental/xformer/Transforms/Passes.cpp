@@ -22,12 +22,13 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createPad3to4Conv2DPass());
   pm.addPass(createApplyTFLPatternsPass());
   // XC passes
-  pm.addPass(createApplyOpSplitPatternsPass());
+  pm.addPass(createInsertStridedSlicePatternsPass());
+  // pm.addPass(createInsertConcatPass());
   pm.addPass(createReplaceStridedSlicePass());
   pm.addPass(createReplaceConv2DPass());
   pm.addPass(createReplaceConcatPass());
   pm.addPass(createApplyXCPatternsPass());
-  // pm.addPass(createApplyOpSplitPatternsPass());
+  // pm.addPass(createInsertStridedSlicePatternsPass());
   // Add to pipeline only if flash image file option is provided
   if (!flashImageFilenameOption.empty()) {
     pm.addPass(createApplyLoadConstantOpPatternsPass());

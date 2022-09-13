@@ -14,8 +14,7 @@ namespace mlir {
 namespace xcore {
 
 namespace {
-// Apply generated OpSplit patterns.
-struct ApplyOpSplitPatterns : public PassWrapper<ApplyOpSplitPatterns, FunctionPass> {
+struct InsertStridedSlicePatterns : public PassWrapper<InsertStridedSlicePatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
@@ -42,10 +41,28 @@ bool HasFollowingReshape(Value outputVal) {
   return false;
 }
 
+bool HasNoFollowingReshape(Value outputVal) {
+  if (outputVal.hasOneUse()) {
+    if (llvm::isa<TFL::ReshapeOp>(*outputVal.getUsers().begin())) {
+        return false;
+    }
+  }
+  return true;
+}
+
 IntegerAttr getI32IntegerAttrZero(PatternRewriter &rewriter) { 
   int zeroValue = 0;
   return rewriter.getI32IntegerAttr(zeroValue);
 } 
+
+// IntegerAttr getQuantization(PatternRewriter &rewriter, Value outputVal) { 
+//   return  quant::CastQuantizedTypeAttrFromExpressedType(
+//           rewriter, quantizeOp.qtypeAttr(),
+//           quant::QuantizedType::castToExpressedType(
+//               outputVal.getType()),
+
+//           -1);;
+// } 
 
 // mlir::OperandRange getValues(mlir::OperandRange values) { 
 //   return values;
@@ -90,7 +107,7 @@ StringAttr getMemcpyFnParam(PatternRewriter &rewriter, Value outputVal) {
   return rewriter.getStringAttr(mfStr);
 }
 
-static Value createOpSplitBlock(PatternRewriter &rewriter, Operation *op,
+static Value insertStridedSlice(PatternRewriter &rewriter, Operation *op,
                                 Value conv_out  ,
                                 Value input  ,
   Value filter  ,
@@ -153,9 +170,9 @@ static Value createOpSplitBlock(PatternRewriter &rewriter, Operation *op,
         rewriter.getI32IntegerAttr(beginY), rewriter.getStringAttr(mfStr));
 }
 
-#include "Transforms/GeneratedOpSplitPatterns.inc"
+#include "Transforms/GeneratedInsertStridedSlicePatterns.inc"
 
-void ApplyOpSplitPatterns::runOnFunction() {
+void InsertStridedSlicePatterns::runOnFunction() {
   OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
 
@@ -168,12 +185,12 @@ void ApplyOpSplitPatterns::runOnFunction() {
 
 } // namespace
 
-// Creates an instance of the ApplyOpSplitPatterns pass.
-std::unique_ptr<OperationPass<FuncOp>> createApplyOpSplitPatternsPass() {
-  return std::make_unique<ApplyOpSplitPatterns>();
+// Creates an instance of the InsertStridedSlicePatterns pass.
+std::unique_ptr<OperationPass<FuncOp>> createInsertStridedSlicePatternsPass() {
+  return std::make_unique<InsertStridedSlicePatterns>();
 }
 
-static PassRegistration<ApplyOpSplitPatterns>
+static PassRegistration<InsertStridedSlicePatterns>
     pass();
     // pass("xcore-apply-opslitpatterns", "Apply generated OpSplit optimization patterns.");
 

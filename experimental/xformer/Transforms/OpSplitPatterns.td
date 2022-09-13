@@ -8,6 +8,7 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "IR/XCoreOps.td"
 
 def getMemcpyFnParam : NativeCodeCall<"getMemcpyFnParam($_builder, $0)">;
+def getQuantization : NativeCodeCall<"getMemcpyFnParam($_builder, $0)">;
 
 def getI32IntegerAttrZero : NativeCodeCall<"getI32IntegerAttrZero($_builder)">;
 
@@ -15,18 +16,43 @@ def getValues : NativeCodeCall<"getValues($0)">;
 
 def HasNoFollowingStridedSlice : Constraint<CPred<"HasNoFollowingStridedSlice($0)">>;
 def HasFollowingReshape : Constraint<CPred<"HasFollowingReshape($0)">>;
+def HasNoFollowingReshape : Constraint<CPred<"HasNoFollowingReshape($0)">>;
+
 
 def createOpSplitBlock : NativeCodeCall<
     "createOpSplitBlock($_builder, $0.getDefiningOp(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)">;
 
-// // First pass of op split
-// // Insert StidedSliceOp
+// First pass of op split
+// Insert StidedSliceOp
+// def : Pat<( TFL_Conv2DOp:$conv_out $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
+//             //  (createOpSplitBlock $conv_out,$conv_out, $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
+//              (XC_StridedSliceOp (TFL_Conv2DOp $input, $weights, $muls, $kt, $mp, $aggp, $padding,
+//               $stride_h, $stride_w), (getI32IntegerAttrZero),
+//              (getI32IntegerAttrZero), (getMemcpyFnParam $conv_out)), 
+//             [(HasFollowingReshape $conv_out)]>;
+
 def : Pat<( TFL_Conv2DOp:$conv_out $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
             //  (createOpSplitBlock $conv_out,$conv_out, $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
-             (XC_StridedSliceOp (TFL_Conv2DOp $input, $weights, $muls, $kt, $mp, $aggp, $padding,
-              $stride_h, $stride_w), (getI32IntegerAttrZero),
+             (XC_StridedSliceOp (TFL_QuantizeOp (TFL_Conv2DOp $input, $weights, $muls, $kt, $mp, $aggp, $padding,
+              $stride_h, $stride_w), (getI32IntegerAttrZero)), (getI32IntegerAttrZero),
              (getI32IntegerAttrZero), (getMemcpyFnParam $conv_out)), 
             [(HasFollowingReshape $conv_out)]>;
+
+// def : Pat<( TFL_Conv2DOp:$conv_out $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
+//             //  (createOpSplitBlock $conv_out,$conv_out, $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
+//              (XC_DummyStridedSliceOp (TFL_Conv2DOp $input, $weights, $muls, $kt, $mp, $aggp, $padding,
+//               $stride_h, $stride_w), (getI32IntegerAttrZero),
+//              (getI32IntegerAttrZero), (getMemcpyFnParam $conv_out)), 
+//             [(HasFollowingReshape $conv_out)]>;
+
+// def : Pat<( TFL_Conv2DOp:$conv_out $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
+//             //  (createOpSplitBlock $conv_out,$conv_out, $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
+//              (XC_ConcatOp (XC_StridedSliceOp (TFL_Conv2DOp $input, $weights, $muls, $kt, $mp, $aggp, $padding,
+//               $stride_h, $stride_w), (getI32IntegerAttrZero),
+//              (getI32IntegerAttrZero), (getMemcpyFnParam $conv_out)), (XC_StridedSliceOp (TFL_Conv2DOp $input, $weights, $muls, $kt, $mp, $aggp, $padding,
+//               $stride_h, $stride_w), (getI32IntegerAttrZero),
+//              (getI32IntegerAttrZero), (getMemcpyFnParam $conv_out))), 
+//             [(HasFollowingReshape $conv_out)]>;
 
 // def : Pat<( TFL_ConcatenationOp:$concat_out $values, $axis, $fused_activation_function ),
 //           (XC_StridedSliceOp ( TFL_ConcatenationOp (getValues $values), $axis, $fused_activation_function ), (getI32IntegerAttrZero),

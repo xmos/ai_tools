@@ -113,7 +113,7 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "opsplit_patterns_inc_gen",
     tbl_outs = [
-        (["-gen-rewriters"], "Transforms/GeneratedOpSplitPatterns.inc"),
+        (["-gen-rewriters"], "Transforms/GeneratedInsertStridedSlicePatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "Transforms/OpSplitPatterns.td",
@@ -186,7 +186,7 @@ cc_library(
         "Transforms/GeneratedLoadConstantOpPatterns.inc",
         "Transforms/GeneratedConvPatterns.inc",
         "Transforms/GeneratedConvRevertPatterns.inc",
-        "Transforms/GeneratedOpSplitPatterns.inc"
+        "Transforms/GeneratedInsertStridedSlicePatterns.inc"
     ],
     hdrs = [
         "Transforms/ConvPatterns.h",

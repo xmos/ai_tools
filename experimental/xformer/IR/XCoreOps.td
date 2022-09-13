@@ -79,6 +79,51 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_DummyStridedSliceOp : XC_Op<"dummy_strided_slice", [NoSideEffect]> {
+  let summary = "Dummy Strided Slice op";
+
+  let description = [{Dummy Strided Slice op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+
+    I32Attr:$begin_x,
+    I32Attr:$begin_y,
+    StrAttr:$memcpy_fn_param
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_ConcatOp : XC_Op<"concat", [NoSideEffect]> {
+  let summary = "concat op";
+
+  let description = [{"concat op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input0,
+    TensorOf<[QI8]>:$input1,
+
+    I32Attr:$offset
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_SimpleSliceOp : XC_Op<"simple_slice", [NoSideEffect]> {
+  let summary = "simple_slice op";
+
+  let description = [{"simple_slice op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+
+    I32Attr:$offset
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_CopyIntoOp : XC_Op<"copy_into", [NoSideEffect]> {
   let summary = "Copy Into op";
 

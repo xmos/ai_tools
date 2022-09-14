@@ -11,7 +11,8 @@ td_library(
     ],
     includes = ["external/org_tensorflow"],
     deps = [
-        "@llvm-project//mlir:StdOpsTdFiles",
+        "@llvm-project//mlir:FuncTdFiles",
+        "@llvm-project//mlir:SideEffectInterfacesTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
@@ -25,7 +26,7 @@ td_library(
     includes = ["external/org_tensorflow", "external/lce"],
     deps = [
         "@lce//larq_compute_engine/mlir:lce_ops_td_file",
-        "@llvm-project//mlir:StdOpsTdFiles",
+        "@llvm-project//mlir:FuncTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
@@ -68,6 +69,18 @@ td_library(
     ],
 )
 
+td_library(
+    name = "conv_revert_patterns_td",
+    srcs = [
+        "Transforms/ConvRevertPatterns.td",
+    ],
+    includes = ["external/org_tensorflow"],
+    deps = [
+        ":xc_dialect_td",
+        "@llvm-project//mlir:ArithmeticOpsTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "xc_ops_inc_gen",
     tbl_outs = [
@@ -77,7 +90,7 @@ gentbl_cc_library(
         (["-gen-op-defs"], "IR/XCoreOps.cpp.inc"),
         (["-gen-dialect-decls", "-dialect=xc"], "IR/XCoreDialect.h.inc"),
         (["-gen-dialect-defs", "-dialect=xc"], "IR/XCoreDialect.cpp.inc"),
-        (["-gen-dialect-doc"], "IR/XCoreOps.md"),
+        (["-gen-dialect-doc", "-dialect=xc"], "IR/XCoreOps.md"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "IR/XCoreOps.td",
@@ -134,6 +147,18 @@ gentbl_cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "conv_revert_patterns_inc_gen",
+    tbl_outs = [
+        (["-gen-rewriters"], "Transforms/GeneratedConvRevertPatterns.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "Transforms/ConvRevertPatterns.td",
+    deps = [
+        ":conv_revert_patterns_td",
+    ],
+)
+
 cc_library(
     name = "xcore_passes",
     srcs = glob(["Transforms/*.cpp"]) + [
@@ -147,12 +172,14 @@ cc_library(
         "Transforms/GeneratedXCPatterns.inc",
         "Transforms/GeneratedTFLPatterns.inc",
         "Transforms/GeneratedLoadConstantOpPatterns.inc",
-        "Transforms/GeneratedConvPatterns.inc"
+        "Transforms/GeneratedConvPatterns.inc",
+        "Transforms/GeneratedConvRevertPatterns.inc"
     ],
     hdrs = [
         "Transforms/ConvPatterns.h",
         "Transforms/Options.h",
         "Transforms/Passes.h",
+        "Utils/Diagnostics.h",
         "Utils/FileIO.h",
         "Utils/ThreadSupport.h",
         "IR/XCoreOps.h",
@@ -163,6 +190,8 @@ cc_library(
         ":tfl_patterns_inc_gen",
         ":load_constant_op_patterns_inc_gen",
         ":conv_patterns_inc_gen",
+        ":conv_revert_patterns_inc_gen",
+        ":utils",
         "@lce//larq_compute_engine/mlir:larq_compute_engine_translate_tflite",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
@@ -193,14 +222,12 @@ cc_binary(
     srcs = ["XCoreOptMain.cpp", "Version.h"],
     deps = [
         ":xcore_passes",
-        ":utils",
         "@lib_tflite_micro//:shared_headers",
         "@llvm-project//mlir:IR",
-        "@llvm-project//mlir:StandardOps",
+        "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:QuantOps",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Pass",
-        "@llvm-project//mlir:Shape",
         "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:MlirOptLib",

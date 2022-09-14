@@ -14,7 +14,10 @@ namespace xcore {
 
 namespace {
 // Apply generated XC patterns.
-struct ApplyXCPatterns : public PassWrapper<ApplyXCPatterns, FunctionPass> {
+struct ApplyXCPatterns
+    : public PassWrapper<ApplyXCPatterns, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ApplyXCPatterns)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
@@ -22,7 +25,7 @@ struct ApplyXCPatterns : public PassWrapper<ApplyXCPatterns, FunctionPass> {
   StringRef getDescription() const final {
     return "Apply generated XC optimization patterns.";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 // TODO: Remove when we have fusing of Pad and Conv2D in xformer2
@@ -83,17 +86,17 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
       op->getOperand(0).getType().dyn_cast<RankedTensorType>();
   auto inputQType =
       inputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
-  auto inputScale = inputQType.getScale();
-  auto inputZeroPoint = inputQType.getZeroPoint();
+  double inputScale = inputQType.getScale();
+  int64_t inputZeroPoint = inputQType.getZeroPoint();
 
   // Get output scale and output zero point
   RankedTensorType outputType =
       op->getResult(0).getType().dyn_cast<RankedTensorType>();
   auto outputQType =
       outputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
-  auto outputScale = outputQType.getScale();
+  double outputScale = outputQType.getScale();
   assert(outputScale != 0 && "Output scale of zero is not supported!");
-  auto outputZeroPoint = outputQType.getZeroPoint();
+  int64_t outputZeroPoint = outputQType.getZeroPoint();
 
   // Dequantize the input vector
   llvm::SmallVector<double, 0> dequantizedVector;
@@ -128,7 +131,7 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
         int32_t t =
             static_cast<int32_t>(round(n / outputScale)) + outputZeroPoint;
         return static_cast<int8_t>(std::max(
-            {std::min({(int8_t)t, (int8_t)INT8_MAX}), (int8_t)INT8_MIN}));
+            {std::min({(int32_t)t, (int32_t)INT8_MAX}), (int32_t)INT8_MIN}));
       });
 
   ShapedType lookupTableType =
@@ -140,9 +143,9 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
 
 #include "Transforms/GeneratedXCPatterns.inc"
 
-void ApplyXCPatterns::runOnFunction() {
-  OwningRewritePatternList patterns(&getContext());
-  auto func = getFunction();
+void ApplyXCPatterns::runOnOperation() {
+  RewritePatternSet patterns(&getContext());
+  func::FuncOp func = getOperation();
 
   populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
@@ -150,7 +153,7 @@ void ApplyXCPatterns::runOnFunction() {
 } // namespace
 
 // Creates an instance of the ApplyXCPatterns pass.
-std::unique_ptr<OperationPass<FuncOp>> createApplyXCPatternsPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createApplyXCPatternsPass() {
   return std::make_unique<ApplyXCPatterns>();
 }
 

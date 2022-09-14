@@ -21,8 +21,8 @@ writeMLIRToFlatBufferFile(std::string &filename, mlir::ModuleOp module,
                           std::map<std::string, std::string> metadata,
                           const bool &dontMinify);
 
-mlir::OwningModuleRef readFlatBufferFileToMLIR(std::string &filename,
-                                               mlir::MLIRContext *context);
+mlir::OwningOpRef<mlir::ModuleOp>
+readFlatBufferFileToMLIR(std::string &filename, mlir::MLIRContext *context);
 
 } // namespace utils
 } // namespace xcore

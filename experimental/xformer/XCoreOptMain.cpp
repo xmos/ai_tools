@@ -11,7 +11,7 @@
 #include "lib_tflite_micro/api/version.h"
 #include "lib_tflite_micro/api/xcore_shared_config.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "llvm/Support/InitLLVM.h"
@@ -46,11 +46,41 @@ cl::opt<bool> reduceMemoryOption(
         "Try to reduce memory usage by possibly increasing execution time."),
     cl::init(true));
 
+// This option is to provide an error threshold.
+// The maximum average error between the reference and quantised
+// implementations of the output transform over each channel is used to decide
+// if to replace TFL Conv ops with XC Conv ops.
+// The average is defined over the range of non-saturating
+// accumulators, i.e. accumulators that do not reach a saturating output in the
+// int8 space. The error calcualated is the maximum average for all of the
+// channels.
+cl::opt<double> convQuantErrorThresholdOption(
+    "xcore-conv-err-threshold",
+    cl::desc("Defaults to TFL Conv ops if channel quantization error is more "
+             "than the provided threshold "
+             "(default = 0.25)."),
+    cl::init(0.25));
+
+cl::opt<bool> convForceErrorCheckOption(
+    "xcore-force-conv-err-full-check",
+    cl::desc("Enable higher precision(more time-consuming) check for "
+             "calculating channel quantization error."),
+    cl::init(false));
+
+cl::opt<unsigned> convMultiplierFactorOption(
+    "xcore-conv-multiplier-factor",
+    cl::desc("If the dynamic range for multipliers is too large, quantization "
+             "error increases. This option is a temporary solution to set all "
+             "the multipliers to be clamped to a specified multiple of the "
+             "minimum multiplier."
+             "(default = UINT32_MAX)."),
+    cl::init(UINT32_MAX));
+
 } // namespace xcore
 } // namespace mlir
 
 LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
-                              const OwningModuleRef &mod,
+                              const OwningOpRef<ModuleOp> &mod,
                               MLIRContext *context) {
   PassManager pm(context, mlir::OpPassManager::Nesting::Implicit);
   applyPassManagerCLOptions(pm);
@@ -106,7 +136,7 @@ int main(int argc, char **argv) {
 
   // Initialize dialects.
   MLIRContext context;
-  context.loadDialect<StandardOpsDialect>();
+  context.loadDialect<func::FuncDialect>();
   context.loadDialect<arith::ArithmeticDialect>();
   context.loadDialect<quant::QuantizationDialect>();
   context.loadDialect<TFL::TensorFlowLiteDialect>();
@@ -133,7 +163,7 @@ int main(int argc, char **argv) {
   }
 
   // Parse input.
-  OwningModuleRef mod;
+  OwningOpRef<ModuleOp> mod;
   SourceMgr sourceMgr;
   if (mlirIOEnabled) {
     // Parse the MLIR input file.
@@ -143,7 +173,7 @@ int main(int argc, char **argv) {
       return failedMessage(errorMessage);
     }
     sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
-    mod = parseSourceFile(sourceMgr, &context);
+    mod = parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
   } else {
     // Read flatbuffer and convert to serialized MLIR string.
     mod = xcore::utils::readFlatBufferFileToMLIR(inputFilename, &context);
@@ -151,6 +181,9 @@ int main(int argc, char **argv) {
       return failedMessage("Unable to read flatbuffer file!");
     }
   }
+
+  // Disable printing op on diagnostics such as error, remark, warning
+  context.printOpOnDiagnostic(false);
 
   // Run transformations
   if (verifyDiagnosticsEnabled) {
@@ -160,6 +193,7 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else {
+    SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
     if (failed(runPassPipeline(passPipeline, mod, &context))) {
       return 1;
     }
@@ -182,9 +216,10 @@ int main(int argc, char **argv) {
 
     // Prepare metadata
     auto module = mod.get();
-    int requiredThreadCount = module->getAttr(xcRequiredThreadCountAttrName)
-                                  .cast<mlir::IntegerAttr>()
-                                  .getInt();
+    int requiredThreadCount = 1;
+    if (auto attr = module->getAttr(xcRequiredThreadCountAttrName)) {
+      requiredThreadCount = attr.cast<mlir::IntegerAttr>().getInt();
+    }
 
     struct shared_config::xcore_metadata cfg;
     // Store version info

@@ -3,6 +3,7 @@
 
 #include "Transforms/ConvPatterns.h"
 #include "Transforms/Options.h"
+#include "Utils/Diagnostics.h"
 
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
@@ -41,7 +42,7 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
                           filter.template getValues<int8_t>().end()};
 
   // Get bias values
-  DenseElementsAttr biases;
+  DenseElementsAttr biasesAttr;
   if (conv2DOp.bias()
           .getType()
           .template cast<ShapedType>()
@@ -49,15 +50,13 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
           .template isa<quant::QuantizedType>()) {
     auto biasQConstOp =
         dyn_cast<TFL::QConstOp>(conv2DOp.bias().getDefiningOp());
-    biases = biasQConstOp.value().template cast<DenseElementsAttr>();
+    biasesAttr = biasQConstOp.value().template cast<DenseElementsAttr>();
   } else {
-    auto biasConstOp =
-        dyn_cast<mlir::arith::ConstantOp>(conv2DOp.bias().getDefiningOp());
-    biases = biasConstOp.getValue().template cast<DenseElementsAttr>();
+    matchPattern(conv2DOp.bias(), m_Constant(&biasesAttr));
   }
   auto biasVector =
-      std::vector<int32_t>{biases.template getValues<int32_t>().begin(),
-                           biases.template getValues<int32_t>().end()};
+      std::vector<int32_t>{biasesAttr.template getValues<int32_t>().begin(),
+                           biasesAttr.template getValues<int32_t>().end()};
 
   // Calculate effectiveOutputScale
   std::vector<float> effectiveOutputScaleVector;
@@ -93,24 +92,42 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
     effectiveOutputScaleVector.push_back(inputScale * scale / outputScale);
   }
 
+  // Clamp multipliers
+  float minVal = *std::min_element(effectiveOutputScaleVector.begin(),
+                                   effectiveOutputScaleVector.end());
+  // float avgVal = std::accumulate(effectiveOutputScaleVector.begin(),
+  // effectiveOutputScaleVector.end(), 0.0) /
+  // effectiveOutputScaleVector.size();
+  for (int i = 0; i < effectiveOutputScaleVector.size(); ++i) {
+    float tmp = std::min(effectiveOutputScaleVector[i],
+                         minVal * convMultiplierFactorOption);
+    if (tmp != effectiveOutputScaleVector[i]) {
+      // Mention which numbers have been clamped
+      std::stringstream msg;
+      msg << std::endl
+          << "CLAMPED conv multiplier index " << i << " from " << std::fixed
+          << std::setprecision(18) << effectiveOutputScaleVector[i] << " to "
+          << tmp << std::endl;
+      conv2DOp.emitRemark(utils::getMsgWithLocPrefix(conv2DOp, msg.str()));
+      effectiveOutputScaleVector[i] = tmp;
+    }
+  }
+
   // Find padding values
   int64_t newHeight, newWidth;
   int64_t padTop, padBottom, padLeft, padRight;
 
   if (conv2DOp.padding() == "EXPLICIT") {
-    auto paddingValuesConstOp = dyn_cast<mlir::arith::ConstantOp>(
-        conv2DOp.padding_values().getDefiningOp());
-    auto paddingValues =
-        paddingValuesConstOp.getValue().template cast<DenseElementsAttr>();
-    // The padding values for the PadOp are stored as a 4x2 tensor
-    // 0,0 and 0,1 is for the batch dimension and 3,0, and 3,1 for the
-    // channel/depth
-    // 1,0 and 1,1 is top and bottom, and 2,0 and 2,1 is
-    // left and right which are the padding values we need
-    padTop = paddingValues.template getValues<int32_t>()[{1, 0}];
-    padBottom = paddingValues.template getValues<int32_t>()[{1, 1}];
-    padLeft = paddingValues.template getValues<int32_t>()[{2, 0}];
-    padRight = paddingValues.template getValues<int32_t>()[{2, 1}];
+    DenseElementsAttr paddingAttr;
+    matchPattern(conv2DOp.padding_values(), m_Constant(&paddingAttr));
+    // The padding values for the PadOp are stored as a 4x2 tensor 0,0 and 0,1
+    // is for the batch dimension and 3,0, and 3,1 for the channel/depth 1,0 and
+    // 1,1 is top and bottom, and 2,0 and 2,1 is left and right which are the
+    // padding values we need
+    padTop = paddingAttr.template getValues<int32_t>()[{1, 0}];
+    padBottom = paddingAttr.template getValues<int32_t>()[{1, 1}];
+    padLeft = paddingAttr.template getValues<int32_t>()[{2, 0}];
+    padRight = paddingAttr.template getValues<int32_t>()[{2, 1}];
   } else {
     tensorflow::Padding opPadding = conv2DOp.padding() == "VALID"
                                         ? tensorflow::Padding::VALID
@@ -152,6 +169,10 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   args.bias = biasVector;
   args.effectiveMultiplier = effectiveOutputScaleVector;
 
+  // Obtain quant error threshold from command-line option
+  args.quantErrorThreshold = convQuantErrorThresholdOption;
+  args.quantErrorFullCheckEnabled = convForceErrorCheckOption;
+
   return success();
 }
 
@@ -186,22 +207,21 @@ LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
   switch (kt) {
   case Conv2DType::ValidDirect:
     if (failed(getConv2DValidDirectParams(args, strParams, abstractKernelParams,
-                                          weightsData, mulsBiasesData,
-                                          scratchBytes))) {
+                                          weightsData, scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::ValidIndirect:
     if (failed(getConv2DValidIndirectParams(args, strParams,
                                             abstractKernelParams, weightsData,
-                                            mulsBiasesData, scratchBytes))) {
+                                            scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::PaddedIndirect:
     if (failed(getConv2DPaddedIndirectParams(args, strParams,
                                              abstractKernelParams, weightsData,
-                                             mulsBiasesData, scratchBytes))) {
+                                             scratchBytes))) {
       return failure();
     }
     break;
@@ -210,14 +230,58 @@ LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
     return failure();
   }
 
+  assert(strParams.size() == 2 &&
+         "strParams should contain memcpyFn params and aggregateFn params!");
+  std::string otStr;
+  if (failed(getOutputTransformParams(args, otStr, mulsBiasesData))) {
+    return failure();
+  }
+  strParams.push_back(otStr);
+
+  return success();
+}
+
+LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
+    const TFLConvArgs &args, std::string &otStr,
+    std::vector<int16_t> &mulsBiasesData) const {
+  nn::MulsAndBias mulsAndBiases =
+      nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
+          args.effectiveMultiplier, args.bias, args.filter, args.inputZeroPoint,
+          args.outputZeroPoint, args.outputDepth);
+  nn::QuantisationParams qp =
+      nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
+
+  double quantError = nn::OutputTransformFnInt8::get_quant_error(
+      mulsAndBiases, qp, args.quantErrorFullCheckEnabled);
+  if (quantError > args.quantErrorThreshold) {
+    std::stringstream msg;
+    msg << "Quantization error of " << quantError
+        << " larger than set threshold of " << args.quantErrorThreshold
+        << ", therefore reverting to reference Conv2D op!" << std::endl
+        << "Inspect the output, and if suitable, set a "
+           "higher threshold with --xcore-conv-err-threshold."
+        << std::endl;
+    args.convOp->emitWarning(
+        utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
+    return failure();
+  }
+
+  auto serialisedMultipliersAndBiases =
+      nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
+  nn::OutputTransformFn::pad_final_access(
+      serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
+  nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
+                               qp.final_shr);
+
+  otStr = otParams.serialise<nn::OT_int8::Params>();
+  mulsBiasesData = serialisedMultipliersAndBiases;
   return success();
 }
 
 LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
-    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
-    int &scratchBytes) const {
+    std::vector<int8_t> &weightsData, int &scratchBytes) const {
 
   nn::ImToColPadded::Params imToColParams(args.X, args.K, args.padding,
                                           args.inputDepth, args.inputZeroPoint);
@@ -229,31 +293,15 @@ LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
   int inputBytes = args.filterHeight * args.filterWidth * args.inputDepth;
   nn::MatMulInt8::Params afParams(args.outputDepth, inputBytes);
 
-  nn::MulsAndBias mulsAndBiases =
-      nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
-          args.effectiveMultiplier, args.bias, args.filter, args.inputZeroPoint,
-          args.outputZeroPoint, args.outputDepth);
-  nn::QuantisationParams qp =
-      nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
-  auto serialisedMultipliersAndBiases =
-      nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
-  nn::OutputTransformFn::pad_final_access(
-      serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
-  nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
-                               qp.final_shr);
-
   std::string mfStr = imToColParams.serialise<nn::ImToColPadded::Params>();
   std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
-  std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
   abstractKernelParams =
       getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
           args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
-  strParams.push_back(otStr);
   weightsData = rw.weights;
-  mulsBiasesData = serialisedMultipliersAndBiases;
   scratchBytes =
       nn::MatMulInt8::get_scratch_mem_bytes(inputBytes) + 32; //[asj] FIXME
 
@@ -263,8 +311,7 @@ LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
 LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
-    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
-    int &scratchBytes) const {
+    std::vector<int8_t> &weightsData, int &scratchBytes) const {
 
   nn::ImToColValid::Params imToColParams(args.X, args.K, args.inputDepth);
 
@@ -275,31 +322,15 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
   int inputBytes = args.filterHeight * args.filterWidth * args.inputDepth;
   nn::MatMulInt8::Params afParams(args.outputDepth, inputBytes);
 
-  nn::MulsAndBias mulsAndBiases =
-      nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
-          args.effectiveMultiplier, args.bias, args.filter, args.inputZeroPoint,
-          args.outputZeroPoint, args.outputDepth);
-  nn::QuantisationParams qp =
-      nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
-  auto serialisedMultipliersAndBiases =
-      nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
-  nn::OutputTransformFn::pad_final_access(
-      serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
-  nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
-                               qp.final_shr);
-
   std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
   std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
-  std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
   abstractKernelParams =
       getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
           args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
-  strParams.push_back(otStr);
   weightsData = rw.weights;
-  mulsBiasesData = serialisedMultipliersAndBiases;
   scratchBytes =
       nn::MatMulInt8::get_scratch_mem_bytes(inputBytes) + 32; //[asj] FIXME
 
@@ -309,8 +340,7 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
 LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
-    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
-    int &scratchBytes) const {
+    std::vector<int8_t> &weightsData, int &scratchBytes) const {
 
   nn::DerefInputFn::Params imToColParams(args.X, args.K);
 
@@ -320,31 +350,15 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
       (int8_t *)args.filter.data(), filterShape, 8, args.padValue);
   nn::MatMulDirectFn::Params afParams(args.X, args.K, args.inputDepth);
 
-  nn::MulsAndBias mulsAndBiases =
-      nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
-          args.effectiveMultiplier, args.bias, args.filter, args.inputZeroPoint,
-          args.outputZeroPoint, args.outputDepth);
-  nn::QuantisationParams qp =
-      nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
-  auto serialisedMultipliersAndBiases =
-      nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
-  nn::OutputTransformFn::pad_final_access(
-      serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
-  nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
-                               qp.final_shr);
-
   std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
   std::string afStr = afParams.serialise<nn::MatMulDirectFn::Params>();
-  std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
   abstractKernelParams =
       getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
           args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
-  strParams.push_back(otStr);
   weightsData = rw.weights;
-  mulsBiasesData = serialisedMultipliersAndBiases;
   scratchBytes = 0;
 
   return success();
@@ -374,14 +388,14 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
   switch (kt) {
   case Conv2DType::DepthwiseValidDirect:
     if (failed(getDepthwiseConv2DValidDirectParams(
-            args, strParams, abstractKernelParams, weightsData, mulsBiasesData,
+            args, strParams, abstractKernelParams, weightsData,
             scratchBytes))) {
       return failure();
     }
     break;
   case Conv2DType::DepthwisePaddedIndirect:
     if (failed(getDepthwiseConv2DPaddedIndirectParams(
-            args, strParams, abstractKernelParams, weightsData, mulsBiasesData,
+            args, strParams, abstractKernelParams, weightsData,
             scratchBytes))) {
       return failure();
     }
@@ -391,6 +405,53 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
     return failure();
   }
 
+  assert(strParams.size() == 2 &&
+         "strParams should contain memcpyFn params and aggregateFn params!");
+  std::string otStr;
+  if (failed(getOutputTransformParams(args, otStr, mulsBiasesData))) {
+    return failure();
+  }
+  strParams.push_back(otStr);
+
+  return success();
+}
+
+LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
+    const TFLConvArgs &args, std::string &otStr,
+    std::vector<int16_t> &mulsBiasesData) const {
+  std::array<int, 4> filterShape = {1, args.filterHeight, args.filterWidth,
+                                    args.inputDepth};
+  nn::MulsAndBias mulsAndBiases =
+      nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
+          args.effectiveMultiplier, args.bias, args.filter, filterShape,
+          args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
+  nn::QuantisationParams qp =
+      nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
+
+  double quantError = nn::OutputTransformFnInt8::get_quant_error(
+      mulsAndBiases, qp, args.quantErrorFullCheckEnabled);
+  if (quantError > args.quantErrorThreshold) {
+    std::stringstream msg;
+    msg << "Quantization error of " << quantError
+        << " larger than set threshold of " << args.quantErrorThreshold
+        << ", therefore reverting to reference DepthwiseConv2D op!" << std::endl
+        << "Inspect the output, and if suitable, set a "
+           "higher threshold with --xcore-conv-err-threshold."
+        << std::endl;
+    args.convOp->emitWarning(
+        utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
+    return failure();
+  }
+
+  auto serialisedMultipliersAndBiases =
+      nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
+  nn::OutputTransformFn::pad_final_access(
+      serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
+  nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
+                               qp.final_shr);
+
+  otStr = otParams.serialise<nn::OT_int8::Params>();
+  mulsBiasesData = serialisedMultipliersAndBiases;
   return success();
 }
 
@@ -398,8 +459,7 @@ LogicalResult
 ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DValidDirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
-    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
-    int &scratchBytes) const {
+    std::vector<int8_t> &weightsData, int &scratchBytes) const {
 
   nn::DerefInputFn::Params imToColParams(args.X, args.K);
 
@@ -409,31 +469,15 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DValidDirectParams(
       (int8_t *)args.filter.data(), filterShape, args.padValue);
   nn::MatMulDirectFn_DW::Params afParams(args.X, args.K);
 
-  nn::MulsAndBias mulsAndBiases =
-      nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
-          args.effectiveMultiplier, args.bias, args.filter, filterShape,
-          args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
-  nn::QuantisationParams qp =
-      nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
-  auto serialisedMultipliersAndBiases =
-      nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
-  nn::OutputTransformFn::pad_final_access(
-      serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
-  nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
-                               qp.final_shr);
-
   std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
   std::string afStr = afParams.serialise<nn::MatMulDirectFn_DW::Params>();
-  std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
   abstractKernelParams =
       getAbstractKernelParamsForMultipleThreads<nn::Filter2D_DW::Params>(
           args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
-  strParams.push_back(otStr);
   weightsData = rw.weights;
-  mulsBiasesData = serialisedMultipliersAndBiases;
   scratchBytes = 0;
 
   return success();
@@ -443,8 +487,7 @@ LogicalResult
 ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DPaddedIndirectParams(
     const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
-    std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
-    int &scratchBytes) const {
+    std::vector<int8_t> &weightsData, int &scratchBytes) const {
 
   nn::ImToColPadded::Params imToColParams(args.X, args.K, args.padding, 16,
                                           args.inputZeroPoint);
@@ -455,31 +498,15 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DPaddedIndirectParams(
       (int8_t *)args.filter.data(), filterShape, args.padValue);
   nn::MatMulDirectFn_DW::Params afParams(args.K);
 
-  nn::MulsAndBias mulsAndBiases =
-      nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
-          args.effectiveMultiplier, args.bias, args.filter, filterShape,
-          args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
-  nn::QuantisationParams qp =
-      nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
-  auto serialisedMultipliersAndBiases =
-      nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
-  nn::OutputTransformFn::pad_final_access(
-      serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
-  nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
-                               qp.final_shr);
-
   std::string mfStr = imToColParams.serialise<nn::ImToColPadded::Params>();
   std::string afStr = afParams.serialise<nn::MatMulDirectFn_DW::Params>();
-  std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
   abstractKernelParams =
       getAbstractKernelParamsForMultipleThreads<nn::Filter2D_DW::Params>(
           args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
-  strParams.push_back(otStr);
   weightsData = rw.weights;
-  mulsBiasesData = serialisedMultipliersAndBiases;
   scratchBytes = nn::MatMulDirectFn_DW::get_scratch_mem_bytes(filterShape);
 
   return success();

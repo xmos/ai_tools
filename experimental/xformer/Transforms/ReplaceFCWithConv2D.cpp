@@ -11,7 +11,9 @@ namespace xcore {
 namespace {
 // Replace suitable TFL FullyConnected with TFL Conv2D for XCore.
 struct ReplaceFCWithConv2D
-    : public PassWrapper<ReplaceFCWithConv2D, FunctionPass> {
+    : public PassWrapper<ReplaceFCWithConv2D, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReplaceFCWithConv2D)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
@@ -19,7 +21,7 @@ struct ReplaceFCWithConv2D
   StringRef getDescription() const final {
     return "Replace suitable TFL FullyConnected with TFL Conv2D";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 struct ReplaceFCWithConv2DPattern
@@ -76,7 +78,7 @@ struct ReplaceFCWithConv2DPattern
                                                 inputType.getShape()[1]};
     auto expandedInputResultType =
         RankedTensorType::get(expandedShapeVector, inputType.getElementType());
-    auto expandedShapeConstantOp = rewriter.create<ConstantOp>(
+    auto expandedShapeConstantOp = rewriter.create<arith::ConstantOp>(
         fcOp.getLoc(),
         DenseElementsAttr::get(
             RankedTensorType::get({4}, rewriter.getIntegerType(64)),
@@ -115,7 +117,7 @@ struct ReplaceFCWithConv2DPattern
         newConv2DOutputType.getShape()[0], newConv2DOutputType.getShape()[3]};
     auto squeezedOutputResultType = RankedTensorType::get(
         squeezedShapeVector, newConv2DOutputType.getElementType());
-    auto squeezedShapeConstantOp = rewriter.create<ConstantOp>(
+    auto squeezedShapeConstantOp = rewriter.create<arith::ConstantOp>(
         fcOp.getLoc(),
         DenseElementsAttr::get(
             RankedTensorType::get({2}, rewriter.getIntegerType(64)),
@@ -131,18 +133,18 @@ struct ReplaceFCWithConv2DPattern
   }
 };
 
-void ReplaceFCWithConv2D::runOnFunction() {
+void ReplaceFCWithConv2D::runOnOperation() {
   auto *ctx = &getContext();
-  auto func = getFunction();
+  func::FuncOp func = getOperation();
 
-  OwningRewritePatternList patterns(ctx);
+  RewritePatternSet patterns(ctx);
   patterns.insert<ReplaceFCWithConv2DPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
 // Creates an instance of the ReplaceFCWithConv2D pass.
-std::unique_ptr<OperationPass<FuncOp>> createReplaceFCWithConv2DPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceFCWithConv2DPass() {
   return std::make_unique<ReplaceFCWithConv2D>();
 }
 

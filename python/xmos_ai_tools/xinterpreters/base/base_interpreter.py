@@ -1,11 +1,18 @@
 # Copyright 2022 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 from abc import ABC, abstractmethod
+from enum import Enum
+from typing import Union, Type, Optional, Any, List, Tuple, Dict
 
+from numpy import ndarray
 from tflite import opcode2name
 from tflite.Model import Model
 from tflite.TensorType import TensorType
+import numpy as np
 
+class XTFLMInterpreterStatus(Enum):
+    OK = 0
+    ERROR = 1
 
 class xcore_tflm_base_interpreter(ABC):
     """! The xcore interpreters base class.
@@ -16,86 +23,81 @@ class xcore_tflm_base_interpreter(ABC):
         """! Base interpreter initializer.
         Initialises the list of models attached to the interpreter.
         """
-        self.models = []
+        self.models: List[xcore_tflm_base_interpreter.modelData] = []
 
     @abstractmethod
-    def initialise_interpreter(self, model_index=0) -> None:
+    def initialise_interpreter(self, model_index: int=0) -> None:
         """! Abstract initialising interpreter with model associated with model_index.
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
-        return
+        raise NotImplementedError
 
     @abstractmethod
-    def set_input_tensor(self, data, input_index=0, model_index=0) -> None:
+    def set_tensor(self, tensor_index: int, value, model_index: int = 0) -> None:
         """! Abstract method for writing the input tensor of a model.
-        @param data  The blob of data to set the tensor to.
-        @param input_index  The index of input tensor to target. Defaults to 0.
+        @param value  The blob of data to set the tensor to.
+        @param tensor_index  The index of input tensor to target. Defaults to 0.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
-        return
+        raise NotImplementedError
 
     @abstractmethod
-    def get_output_tensor(
-        self, output_index=0, model_index=0, tensor=None
-    ) -> "Output tensor data":
+    def get_tensor(self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None) -> ndarray:
         """! Abstract method for reading data from the output tensor of a model.
-        @param output_index  The index of output tensor to target.
+        @param tensor_index  The index of output tensor to target.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         @param tensor  Tensor of correct shape to write into (optional).
         @return  The data that was stored in the output tensor.
         """
-        return
+        raise NotImplementedError
 
     @abstractmethod
-    def get_input_tensor(self, input_index=0, model_index=0) -> "Input tensor data":
+    def get_input_tensor(self, input_index: int = 0, model_index: int = 0) -> Union[ndarray, List[Union[int, Tuple[float]]]]:
         """! Abstract for reading the data in the input tensor of a model.
         @param input_index  The index of input tensor to target.
-        @param tensor Tensor of correct shape to write into (optional).
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
-        @return The data that was stored in the output tensor.
+        @return The data that was stored in the input tensor.
         """
-        return
+        raise NotImplementedError
 
     @abstractmethod
-    def invoke(self, model_index=0) -> None:
+    def invoke(self, model_index: int = 0) -> None:
         """! Abstract method for invoking the model and starting inference of the current
         state of the tensors.
         """
-        return
+        raise NotImplementedError
 
     @abstractmethod
-    def close(self, model_index=0) -> None:
+    def close(self, model_index: int = 0) -> None:
         """! Abstract method deleting the interpreter.
         @params model_index Defines which interpreter to target in systems with multiple.
         """
-        return
+        raise NotImplementedError
 
     @abstractmethod
-    def tensor_arena_size(self) -> "Size of tensor arena":
+    def tensor_arena_size(self) -> int:
         """! Abstract method to read the size of the tensor arena required.
         @return size of the tensor arena as an integer.
         """
-        return
+        raise NotImplementedError
 
     @abstractmethod
-    def _check_status(self, status):
+    def _check_status(self, status: XTFLMInterpreterStatus) -> None:
         """! Abstract method to read a status code and raise an exception.
         @param status Status code.
         """
-        return
+        raise NotImplementedError
 
     @abstractmethod
     def print_memory_plan(self) -> None:
         """! Abstract method to print a plan of memory allocation"""
-        return
+        raise NotImplementedError
 
-    def get_input_tensor_size(
-        self, input_index=0, model_index=0
-    ) -> "Size of input tensor":
+    def get_input_tensor_size(self, input_index: int = 0, model_index: int = 0) -> int:
         """! Read the size of the input tensor from the model.
         @param input_index  The index of input tensor to target.
         @param model_index The model to target, for interpreters that support multiple models
@@ -104,7 +106,6 @@ class xcore_tflm_base_interpreter(ABC):
         """
 
         # Select correct model from model list
-        modelBuf = None
         model = self.get_model(model_index)
         modelBuf = Model.GetRootAsModel(model.model_content, 0)
 
@@ -112,13 +113,18 @@ class xcore_tflm_base_interpreter(ABC):
         tensorIndex = modelBuf.Subgraphs(0).Inputs(input_index)
 
         tensorType = modelBuf.Subgraphs(0).Tensors(tensorIndex).Type()
+
+        tensorSize: int
         if tensorType == TensorType.INT8:
             tensorSize = 1  # int8 is 1 byte
         elif tensorType == TensorType.INT32:
             tensorSize = 4  # int32 is 4 bytes
+        elif tensorType == TensorType.FLOAT32:
+            tensorSize = 4  # float32 is 4 bytes
         else:
             print(tensorType)
-            self._check_status(1)
+            self._check_status(XTFLMInterpreterStatus.ERROR)
+            tensorSize = 0
 
         # Calculate tensor size by multiplying shape elements
         for i in range(0, modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeLength()):
@@ -128,8 +134,8 @@ class xcore_tflm_base_interpreter(ABC):
         return tensorSize
 
     def get_output_tensor_size(
-        self, output_index=0, model_index=0
-    ) -> "Size of output tensor":
+        self, output_index: int = 0, model_index: int = 0
+    ) -> int:
         """! Read the size of the output tensor from the model.
         @param output_index  The index of output tensor to target.
         @param model_index The model to target, for interpreters that support multiple models
@@ -146,13 +152,18 @@ class xcore_tflm_base_interpreter(ABC):
         tensorIndex = modelBuf.Subgraphs(0).Outputs(output_index)
 
         tensorType = modelBuf.Subgraphs(0).Tensors(tensorIndex).Type()
+
+        tensorSize: int
         if tensorType == TensorType.INT8:
             tensorSize = 1  # int8 is 1 byte
         elif tensorType == TensorType.INT32:
             tensorSize = 4  # int32 is 4 bytes
+        elif tensorType == TensorType.FLOAT32:
+            tensorSize = 4  # float32 is 4 bytes
         else:
             print(tensorType)
-            self._check_status(1)
+            self._check_status(XTFLMInterpreterStatus.ERROR)
+            tensorSize = 0
 
         # Calculate tensor size by multiplying shape elements
         for i in range(0, modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeLength()):
@@ -161,11 +172,39 @@ class xcore_tflm_base_interpreter(ABC):
             )
         return tensorSize
 
-    def get_input_details(
-        self, input_index=0, model_index=0
-    ) -> "Details of input tensor":
+    def get_tensor_size(self, tensor_index: int = 0, model_index: int = 0) -> int:
+        """! Read the size of the input tensor from the model.
+        @param tensor_index  The index of input tensor to target.
+        @param model_index The model to target, for interpreters that support multiple models
+        running concurrently. Defaults to 0 for use with a single model.
+        @return The size of the input tensor as an integer.
+        """
+
+        # Select correct model from model list
+        modelBuf = None
+        model = self.get_model(model_index)
+        modelBuf = Model.GetRootAsModel(model.model_content, 0)
+
+        tensorType = modelBuf.Subgraphs(0).Tensors(tensor_index).Type()
+        if tensorType == TensorType.INT8:
+            tensorSize = 1  # int8 is 1 byte
+        elif tensorType == TensorType.INT32:
+            tensorSize = 4  # int32 is 4 bytes
+        elif tensorType == TensorType.FLOAT32:
+            tensorSize = 4  # float32 is 4 bytes
+        else:
+            print(tensorType)
+            self._check_status(XTFLMInterpreterStatus.ERROR)
+
+        # Calculate tensor size by multiplying shape elements
+        for i in range(0, modelBuf.Subgraphs(0).Tensors(tensor_index).ShapeLength()):
+            tensorSize = tensorSize * modelBuf.Subgraphs(0).Tensors(tensor_index).Shape(
+                i
+            )
+        return tensorSize
+
+    def get_input_details(self, model_index: int = 0) -> List[Dict[str, Any]]:
         """! Reads the input tensor details from the model.
-        @param input_index  The index of input tensor to target.
         @param model_index The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         @return Tensor details, including the index, name, shape, data type, and quantization
@@ -177,32 +216,64 @@ class xcore_tflm_base_interpreter(ABC):
         model = self.get_model(model_index)
         modelBuf = Model.GetRootAsModel(model.model_content, 0)
 
-        tensorIndex = modelBuf.Subgraphs(0).Inputs(input_index)
+        inputsList = []
+        for input_ in range(0, modelBuf.Subgraphs(0).InputsLength()):
 
-        # Generate dictioary of tensor details
-        if modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT8:
-            dtype = "int8"
-        elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
-            dtype = "int32"
+            tensorIndex = modelBuf.Subgraphs(0).Inputs(input_)
 
-        details = {
-            "index": tensorIndex,
-            "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[1:].strip(
-                "'"
-            ),
-            "shape": modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeAsNumpy(),
-            "dtype": dtype,
-            "quantization": (
-                modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().Scale(0),
-                modelBuf.Subgraphs(0).Tensors(0).Quantization().ZeroPoint(0),
-            ),
-        }
+            # Generate dictioary of tensor details
+            dtype: Union[Type[Any]]
+            if modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT8:
+                dtype = np.int8
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
+                dtype = np.int32
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+                dtype = np.float32
+            else:
+                raise Exception
 
-        return details
+            details = {
+                "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[
+                    1:
+                ].strip("'"),
+                "index": tensorIndex,
+                "shape": modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeAsNumpy(),
+                "shape_signature": modelBuf.Subgraphs(0)
+                .Tensors(tensorIndex)
+                .ShapeSignatureAsNumpy(),
+                "dtype": dtype,
+                "quantization": (
+                    modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().Scale(0),
+                    modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ZeroPoint(0),
+                ),
+                "quantization_parameters": {
+                    "scales": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ScaleAsNumpy(),
+                    "zero_points": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ZeroPointAsNumpy(),
+                    "quantized_dimension": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .QuantizedDimension(),
+                },
+                "sparsity_parameters": {
+                    modelBuf.Subgraphs(0).Tensors(tensorIndex).Sparsity()
+                },
+            }
+            inputsList.append(details)
+
+        return inputsList
 
     def get_output_details(
-        self, output_index=0, model_index=0
-    ) -> "Details of output tensor":
+            self, model_index: int = 0
+    ) -> List[Dict[str, Any]]:
         """! Reads the output tensor details from the model.
         @param output_index  The index of output tensor to target.
         @param model_index The model to target, for interpreters that support multiple models
@@ -212,43 +283,72 @@ class xcore_tflm_base_interpreter(ABC):
         """
 
         # Select correct model from models list
-        modelBuf = None
         model = self.get_model(model_index)
         modelBuf = Model.GetRootAsModel(model.model_content, 0)
 
-        # Output tensor is last tensor
-        tensorIndex = modelBuf.Subgraphs(0).Outputs(output_index)
+        outputsList = []
+        for output_ in range(0, modelBuf.Subgraphs(0).OutputsLength()):
 
-        # Generate dictioary of tensor details
-        if modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT8:
-            dtype = "int8"
-        elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
-            dtype = "int32"
+            # Output tensor is last tensor
+            tensorIndex = modelBuf.Subgraphs(0).Outputs(output_)
 
-        details = {
-            "index": tensorIndex,
-            "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[1:].strip(
-                "'"
-            ),
-            "shape": modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeAsNumpy(),
-            "dtype": dtype,
-            "quantization": (
-                modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().Scale(0),
-                modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().ZeroPoint(0),
-            ),
-        }
+            dtype: Union[Type[Any]]
+            # Generate dictionary of tensor details
+            if modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT8:
+                dtype = np.int8
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
+                dtype = np.int32
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+                dtype = np.float32
 
-        return details
+            details = {
+                "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[
+                    1:
+                ].strip("'"),
+                "index": tensorIndex,
+                "shape": modelBuf.Subgraphs(0).Tensors(tensorIndex).ShapeAsNumpy(),
+                "shape_signature": modelBuf.Subgraphs(0)
+                .Tensors(tensorIndex)
+                .ShapeSignatureAsNumpy(),
+                "dtype": dtype,
+                "quantization": (
+                    modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().Scale(0),
+                    modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ZeroPoint(0),
+                ),
+                "quantization_parameters": {
+                    "scales": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ScaleAsNumpy(),
+                    "zero_points": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .ZeroPointAsNumpy(),
+                    "quantized_dimension": modelBuf.Subgraphs(0)
+                    .Tensors(tensorIndex)
+                    .Quantization()
+                    .QuantizedDimension(),
+                },
+                "sparsity_parameters": {
+                    modelBuf.Subgraphs(0).Tensors(tensorIndex).Sparsity()
+                },
+            }
+            outputsList.append(details)
+
+        return outputsList
 
     def set_model(
         self,
-        model_path=None,
-        model_content=None,
-        params_path=None,
-        params_content=None,
-        model_index=0,
-        secondary_memory=False,
-        flash=False,
+        model_path: Optional[str] = None,
+        model_content: Optional[bytes] = None,
+        params_path: Optional[str] = None,
+        params_content: Optional[bytes] = None,
+        model_index: int = 0,
+        secondary_memory: bool = False,
+        flash: bool = False,
     ) -> None:
         """! Adds a model to the interpreter's list of models.
         @param model_path The path to the model file (.tflite), alternative to model_content.
@@ -257,7 +357,7 @@ class xcore_tflm_base_interpreter(ABC):
         alternative to params_content (optional).
         @param params_content The byte array representing the model parameters,
         alternative to params_path (optional).
-        @param model_index The modell to target, for interpreters that support multiple models
+        @param model_index The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
 
@@ -293,7 +393,7 @@ class xcore_tflm_base_interpreter(ABC):
                 )
             self.initialise_interpreter(model_index)
 
-    def get_model(self, model_index=0):
+    def get_model(self, model_index: int = 0):
         for model in self.models:
             if model.tile == model_index:
                 return model
@@ -305,13 +405,13 @@ class xcore_tflm_base_interpreter(ABC):
 
         def __init__(
             self,
-            model_path,
-            model_content,
-            params_path,
-            params_content,
-            model_index,
-            secondary_memory,
-            flash,
+            model_path: Optional[str],
+            model_content: Optional[bytes],
+            params_path: Optional[str],
+            params_content: Optional[bytes],
+            model_index: int,
+            secondary_memory: bool,
+            flash: bool,
         ):
             """! Model data initializer.
             Sets up variables, generates a list of operators used in the model,
@@ -323,18 +423,18 @@ class xcore_tflm_base_interpreter(ABC):
             @param model_index The model to target, for interpreters that support multiple models
             running concurrently. Defaults to 0 for use with a single model.
             """
-            self.model_path = model_path
-            self.model_content = model_content
-            self.params_path = params_path
-            self.params_content = params_content
-            self.tile = model_index
+            self.model_path: Optional[str] = model_path
+            self.model_content: Optional[bytes] = model_content
+            self.params_path: Optional[str] = params_path
+            self.params_content: Optional[bytes] = params_content
+            self.tile: int = model_index
             self.secondary_memory = secondary_memory
             self.flash = flash
-            self.opList = []
+            self.opList: List[str] = []
             self.pathToContent()
             self.modelToOpList()
 
-        def modelToOpList(self):
+        def modelToOpList(self) -> None:
             """! Generates operator list from model."""
 
             # Load model
@@ -354,16 +454,16 @@ class xcore_tflm_base_interpreter(ABC):
                 else:
                     self.opList.append(opcode2name(opcode.BuiltinCode()))
 
-        def pathToContent(self):
+        def pathToContent(self) -> None:
             """! Reads model and params paths to content (byte arrays)"""
 
             # Check if path exists but not content
-            if self.model_content == None and self.model_path != None:
+            if self.model_content is None and self.model_path is not None:
                 with open(self.model_path, "rb") as input_fd:
                     self.model_content = input_fd.read()
 
             # Check if params_path exits but not params_content
-            if self.params_content == None and self.params_path != None:
+            if self.params_content is None and self.params_path is not None:
                 with open(self.params_path, "rb") as input_fd2:
                     self.params_content = input_fd2.read()
             # If no params, set to empty byte array

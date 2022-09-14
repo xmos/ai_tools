@@ -74,6 +74,9 @@ pipeline {
                 // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv && //
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./ai_tools_venv &&
+                      cd third_party/lib_tflite_micro &&
+                      make build &&
+                      cd ../.. &&
                       make clean &&
                       make build
                 """
@@ -95,7 +98,7 @@ pipeline {
                 """
         // xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&
-                      make xformer2_integration_test NUM_PROCS=8
+                      make test
                 """
                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                 // This step collects these files for display in Jenkins UI

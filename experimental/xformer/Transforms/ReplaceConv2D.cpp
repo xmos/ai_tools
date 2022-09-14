@@ -31,6 +31,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
 
   // Extract common args from the op
   ArgsType args;
+  args.convOp = conv2DOp.getOperation();
   auto inputType =
       conv2DOp.input().getType().template dyn_cast<RankedTensorType>();
   auto outputType =
@@ -108,14 +109,14 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
       {static_cast<long long>(weightsData.size())}, rewriter.getIntegerType(8));
   auto weightsAttr = DenseElementsAttr::get<int8_t>(weightsType, weightsData);
   auto weightsConstantOp =
-      rewriter.create<ConstantOp>(conv2DOp.getLoc(), weightsAttr);
+      rewriter.create<arith::ConstantOp>(conv2DOp.getLoc(), weightsAttr);
 
   ShapedType mulsBiasesOrThresholdsType = RankedTensorType::get(
       {static_cast<long long>(mulsBiasesOrThresholdsData.size())},
       rewriter.getIntegerType(16));
   auto mulsBiasesOrThresholdsAttr = DenseElementsAttr::get<int16_t>(
       mulsBiasesOrThresholdsType, mulsBiasesOrThresholdsData);
-  auto mulsBiasesOrThresholdsConstantOp = rewriter.create<ConstantOp>(
+  auto mulsBiasesOrThresholdsConstantOp = rewriter.create<arith::ConstantOp>(
       conv2DOp.getLoc(), mulsBiasesOrThresholdsAttr);
 
   // Create the Conv2DV2 Op with the params and kernel type
@@ -136,7 +137,10 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
 
 namespace {
 // Replace with XC Conv2D pass
-struct ReplaceConv2D : public PassWrapper<ReplaceConv2D, FunctionPass> {
+struct ReplaceConv2D
+    : public PassWrapper<ReplaceConv2D, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReplaceConv2D)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry
         .insert<TFL::TensorFlowLiteDialect, XCoreDialect, lq::LarqDialect>();
@@ -145,30 +149,54 @@ struct ReplaceConv2D : public PassWrapper<ReplaceConv2D, FunctionPass> {
   StringRef getDescription() const final {
     return "Replace Conv2D with XC Conv2D pass";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 bool shouldReduceMemory() { return reduceMemoryOption; }
 
-#include "Transforms/GeneratedConvPatterns.inc"
+Type getPadOpOutputType(PatternRewriter &rewriter, Value input,
+                        std::vector<int32_t> paddingValues) {
+  auto inputType = input.getType().dyn_cast<RankedTensorType>();
+  int batch = inputType.getDimSize(0) + paddingValues[0] + paddingValues[1];
+  int height = inputType.getDimSize(1) + paddingValues[2] + paddingValues[3];
+  int width = inputType.getDimSize(2) + paddingValues[4] + paddingValues[5];
+  int depth = inputType.getDimSize(3) + paddingValues[6] + paddingValues[7];
 
-void ReplaceConv2D::runOnFunction() {
+  RankedTensorType outputType = RankedTensorType::get(
+      {batch, height, width, depth}, inputType.getElementType());
+  return outputType;
+}
+
+namespace convpatterns {
+#include "Transforms/GeneratedConvPatterns.inc"
+}
+
+namespace convrevertpatterns {
+#include "Transforms/GeneratedConvRevertPatterns.inc"
+}
+
+void ReplaceConv2D::runOnOperation() {
   auto *ctx = &getContext();
-  auto func = getFunction();
+  func::FuncOp func = getOperation();
 
   // Apply patterns to lower TFL Conv to XC Fake Conv ops
   // This helps in pattern matching only types we support for xcore such as QI8
   // and for handling issues such as EXPLICIT padding which is not supported in
   // TFL Conv ops
-  OwningRewritePatternList patterns1(ctx);
-  populateWithGenerated(patterns1);
+  RewritePatternSet patterns1(ctx);
+  convpatterns::populateWithGenerated(patterns1);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns1));
 
   // Replace with XC Conv2D op
-  OwningRewritePatternList patterns2(ctx);
+  RewritePatternSet patterns2(ctx);
   patterns2.insert<ReplaceConv2DPattern, ReplaceDepthwiseConv2DPattern,
                    ReplaceBConv2DPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
+
+  // Revert remaining XC Fake Conv ops back to TFL Conv2D ops
+  RewritePatternSet patterns3(ctx);
+  convrevertpatterns::populateWithGenerated(patterns3);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns3));
 
   // We walk through all Conv2DV2 ops in the graph and find the maximum required
   // thread count
@@ -191,7 +219,7 @@ void ReplaceConv2D::runOnFunction() {
 } // namespace
 
 // Creates an instance of the ReplaceConv2D pass.
-std::unique_ptr<OperationPass<FuncOp>> createReplaceConv2DPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceConv2DPass() {
   return std::make_unique<ReplaceConv2D>();
 }
 

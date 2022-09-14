@@ -1,7 +1,7 @@
 // RUN: xcore-opt --mlir-io %s --xcore-replace-fc-with-conv2d | FileCheck %s
 
 // CHECK-LABEL: valid_fc
-func @valid_fc(%arg0: tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>) -> tensor<?x32x!quant.uniform<i8:f32, 0.037329975515604019:-13>> attributes {tf.entry_function = {inputs = "flatten_input", outputs = "Identity"}} {
+func.func @valid_fc(%arg0: tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>) -> tensor<?x32x!quant.uniform<i8:f32, 0.037329975515604019:-13>> attributes {tf.entry_function = {inputs = "flatten_input", outputs = "Identity"}} {
   %0 = "tfl.pseudo_const"() {value = dense<[-1, 32]> : tensor<2xi32>} : () -> tensor<2xi32>
   // CHECK: tfl.reshape
   %1 = "tfl.reshape"(%arg0, %0) : (tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>, tensor<2xi32>) -> tensor<?x32x!quant.uniform<i8:f32, 0.0078160231932997704>>

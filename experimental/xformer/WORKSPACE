@@ -16,11 +16,11 @@ http_archive(
 )
 
 ################################## Skylib #####################################
-SKYLIB_VERSION = "1.0.3"
+SKYLIB_VERSION = "1.2.1"
 
 http_archive(
     name = "bazel_skylib",
-    sha256 = "1c531376ac7e5a180e0237938a2536de0c54d93f5c278634818e0efc952dd56c",
+    sha256 = "f7be3474d42aae265405a592bb7da8e171919d74c16f082a5457840f06054728",
     urls = [
         "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/{version}/bazel-skylib-{version}.tar.gz".format(version = SKYLIB_VERSION),
         "https://github.com/bazelbuild/bazel-skylib/releases/download/{version}/bazel-skylib-{version}.tar.gz".format(version = SKYLIB_VERSION),
@@ -36,10 +36,10 @@ http_archive(
     patches = [
           "//patches:flatbuffer_export.patch",
     ],
-    sha256 = "66b953ae7fba61fd78969a2e24e350b26ec116cf2e6a7eb93d02c63939c6f9f7",
-    strip_prefix = "tensorflow-2.8.0",
+    sha256 = "3bac161442497c1ad5fd44ee7084064c0f5aab2cceb53a34c9345eaaa326a618",
+    strip_prefix = "tensorflow-2.10.0-rc0",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/v2.8.0.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/v2.10.0-rc0.tar.gz",
     ],
 )
 
@@ -77,12 +77,14 @@ http_archive(
     patch_args = ["-p0"],
     patch_tool = "patch",
     patches = [
-          "//patches:tf_include.patch",
+          "//patches:tf_update.patch",
     ],
-    sha256 = "61f956bebce552406d338c3311995473f47c13105caa0cfea1a85bb047c27286",
-    strip_prefix = "compute-engine-0.7.0",
+    sha256 = "940534692889dfef771f036e58b5f7d50fe7a7ab9394eab84cd0387add796146",
+    strip_prefix = "compute-engine-6aa942272db79dabe076821f87826e2c0223d372",
+    # https://github.com/larq/compute-engine/tree/6aa942272db79dabe076821f87826e2c0223d372
+    # From 12 Aug 2022
     urls = [
-        "https://github.com/larq/compute-engine/archive/refs/tags/v0.7.0.tar.gz",
+        "https://github.com/larq/compute-engine/archive/6aa942272db79dabe076821f87826e2c0223d372.zip",
     ],
 )
 

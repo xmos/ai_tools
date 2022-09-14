@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/PatternBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "tensorflow/compiler/mlir/lite/quantization/quantization.td"
@@ -37,7 +39,7 @@ def XCoreDialect : Dialect {
 //===----------------------------------------------------------------------===//
 
 // Base class for the operation in this dialect
-class XC_Op<string mnemonic, list<OpTrait> traits = []>
+class XC_Op<string mnemonic, list<Trait> traits = []>
     : Op<XCoreDialect, mnemonic, traits> {
 
   let extraClassDeclaration = [{ std::vector<uint8_t> buildCustomOptions(); }];
@@ -45,18 +47,20 @@ class XC_Op<string mnemonic, list<OpTrait> traits = []>
 
 // Conv2D
 
-def XC_Conv2D_ValidDirect : StrEnumAttrCase<"ValidDirect">;
-def XC_Conv2D_ValidIndirect : StrEnumAttrCase<"ValidIndirect">;
-def XC_Conv2D_PaddedIndirect : StrEnumAttrCase<"PaddedIndirect">;
-def XC_DW_Conv2D_ValidDirect : StrEnumAttrCase<"DepthwiseValidDirect">;
-def XC_DW_Conv2D_PaddedIndirect : StrEnumAttrCase<"DepthwisePaddedIndirect">;
-def XC_BNN_Conv2D_ValidDirect_Binary : StrEnumAttrCase<"BNNValidDirectBinary">;
+def XC_Conv2D_ValidDirect : I32EnumAttrCase<"ValidDirect", 0>;
+def XC_Conv2D_ValidIndirect : I32EnumAttrCase<"ValidIndirect", 1>;
+def XC_Conv2D_PaddedIndirect : I32EnumAttrCase<"PaddedIndirect", 2>;
+def XC_DW_Conv2D_ValidDirect : I32EnumAttrCase<"DepthwiseValidDirect", 3>;
+def XC_DW_Conv2D_PaddedIndirect : I32EnumAttrCase<"DepthwisePaddedIndirect", 4>;
+def XC_BNN_Conv2D_ValidDirect_Binary
+    : I32EnumAttrCase<"BNNValidDirectBinary", 5>;
 def XC_BNN_Conv2D_ValidIndirect_Binary
-    : StrEnumAttrCase<"BNNValidIndirectBinary">;
-def XC_BNN_Conv2D_ValidDirect_Int8 : StrEnumAttrCase<"BNNValidDirectInt8">;
-def XC_BNN_Conv2D_ValidIndirect_Int8 : StrEnumAttrCase<"BNNValidIndirectInt8">;
+    : I32EnumAttrCase<"BNNValidIndirectBinary", 6>;
+def XC_BNN_Conv2D_ValidDirect_Int8 : I32EnumAttrCase<"BNNValidDirectInt8", 7>;
+def XC_BNN_Conv2D_ValidIndirect_Int8
+    : I32EnumAttrCase<"BNNValidIndirectInt8", 8>;
 
-def XC_Conv2D_TypeAttr : StrEnumAttr<"Conv2DType", "conv2d type enum", [
+def XC_Conv2D_TypeAttr : I32EnumAttr<"Conv2DType", "conv2d type enum", [
   XC_Conv2D_ValidDirect, XC_Conv2D_ValidIndirect, XC_Conv2D_PaddedIndirect,
   XC_DW_Conv2D_ValidDirect, XC_DW_Conv2D_PaddedIndirect,
   XC_BNN_Conv2D_ValidDirect_Binary, XC_BNN_Conv2D_ValidIndirect_Binary,
@@ -148,7 +152,7 @@ def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-def XC_Lookup8Op : XC_Op<"lookup_8", [NoSideEffect]> {
+def XC_LookupOp : XC_Op<"lookup", [NoSideEffect]> {
   let summary = "Lookup table op";
 
   let description = [{Lookup table op.}];

@@ -14,7 +14,10 @@ namespace xcore {
 namespace {
 // Apply generated patterns.
 struct ApplyLoadConstantOpPatterns
-    : public PassWrapper<ApplyLoadConstantOpPatterns, FunctionPass> {
+    : public PassWrapper<ApplyLoadConstantOpPatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ApplyLoadConstantOpPatterns)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
@@ -24,7 +27,7 @@ struct ApplyLoadConstantOpPatterns
   StringRef getDescription() const final {
     return "Apply load constant op optimization patterns.";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 bool shouldBeLoadedExternally(Attribute values) {
@@ -42,23 +45,24 @@ bool shouldBeLoadedExternally(Attribute values) {
 
 #include "Transforms/GeneratedLoadConstantOpPatterns.inc"
 
-void ApplyLoadConstantOpPatterns::runOnFunction() {
-  auto f = getFunction();
+void ApplyLoadConstantOpPatterns::runOnOperation() {
+  func::FuncOp f = getOperation();
   if (flashImageFilenameOption.empty()) {
     f.emitError("Flash image file option should be provided to run this pass!");
     signalPassFailure();
     return;
   }
 
-  OwningRewritePatternList patterns(&getContext());
-  auto func = getFunction();
+  RewritePatternSet patterns(&getContext());
+  func::FuncOp func = getOperation();
   populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
 // Creates an instance of the ApplyLoadConstantOpPatterns pass.
-std::unique_ptr<OperationPass<FuncOp>> createApplyLoadConstantOpPatternsPass() {
+std::unique_ptr<OperationPass<func::FuncOp>>
+createApplyLoadConstantOpPatternsPass() {
   return std::make_unique<ApplyLoadConstantOpPatterns>();
 }
 

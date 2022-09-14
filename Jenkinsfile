@@ -107,7 +107,7 @@ pipeline {
                 sh """. activate ./ai_tools_venv &&
                     pip install ./python/
                     pip install pytest nbmake
-                    pytest --nbmake ./docs/*.ipynb
+                    pytest --nbmake ./docs/notebooks/*.ipynb
                 """
             }
         }

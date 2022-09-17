@@ -48,79 +48,34 @@ jobs:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
         shell: bash
         run: |
+          # make clean
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
-          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
-          make build
-          cd $GITHUB_WORKSPACE
-          make build
+          # cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
+          # make build
+          # cd $GITHUB_WORKSPACE
+          # make build
                     
-          cd $GITHUB_WORKSPACE/experimental/xformer
-          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
+          # cd $GITHUB_WORKSPACE/experimental/xformer
+          # bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
           
-          cd $GITHUB_WORKSPACE/python
-          python setup.py bdist_wheel --plat macosx_10_9_x86_64
+          # cd $GITHUB_WORKSPACE/python
+          # python setup.py bdist_wheel --plat macosx_10_9_x86_64
           
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ runner.os }}-wheels
-          path: python/dist
-
-
-
-  macos-arm-release-wheel:
-    name: Build release wheels for macOS arm64
-    runs-on: macos-11
-    strategy:
-      matrix:
-        python-version: [3.8]
-      fail-fast: false
-    steps:
-      # Caches and restores the bazelisk download directory, the bazel build directory.
-      - name: Cache bazel
-        uses: actions/cache@v2.1.4
-        env:
-          cache-name: bazel-cache
-        with:
-          path: |
-            ~/.cache/bazelisk
-            ~/.cache/bazel
-          key: ${{ runner.os }}-arm-${{ env.cache-name }}
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-          fetch-depth: 0
-          ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Build macOS arm wheels
-        env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
-          CMAKE_ENABLE_DARWIN_TARGET_ARM64: 1
-        shell: bash
+      - name: Test macOS wheels
         run: |
-          python --version
-          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
+          pip install -r ./requirements.txt
+          # cd python/dist
+          # pip install *
+          # cd ../..
+          pip install xmos-ai-tools --upgrade --pre
+          make test NUM_PROCS=2
           
-          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
-          make build
-          cd $GITHUB_WORKSPACE
-          make build
-                    
-          cd $GITHUB_WORKSPACE/experimental/xformer
-          bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
-          
-          cd $GITHUB_WORKSPACE/python
-          python setup.py bdist_wheel --plat-name macosx_11_0_arm64
-          
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ runner.os }}-arm-wheels
-          path: python/dist
-          
-  
+      # - uses: actions/upload-artifact@v2
+      #   with:
+      #     name: ${{ runner.os }}-wheels
+      #     path: python/dist
 
   manylinux-release-wheel:
     name: Build release wheels for manylinux2014
@@ -155,25 +110,33 @@ jobs:
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
-          docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
-            -v ${PWD}:/ai_tools -w /ai_tools \
-            tensorflow/build:2.10-python${{ matrix.python-version }} \
-            .github/scripts/build_linux_wheel.sh
+          # make clean
+          # docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
+          #   -v ${PWD}:/ai_tools -w /ai_tools \
+          #   tensorflow/build:2.10-python${{ matrix.python-version }} \
+          #   .github/scripts/build_linux_wheel.sh
           
-          sudo apt-get -y -qq install patchelf --no-install-recommends
-          python -m pip install auditwheel --no-cache-dir
-          cd python
-          for f in dist/*.whl; do
-            auditwheel repair --plat manylinux2014_x86_64 $f
-          done
+          # sudo apt-get -y -qq install patchelf --no-install-recommends
+          # python -m pip install auditwheel --no-cache-dir
+          # cd python
+          # for f in dist/*.whl; do
+          #   auditwheel repair --plat manylinux2014_x86_64 $f
+          # done
           
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ runner.os }}-wheels
-          # auditwheel creates the output wheel in the wheelhouse folder
-          path: python/wheelhouse
-
-
+      - name: Test linux wheels
+        run: |
+          pip install -r ./requirements.txt
+          # cd python/wheelhouse
+          # pip install *
+          # cd ../..
+          pip install xmos-ai-tools --upgrade --pre
+          make test NUM_PROCS=2
+          
+      # - uses: actions/upload-artifact@v2
+      #   with:
+      #     name: ${{ runner.os }}-wheels
+      #     # auditwheel creates the output wheel in the wheelhouse folder
+      #     path: python/wheelhouse
 
   windows-release-wheel:
     name: Build release wheels for windows
@@ -217,27 +180,37 @@ jobs:
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           python -c "import sys; print(sys.executable)"
           
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          # call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           
-          cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
-          patch -p0 < ../../../patches/tflite-micro.patch
-          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/host
-          mkdir -p build
-          cd build
-          cmake ..
-          cmake --build . -t install --parallel --config Release
+          # cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
+          # patch -p0 < ../../../patches/tflite-micro.patch
+          # cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/host
+          # mkdir -p build
+          # cd build
+          # cmake ..
+          # cmake --build . -t install --parallel --config Release
                               
-          cd %GITHUB_WORKSPACE%/experimental/xformer
-          set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"  
+          # cd %GITHUB_WORKSPACE%/experimental/xformer
+          # set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
+          # bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"  
       - name: Build windows wheels
         shell: cmd
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
         run: |
-          cd python
-          python setup.py bdist_wheel
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ runner.os }}-wheels
-          path: python/dist
+          # cd python
+          # python setup.py bdist_wheel --plat win_amd64
+          
+      - name: Test windows wheels
+        run: |
+          pip install -r ./requirements.txt
+          # cd python/dist
+          # pip install xmos_ai_tools-0.1.1-py3-none-win_amd64.whl
+          # cd ../..
+          pip install xmos-ai-tools --upgrade --pre
+          make test NUM_PROCS=2
+
+      # - uses: actions/upload-artifact@v2
+      #   with:
+      #     name: ${{ runner.os }}-wheels
+      #     path: python/dist

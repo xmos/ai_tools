@@ -86,7 +86,8 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
 }
 
 DLLEXPORT void delete_interpreter(inference_engine *ie) {
-  inference_engine_unload_model(ie);
+  //inference_engine_unload_model(ie);
+  free(ie->memory_primary);
   free(ie->xtflm);
   free(ie);
 }

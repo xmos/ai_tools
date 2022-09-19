@@ -70,7 +70,7 @@ jobs:
           # pip install *
           # cd ../..
           pip install xmos-ai-tools --upgrade --pre
-          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns
+          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 2 --reruns 5 --reruns-delay 1
           
       # - uses: actions/upload-artifact@v2
       #   with:
@@ -130,7 +130,7 @@ jobs:
           # pip install *
           # cd ../..
           pip install xmos-ai-tools --upgrade --pre
-          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns
+          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 2 --reruns 5 --reruns-delay 1
 
           
       # - uses: actions/upload-artifact@v2
@@ -185,7 +185,7 @@ jobs:
         run: |
           pip install -r ./requirements.txt
           pip install xmos-ai-tools --upgrade --pre
-          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns
+          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 2 --reruns 5 --reruns-delay 1
 
 
       # - uses: actions/upload-artifact@v2

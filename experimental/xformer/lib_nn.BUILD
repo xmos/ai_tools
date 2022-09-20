@@ -19,7 +19,6 @@ cc_library(
            glob(["lib_nn/src/cpp/filt2d/geom/*.cpp"]),
     includes = ["../../external/lib_nn/lib_nn/api"],
     local_defines = ["NN_USE_REF"],
-    #copts = ["-DNN_USE_REF -Iexternal/lib_nn/lib_nn/api"],
     deps = [],
     alwayslink = 1,
 )

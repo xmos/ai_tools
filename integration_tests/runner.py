@@ -286,6 +286,6 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                 LOGGER.error("Run #" + str(test) + " failed")
     if testing_on_tflmc_option:
        tflmc_temp_dirname.cleanup()
-    if testing_device_option:
-        ie.close()
+    # Free allocated objects and cleanp
+    ie.close()
     assert num_of_fails == 0

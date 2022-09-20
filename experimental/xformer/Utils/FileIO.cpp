@@ -13,7 +13,7 @@ namespace mlir {
 namespace xcore {
 namespace utils {
 
-LogicalResult writeDataToFile(std::string &filename, std::string &data) {
+LogicalResult writeDataToFile(const std::string &filename, std::string data) {
   auto outputFile = openOutputFile(filename);
   if (!outputFile) {
     llvm::errs() << "Could not open output file: " << filename << "\n";
@@ -24,9 +24,8 @@ LogicalResult writeDataToFile(std::string &filename, std::string &data) {
   return success();
 }
 
-LogicalResult writeFlashImageToFile(std::string &filename,
+LogicalResult writeFlashImageToFile(const std::string &filename,
                                     std::vector<std::vector<char>> tensorsVec) {
-
   // Combine data for the tensors
   std::string data;
   for (auto const &tensor : tensorsVec) {
@@ -69,7 +68,8 @@ LogicalResult getFlatBufferStringFromMLIR(
 }
 
 mlir::OwningOpRef<mlir::ModuleOp>
-readFlatBufferFileToMLIR(std::string &filename, mlir::MLIRContext *context) {
+readFlatBufferFileToMLIR(const std::string &filename,
+                         mlir::MLIRContext *context) {
   std::string errorMessage;
   auto inputFile = openInputFile(filename, &errorMessage);
   if (!inputFile) {

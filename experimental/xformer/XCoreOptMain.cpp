@@ -128,6 +128,14 @@ int main(int argc, char **argv) {
       "xcore-dont-minify",
       cl::desc("Do not strip debug info and minify the model"),
       cl::init(false));
+  static cl::opt<std::string> tflmcPrefixOption(
+      "xcore-naming-prefix",
+      cl::desc("Specify naming prefix(also \"--xp\") for compiled model"
+               "(default = \"model_\")."),
+      cl::init("model_"));
+  static cl::alias aliasTflmcPrefixOption(
+      "xp", cl::desc("Alias for --xcore-naming-prefix"),
+      cl::aliasopt(tflmcPrefixOption));
 
   // Register any command line options.
   registerAsmPrinterCLOptions();
@@ -187,7 +195,7 @@ int main(int argc, char **argv) {
 
   // Disable printing op on diagnostics such as error, remark, warning
   context.printOpOnDiagnostic(false);
-    SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
+  SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
 
   // Run transformations
   if (verifyDiagnosticsEnabled) {
@@ -237,14 +245,17 @@ int main(int argc, char **argv) {
     return failedMessage("Failed to obtain flatbuffer string from MLIR!");
 
   // Invoke tflmc and get info
+  std::stringstream tflmcSourceString, tflmcHeaderString;
   try {
-    tflmc::Compiler compiler(flatBufferString.data(), "prefix");
+    tflmc::Compiler compiler(flatBufferString.data(), tflmcPrefixOption);
     emitRemark(UnknownLoc::get(module.getContext()))
         << "Tensor arena size : " << compiler.getTensorArenaSize();
+    compiler.writeSource(tflmcSourceString);
+    compiler.writeHeader(tflmcHeaderString);
   } catch (const std::exception &e) {
-    std::cerr << e.what() << "\n";
+    return failedMessage(e.what());
   } catch (...) {
-    std::cerr << "Unknown exception\n";
+    return failedMessage("Unknown exception while invoking tflmc!");
   }
 
   // Print output
@@ -260,10 +271,21 @@ int main(int argc, char **argv) {
   }
   // Write modified flatbuffer to output file
   if (!outputFilename.empty()) {
-    std::string outfilename(outputFilename);
+    std::string outFilename(outputFilename);
+    if (failed(xcore::utils::writeDataToFile(outFilename, flatBufferString))) {
+      return failedMessage("Failed to write output tflite file!");
+    }
 
-    if (failed(xcore::utils::writeDataToFile(outfilename, flatBufferString))) {
-      return failedMessage("Failed to write to file!");
+    std::string tflmcSourceFilename(outputFilename + ".cpp");
+    if (failed(xcore::utils::writeDataToFile(tflmcSourceFilename,
+                                             tflmcSourceString.str()))) {
+      return failedMessage("Failed to write output source file!");
+    }
+
+    std::string tflmcHeaderFilename(outputFilename + ".h");
+    if (failed(xcore::utils::writeDataToFile(tflmcHeaderFilename,
+                                             tflmcHeaderString.str()))) {
+      return failedMessage("Failed to write output header file!");
     }
   }
 

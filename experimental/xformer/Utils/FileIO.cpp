@@ -36,11 +36,9 @@ LogicalResult writeFlashImageToFile(std::string &filename,
   return utils::writeDataToFile(filename, data);
 }
 
-LogicalResult
-writeMLIRToFlatBufferFile(std::string &filename, mlir::ModuleOp module,
-                          std::map<std::string, std::string> metadata,
-                          const bool &dontMinify) {
-  std::string serialized_flatbuffer;
+LogicalResult getFlatBufferStringFromMLIR(
+    mlir::ModuleOp module, std::map<std::string, std::string> metadata,
+    const bool &dontMinify, std::string &flatBufferString) {
   std::unique_ptr<tensorflow::OpOrArgNameMapper> op_or_arg_name_mapper;
   if (dontMinify) {
     op_or_arg_name_mapper =
@@ -61,14 +59,13 @@ writeMLIRToFlatBufferFile(std::string &filename, mlir::ModuleOp module,
   options.op_or_arg_name_mapper = op_or_arg_name_mapper.get();
   options.metadata = metadata;
 
-  if (tflite::MlirToFlatBufferTranslateFunction(module, options,
-                                                &serialized_flatbuffer)) {
-    return writeDataToFile(filename, serialized_flatbuffer);
-  } else {
+  if (!tflite::MlirToFlatBufferTranslateFunction(module, options,
+                                                 &flatBufferString)) {
     emitError(UnknownLoc::get(module.getContext()))
-        << "Error converting MLIR to flatbuffer, no file written";
+        << "Error converting MLIR to flatbuffer string!";
     return failure();
   }
+  return success();
 }
 
 mlir::OwningOpRef<mlir::ModuleOp>

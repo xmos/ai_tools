@@ -72,6 +72,9 @@ pipeline {
             steps {
                 // below is how we can activate the tools, NOTE: xTIMEcomposer -> XTC at tools 15.0.5 and later
                 // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv && //
+                sh """. activate ./ai_tools_venv && 
+                      make submodule_update
+                """
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./ai_tools_venv &&
                       cd third_party/lib_tflite_micro &&

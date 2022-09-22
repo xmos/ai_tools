@@ -210,54 +210,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  // Translate MLIR to flatbuffer string
-  // Prepare metadata
-  auto module = mod.get();
-  int requiredThreadCount = 1;
-  if (auto attr = module->getAttr(xcRequiredThreadCountAttrName)) {
-    requiredThreadCount = attr.cast<mlir::IntegerAttr>().getInt();
-  }
-
-  struct shared_config::xcore_metadata cfg;
-  // Store version info
-  cfg.lib_nn_major_version = lib_nn::major_version;
-  cfg.lib_nn_minor_version = lib_nn::minor_version;
-  cfg.lib_nn_patch_version = lib_nn::patch_version;
-  cfg.lib_tflite_micro_major_version = lib_tflite_micro::major_version;
-  cfg.lib_tflite_micro_minor_version = lib_tflite_micro::minor_version;
-  cfg.lib_tflite_micro_patch_version = lib_tflite_micro::patch_version;
-  cfg.xformer_major_version = xformer::majorVersion;
-  cfg.xformer_minor_version = xformer::minorVersion;
-  cfg.xformer_patch_version = xformer::patchVersion;
-  // Store number of threads needed to execute the model
-  cfg.required_thread_count = requiredThreadCount;
-  auto bufferData =
-      std::string((char *)&cfg, sizeof(shared_config::xcore_metadata));
-
-  std::map<std::string, std::string> metadata;
-  auto xcoreConfigMetadata =
-      std::make_pair(shared_config::xcoreMetadataName, bufferData);
-  metadata.insert(xcoreConfigMetadata);
-  std::string flatBufferString;
-
-  if (failed(xcore::utils::getFlatBufferStringFromMLIR(
-          module, metadata, dontMinifyEnabled, flatBufferString)))
-    return failedMessage("Failed to obtain flatbuffer string from MLIR!");
-
-  // Invoke tflmc and get info
-  std::stringstream tflmcSourceString, tflmcHeaderString;
-  try {
-    tflmc::Compiler compiler(flatBufferString.data(), tflmcPrefixOption);
-    emitRemark(UnknownLoc::get(module.getContext()))
-        << "Tensor arena size : " << compiler.getTensorArenaSize();
-    compiler.writeSource(tflmcSourceString);
-    compiler.writeHeader(tflmcHeaderString);
-  } catch (const std::exception &e) {
-    return failedMessage(e.what());
-  } catch (...) {
-    return failedMessage("Unknown exception while invoking tflmc!");
-  }
-
   // Print output
   if (mlirIOEnabled) {
     // Print the MLIR output to stdout
@@ -271,6 +223,54 @@ int main(int argc, char **argv) {
   }
   // Write modified flatbuffer to output file
   if (!outputFilename.empty()) {
+    // Translate MLIR to flatbuffer string
+    // Prepare metadata
+    auto module = mod.get();
+    int requiredThreadCount = 1;
+    if (auto attr = module->getAttr(xcRequiredThreadCountAttrName)) {
+      requiredThreadCount = attr.cast<mlir::IntegerAttr>().getInt();
+    }
+
+    struct shared_config::xcore_metadata cfg;
+    // Store version info
+    cfg.lib_nn_major_version = lib_nn::major_version;
+    cfg.lib_nn_minor_version = lib_nn::minor_version;
+    cfg.lib_nn_patch_version = lib_nn::patch_version;
+    cfg.lib_tflite_micro_major_version = lib_tflite_micro::major_version;
+    cfg.lib_tflite_micro_minor_version = lib_tflite_micro::minor_version;
+    cfg.lib_tflite_micro_patch_version = lib_tflite_micro::patch_version;
+    cfg.xformer_major_version = xformer::majorVersion;
+    cfg.xformer_minor_version = xformer::minorVersion;
+    cfg.xformer_patch_version = xformer::patchVersion;
+    // Store number of threads needed to execute the model
+    cfg.required_thread_count = requiredThreadCount;
+    auto bufferData =
+        std::string((char *)&cfg, sizeof(shared_config::xcore_metadata));
+
+    std::map<std::string, std::string> metadata;
+    auto xcoreConfigMetadata =
+        std::make_pair(shared_config::xcoreMetadataName, bufferData);
+    metadata.insert(xcoreConfigMetadata);
+
+    std::string flatBufferString;
+    if (failed(xcore::utils::getFlatBufferStringFromMLIR(
+            module, metadata, dontMinifyEnabled, flatBufferString)))
+      return failedMessage("Failed to obtain flatbuffer string from MLIR!");
+
+    // Invoke tflmc and get info
+    std::stringstream tflmcSourceString, tflmcHeaderString;
+    try {
+      tflmc::Compiler compiler(flatBufferString.data(), tflmcPrefixOption);
+      emitRemark(UnknownLoc::get(module.getContext()))
+          << "Tensor arena size : " << compiler.getTensorArenaSize();
+      compiler.writeSource(tflmcSourceString);
+      compiler.writeHeader(tflmcHeaderString);
+    } catch (const std::exception &e) {
+      return failedMessage(e.what());
+    } catch (...) {
+      return failedMessage("Unknown exception while invoking tflmc!");
+    }
+
     std::string outFilename(outputFilename);
     if (failed(xcore::utils::writeDataToFile(outFilename, flatBufferString))) {
       return failedMessage("Failed to write output tflite file!");

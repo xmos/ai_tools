@@ -1,7 +1,8 @@
 # We depend on headers from tflite-micro and lib_tflite_micro which
-# have not been explicitly specified
-# The local spawn_strategy symlinks to the local repos so all files are available
-build --spawn_strategy=local
+# have not been explicitly specified as bazel dependencies
+# The standalone spawn_strategy simply symlinks to the local repos,
+# so all files are available
+build --spawn_strategy=standalone
 
 # Needed for tensorflow
 build --experimental_repo_remote_exec

@@ -87,7 +87,7 @@ pipeline {
                       rm -r \$(bazel info repository_cache)
                 """
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel build --client_env=CC=clang //:xcore-opt --verbose_failures
+                      bazel build //:xcore-opt --verbose_failures
                 """
                 sh """. activate ./ai_tools_venv &&
                       (cd python && python3 setup.py bdist_wheel) &&

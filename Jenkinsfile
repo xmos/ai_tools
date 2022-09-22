@@ -84,7 +84,8 @@ pipeline {
                       make build
                 """
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel build --client_env=CC=clang --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
+                      bazel clean --expunge &&
+                      bazel build --client_env=CC=clang //:xcore-opt --verbose_failures
                 """
                 sh """. activate ./ai_tools_venv &&
                       (cd python && python3 setup.py bdist_wheel) &&

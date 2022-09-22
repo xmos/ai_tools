@@ -84,7 +84,7 @@ pipeline {
                       make build
                 """
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      rm -r $(bazel info repository_cache)
+                      rm -r \$(bazel info repository_cache)
                 """
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
                       bazel build --client_env=CC=clang //:xcore-opt --verbose_failures

@@ -13,8 +13,6 @@ cc_library(
 filegroup(
     name = "XTFLIB_SOURCES",
     srcs = [
-        #"lib_tflite_micro/src/inference_engine.cc",
-        #"lib_tflite_micro/src/thread_call_host.c",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_dispatcher.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_error_reporter.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_interpreter.cc",
@@ -37,6 +35,3 @@ filegroup(
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_strided_slice.cc",
     ],
 )
-
-# link error on Linux
-#list(APPEND ALL_SOURCES  "${TOP_DIR}/lib_tflite_micro/submodules/flatbuffers/src/util.cpp")

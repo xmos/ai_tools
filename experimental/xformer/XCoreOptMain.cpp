@@ -254,8 +254,9 @@ int main(int argc, char **argv) {
 
     std::string flatBufferString;
     if (failed(xcore::utils::getFlatBufferStringFromMLIR(
-            module, metadata, dontMinifyEnabled, flatBufferString)))
+            module, metadata, dontMinifyEnabled, flatBufferString))) {
       return failedMessage("Failed to obtain flatbuffer string from MLIR!");
+    }
 
     // Invoke tflmc and get info
     std::stringstream tflmcSourceString, tflmcHeaderString;

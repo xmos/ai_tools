@@ -196,11 +196,8 @@ cc_library(
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:QuantOps",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-        "@lib_nn//:libnn_lib",
+        "@lib_nn//:nn_lib",
     ],
-    copts = ["-DNN_USE_REF -Iexternal/lib_nn/lib_nn/api"],
 ) 
 
 cc_library(
@@ -223,6 +220,7 @@ cc_binary(
     deps = [
         ":xcore_passes",
         "@lib_tflite_micro//:shared_headers",
+        "@lib_tflmc//:tflmc_lib",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:QuantOps",

@@ -11,18 +11,18 @@ namespace mlir {
 namespace xcore {
 namespace utils {
 
-LogicalResult writeDataToFile(std::string &filename, std::string &data);
+LogicalResult writeDataToFile(const std::string &filename, std::string data);
 
-LogicalResult writeFlashImageToFile(std::string &filename,
+LogicalResult writeFlashImageToFile(const std::string &filename,
                                     std::vector<std::vector<char>> tensorsVec);
 
-LogicalResult
-writeMLIRToFlatBufferFile(std::string &filename, mlir::ModuleOp module,
-                          std::map<std::string, std::string> metadata,
-                          const bool &dontMinify);
+LogicalResult getFlatBufferStringFromMLIR(
+    mlir::ModuleOp module, std::map<std::string, std::string> metadata,
+    const bool &dontMinify, std::string &flatBufferString);
 
 mlir::OwningOpRef<mlir::ModuleOp>
-readFlatBufferFileToMLIR(std::string &filename, mlir::MLIRContext *context);
+readFlatBufferFileToMLIR(const std::string &filename,
+                         mlir::MLIRContext *context);
 
 } // namespace utils
 } // namespace xcore

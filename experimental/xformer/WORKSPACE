@@ -71,6 +71,19 @@ new_local_repository(
     build_file = "lib_tflite_micro.BUILD",
 )
 
+########################### tflite_micro_compiler ##############################
+new_local_repository(
+    name = "lib_tflmc",
+    path = "../../third_party/lib_tflite_micro/tflite_micro_compiler",
+    build_file = "lib_tflmc.BUILD",
+)
+
+############################## tflite_micro ####################################
+local_repository(
+    name = "tflite_micro",
+    path = "../../third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro",
+)
+
 ########################### larq compute engine ################################
 http_archive(
     name = "lce",

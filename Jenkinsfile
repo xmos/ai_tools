@@ -81,7 +81,7 @@ pipeline {
                       make build
                 """
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel build --client_env=CC=clang --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
+                      bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
                 """
                 sh """. activate ./ai_tools_venv &&
                       (cd python && python3 setup.py bdist_wheel) &&
@@ -94,7 +94,7 @@ pipeline {
             steps {
                 // xformer2 unit tests
         sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel test --client_env=CC=clang --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures
+                      bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures
                 """
         // xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&

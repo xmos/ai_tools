@@ -17,6 +17,9 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+// TODO: dpk
+// refactor tflmc to have include folder
+#include "src/Compiler.h"
 
 using namespace llvm;
 using namespace mlir;
@@ -125,6 +128,14 @@ int main(int argc, char **argv) {
       "xcore-dont-minify",
       cl::desc("Do not strip debug info and minify the model"),
       cl::init(false));
+  static cl::opt<std::string> tflmcPrefixOption(
+      "xcore-naming-prefix",
+      cl::desc("Specify naming prefix(also \"--xp\") for compiled model"
+               "(default = \"model_\")."),
+      cl::init("model_"));
+  static cl::alias aliasTflmcPrefixOption(
+      "xp", cl::desc("Alias for --xcore-naming-prefix"),
+      cl::aliasopt(tflmcPrefixOption));
 
   // Register any command line options.
   registerAsmPrinterCLOptions();
@@ -184,6 +195,7 @@ int main(int argc, char **argv) {
 
   // Disable printing op on diagnostics such as error, remark, warning
   context.printOpOnDiagnostic(false);
+  SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
 
   // Run transformations
   if (verifyDiagnosticsEnabled) {
@@ -193,7 +205,6 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else {
-    SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
     if (failed(runPassPipeline(passPipeline, mod, &context))) {
       return 1;
     }
@@ -212,8 +223,7 @@ int main(int argc, char **argv) {
   }
   // Write modified flatbuffer to output file
   if (!outputFilename.empty()) {
-    std::string outfilename(outputFilename);
-
+    // Translate MLIR to flatbuffer string
     // Prepare metadata
     auto module = mod.get();
     int requiredThreadCount = 1;
@@ -241,9 +251,43 @@ int main(int argc, char **argv) {
     auto xcoreConfigMetadata =
         std::make_pair(shared_config::xcoreMetadataName, bufferData);
     metadata.insert(xcoreConfigMetadata);
-    if (failed(xcore::utils::writeMLIRToFlatBufferFile(
-            outfilename, module, metadata, dontMinifyEnabled)))
-      return 1;
+
+    std::string flatBufferString;
+    if (failed(xcore::utils::getFlatBufferStringFromMLIR(
+            module, metadata, dontMinifyEnabled, flatBufferString))) {
+      return failedMessage("Failed to obtain flatbuffer string from MLIR!");
+    }
+
+    // Invoke tflmc and get info
+    std::stringstream tflmcSourceString, tflmcHeaderString;
+    try {
+      tflmc::Compiler compiler(flatBufferString.data(), tflmcPrefixOption);
+      emitRemark(UnknownLoc::get(module.getContext()))
+          << "Tensor arena size : " << compiler.getTensorArenaSize();
+      compiler.writeSource(tflmcSourceString);
+      compiler.writeHeader(tflmcHeaderString);
+    } catch (const std::exception &e) {
+      return failedMessage(e.what());
+    } catch (...) {
+      return failedMessage("Unknown exception while invoking tflmc!");
+    }
+
+    std::string outFilename(outputFilename);
+    if (failed(xcore::utils::writeDataToFile(outFilename, flatBufferString))) {
+      return failedMessage("Failed to write output tflite file!");
+    }
+
+    std::string tflmcSourceFilename(outputFilename + ".cpp");
+    if (failed(xcore::utils::writeDataToFile(tflmcSourceFilename,
+                                             tflmcSourceString.str()))) {
+      return failedMessage("Failed to write output source file!");
+    }
+
+    std::string tflmcHeaderFilename(outputFilename + ".h");
+    if (failed(xcore::utils::writeDataToFile(tflmcHeaderFilename,
+                                             tflmcHeaderString.str()))) {
+      return failedMessage("Failed to write output header file!");
+    }
   }
 
   return 0;

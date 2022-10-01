@@ -137,6 +137,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     testing_binary_models_option = request.config.getoption("bnn")
     testing_device_option = request.config.getoption("device")
     testing_on_tflmc_option = request.config.getoption("tflmc")
+    number_of_samples_option = request.config.getoption("number_of_samples")
+    testing_detection_postprocess_option = True if "detection_postprocess" in request.node.name else False
 
     model_path = pathlib.Path(filename).resolve()
     if not model_path.exists():
@@ -164,9 +166,12 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         # interpreter = tf.lite.Interpreter(
         #     model_content=model_content)
         interpreter.allocate_tensors()
-        input_tensor_details = interpreter.get_input_details()[0]
-        input_tensor_type = input_tensor_details["dtype"]
-        input_tensor_shape = input_tensor_details["shape"]
+        num_of_inputs = len(interpreter.get_input_details())
+        input_tensor_type = []
+        input_tensor_shape = []
+        for i in range(num_of_inputs):
+            input_tensor_type.append(interpreter.get_input_details()[i]["dtype"])
+            input_tensor_shape.append(interpreter.get_input_details()[i]["shape"])
 
     if testing_on_tflmc_option:
         LOGGER.info("Creating tflmc model exe...")
@@ -174,6 +179,10 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         tflmc_model_exe = get_tflmc_model_exe(model_content, tflmc_temp_dirname.name)
     else:    
         LOGGER.info("Invoking xformer to get xformed model...")
+        if testing_detection_postprocess_option:
+            LOGGER.info("Detection postprocess special case - loading int8 model for xcore...")
+            with open(model_path.parent.joinpath("test_dtp.xc"), "rb") as fd:
+                model_content = fd.read()
         xformed_model = get_xformed_model(model_content)
         LOGGER.info("Creating TFLM XCore interpreter...")
         if testing_device_option:
@@ -185,24 +194,21 @@ def test_model(request: FixtureRequest, filename: str) -> None:
 
     # Run tests
     num_of_fails = 0
-    number_of_samples = request.config.getoption("number_of_samples")
-    for test in range(0, int(number_of_samples)):
+    for test in range(0, int(number_of_samples_option)):
         LOGGER.info("Run #" + str(test))
-        LOGGER.info("Creating random input...")
-        # input_tensor = np.array(
-        #     np.random.uniform(-1, 1, input_tensor_shape), dtype=input_tensor_type
-        # )
-        input_tensor = np.array(
-            100 * np.random.random_sample(input_tensor_shape), dtype=input_tensor_type
-        )
-        # input_tensor = np.array(
-        #    100 * np.ones(input_tensor_shape), dtype=input_tensor_type
-        # )
-        #print(input_tensor)
-        #np.save("in" + str(test) + ".npy", input_tensor)
-        # input_tensor = np.load("in3.npy")
-        # LOGGER.info(input_tensor)
-        # LOGGER.info(input_tensor.dtype)
+
+        input_tensor = []
+        if testing_detection_postprocess_option:
+            LOGGER.info("Detection postprocess special case - loading input from files...")
+            in1 = np.load(model_path.parent.joinpath("in1.npy"))
+            input_tensor.append(in1)
+            in2 = np.load(model_path.parent.joinpath("in2.npy"))
+            input_tensor.append(in2)
+        else:
+            LOGGER.info("Creating random input...")
+            for i in range(num_of_inputs):
+                input_tensor.append(np.array(256 * np.random.random_sample(input_tensor_shape[i]) - 127, dtype=input_tensor_type[i]))
+                #input_tensor.append(np.array(100 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
 
         if testing_binary_models_option:
             LOGGER.info("Invoking LCE interpreter...")
@@ -214,7 +220,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             output_scales = interpreter.output_scales
             output_zero_points = interpreter.output_zero_points
         else:
-            interpreter.set_tensor(input_tensor_details["index"], input_tensor)
+            for i in range(num_of_inputs):
+                interpreter.set_tensor(interpreter.get_input_details()[i]["index"], input_tensor[i])
             LOGGER.info("Invoking TFLite interpreter...")
             interpreter.invoke()
             num_of_outputs = len(interpreter.get_output_details())
@@ -236,7 +243,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             xformer_outputs = get_tflmc_outputs(tflmc_model_exe, input_tensor, outputs)
         else:
             LOGGER.info("Invoking XCORE interpreter...")
-            ie.set_tensor(0, input_tensor)
+            for i in range(num_of_inputs):
+                ie.set_tensor(i, input_tensor[i])
             ie.invoke()
             xformer_outputs = []
             for i in range(num_of_outputs):

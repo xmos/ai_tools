@@ -154,8 +154,12 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             model_content, num_threads=1, use_reference_bconv=True
         )
         # interpreter = lce.testing.Interpreter(model_content, num_threads=1)
-        input_tensor_type = interpreter.input_types[0]
-        input_tensor_shape = interpreter.input_shapes[0]
+        num_of_inputs = len(interpreter.input_types)
+        input_tensor_type = []
+        input_tensor_shape = []
+        for i in range(num_of_inputs):
+            input_tensor_type.append(interpreter.input_types[i])
+            input_tensor_shape.append(interpreter.input_shapes[i])
     else:
         LOGGER.info("Creating TFLite interpreter...")
         interpreter = tf.lite.Interpreter(
@@ -254,7 +258,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         for i in range(num_of_outputs):
             LOGGER.info("Comparing output number " + str(i) + "...")
             #if quantized output, we dequantize it before comparing
-            if len(output_scales[i]) > 0:
+            if output_scales[i] and len(output_scales[i]) > 0:
                 outputs[i] = dequantize(
                     outputs[i], output_scales[i], output_zero_points[i]
                 )

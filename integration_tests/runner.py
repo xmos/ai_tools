@@ -258,7 +258,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         for i in range(num_of_outputs):
             LOGGER.info("Comparing output number " + str(i) + "...")
             #if quantized output, we dequantize it before comparing
-            if output_scales[i] and len(output_scales[i]) > 0:
+            if output_scales[i]:
                 outputs[i] = dequantize(
                     outputs[i], output_scales[i], output_zero_points[i]
                 )

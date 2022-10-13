@@ -376,8 +376,9 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectInt8Params(
       args.clampMin, args.clampMax, args.outputDepth);
   auto accuOverlaps = nn::OT_int8_clamped::get_accumulator_overlaps(
       receptiveVolume, args.outputDepth, rw);
-  nn::QuantisationParams qp =
-      nn::OutputTransformFnInt8::quantise_activation(mulAndBiases);
+  auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
+  nn::OutputTransformFnInt8_Group::QuantisationParams qp =
+      quantizer.quantise_activation(mulAndBiases, false);
 
   auto serialisedOffsetsMultipliersAndBiases =
       nn::OutputTransformFn::serialise_memory(accuOverlaps, qp.multipliers,
@@ -430,8 +431,9 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
       args.clampMin, args.clampMax, args.outputDepth);
   auto accuOverlaps = nn::OT_int8_clamped::get_accumulator_overlaps(
       receptiveVolume, args.outputDepth, rw);
-  nn::QuantisationParams qp =
-      nn::OutputTransformFnInt8::quantise_activation(mulAndBiases);
+  auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
+  nn::OutputTransformFnInt8_Group::QuantisationParams qp =
+      quantizer.quantise_activation(mulAndBiases, false);
 
   auto serialisedOffsetsMultipliersAndBiases =
       nn::OutputTransformFn::serialise_memory(accuOverlaps, qp.multipliers,

@@ -244,15 +244,16 @@ LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
 LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
     const TFLConvArgs &args, std::string &otStr,
     std::vector<int16_t> &mulsBiasesData) const {
-  nn::MulsAndBias mulsAndBiases =
+  nn::MulsAndBias mulAndBiases =
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
           args.effectiveMultiplier, args.bias, args.filter, args.inputZeroPoint,
           args.outputZeroPoint, args.outputDepth);
-  nn::QuantisationParams qp =
-      nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
+  auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
+  nn::OutputTransformFnInt8_Group::QuantisationParams qp =
+      quantizer.quantise_activation(mulAndBiases, false);
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
-      mulsAndBiases, qp, args.quantErrorFullCheckEnabled);
+      mulAndBiases, qp, args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
     std::stringstream msg;
     msg << "Quantization error of " << quantError
@@ -421,15 +422,16 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
     std::vector<int16_t> &mulsBiasesData) const {
   std::array<int, 4> filterShape = {1, args.filterHeight, args.filterWidth,
                                     args.inputDepth};
-  nn::MulsAndBias mulsAndBiases =
+  nn::MulsAndBias mulAndBiases =
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
           args.effectiveMultiplier, args.bias, args.filter, filterShape,
           args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
-  nn::QuantisationParams qp =
-      nn::OutputTransformFnInt8::quantise_activation(mulsAndBiases);
+  auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
+  nn::OutputTransformFnInt8_Group::QuantisationParams qp =
+      quantizer.quantise_activation(mulAndBiases, false);
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
-      mulsAndBiases, qp, args.quantErrorFullCheckEnabled);
+      mulAndBiases, qp, args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
     std::stringstream msg;
     msg << "Quantization error of " << quantError

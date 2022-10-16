@@ -51,8 +51,7 @@ struct ReplaceFCWithConv2DPattern
       return failure();
     }
 
-    // TODO: What to do if no bias?
-    // Bias type must be QI32
+    // If bias exists, it must be QI32
     if (!fcOp.bias().getType().isa<NoneType>()) {
       auto fcBiasElementType =
           fcOp.bias().getType().cast<ShapedType>().getElementType();

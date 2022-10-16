@@ -53,13 +53,16 @@ struct ReplaceFCWithConv2DPattern
 
     // TODO: What to do if no bias?
     // Bias type must be QI32
-    auto fcBiasElementType =
-        fcOp.bias().getType().cast<ShapedType>().getElementType();
-    if (!(fcBiasElementType.isa<quant::QuantizedType>() &&
-          fcBiasElementType.cast<quant::QuantizedType>().isSigned() &&
-          fcBiasElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 32)) {
-      return failure();
+    if (!fcOp.bias().getType().isa<NoneType>()) {
+      auto fcBiasElementType =
+          fcOp.bias().getType().cast<ShapedType>().getElementType();
+
+      if (!(fcBiasElementType.isa<quant::QuantizedType>() &&
+            fcBiasElementType.cast<quant::QuantizedType>().isSigned() &&
+            fcBiasElementType.cast<quant::QuantizedType>()
+                    .getStorageTypeIntegralWidth() == 32)) {
+        return failure();
+      }
     }
 
     if (fcOp.weights_format() != "DEFAULT") {

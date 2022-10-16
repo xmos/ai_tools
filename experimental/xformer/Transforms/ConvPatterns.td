@@ -24,7 +24,7 @@ def HasEqualChannels
                        "$1.getType().cast<ShapedType>().getDimSize(3)">>;
 
 // TFL_Conv2D() -> XC_FakeConv2D()
-def : Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, TensorOf<[I32,QI32]>:$b, $dh, $dw, $faf, $p, $sh, $sw),
+def : Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, $p, $sh, $sw),
           (XC_FakeConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, (CreateNoneValue $input), $sh, $sw),[
               (HasValidDepth $input),
               (HasValidDepth $output),

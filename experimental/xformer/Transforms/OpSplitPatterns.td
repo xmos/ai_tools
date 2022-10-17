@@ -31,19 +31,18 @@ def createOpSplitBlock : NativeCodeCall<
 //              (getI32IntegerAttrZero), (getMemcpyFnParam $conv_out)), 
 //             [(HasFollowingReshape $conv_out)]>;
 
-def : Pat<( TFL_Conv2DOp:$conv_out $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
-            //  (createOpSplitBlock $conv_out,$conv_out, $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
-             (XC_StridedSliceOp (TFL_QuantizeOp (TFL_Conv2DOp $input, $weights, $muls, $kt, $mp, $aggp, $padding,
-              $stride_h, $stride_w), (getI32IntegerAttrZero)), (getI32IntegerAttrZero),
-             (getI32IntegerAttrZero), (getMemcpyFnParam $conv_out)), 
-            [(HasFollowingReshape $conv_out)]>;
-
 // def : Pat<( TFL_Conv2DOp:$conv_out $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
 //             //  (createOpSplitBlock $conv_out,$conv_out, $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
-//              (XC_DummyStridedSliceOp (TFL_Conv2DOp $input, $weights, $muls, $kt, $mp, $aggp, $padding,
-//               $stride_h, $stride_w), (getI32IntegerAttrZero),
+//              (XC_StridedSliceOp (TFL_QuantizeOp (TFL_Conv2DOp $input, $weights, $muls, $kt, $mp, $aggp, $padding,
+//               $stride_h, $stride_w), (getI32IntegerAttrZero)), (getI32IntegerAttrZero),
 //              (getI32IntegerAttrZero), (getMemcpyFnParam $conv_out)), 
 //             [(HasFollowingReshape $conv_out)]>;
+
+def : Pat<( TFL_Conv2DOp:$conv_out $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
+             (XC_DummyStridedSliceOp (TFL_Conv2DOp $input, $weights, $muls, $kt, $mp, $aggp, $padding,
+              $stride_h, $stride_w), (getI32IntegerAttrZero),
+             (getI32IntegerAttrZero), (getMemcpyFnParam $conv_out)), 
+            [(HasFollowingReshape $conv_out)]>;
 
 // def : Pat<( TFL_Conv2DOp:$conv_out $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),
 //             //  (createOpSplitBlock $conv_out,$conv_out, $input, $weights, $muls, $kt, $mp, $aggp, $padding, $stride_h, $stride_w),

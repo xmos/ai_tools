@@ -23,7 +23,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createApplyTFLPatternsPass());
   // XC passes
   pm.addPass(createInsertStridedSlicePatternsPass());
-  // pm.addPass(createInsertConcatPass());
+  pm.addPass(createInsertConcatPass());
   pm.addPass(createReplaceStridedSlicePass());
   pm.addPass(createReplaceConv2DPass());
   pm.addPass(createReplaceConcatPass());

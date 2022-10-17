@@ -11,12 +11,15 @@
 #include "lib_tflite_micro/api/version.h"
 #include "lib_tflite_micro/api/xcore_shared_config.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+// TODO: dpk
+// refactor tflmc to have include folder
+#include "src/Compiler.h"
 
 using namespace llvm;
 using namespace mlir;
@@ -67,11 +70,20 @@ cl::opt<bool> convForceErrorCheckOption(
              "calculating channel quantization error."),
     cl::init(false));
 
+cl::opt<unsigned> convMultiplierFactorOption(
+    "xcore-conv-multiplier-factor",
+    cl::desc("If the dynamic range for multipliers is too large, quantization "
+             "error increases. This option is a temporary solution to set all "
+             "the multipliers to be clamped to a specified multiple of the "
+             "minimum multiplier."
+             "(default = UINT32_MAX)."),
+    cl::init(UINT32_MAX));
+
 } // namespace xcore
 } // namespace mlir
 
 LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
-                              const OwningModuleRef &mod,
+                              const OwningOpRef<ModuleOp> &mod,
                               MLIRContext *context) {
   PassManager pm(context, mlir::OpPassManager::Nesting::Implicit);
   applyPassManagerCLOptions(pm);
@@ -116,6 +128,17 @@ int main(int argc, char **argv) {
       "xcore-dont-minify",
       cl::desc("Do not strip debug info and minify the model"),
       cl::init(false));
+  static cl::opt<std::string> tflmcPrefixOption(
+      "xcore-naming-prefix",
+      cl::desc("Specify naming prefix(also \"--xp\") for compiled model"
+               "(default = \"model_\")."),
+      cl::init("model_"));
+  static cl::alias aliasTflmcPrefixOption(
+      "xp", cl::desc("Alias for --xcore-naming-prefix"),
+      cl::aliasopt(tflmcPrefixOption));
+  static cl::opt<bool> tflmcPrintEnabled(
+      "xcore-tflmc-print", cl::desc("Print out memory allocation plan"),
+      cl::init(false));
 
   // Register any command line options.
   registerAsmPrinterCLOptions();
@@ -127,7 +150,7 @@ int main(int argc, char **argv) {
 
   // Initialize dialects.
   MLIRContext context;
-  context.loadDialect<StandardOpsDialect>();
+  context.loadDialect<func::FuncDialect>();
   context.loadDialect<arith::ArithmeticDialect>();
   context.loadDialect<quant::QuantizationDialect>();
   context.loadDialect<TFL::TensorFlowLiteDialect>();
@@ -154,7 +177,7 @@ int main(int argc, char **argv) {
   }
 
   // Parse input.
-  OwningModuleRef mod;
+  OwningOpRef<ModuleOp> mod;
   SourceMgr sourceMgr;
   if (mlirIOEnabled) {
     // Parse the MLIR input file.
@@ -164,7 +187,7 @@ int main(int argc, char **argv) {
       return failedMessage(errorMessage);
     }
     sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
-    mod = parseSourceFile(sourceMgr, &context);
+    mod = parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
   } else {
     // Read flatbuffer and convert to serialized MLIR string.
     mod = xcore::utils::readFlatBufferFileToMLIR(inputFilename, &context);
@@ -172,6 +195,10 @@ int main(int argc, char **argv) {
       return failedMessage("Unable to read flatbuffer file!");
     }
   }
+
+  // Disable printing op on diagnostics such as error, remark, warning
+  context.printOpOnDiagnostic(false);
+  SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
 
   // Run transformations
   if (verifyDiagnosticsEnabled) {
@@ -199,13 +226,13 @@ int main(int argc, char **argv) {
   }
   // Write modified flatbuffer to output file
   if (!outputFilename.empty()) {
-    std::string outfilename(outputFilename);
-
+    // Translate MLIR to flatbuffer string
     // Prepare metadata
     auto module = mod.get();
-    int requiredThreadCount = module->getAttr(xcRequiredThreadCountAttrName)
-                                  .cast<mlir::IntegerAttr>()
-                                  .getInt();
+    int requiredThreadCount = 1;
+    if (auto attr = module->getAttr(xcRequiredThreadCountAttrName)) {
+      requiredThreadCount = attr.cast<mlir::IntegerAttr>().getInt();
+    }
 
     struct shared_config::xcore_metadata cfg;
     // Store version info
@@ -227,9 +254,45 @@ int main(int argc, char **argv) {
     auto xcoreConfigMetadata =
         std::make_pair(shared_config::xcoreMetadataName, bufferData);
     metadata.insert(xcoreConfigMetadata);
-    if (failed(xcore::utils::writeMLIRToFlatBufferFile(
-            outfilename, module, metadata, dontMinifyEnabled)))
-      return 1;
+
+    std::string flatBufferString;
+    if (failed(xcore::utils::getFlatBufferStringFromMLIR(
+            module, metadata, dontMinifyEnabled, flatBufferString))) {
+      return failedMessage("Failed to obtain flatbuffer string from MLIR!");
+    }
+
+    // Write tflite file
+    std::string outFilename(outputFilename);
+    if (failed(xcore::utils::writeDataToFile(outFilename, flatBufferString))) {
+      return failedMessage("Failed to write output tflite file!");
+    }
+
+    // Invoke tflmc and get info
+    std::stringstream tflmcSourceString, tflmcHeaderString;
+    try {
+      tflmc::Compiler compiler(flatBufferString.data(), tflmcPrefixOption,
+                               tflmcPrintEnabled);
+      emitRemark(UnknownLoc::get(module.getContext()))
+          << "Tensor arena size : " << compiler.getTensorArenaSize();
+      compiler.writeSource(tflmcSourceString);
+      compiler.writeHeader(tflmcHeaderString);
+    } catch (const std::exception &e) {
+      return failedMessage(e.what());
+    } catch (...) {
+      return failedMessage("Unknown exception while invoking tflmc!");
+    }
+
+    std::string tflmcSourceFilename(outputFilename + ".cpp");
+    if (failed(xcore::utils::writeDataToFile(tflmcSourceFilename,
+                                             tflmcSourceString.str()))) {
+      return failedMessage("Failed to write output source file!");
+    }
+
+    std::string tflmcHeaderFilename(outputFilename + ".h");
+    if (failed(xcore::utils::writeDataToFile(tflmcHeaderFilename,
+                                             tflmcHeaderString.str()))) {
+      return failedMessage("Failed to write output header file!");
+    }
   }
 
   return 0;

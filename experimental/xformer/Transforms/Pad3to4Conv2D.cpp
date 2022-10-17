@@ -10,7 +10,10 @@ namespace xcore {
 
 namespace {
 // Add padding before TFL Conv2D to align input depth from three to four.
-struct Pad3to4Conv2D : public PassWrapper<Pad3to4Conv2D, FunctionPass> {
+struct Pad3to4Conv2D
+    : public PassWrapper<Pad3to4Conv2D, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(Pad3to4Conv2D)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
@@ -19,7 +22,7 @@ struct Pad3to4Conv2D : public PassWrapper<Pad3to4Conv2D, FunctionPass> {
     return "Add padding before TFL Conv2D to align input depth from three to "
            "four.";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 struct Pad3to4Conv2DPattern : public OpRewritePattern<TFL::Conv2DOp> {
@@ -151,18 +154,18 @@ struct Pad3to4Conv2DPattern : public OpRewritePattern<TFL::Conv2DOp> {
   }
 };
 
-void Pad3to4Conv2D::runOnFunction() {
+void Pad3to4Conv2D::runOnOperation() {
   auto *ctx = &getContext();
-  auto func = getFunction();
+  func::FuncOp func = getOperation();
 
-  OwningRewritePatternList patterns(ctx);
+  RewritePatternSet patterns(ctx);
   patterns.insert<Pad3to4Conv2DPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
 // Creates an instance of the Pad3to4Conv2D pass.
-std::unique_ptr<OperationPass<FuncOp>> createPad3to4Conv2DPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createPad3to4Conv2DPass() {
   return std::make_unique<Pad3to4Conv2D>();
 }
 

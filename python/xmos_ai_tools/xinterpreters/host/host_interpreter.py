@@ -2,12 +2,15 @@
 # XMOS Public License: Version 1
 import sys
 import ctypes
+from typing import Optional, Dict, Any, List
+
 import numpy as np
-from enum import Enum
 from pathlib import Path
 
+from numpy import ndarray
+
 from xmos_ai_tools.xinterpreters.base.base_interpreter import (
-    xcore_tflm_base_interpreter,
+    xcore_tflm_base_interpreter, XTFLMInterpreterStatus,
 )
 
 # DLL path for different platforms
@@ -34,20 +37,12 @@ from xmos_ai_tools.xinterpreters.host.exceptions import (
 
 MAX_TENSOR_ARENA_SIZE = 10000000
 
-
-class XTFLMInterpreterStatus(Enum):
-    OK = 0
-    ERROR = 1
-
-
 class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
     """! The xcore interpreters host class.
     The interpreter to be used on a host, inherits from base interpreter.
     """
 
-    def __init__(
-        self, max_tensor_arena_size=MAX_TENSOR_ARENA_SIZE, max_model_size=50000000
-    ) -> None:
+    def __init__(self, max_tensor_arena_size: int = MAX_TENSOR_ARENA_SIZE) -> None:
         """! Host interpreter initializer.
         Sets up functions from the cdll, and calls to cdll function to create a new interpreter.
         """
@@ -109,28 +104,35 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         ]
 
         self._max_tensor_arena_size = max_tensor_arena_size
-        self._op_states = []
-
-        self.obj = lib.new_interpreter(max_model_size)
 
         super().__init__()
 
-    def __enter__(self) -> "xcore_tflm_host_interpreter":
+    def __enter__(self) -> 'xcore_tflm_host_interpreter':
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         """! Exit calls close function to delete interpreter"""
         self.close()
 
-    def initialise_interpreter(self, model_index=0) -> None:
+    def initialise_interpreter(self, model_index: int = 0) -> None:
         """! Interpreter initialiser, initialised interpreter with model and parameters (optional)
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
+        max_model_size = 50000000
+        self.obj = lib.new_interpreter(max_model_size)
         currentModel = None
+
         for model in self.models:
             if model.tile == model_index:
                 currentModel = model
+
+        if currentModel is None:
+            print(f"No model at index {model_index} found.", sys.stderr)
+            raise IndexError
+
+        assert currentModel.model_content is not None
+
         status = lib.initialize(
             self.obj,
             currentModel.model_content,
@@ -141,25 +143,23 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         if XTFLMInterpreterStatus(status) is XTFLMInterpreterStatus.ERROR:
             raise RuntimeError("Unable to initialize interpreter")
 
-    def set_tensor(self, data, tensor_index=0, model_index=0) -> None:
+    def set_tensor(self, tensor_index: int, value: ndarray, model_index=0) -> None:
         """! Write the input tensor of a model.
-        @param data  The blob of data to set the tensor to.
+        @param value  The blob of data to set the tensor to.
         @param tensor_index  The index of input tensor to target. Defaults to 0.
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
-        if isinstance(data, np.ndarray):
-            data = data.tobytes()
-        l = len(data)
-        l2 = self.get_input_tensor_size(tensor_index)
-        if l != l2:
-            print("ERROR: mismatching size in set_input_tensor %d vs %d" % (l, l2))
+        val = value.tobytes()
 
-        self._check_status(lib.set_input_tensor(self.obj, tensor_index, data, l))
+        length = len(val)
+        length2 = self.get_input_tensor_size(tensor_index)
+        if length != length2:
+            print("ERROR: mismatching size in set_input_tensor %d vs %d" % (length, length2))
 
-    def get_tensor(
-        self, tensor_index=0, model_index=0, tensor=None
-    ) -> "Output tensor data":
+        self._check_status(lib.set_input_tensor(self.obj, tensor_index, val, length))
+
+    def get_tensor(self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None) -> ndarray:
         """! Read data from the output tensor of a model.
         @param tensor_index  The index of output tensor to target.
         @param model_index  The model to target, for interpreters that support multiple models
@@ -167,23 +167,33 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         @param tensor  Tensor of correct shape to write into (optional).
         @return  The data that was stored in the output tensor.
         """
-        l = self.get_output_tensor_size(tensor_index)
+
+        count: Optional[int]
+        tensor_details: Optional[Dict[str, Any]]
+        count, tensor_details = next(
+            filter(lambda x: x[1]["index"] == tensor_index, enumerate(self.get_output_details())),
+            (None, None)
+        )
+
+        if count is None or tensor_details is None:
+            print(f"No tensor at index {tensor_index} found.", sys.stderr)
+            raise IndexError
+
+        length = self.get_tensor_size(tensor_index)
         if tensor is None:
-            tensor_details = self.get_output_details(model_index)[tensor_index]
             tensor = np.zeros(tensor_details["shape"], dtype=tensor_details["dtype"])
         else:
-            l2 = len(tensor.tobytes())
-            if l2 != l:
-                print("ERROR: mismatching size in get_output_tensor %d vs %d" % (l, l2))
+            length = len(tensor.tobytes())
+            if length != length:
+                print("ERROR: mismatching size in get_output_tensor %d vs %d" % (length, length))
 
         data_ptr = tensor.ctypes.data_as(ctypes.c_void_p)
-        self._check_status(lib.get_output_tensor(self.obj, tensor_index, data_ptr, l))
+        self._check_status(lib.get_output_tensor(self.obj, count, data_ptr, length))
         return tensor
 
-    def get_input_tensor(self, input_index=0, model_index=0) -> "Input tensor data":
+    def get_input_tensor(self, input_index: int = 0, model_index: int = 0) -> ndarray:
         """! Read the data in the input tensor of a model.
         @param input_index  The index of input tensor to target.
-        @param tensor Tensor of correct shape to write into (optional).
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         @return The data that was stored in the output tensor.
@@ -196,7 +206,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         self._check_status(lib.get_input_tensor(self.obj, input_index, data_ptr, l))
         return tensor
 
-    def invoke(self) -> None:
+    def invoke(self, model_index: int = 0) -> None:
         """! Invoke the model and starting inference of the current
         state of the tensors.
         """
@@ -204,7 +214,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
 
         self._check_status(lib.invoke(self.obj))
 
-    def close(self) -> None:
+    def close(self, model_index: int = 0) -> None:
         """! Delete the interpreter.
         @params model_index Defines which interpreter to target in systems with multiple.
         """
@@ -213,7 +223,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
             self.obj = None
             print(self.obj)
 
-    def tensor_arena_size(self) -> "Size of tensor arena":
+    def tensor_arena_size(self) -> int:
         """! Read the size of the tensor arena required.
         @return size of the tensor arena as an integer.
         """

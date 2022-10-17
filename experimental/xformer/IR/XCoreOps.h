@@ -5,6 +5,7 @@
 #define XFORMER_IR_XCOREOPS_H
 
 #include "mlir/Dialect/Quant/QuantTypes.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 // clang-format off

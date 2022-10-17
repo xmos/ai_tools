@@ -121,12 +121,14 @@ std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
 namespace {
 /// This pass translates XCore ops to TFLite custom ops.
 struct TranslateToCustomOp
-    : public PassWrapper<TranslateToCustomOp, FunctionPass> {
+    : public PassWrapper<TranslateToCustomOp, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TranslateToCustomOp)
+
   StringRef getArgument() const final { return "xcore-translate-to-customop"; }
   StringRef getDescription() const final {
     return "Translate to custom ops in TensorFlow Lite dialect";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 template <typename XCoreOp>
@@ -149,10 +151,10 @@ struct RewriteToCustomOp : public OpRewritePattern<XCoreOp> {
   }
 };
 
-void TranslateToCustomOp::runOnFunction() {
+void TranslateToCustomOp::runOnOperation() {
   auto *ctx = &getContext();
-  OwningRewritePatternList patterns(ctx);
-  auto func = getFunction();
+  RewritePatternSet patterns(ctx);
+  func::FuncOp func = getOperation();
 
   patterns.insert<RewriteToCustomOp<LookupOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
@@ -173,7 +175,7 @@ void TranslateToCustomOp::runOnFunction() {
 } // namespace
 
 // Creates an instance of the TranslateToCustomOp pass.
-std::unique_ptr<OperationPass<FuncOp>> createTranslateToCustomOpPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createTranslateToCustomOpPass() {
   return std::make_unique<TranslateToCustomOp>();
 }
 

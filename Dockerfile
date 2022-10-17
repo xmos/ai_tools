@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:4.10.3
+FROM continuumio/miniconda3:4.11.0
 
 # This Dockerfile is for use by the XMOS CI system
 # It provides a minimal environment needed to execute the Jenkinsfile
@@ -19,18 +19,10 @@ RUN apt-get update && apt-get install -y \
     tcl environment-modules \
     && apt-get clean autoclean
 
-# install clang
-RUN apt-get update && apt-get install -y \
-    gnupg lsb-release software-properties-common
-ADD https://apt.llvm.org/llvm.sh /tmp/
-ARG clang_version=12
-RUN cd /tmp \
-    && chmod +x llvm.sh \
-    && ./llvm.sh $clang_version all
-RUN ln -s /usr/bin/clang-$clang_version /usr/bin/clang \
-    && ln -s /usr/bin/clang++-$clang_version /usr/bin/clang++ \
-    && ln -s /usr/bin/clang /usr/bin/cc \
-    && ln -s /usr/bin/clang++ /usr/bin/c++
+# install gcc-9
+RUN apt-get install gcc-9 g++-9 -y \
+    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9 \
+    && update-alternatives --config gcc
 
 # install get_tools.py script
 #   requires connection to XMOS network at build and run time

@@ -11,7 +11,10 @@ namespace xcore {
 namespace {
 // Replace TFL AveragePool2D with TFL DepthwiseConv2D.
 struct ReplaceAvgPoolWithConv2D
-    : public PassWrapper<ReplaceAvgPoolWithConv2D, FunctionPass> {
+    : public PassWrapper<ReplaceAvgPoolWithConv2D,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReplaceAvgPoolWithConv2D)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
@@ -21,7 +24,7 @@ struct ReplaceAvgPoolWithConv2D
   StringRef getDescription() const final {
     return "Replace TFL Avgpool with Conv2D operations.";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 struct ReplaceAvgPoolWithConv2DPattern
@@ -116,18 +119,19 @@ struct ReplaceAvgPoolWithConv2DPattern
   }
 };
 
-void ReplaceAvgPoolWithConv2D::runOnFunction() {
+void ReplaceAvgPoolWithConv2D::runOnOperation() {
   auto *ctx = &getContext();
-  auto func = getFunction();
+  func::FuncOp func = getOperation();
 
-  OwningRewritePatternList patterns(ctx);
+  RewritePatternSet patterns(ctx);
   patterns.insert<ReplaceAvgPoolWithConv2DPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
 // Creates an instance of the ReplaceAvgPoolWithConv2D pass.
-std::unique_ptr<OperationPass<FuncOp>> createReplaceAvgPoolWithConv2DPass() {
+std::unique_ptr<OperationPass<func::FuncOp>>
+createReplaceAvgPoolWithConv2DPass() {
   return std::make_unique<ReplaceAvgPoolWithConv2D>();
 }
 

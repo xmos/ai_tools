@@ -4,6 +4,7 @@
 #ifndef XFORMER_TRANSFORMS_PASSES_H
 #define XFORMER_TRANSFORMS_PASSES_H
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {

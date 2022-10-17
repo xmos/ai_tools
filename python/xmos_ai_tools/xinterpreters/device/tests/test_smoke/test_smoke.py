@@ -60,7 +60,7 @@ ie = xcore_tflm_usb_interpreter()
 ie.set_model(model_path=xcore_model, model_index=0, secondary_memory=True, flash=False)
 raw_img = imageToInput("./goldfish.png", ie.get_input_tensor_size(0, 0))
 
-ie.set_tensor(raw_img, 0, 0)
+ie.set_tensor(0, raw_img, 0)
 ie.invoke()
 
 out = ie.get_tensor(0, 0)

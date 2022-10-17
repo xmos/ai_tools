@@ -1,7 +1,7 @@
 // RUN: xcore-opt --mlir-io %s --xcore-write-flash-image --xcore-flash-image-file=/dev/null | FileCheck %s
 
 // CHECK-LABEL: valid
-func @valid(%arg0: tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>) -> tensor<?x32x!quant.uniform<i8:f32, 0.037329975515604019:-13>> attributes {tf.entry_function = {inputs = "flatten_input", outputs = "Identity"}} {
+func.func @valid(%arg0: tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>) -> tensor<?x32x!quant.uniform<i8:f32, 0.037329975515604019:-13>> attributes {tf.entry_function = {inputs = "flatten_input", outputs = "Identity"}} {
   %cst = arith.constant dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 0]> : tensor<10xi8>
   %cst_0 = arith.constant dense<[[11, 12, 13, 14, 15, 16, 17, 18, 19, 10]]> : tensor<1x10xi16>
   %cst_1 = arith.constant dense<[-1, 1, 1, 32]> : tensor<4xi64>

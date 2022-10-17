@@ -16,6 +16,7 @@ namespace mlir {
 namespace xcore {
 
 struct TFLConvArgs {
+  Operation *convOp;
   int outputHeight, outputWidth, outputDepth, outputZeroPoint;
   int inputHeight, inputWidth, inputDepth, inputZeroPoint;
   int filterHeight, filterWidth, filterDepth;
@@ -34,6 +35,7 @@ struct TFLConvArgs {
 };
 
 struct BConvArgs {
+  Operation *convOp;
   int outputHeight, outputWidth, outputDepth;
   int inputHeight, inputWidth, inputDepth;
   int filterHeight, filterWidth, filterDepth;

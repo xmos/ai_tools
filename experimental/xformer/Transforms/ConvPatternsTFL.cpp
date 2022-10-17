@@ -199,7 +199,7 @@ LogicalResult ReplaceConv2DPattern::getKernelType(const TFLConvArgs &args,
 }
 
 LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
-    const TFLConvArgs &args, const Conv2DType &kt,
+    const TFLConvArgs &args, const Conv2DType &kt, int &otType,
     llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
@@ -233,7 +233,7 @@ LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
   assert(strParams.size() == 2 &&
          "strParams should contain memcpyFn params and aggregateFn params!");
   std::string otStr;
-  if (failed(getOutputTransformParams(args, otStr, mulsBiasesData))) {
+  if (failed(getOutputTransformParams(args, otStr, otType, mulsBiasesData))) {
     return failure();
   }
   strParams.push_back(otStr);
@@ -242,40 +242,79 @@ LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
 }
 
 LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
-    const TFLConvArgs &args, std::string &otStr,
+    const TFLConvArgs &args, std::string &otStr, int &otType,
     std::vector<int16_t> &mulsBiasesData) const {
+  
+  otType = 0;
+
   nn::MulsAndBias mulAndBiases =
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
           args.effectiveMultiplier, args.bias, args.filter, args.inputZeroPoint,
           args.outputZeroPoint, args.outputDepth);
+  //Try group OT
   auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
       quantizer.quantise_activation(mulAndBiases, false);
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulAndBiases, qp, args.quantErrorFullCheckEnabled);
+
   if (quantError > args.quantErrorThreshold) {
-    std::stringstream msg;
-    msg << "Quantization error of " << quantError
-        << " larger than set threshold of " << args.quantErrorThreshold
-        << ", therefore reverting to reference Conv2D op!" << std::endl
-        << "Inspect the output, and if suitable, set a "
-           "higher threshold with --xcore-conv-err-threshold."
-        << std::endl;
-    args.convOp->emitWarning(
-        utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
-    return failure();
+    //Try channelwise OT
+    auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
+    nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
+        quantizer.quantise_activation(mulAndBiases, false);
+
+    quantError = nn::OutputTransformFnInt8::get_quant_error(
+      mulAndBiases, qp, false);
+
+    if(quantError > args.quantErrorThreshold) {
+      std::stringstream msg;
+      msg << "Quantization error of " << quantError
+          << " larger than set threshold of " << args.quantErrorThreshold
+          << ", therefore reverting to reference Conv2D op!" << std::endl
+          << "Inspect the output, and if suitable, set a "
+            "higher threshold with --xcore-conv-err-threshold."
+          << std::endl;
+      args.convOp->emitWarning(
+          utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
+      return failure();
+    }
+    else {
+      otType = 1;
+      std::stringstream msg;
+      msg << "Quantization for group Output Transform is large"
+          << ", therefore using channelwise Output Transform" << std::endl
+          << "Memory usage will be higher."
+          << std::endl;
+      args.convOp->emitWarning(
+          utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
+
+      auto serialisedMultipliersAndBiases =
+        nn::OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers, qp.biases);
+      nn::OutputTransformFn::pad_final_access(
+          serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
+      nn::OT_int8_channelwise::Params otParams((int32_t)args.outputDepth,
+                                  qp.final_shr);
+
+      otStr = otParams.serialise<nn::OT_int8_channelwise::Params>();
+      mulsBiasesData = serialisedMultipliersAndBiases;
+      return success();
+    }
   }
 
-  auto serialisedMultipliersAndBiases =
-      nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
-  nn::OutputTransformFn::pad_final_access(
-      serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
-  nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
-                               qp.final_shr);
+  if(otType == 0) {
+    auto serialisedMultipliersAndBiases =
+        nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
+    nn::OutputTransformFn::pad_final_access(
+        serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
+    nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
+                                qp.final_shr);
 
-  otStr = otParams.serialise<nn::OT_int8::Params>();
-  mulsBiasesData = serialisedMultipliersAndBiases;
+    otStr = otParams.serialise<nn::OT_int8::Params>();
+    mulsBiasesData = serialisedMultipliersAndBiases;
+  }
+  
   return success();
 }
 
@@ -381,7 +420,7 @@ ReplaceDepthwiseConv2DPattern::getKernelType(const TFLConvArgs &args,
 }
 
 LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
-    const TFLConvArgs &args, const Conv2DType &kt,
+    const TFLConvArgs &args, const Conv2DType &kt, int &otType,
     llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
@@ -409,7 +448,8 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
   assert(strParams.size() == 2 &&
          "strParams should contain memcpyFn params and aggregateFn params!");
   std::string otStr;
-  if (failed(getOutputTransformParams(args, otStr, mulsBiasesData))) {
+
+  if (failed(getOutputTransformParams(args, otStr, otType, mulsBiasesData))) {
     return failure();
   }
   strParams.push_back(otStr);
@@ -418,7 +458,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
 }
 
 LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
-    const TFLConvArgs &args, std::string &otStr,
+    const TFLConvArgs &args, std::string &otStr, int &otType,
     std::vector<int16_t> &mulsBiasesData) const {
   std::array<int, 4> filterShape = {1, args.filterHeight, args.filterWidth,
                                     args.inputDepth};
@@ -454,6 +494,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
 
   otStr = otParams.serialise<nn::OT_int8::Params>();
   mulsBiasesData = serialisedMultipliersAndBiases;
+  otType = 1;
   return success();
 }
 

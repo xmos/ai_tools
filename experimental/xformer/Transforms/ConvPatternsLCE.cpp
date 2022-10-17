@@ -234,7 +234,7 @@ LogicalResult ReplaceBConv2DPattern::getKernelType(const BConvArgs &args,
 }
 
 LogicalResult ReplaceBConv2DPattern::getSerializedParamsAndTensors(
-    const BConvArgs &args, const Conv2DType &kt,
+    const BConvArgs &args, const Conv2DType &kt, int &otType,
     llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &thresholdsData,

@@ -61,6 +61,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   std::string memcpyFnParam, aggregateFnParam, outputTransformFnParam,
       kernelTypeEnumParam;
   int32_t scratchByteParam;
+  int32_t otTypeParam;
   std::vector<int8_t> weightsData;
   std::vector<int16_t> mulsBiasesOrThresholdsData;
 
@@ -68,7 +69,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   const int threadCount = threadCountOption;
   llvm::SmallVector<std::string> strParams;
   int scratchBytes = 0;
-
+  int otType = 0;
   // Get image region splits for multiple threads
   args.imageRegionSplits = utils::getImageRegionThreadSplits(
       threadCount, args.Y.height, args.Y.width);
@@ -76,7 +77,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   // Obtain serialized params and calculated tensors from lib_nn for the
   // conv2d kernel type
   if (failed(builder->getSerializedParamsAndTensors(
-          args, kernelType, strParams, abstractKernelParams, weightsData,
+          args, kernelType, otType, strParams, abstractKernelParams, weightsData,
           mulsBiasesOrThresholdsData, scratchBytes))) {
     return failure();
   }
@@ -94,6 +95,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   aggregateFnParam = strParams[1];
   outputTransformFnParam = strParams[2];
   scratchByteParam = scratchBytes;
+  otTypeParam = otType;
 
   // Create a string array attr from a vector of strings
   auto getStringArrayAttr = [&](llvm::SmallVector<std::string> value) {
@@ -118,7 +120,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
       mulsBiasesOrThresholdsType, mulsBiasesOrThresholdsData);
   auto mulsBiasesOrThresholdsConstantOp = rewriter.create<arith::ConstantOp>(
       conv2DOp.getLoc(), mulsBiasesOrThresholdsAttr);
-
+  printf("OT TYPE: %d\n", otType);
   // Create the Conv2DV2 Op with the params and kernel type
   auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
       conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(),
@@ -127,6 +129,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
       rewriter.getStringAttr(memcpyFnParam),
       rewriter.getStringAttr(aggregateFnParam),
       rewriter.getStringAttr(outputTransformFnParam),
+      rewriter.getI32IntegerAttr(otTypeParam),
       rewriter.getI32IntegerAttr(scratchByteParam),
       rewriter.getI32IntegerAttr(actualThreadCount),
       getStringArrayAttr(abstractKernelParams));

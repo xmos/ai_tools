@@ -85,7 +85,7 @@ public:
   LogicalResult getKernelType(const BConvArgs &args, Conv2DType &kt) const;
 
   LogicalResult getSerializedParamsAndTensors(
-      const BConvArgs &args, const Conv2DType &kt,
+      const BConvArgs &args, const Conv2DType &kt, int &otType,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData,
@@ -145,14 +145,14 @@ public:
   }
 
   LogicalResult getSerializedParamsAndTensors(
-      const TFLConvArgs &args, const Conv2DType &kt,
+      const TFLConvArgs &args, const Conv2DType &kt, int &otType,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const {
     if (failed(static_cast<const ConcreteType *>(this)
                    ->getSerializedParamsAndTensors(
-                       args, kt, strParams, abstractKernelParams, weightsData,
+                       args, kt, otType, strParams, abstractKernelParams, weightsData,
                        mulsBiasesData, scratchBytes))) {
       return failure();
     }
@@ -176,7 +176,7 @@ public:
   int getQuantizationIndex() const { return 0; }
 
   LogicalResult getSerializedParamsAndTensors(
-      const TFLConvArgs &args, const Conv2DType &kt,
+      const TFLConvArgs &args, const Conv2DType &kt, int &otType,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
@@ -199,7 +199,7 @@ private:
       std::vector<int8_t> &weightsData, int &scratchBytes) const;
 
   LogicalResult
-  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr,
+  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr, int &otType,
                            std::vector<int16_t> &mulsBiasesData) const;
 };
 
@@ -221,7 +221,7 @@ public:
   int getQuantizationIndex() const { return 3; }
 
   LogicalResult getSerializedParamsAndTensors(
-      const TFLConvArgs &args, const Conv2DType &kt,
+      const TFLConvArgs &args, const Conv2DType &kt, int &otType,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
@@ -239,7 +239,7 @@ private:
       std::vector<int8_t> &weightsData, int &scratchBytes) const;
 
   LogicalResult
-  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr,
+  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr, int &otType,
                            std::vector<int16_t> &mulsBiasesData) const;
 };
 

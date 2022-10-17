@@ -98,6 +98,7 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
     StrAttr:$memcpy_fn_param,
     StrAttr:$aggregate_fn_param,
     StrAttr:$output_transform_fn_param,
+    I32Attr:$output_transform_type,
     I32Attr:$scratch_bytes,
     I32Attr:$thread_count,
     StrArrayAttr:$abstract_kernel_params

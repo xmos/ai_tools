@@ -15,11 +15,11 @@ def : Pat<(XC_Conv2DV2Op
              (Arith_ConstantOp
               : $weights_op $weights_attr),
              $mulsbiases_or_thresholds, $conv2d_kernel_type, $memcpy_fn_params,
-             $aggregate_fn_params, $output_transform_fn_params, $scratch_bytes,
+             $aggregate_fn_params, $output_transform_fn_params, $ot_type, $scratch_bytes,
              $thread_count, $abstract_kernel_params),
           (XC_Conv2DV2Op $input, (XC_LoadConstantOp $weights_op),
            $mulsbiases_or_thresholds, $conv2d_kernel_type, $memcpy_fn_params,
-           $aggregate_fn_params, $output_transform_fn_params, $scratch_bytes,
+           $aggregate_fn_params, $output_transform_fn_params, $ot_type, $scratch_bytes,
            $thread_count, $abstract_kernel_params),
           [(ShouldBeLoadedExternally $weights_attr)]>;
 
@@ -28,12 +28,12 @@ def : Pat<(XC_Conv2DV2Op
              (Arith_ConstantOp
               : $mulsbiases_or_thresholds_op $mulsbiases_or_thresholds_attr),
              $conv2d_kernel_type, $memcpy_fn_params, $aggregate_fn_params,
-             $output_transform_fn_params, $scratch_bytes, $thread_count,
+             $output_transform_fn_params, $ot_type, $scratch_bytes, $thread_count,
              $abstract_kernel_params),
           (XC_Conv2DV2Op $input, $weights,
            (XC_LoadConstantOp $mulsbiases_or_thresholds_op),
            $conv2d_kernel_type, $memcpy_fn_params, $aggregate_fn_params,
-           $output_transform_fn_params, $scratch_bytes, $thread_count,
+           $output_transform_fn_params, $ot_type, $scratch_bytes, $thread_count,
            $abstract_kernel_params),
           [(ShouldBeLoadedExternally $mulsbiases_or_thresholds_attr)]>;
 

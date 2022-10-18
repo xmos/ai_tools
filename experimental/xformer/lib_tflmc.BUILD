@@ -140,6 +140,9 @@ filegroup(
         "@tflite_micro//tensorflow/lite/micro/kernels:transpose.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:transpose_conv.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:unpack.cc",
+        "@tflite_micro//tensorflow/lite/micro/kernels:micro_tensor_utils.cc",
+        "@tflite_micro//tensorflow/lite/micro/kernels:lstm_eval.cc",
+        "@tflite_micro//tensorflow/lite/micro/kernels:unidirectional_sequence_lstm.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:zeros_like.cc",
     ],
 )

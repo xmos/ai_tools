@@ -42,21 +42,27 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
                           filter.template getValues<int8_t>().end()};
 
   // Get bias values
-  DenseElementsAttr biasesAttr;
-  if (conv2DOp.bias()
-          .getType()
-          .template cast<ShapedType>()
-          .getElementType()
-          .template isa<quant::QuantizedType>()) {
-    auto biasQConstOp =
-        dyn_cast<TFL::QConstOp>(conv2DOp.bias().getDefiningOp());
-    biasesAttr = biasQConstOp.value().template cast<DenseElementsAttr>();
+  // If no bias exists, create vector with zero values
+  std::vector<int32_t> biasVector;
+  if (!conv2DOp.bias().getType().template isa<NoneType>()) {
+    DenseElementsAttr biasesAttr;
+    if (conv2DOp.bias()
+            .getType()
+            .template cast<ShapedType>()
+            .getElementType()
+            .template isa<quant::QuantizedType>()) {
+      auto biasQConstOp =
+          dyn_cast<TFL::QConstOp>(conv2DOp.bias().getDefiningOp());
+      biasesAttr = biasQConstOp.value().template cast<DenseElementsAttr>();
+    } else {
+      matchPattern(conv2DOp.bias(), m_Constant(&biasesAttr));
+    }
+    biasVector =
+        std::vector<int32_t>{biasesAttr.template getValues<int32_t>().begin(),
+                             biasesAttr.template getValues<int32_t>().end()};
   } else {
-    matchPattern(conv2DOp.bias(), m_Constant(&biasesAttr));
+    biasVector = std::vector<int32_t>(args.outputDepth, 0);
   }
-  auto biasVector =
-      std::vector<int32_t>{biasesAttr.template getValues<int32_t>().begin(),
-                           biasesAttr.template getValues<int32_t>().end()};
 
   // Calculate effectiveOutputScale
   std::vector<float> effectiveOutputScaleVector;

@@ -136,6 +136,9 @@ int main(int argc, char **argv) {
   static cl::alias aliasTflmcPrefixOption(
       "xp", cl::desc("Alias for --xcore-naming-prefix"),
       cl::aliasopt(tflmcPrefixOption));
+  static cl::opt<bool> tflmcPrintEnabled(
+      "xcore-tflmc-print", cl::desc("Print out memory allocation plan"),
+      cl::init(false));
 
   // Register any command line options.
   registerAsmPrinterCLOptions();
@@ -258,10 +261,17 @@ int main(int argc, char **argv) {
       return failedMessage("Failed to obtain flatbuffer string from MLIR!");
     }
 
+    // Write tflite file
+    std::string outFilename(outputFilename);
+    if (failed(xcore::utils::writeDataToFile(outFilename, flatBufferString))) {
+      return failedMessage("Failed to write output tflite file!");
+    }
+
     // Invoke tflmc and get info
     std::stringstream tflmcSourceString, tflmcHeaderString;
     try {
-      tflmc::Compiler compiler(flatBufferString.data(), tflmcPrefixOption);
+      tflmc::Compiler compiler(flatBufferString.data(), tflmcPrefixOption,
+                               tflmcPrintEnabled);
       emitRemark(UnknownLoc::get(module.getContext()))
           << "Tensor arena size : " << compiler.getTensorArenaSize();
       compiler.writeSource(tflmcSourceString);
@@ -270,11 +280,6 @@ int main(int argc, char **argv) {
       return failedMessage(e.what());
     } catch (...) {
       return failedMessage("Unknown exception while invoking tflmc!");
-    }
-
-    std::string outFilename(outputFilename);
-    if (failed(xcore::utils::writeDataToFile(outFilename, flatBufferString))) {
-      return failedMessage("Failed to write output tflite file!");
     }
 
     std::string tflmcSourceFilename(outputFilename + ".cpp");

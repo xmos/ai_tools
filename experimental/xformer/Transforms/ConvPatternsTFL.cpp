@@ -245,7 +245,7 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
     const TFLConvArgs &args, std::string &otStr, int &otType,
     std::vector<int16_t> &mulsBiasesData) const {
   
-  otType = 0;
+  otType = Group;
 
   nn::MulsAndBias mulAndBiases =
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
@@ -258,16 +258,15 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulAndBiases, qp, args.quantErrorFullCheckEnabled);
-
   if (quantError > args.quantErrorThreshold) {
     //Try channelwise OT
+    
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
         quantizer.quantise_activation(mulAndBiases, false);
 
     quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulAndBiases, qp, false);
-
     if(quantError > args.quantErrorThreshold) {
       std::stringstream msg;
       msg << "Quantization error of " << quantError
@@ -281,7 +280,7 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
       return failure();
     }
     else {
-      otType = 1;
+      otType = Channelwise;
       std::stringstream msg;
       msg << "Quantization for group Output Transform is large"
           << ", therefore using channelwise Output Transform" << std::endl
@@ -303,7 +302,7 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
     }
   }
 
-  if(otType == 0) {
+  if(otType == Group) {
     auto serialisedMultipliersAndBiases =
         nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(
@@ -494,7 +493,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
 
   otStr = otParams.serialise<nn::OT_int8::Params>();
   mulsBiasesData = serialisedMultipliersAndBiases;
-  otType = 1;
+  otType = Channelwise;
   return success();
 }
 

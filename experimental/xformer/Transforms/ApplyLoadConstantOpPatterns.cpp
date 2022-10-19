@@ -43,6 +43,15 @@ bool shouldBeLoadedExternally(Attribute values) {
   return totalSizeInBits / CHAR_BIT > loadExternallyIfLargerOption;
 }
 
+bool isNotUsedByLoadConstantOp(Value result) {
+  if (result.hasOneUse()) {
+    if (llvm::isa<LoadConstantOp>(*result.getUsers().begin())) {
+      return false;
+    }
+  }
+  return true;
+}
+
 #include "Transforms/GeneratedLoadConstantOpPatterns.inc"
 
 void ApplyLoadConstantOpPatterns::runOnOperation() {

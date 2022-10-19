@@ -25,9 +25,11 @@ def get_xformed_model(model, args):
         with open(pathlib.Path(input_path).resolve(), "wb") as fd:
             fd.write(model)
 
+        params_path = pathlib.Path(dirname) / "output.params"
         output_path = pathlib.Path(dirname) / "output.tflite"
         cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path),
         "--xcore-thread-count=" + args.tc,
+        "--xcore-flash-image-file=" + str(params_path),
         #"--xcore-replace-avgpool-with-conv2d",
         #"--xcore-replace-with-conv2dv2",
         #"--xcore-translate-to-customop"
@@ -38,8 +40,10 @@ def get_xformed_model(model, args):
                            check=True)
         print(p.stdout)
         with open(pathlib.Path(output_path).resolve(), "rb") as fd:
-            bits = bytes(fd.read())
-    return bits
+            output_bits = bytes(fd.read())
+        with open(pathlib.Path(params_path).resolve(), "rb") as fd:
+            params_bits = bytes(fd.read())
+    return output_bits, params_bits
 
 
 def test_inference(args):
@@ -92,15 +96,15 @@ def test_inference(args):
 
     #print(repr(input_tensor))
     print("Invoking xformer to get converted model...")
-    xformed_model = get_xformed_model(model_content, args)
-
+    xformed_model, params = get_xformed_model(model_content, args)
 
     print("Creating TFLM XCore interpreter...")
     if args.device:
         ie = xcore_tflm_usb_interpreter()
     else:
         ie = xcore_tflm_host_interpreter()
-    ie.set_model(model_content=xformed_model, secondary_memory=True)
+    ie.set_model(model_content=xformed_model, params_content=params, secondary_memory=True)
+    #ie.set_model(model_content=xformed_model, secondary_memory=True)
 
     if args.cifar:
         (_,_), (test_images,_) = tf.keras.datasets.cifar10.load_data()

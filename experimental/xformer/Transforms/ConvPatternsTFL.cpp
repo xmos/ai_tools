@@ -266,7 +266,6 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
       mulAndBiases, qp, args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
     //Try channelwise OT
-    
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
         quantizer.quantise_activation(mulAndBiases, false);
@@ -287,14 +286,7 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
     }
     else {
       otType = Channelwise;
-      std::stringstream msg;
-      msg << "Quantization for group Output Transform is large"
-          << ", therefore using channelwise Output Transform" << std::endl
-          << "Memory usage will be higher."
-          << std::endl;
-      args.convOp->emitWarning(
-          utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
-
+      
       auto serialisedMultipliersAndBiases =
         nn::OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers, qp.biases);
       nn::OutputTransformFn::pad_final_access(

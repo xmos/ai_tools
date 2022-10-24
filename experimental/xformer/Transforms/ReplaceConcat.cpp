@@ -16,6 +16,8 @@ namespace {
 struct ReplaceConcat
     : public PassWrapper<ReplaceConcat, 
                          OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReplaceConcat)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }

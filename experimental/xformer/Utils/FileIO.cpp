@@ -13,7 +13,7 @@ namespace mlir {
 namespace xcore {
 namespace utils {
 
-LogicalResult writeDataToFile(std::string &filename, std::string &data) {
+LogicalResult writeDataToFile(const std::string &filename, std::string data) {
   auto outputFile = openOutputFile(filename);
   if (!outputFile) {
     llvm::errs() << "Could not open output file: " << filename << "\n";
@@ -24,9 +24,8 @@ LogicalResult writeDataToFile(std::string &filename, std::string &data) {
   return success();
 }
 
-LogicalResult writeFlashImageToFile(std::string &filename,
+LogicalResult writeFlashImageToFile(const std::string &filename,
                                     std::vector<std::vector<char>> tensorsVec) {
-
   // Combine data for the tensors
   std::string data;
   for (auto const &tensor : tensorsVec) {
@@ -36,11 +35,9 @@ LogicalResult writeFlashImageToFile(std::string &filename,
   return utils::writeDataToFile(filename, data);
 }
 
-LogicalResult
-writeMLIRToFlatBufferFile(std::string &filename, mlir::ModuleOp module,
-                          std::map<std::string, std::string> metadata,
-                          const bool &dontMinify) {
-  std::string serialized_flatbuffer;
+LogicalResult getFlatBufferStringFromMLIR(
+    mlir::ModuleOp module, std::map<std::string, std::string> metadata,
+    const bool &dontMinify, std::string &flatBufferString) {
   std::unique_ptr<tensorflow::OpOrArgNameMapper> op_or_arg_name_mapper;
   if (dontMinify) {
     op_or_arg_name_mapper =
@@ -61,27 +58,27 @@ writeMLIRToFlatBufferFile(std::string &filename, mlir::ModuleOp module,
   options.op_or_arg_name_mapper = op_or_arg_name_mapper.get();
   options.metadata = metadata;
 
-  if (tflite::MlirToFlatBufferTranslateFunction(module, options,
-                                                &serialized_flatbuffer)) {
-    return writeDataToFile(filename, serialized_flatbuffer);
-  } else {
+  if (!tflite::MlirToFlatBufferTranslateFunction(module, options,
+                                                 &flatBufferString)) {
     emitError(UnknownLoc::get(module.getContext()))
-        << "Error converting MLIR to flatbuffer, no file written";
+        << "Error converting MLIR to flatbuffer string!";
     return failure();
   }
+  return success();
 }
 
-mlir::OwningModuleRef readFlatBufferFileToMLIR(std::string &filename,
-                                               mlir::MLIRContext *context) {
+mlir::OwningOpRef<mlir::ModuleOp>
+readFlatBufferFileToMLIR(const std::string &filename,
+                         mlir::MLIRContext *context) {
   std::string errorMessage;
   auto inputFile = openInputFile(filename, &errorMessage);
   if (!inputFile) {
     emitError(UnknownLoc::get(context)) << errorMessage;
-    return mlir::OwningModuleRef(nullptr);
+    return mlir::OwningOpRef<mlir::ModuleOp>(nullptr);
   }
 
   auto loc = mlir::FileLineColLoc::get(context, filename, 0, 0);
-  OwningModuleRef mod =
+  mlir::OwningOpRef<mlir::ModuleOp> mod =
       tflite::FlatBufferToMlir(absl::string_view(inputFile->getBufferStart(),
                                                  inputFile->getBufferSize()),
                                context, loc);

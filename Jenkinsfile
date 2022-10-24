@@ -74,11 +74,14 @@ pipeline {
                 // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv && //
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./ai_tools_venv &&
+                      cd third_party/lib_tflite_micro &&
+                      make build &&
+                      cd ../.. &&
                       make clean &&
                       make build
                 """
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel build --client_env=CC=clang --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
+                      bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
                 """
                 sh """. activate ./ai_tools_venv &&
                       (cd python && python3 setup.py bdist_wheel) &&
@@ -91,15 +94,21 @@ pipeline {
             steps {
                 // xformer2 unit tests
         sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel test --client_env=CC=clang --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures
+                      bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures
                 """
         // xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&
-                      make xformer2_integration_test NUM_PROCS=8
+                      make test
                 """
                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                 // This step collects these files for display in Jenkins UI
                 junit "**/*_junit.xml"
+        // regression test for xmos_ai_tools juypiter notebooks
+                sh """. activate ./ai_tools_venv &&
+                    pip install ./python/
+                    pip install pytest nbmake
+                    pytest --nbmake ./docs/notebooks/*.ipynb
+                """
             }
         }
     }

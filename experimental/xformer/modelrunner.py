@@ -7,7 +7,7 @@ import subprocess
 import numpy as np
 import pathlib
 import argparse
-# from cv2 import cv2
+import cv2
 
 import tensorflow as tf
 import larq_compute_engine as lce
@@ -71,9 +71,12 @@ def test_inference(args):
         # interpreter = tensorflow.lite.Interpreter(
         #     model_content=model_content)
         interpreter.allocate_tensors()
-        input_tensor_details = interpreter.get_input_details()[0]
-        input_tensor_type = input_tensor_details["dtype"]
-        input_tensor_shape = input_tensor_details["shape"]
+        num_of_inputs = len(interpreter.get_input_details())
+        input_tensor_type = []
+        input_tensor_shape = []
+        for i in range(num_of_inputs):
+            input_tensor_type.append(interpreter.get_input_details()[i]["dtype"])
+            input_tensor_shape.append(interpreter.get_input_details()[i]["shape"])
 
         # input_tensor = np.array(100 * np.random.random_sample(input_tensor_shape), dtype=input_tensor_type)
         # interpreter.set_tensor(input_tensor_details["index"], input_tensor)
@@ -110,15 +113,15 @@ def test_inference(args):
     num_of_fails = 0
     for test in range(0, int(args.n)):
         print("Run #" + str(test))
+        input_tensor = []
         if args.cifar:
             print("Using cifar images...")
             # add batch dim
             input_tensor = np.expand_dims(test_images[test], axis=0)
         else:
             print("Creating random input...")
-            np.random.seed(0)
-            input_tensor = np.array(100 * np.random.random_sample(input_tensor_shape), dtype=input_tensor_type)
-            # input_tensor = np.array(100 * np.ones(input_tensor_shape), dtype=input_tensor_type)
+            for i in range(num_of_inputs):
+                input_tensor.append(np.array(256 * np.random.random_sample(input_tensor_shape[i]) - 127, dtype=input_tensor_type[i]))
 
         if args.bnn:
             print("Invoking LCE interpreter...")
@@ -128,7 +131,8 @@ def test_inference(args):
                 outputs = [outputs]
             num_of_outputs = len(outputs)
         else:
-            interpreter.set_tensor(input_tensor_details["index"], input_tensor)
+            for i in range(num_of_inputs):
+                interpreter.set_tensor(interpreter.get_input_details()[i]["index"], input_tensor[i])
             print("Invoking TFLite interpreter...")
             interpreter.invoke()
 
@@ -148,12 +152,12 @@ def test_inference(args):
         # print(outputs2)
 
         print("Invoking XCORE interpreter...")
-        ie.set_tensor(input_tensor, 0)
-        ie.get_input_details()
+        for i in range(num_of_inputs):
+            ie.set_tensor(i, input_tensor[i])
         ie.invoke()
         xformer_outputs = []
         for i in range(num_of_outputs):
-            xformer_outputs.append(ie.get_tensor(i))
+            xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]["index"]))
 
         # Compare outputs
         for i in range(num_of_outputs):

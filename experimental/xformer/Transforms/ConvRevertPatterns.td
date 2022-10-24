@@ -2,7 +2,7 @@
 // XMOS Public License: Version 1
 
 include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
-include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir/Dialect/Func/IR/FuncOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 
 include "IR/XCoreOps.td"
@@ -26,10 +26,11 @@ def getPadOpOutputType
 
 def : Pat<(XC_FakeDepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf,
            ConstantStrAttr<StrAttr, "EXPLICIT">,
-           (Arith_ConstantOp
+           (TFL_ConstOp
             : $pv_op $pv),
            $sh, $sw, $dm),
           (TFL_DepthwiseConv2DOp(TFL_PadOp $input, $pv_op,
                                  (returnType(getPadOpOutputType $input, $pv))),
-           $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw, $dm),
+           $f, $b, $dh, $dw, $faf, ConstantStrAttr<StrAttr, "VALID">, $sh, $sw,
+           $dm),
           [], (addBenefit 10)>;

@@ -123,38 +123,33 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
   }
 
   // Get filter values
-  auto filterConstOp =
-      dyn_cast<mlir::arith::ConstantOp>(conv2DOp.filter().getDefiningOp());
-  auto filter = filterConstOp.getValue().cast<DenseElementsAttr>();
-  auto filterVector = std::vector<int32_t>{filter.getValues<int32_t>().begin(),
-                                           filter.getValues<int32_t>().end()};
+  DenseElementsAttr filterAttr;
+  matchPattern(conv2DOp.filter(), m_Constant(&filterAttr));
+  auto filterVector = std::vector<int32_t>{filterAttr.value_begin<int32_t>(),
+                                           filterAttr.value_end<int32_t>()};
 
   std::vector<float> biasVector;
   std::vector<float> multiplierVector;
   std::vector<int32_t> thresholdVector;
   if (binaryOutput) {
     // Get threshold values
-    auto thresholdConstOp = dyn_cast<mlir::arith::ConstantOp>(
-        conv2DOp.output_threshold().getDefiningOp());
-    auto threshold = thresholdConstOp.getValue().cast<DenseElementsAttr>();
-    thresholdVector =
-        std::vector<int32_t>{threshold.getValues<int32_t>().begin(),
-                             threshold.getValues<int32_t>().end()};
+    DenseElementsAttr thresholdAttr;
+    matchPattern(conv2DOp.output_threshold(), m_Constant(&thresholdAttr));
+    thresholdVector = std::vector<int32_t>{thresholdAttr.value_begin<int32_t>(),
+                                           thresholdAttr.value_end<int32_t>()};
   } else {
     // Get bias values
-    auto biasConstOp = dyn_cast<mlir::arith::ConstantOp>(
-        conv2DOp.post_activation_bias().getDefiningOp());
-    auto biases = biasConstOp.getValue().cast<DenseElementsAttr>();
-    biasVector = std::vector<float>{biases.getValues<float>().begin(),
-                                    biases.getValues<float>().end()};
+    DenseElementsAttr biasAttr;
+    matchPattern(conv2DOp.post_activation_bias(), m_Constant(&biasAttr));
+    biasVector = std::vector<float>{biasAttr.value_begin<float>(),
+                                    biasAttr.value_end<float>()};
 
     // Get multiplier values
-    auto multiplierConstOp = dyn_cast<mlir::arith::ConstantOp>(
-        conv2DOp.post_activation_multiplier().getDefiningOp());
-    auto multipliers = multiplierConstOp.getValue().cast<DenseElementsAttr>();
-    multiplierVector =
-        std::vector<float>{multipliers.getValues<float>().begin(),
-                           multipliers.getValues<float>().end()};
+    DenseElementsAttr multiplierAttr;
+    matchPattern(conv2DOp.post_activation_multiplier(),
+                 m_Constant(&multiplierAttr));
+    multiplierVector = std::vector<float>{multiplierAttr.value_begin<float>(),
+                                          multiplierAttr.value_end<float>()};
 
     // Fuse the back-transformation and int8 scale/zero-point into
     // the output transform multiplier/bias

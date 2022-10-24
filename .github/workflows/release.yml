@@ -125,7 +125,7 @@ jobs:
   
 
   manylinux-release-wheel:
-    name: Build release wheels for manylinux2010
+    name: Build release wheels for manylinux2014
     runs-on: ubuntu-18.04
     strategy:
       matrix:
@@ -150,7 +150,7 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Build manylinux2010 wheels
+      - name: Build manylinux2014 wheels
         # The SETUPTOOLS_SCM_PRETEND_VERSION var is passed via docker to the
         # python setup.py script to add the version info for the wheel file.
         #
@@ -159,14 +159,14 @@ jobs:
         run: |
           docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.TAG_VERSION }} \
             -v ${PWD}:/ai_tools -w /ai_tools \
-            tensorflow/build:2.8-python${{ matrix.python-version }} \
+            tensorflow/build:2.10-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
           python -m pip install auditwheel --no-cache-dir
           cd python
           for f in dist/*.whl; do
-            auditwheel repair --plat manylinux2010_x86_64 $f
+            auditwheel repair --plat manylinux2014_x86_64 $f
           done
           
       - uses: actions/upload-artifact@v2

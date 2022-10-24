@@ -1,0 +1,104 @@
+--- larq_compute_engine/mlir/BUILD
++++ larq_compute_engine/mlir/BUILD
+@@ -9,7 +9,7 @@ package(
+ td_library(
+     name = "lce_ops_td_file",
+     srcs = ["ir/lce_ops.td"],
+-    includes = ["/external/org_tensorflow"],
++    includes = ["/../org_tensorflow"],
+     deps = [
+         "@llvm-project//mlir:SideEffectInterfacesTdFiles",
+         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+--- larq_compute_engine/mlir/ir/lce_ops.td
++++ larq_compute_engine/mlir/ir/lce_ops.td
+@@ -7,26 +7,66 @@
+ //===----------------------------------------------------------------------===//
+ 
+ include "mlir/IR/OpBase.td"
++include "mlir/IR/EnumAttr.td"
+ include "mlir/Interfaces/SideEffectInterfaces.td"
+ include "tensorflow/compiler/mlir/lite/quantization/quantization.td"
+ 
+ #ifndef TFL_OPS
+-def TFL_AF_None  : StrEnumAttrCase<"NONE">;
+-def TFL_AF_Relu  : StrEnumAttrCase<"RELU">;
+-def TFL_AF_Relu1 : StrEnumAttrCase<"RELU_N1_TO_1">;
+-def TFL_AF_Relu6 : StrEnumAttrCase<"RELU6">;
+-
+-def TFL_AFAttr : StrEnumAttr<
+-    "ActivationFunctionType", "fused activation enum", [
+-      TFL_AF_None,  TFL_AF_Relu, TFL_AF_Relu1, TFL_AF_Relu6
++// A string attribute whose value are one of the values in `cases`.
++// Referred TF_AnyStrAttrOf in tensorflow/compiler/mlir/tensorflow/ir/tf_op_base.td
++class TFL_AnyStrAttrOf<list<string> cases> : StringBasedAttr<
++  CPred<!foldl(
++      "$_self.cast<StringAttr>().getValue() == \"" # !head(cases) # "\"",
++      !foreach(case, !tail(cases),
++               "$_self.cast<StringAttr>().getValue() == \"" # case # "\""),
++      prev, cur, prev # " || " # cur)>,
++  "string attribute whose value is " #
++    !foldl(/*init*/!head(cases), /*list*/!tail(cases),
++           prev, cur, prev # ", or " # cur)>;
++
++// Allowed activation function cases
++// These should match the ActivationFunctionType enum in TFLite schema.
++def TFL_AFEnum_None  : I32EnumAttrCase<"NONE", 0>;
++def TFL_AFEnum_Relu  : I32EnumAttrCase<"RELU", 1>;
++def TFL_AFEnum_Relu1 : I32EnumAttrCase<"RELU_N1_TO_1", 2>;
++def TFL_AFEnum_Relu6 : I32EnumAttrCase<"RELU6", 3>;
++def TFL_AFEnum_Tanh  : I32EnumAttrCase<"TANH", 4>;
++def TFL_AFEnum_Sign  : I32EnumAttrCase<"SIGN_BIT", 5>;
++
++def TFL_AFEnum : I32EnumAttr<"ActivationFunctionType", "conv2d type enum", [
++  TFL_AFEnum_None, TFL_AFEnum_Relu,
++  TFL_AFEnum_Relu1, TFL_AFEnum_Relu6,
++  TFL_AFEnum_Tanh,
++  TFL_AFEnum_Sign
++]>;
++
++def TFL_AFAttr : TFL_AnyStrAttrOf<[
++      TFL_AFEnum_None.symbol,  TFL_AFEnum_Relu.symbol, TFL_AFEnum_Relu1.symbol,
++      TFL_AFEnum_Relu6.symbol, TFL_AFEnum_Tanh.symbol, TFL_AFEnum_Sign.symbol
+     ]>;
+ 
+-def TFL_PAD_Same  : StrEnumAttrCase<"SAME">;
+-def TFL_PAD_Valid : StrEnumAttrCase<"VALID">;
+-
+-def TFL_PaddingAttr : StrEnumAttr<"Padding", "padding enum", [
+-      TFL_PAD_Same, TFL_PAD_Valid
++// Predefined constant attributes of activation function
++def TFL_AF_None  : ConstantStrAttr<TFL_AFAttr, TFL_AFEnum_None.symbol>;
++def TFL_AF_Relu  : ConstantStrAttr<TFL_AFAttr, TFL_AFEnum_Relu.symbol>;
++def TFL_AF_Relu1 : ConstantStrAttr<TFL_AFAttr, TFL_AFEnum_Relu1.symbol>;
++def TFL_AF_Relu6 : ConstantStrAttr<TFL_AFAttr, TFL_AFEnum_Relu6.symbol>;
++def TFL_AF_Tanh  : ConstantStrAttr<TFL_AFAttr, TFL_AFEnum_Tanh.symbol>;
++def TFL_AF_Sign  : ConstantStrAttr<TFL_AFAttr, TFL_AFEnum_Sign.symbol>;
++
++// Allowed padding cases
++// These should match the padding enum in TFLite schema.
++def TFL_PADEnum_Same  : I32EnumAttrCase<"SAME", 0>;
++def TFL_PADEnum_Valid : I32EnumAttrCase<"VALID", 1>;
++def TFL_PaddingAttr : TFL_AnyStrAttrOf<[
++      TFL_PADEnum_Same.symbol, TFL_PADEnum_Valid.symbol
+     ]>;
++
++def TFL_PaddingEnum : I32EnumAttr<"Padding", "conv2d padding enum", [
++  TFL_PADEnum_Same, TFL_PADEnum_Valid
++]>;
++
++def TFL_PAD_Same  : ConstantStrAttr<TFL_PaddingAttr, TFL_PADEnum_Same.symbol>;
++def TFL_PAD_Valid : ConstantStrAttr<TFL_PaddingAttr, TFL_PADEnum_Valid.symbol>;
+ #endif
+ 
+ //===----------------------------------------------------------------------===//
+--- larq_compute_engine/mlir/transforms/translate_tflite.cc
++++ larq_compute_engine/mlir/transforms/translate_tflite.cc
+@@ -12,6 +12,8 @@ namespace {
+ 
+ struct TranslateToLCE
+     : public PassWrapper<TranslateToLCE, OperationPass<mlir::func::FuncOp>> {
++  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TranslateToLCE)
++
+   llvm::StringRef getArgument() const final { return "lce-translate-tfl"; }
+   llvm::StringRef getDescription() const final {
+     return "Translate TFL custom ops to LCE ops";

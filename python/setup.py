@@ -4,6 +4,8 @@
 # XMOS Public License: Version 1
 
 import platform
+from typing import Union
+
 from setuptools import setup, find_packages
 from setuptools.command.install import install
 import pathlib
@@ -11,7 +13,7 @@ import pathlib
 # Find path to xcore-opt binary
 here = pathlib.Path(__file__).parent.resolve()
 exe_suffix = ".exe" if platform.system() == "Windows" else ""
-XCOREOPT_BINARY = pathlib.Path.joinpath(
+XCOREOPT_BINARY: Union[pathlib.Path, str] = pathlib.Path.joinpath(
     here.parent, "experimental", "xformer", "bazel-bin", "xcore-opt"
 )
 XCOREOPT_BINARY = str(XCOREOPT_BINARY) + exe_suffix

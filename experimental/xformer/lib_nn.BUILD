@@ -3,18 +3,7 @@ package(
 )
 
 cc_library(
-    name = "libnn_lib2",
-    hdrs = glob(["lib_nn/api/*.h*"]) + 
-           glob(["lib_nn/api/geom/*.h*"]) + 
-           glob(["lib_nn/src/asm/*.h*"]) + 
-           glob(["lib_nn/src/*.h*"]),
-    srcs = ["lib_nn.dylib"],
-    deps = [],
-)
-
-
-cc_library(
-    name = "libnn_lib",
+    name = "nn_lib",
     hdrs = glob(["lib_nn/api/*.h*"]) + 
            glob(["lib_nn/api/geom/*.h*"]) + 
            glob(["lib_nn/src/asm/*.h*"]) + 
@@ -28,7 +17,8 @@ cc_library(
            glob(["lib_nn/src/cpp/*.cpp"]) + 
            glob(["lib_nn/src/cpp/filt2d/*.cpp"]) + 
            glob(["lib_nn/src/cpp/filt2d/geom/*.cpp"]),
-    copts = ["-DNN_USE_REF -Iexternal/lib_nn/lib_nn/api"],
+    includes = ["../../external/lib_nn/lib_nn/api"],
+    local_defines = ["NN_USE_REF"],
     deps = [],
     alwayslink = 1,
 )

@@ -36,7 +36,6 @@ void add_lib_vision_ops(
   resolver->AddRound();
   resolver->AddStridedSlice();
   resolver->AddSub();
-  resolver->AddTranspose();
   resolver->AddGather();
   resolver->AddFullyConnected();
   resolver->AddTranspose();
@@ -78,6 +77,8 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
   resolver->AddConv2D();
   resolver->AddQuantize();
   resolver->AddDepthwiseConv2D();
+  resolver->AddDetectionPostprocess();
+  resolver->AddTransposeConv();
   tflite::ops::micro::xcore::RegisterXCOps(resolver);
   add_lib_vision_ops(resolver);
 
@@ -85,7 +86,8 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
 }
 
 DLLEXPORT void delete_interpreter(inference_engine *ie) {
-  inference_engine_unload_model(ie);
+  //inference_engine_unload_model(ie);
+  free(ie->memory_primary);
   free(ie->xtflm);
   free(ie);
 }

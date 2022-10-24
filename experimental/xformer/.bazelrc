@@ -1,3 +1,9 @@
+# We depend on headers from tflite-micro and lib_tflite_micro which
+# have not been explicitly specified as bazel dependencies
+# The standalone spawn_strategy simply symlinks to the local repos,
+# so all files are available
+build --spawn_strategy=standalone
+
 # Needed for tensorflow
 build --experimental_repo_remote_exec
 
@@ -8,12 +14,12 @@ build --nocheck_visibility
 build --enable_platform_specific_config
 
 # C++14 standard version is required.
-build:linux --cxxopt=-std=c++14
-build:linux --host_cxxopt=-std=c++14
-build:macos --cxxopt=-std=c++14
-build:macos --host_cxxopt=-std=c++14
-build:windows --cxxopt=/std:c++14
-build:windows --host_cxxopt=/std:c++14
+build:linux --cxxopt=-std=c++17
+build:linux --host_cxxopt=-std=c++17
+build:macos --cxxopt=-std=c++17
+build:macos --host_cxxopt=-std=c++17
+build:windows --cxxopt=/std:c++17
+build:windows --host_cxxopt=/std:c++17
 
 # Suppress C++ compiler warnings, otherwise build logs become 10s of MBs.
 build:linux --copt=-w

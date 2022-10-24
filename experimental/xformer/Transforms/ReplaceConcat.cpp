@@ -14,7 +14,8 @@ namespace xcore {
 namespace {
 // Replace  Concat
 struct ReplaceConcat
-    : public PassWrapper<ReplaceConcat, FunctionPass> {
+    : public PassWrapper<ReplaceConcat, 
+                         OperationPass<func::FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
@@ -22,7 +23,7 @@ struct ReplaceConcat
   StringRef getDescription() const final {
     return "Replace TFL Concat.";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 struct ReplaceConcatPattern
@@ -62,7 +63,7 @@ struct ReplaceConcatPattern
       outputSize0, rewriter.getI8Type());
     auto concatTensorAttr = DenseElementsAttr::get<int8_t>(concatTensorType, dummy);
     auto concatTensorOp =
-      rewriter.create<ConstantOp>(concatOp.getLoc(), concatTensorAttr);
+      rewriter.create<arith::ConstantOp>(concatOp.getLoc(), concatTensorAttr);
     
     auto copyIntoOp0 = rewriter.create<CopyIntoOp>(
       concatOp.getLoc(), concatOp.getType(),
@@ -111,7 +112,7 @@ struct ReplaceConcatPattern
         outputSize1, rewriter.getI8Type());
       auto concatTensorAttr = DenseElementsAttr::get<int8_t>(concatTensorType, dummy);
       auto concatTensorOp =
-        rewriter.create<ConstantOp>(concatOp.getLoc(), concatTensorAttr);
+        rewriter.create<arith::ConstantOp>(concatOp.getLoc(), concatTensorAttr);
 
       auto copyIntoOp2 = rewriter.create<CopyIntoOp>(
           concatOp.getLoc(), concatOp.getType(),
@@ -141,17 +142,18 @@ struct ReplaceConcatPattern
   }
 };
 
-void ReplaceConcat::runOnFunction() {
+void ReplaceConcat::runOnOperation() {
   auto *ctx = &getContext();
-  auto func = getFunction();
-  OwningRewritePatternList patterns(ctx);
+  RewritePatternSet patterns(ctx);
+  func::FuncOp func = getOperation();
+
   patterns.insert<ReplaceConcatPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
 // Creates an instance of the ReplaceConcat pass.
-std::unique_ptr<OperationPass<FuncOp>> createReplaceConcatPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceConcatPass() {
   return std::make_unique<ReplaceConcat>();
 }
 

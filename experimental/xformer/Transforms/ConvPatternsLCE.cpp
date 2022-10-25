@@ -239,6 +239,7 @@ LogicalResult ReplaceBConv2DPattern::getSerializedParamsAndTensors(
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &thresholdsData,
     int &scratchBytes) const {
+  otType = OtType::Group;
   switch (kt) {
   case Conv2DType::BNNValidDirectBinary:
     if (failed(getBConv2DValidDirectBinaryParams(

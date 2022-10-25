@@ -52,9 +52,6 @@ struct BConvArgs {
   llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
 };
 
-enum OT_Type { Group, Channelwise };
-
-//
 // XC Conv2D Base class
 // ConcreteType would be TFL Conv types or Larq BConv2D
 // Replaces them with XC Conv2D

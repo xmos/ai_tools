@@ -39,6 +39,12 @@ struct ReplaceConcatPattern
     auto numInputs = concatOp.values().size();
 
     auto numConcats = numInputs/2 + numInputs % 2;
+    
+    //only implemented for concats with 2 or 4 inputs
+    if (numConcats>2)
+    {
+      return success();
+    }
 
     auto input0 = concatOp.values().operator[](0);
     auto input1 = concatOp.values().operator[](1);

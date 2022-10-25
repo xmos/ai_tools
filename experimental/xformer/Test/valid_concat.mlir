@@ -4,7 +4,10 @@
 // CHECK-LABEL: main
 func.func @main(%arg0: tensor<?x160x160x4x!quant.uniform<i8:f32, 0.007841695100069046>> {tf_saved_model.index_path = ["input_1"]}) -> (tensor<?x2560x!quant.uniform<i8:f32, 0.007841695100069046>> {tf_saved_model.index_path = ["flatten"]}) attributes {tf.entry_function = {inputs = "serving_default_input_1:0", outputs = "PartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
 
-  // CHECK: xc.concat
+  // CHECK: xc.copy_into
+  // CHECK: xc.copy_into
+  // CHECK: xc.connector
+  // CHECK: xc.pass_thru
   // CHECK-NOT: tfl.concatenation
 
   %cst = arith.constant dense<0> : tensor<4xi32>

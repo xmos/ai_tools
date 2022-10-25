@@ -205,7 +205,7 @@ LogicalResult ReplaceConv2DPattern::getKernelType(const TFLConvArgs &args,
 }
 
 LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
-    const TFLConvArgs &args, const Conv2DType &kt, int &otType,
+    const TFLConvArgs &args, const Conv2DType &kt, OtType &otType,
     llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
@@ -248,10 +248,10 @@ LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
 }
 
 LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
-    const TFLConvArgs &args, std::string &otStr, int &otType,
+    const TFLConvArgs &args, std::string &otStr, OtType &otType,
     std::vector<int16_t> &mulsBiasesData) const {
   
-  otType = Group;
+  otType = OtType::Group;
 
   nn::MulsAndBias mulAndBiases =
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
@@ -272,6 +272,7 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
 
     quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulAndBiases, qp, false);
+      
     if(quantError > args.quantErrorThreshold) {
       std::stringstream msg;
       msg << "Quantization error of " << quantError
@@ -285,7 +286,7 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
       return failure();
     }
     else {
-      otType = Channelwise;
+      otType = OtType::Channelwise;
 
       auto serialisedMultipliersAndBiases =
         nn::OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers, qp.biases);
@@ -300,7 +301,7 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
     }
   }
 
-  if(otType == Group) {
+  if(otType == OtType::Group) {
     auto serialisedMultipliersAndBiases =
         nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(
@@ -417,7 +418,7 @@ ReplaceDepthwiseConv2DPattern::getKernelType(const TFLConvArgs &args,
 }
 
 LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
-    const TFLConvArgs &args, const Conv2DType &kt, int &otType,
+    const TFLConvArgs &args, const Conv2DType &kt, OtType &otType,
     llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
@@ -455,12 +456,12 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
 }
 
 LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
-    const TFLConvArgs &args, std::string &otStr, int &otType,
+    const TFLConvArgs &args, std::string &otStr, OtType &otType,
     std::vector<int16_t> &mulsBiasesData) const {
   std::array<int, 4> filterShape = {1, args.filterHeight, args.filterWidth,
                                     args.inputDepth};
 
-  otType = Group;
+  otType = OtType::Group;
 
   nn::MulsAndBias mulAndBiases =
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
@@ -479,7 +480,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
         quantizer.quantise_activation(mulAndBiases, false);
 
-    quantError = nn::OutputTransformFnInt8::get_quant_error(
+    quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(
       mulAndBiases, qp, false);
     if(quantError > args.quantErrorThreshold) {
       std::stringstream msg;
@@ -494,7 +495,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
       return failure();
     }
     else {
-      otType = Channelwise;
+      otType = OtType::Channelwise;
 
       auto serialisedMultipliersAndBiases =
         nn::OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers, qp.biases);
@@ -508,7 +509,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
       return success();
     }
   }
-  if(otType == Group) {
+  if(otType == OtType::Group) {
     auto serialisedMultipliersAndBiases =
         nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(

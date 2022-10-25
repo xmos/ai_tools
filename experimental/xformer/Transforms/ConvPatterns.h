@@ -90,7 +90,7 @@ public:
   LogicalResult getKernelType(const BConvArgs &args, Conv2DType &kt) const;
 
   LogicalResult getSerializedParamsAndTensors(
-      const BConvArgs &args, const Conv2DType &kt, int &otType,
+      const BConvArgs &args, const Conv2DType &kt, OtType &otType,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData,
@@ -150,7 +150,7 @@ public:
   }
 
   LogicalResult getSerializedParamsAndTensors(
-      const TFLConvArgs &args, const Conv2DType &kt, int &otType,
+      const TFLConvArgs &args, const Conv2DType &kt, OtType &otType,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
@@ -181,7 +181,7 @@ public:
   int getQuantizationIndex() const { return 0; }
 
   LogicalResult getSerializedParamsAndTensors(
-      const TFLConvArgs &args, const Conv2DType &kt, int &otType,
+      const TFLConvArgs &args, const Conv2DType &kt, OtType &otType,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
@@ -204,7 +204,7 @@ private:
       std::vector<int8_t> &weightsData, int &scratchBytes) const;
 
   LogicalResult
-  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr, int &otType,
+  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr, OtType &otType,
                            std::vector<int16_t> &mulsBiasesData) const;
 };
 
@@ -226,7 +226,7 @@ public:
   int getQuantizationIndex() const { return 3; }
 
   LogicalResult getSerializedParamsAndTensors(
-      const TFLConvArgs &args, const Conv2DType &kt, int &otType,
+      const TFLConvArgs &args, const Conv2DType &kt, OtType &otType,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
@@ -244,7 +244,7 @@ private:
       std::vector<int8_t> &weightsData, int &scratchBytes) const;
 
   LogicalResult
-  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr, int &otType,
+  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr, OtType &otType,
                            std::vector<int16_t> &mulsBiasesData) const;
 };
 

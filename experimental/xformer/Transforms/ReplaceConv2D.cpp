@@ -57,11 +57,14 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
     return failure();
   }
 
+  OtType otType;
+
   llvm::SmallVector<std::string> abstractKernelParams;
   std::string memcpyFnParam, aggregateFnParam, outputTransformFnParam,
-      kernelTypeEnumParam;
+      kernelTypeEnumParam, otTypeEnumParam;
+
   int32_t scratchByteParam;
-  int32_t otTypeParam;
+
   std::vector<int8_t> weightsData;
   std::vector<int16_t> mulsBiasesOrThresholdsData;
 
@@ -69,7 +72,6 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   const int threadCount = threadCountOption;
   llvm::SmallVector<std::string> strParams;
   int scratchBytes = 0;
-  int otType = 0;
   // Get image region splits for multiple threads
   args.imageRegionSplits = utils::getImageRegionThreadSplits(
       threadCount, args.Y.height, args.Y.width);
@@ -94,8 +96,8 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   memcpyFnParam = strParams[0];
   aggregateFnParam = strParams[1];
   outputTransformFnParam = strParams[2];
+  otTypeEnumParam = stringifyOtType(otType).str();
   scratchByteParam = scratchBytes;
-  otTypeParam = otType;
 
   // Create a string array attr from a vector of strings
   auto getStringArrayAttr = [&](llvm::SmallVector<std::string> value) {
@@ -120,7 +122,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
       mulsBiasesOrThresholdsType, mulsBiasesOrThresholdsData);
   auto mulsBiasesOrThresholdsConstantOp = rewriter.create<arith::ConstantOp>(
       conv2DOp.getLoc(), mulsBiasesOrThresholdsAttr);
-
+  
   // Create the Conv2DV2 Op with the params and kernel type
   auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
       conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(),
@@ -129,7 +131,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
       rewriter.getStringAttr(memcpyFnParam),
       rewriter.getStringAttr(aggregateFnParam),
       rewriter.getStringAttr(outputTransformFnParam),
-      rewriter.getI32IntegerAttr(otTypeParam),
+      rewriter.getStringAttr(otTypeEnumParam),
       rewriter.getI32IntegerAttr(scratchByteParam),
       rewriter.getI32IntegerAttr(actualThreadCount),
       getStringArrayAttr(abstractKernelParams));

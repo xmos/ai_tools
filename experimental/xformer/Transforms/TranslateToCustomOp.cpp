@@ -54,7 +54,7 @@ std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
   fbb.String("mp", memcpy_fn_param().str());
   fbb.String("aggp", aggregate_fn_param().str());
   fbb.String("otp", output_transform_fn_param().str());
-  fbb.Int("ott", (int32_t)output_transform_type());
+  fbb.Int("ott", (int32_t)(symbolizeOtType(output_transform_type()).getValue()));
   fbb.Int("scratch", (int32_t)scratch_bytes());
 
   int threadCount = (int)thread_count();

@@ -33,5 +33,8 @@ filegroup(
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_load_from_flash.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_lookup.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_strided_slice.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_copy_into.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_connector.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_pass_thru.cc",
     ],
 )

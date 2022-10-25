@@ -52,10 +52,7 @@ struct BConvArgs {
   llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
 };
 
-enum OT_Type {
-  Group,
-  Channelwise
-}; 
+enum OT_Type { Group, Channelwise };
 
 //
 // XC Conv2D Base class
@@ -157,8 +154,8 @@ public:
       int &scratchBytes) const {
     if (failed(static_cast<const ConcreteType *>(this)
                    ->getSerializedParamsAndTensors(
-                       args, kt, otType, strParams, abstractKernelParams, weightsData,
-                       mulsBiasesData, scratchBytes))) {
+                       args, kt, otType, strParams, abstractKernelParams,
+                       weightsData, mulsBiasesData, scratchBytes))) {
       return failure();
     }
     return success();
@@ -204,7 +201,8 @@ private:
       std::vector<int8_t> &weightsData, int &scratchBytes) const;
 
   LogicalResult
-  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr, OtType &otType,
+  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr,
+                           OtType &otType,
                            std::vector<int16_t> &mulsBiasesData) const;
 };
 
@@ -244,7 +242,8 @@ private:
       std::vector<int8_t> &weightsData, int &scratchBytes) const;
 
   LogicalResult
-  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr, OtType &otType,
+  getOutputTransformParams(const TFLConvArgs &args, std::string &otStr,
+                           OtType &otType,
                            std::vector<int16_t> &mulsBiasesData) const;
 };
 

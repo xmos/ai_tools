@@ -79,8 +79,8 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   // Obtain serialized params and calculated tensors from lib_nn for the
   // conv2d kernel type
   if (failed(builder->getSerializedParamsAndTensors(
-          args, kernelType, otType, strParams, abstractKernelParams, weightsData,
-          mulsBiasesOrThresholdsData, scratchBytes))) {
+          args, kernelType, otType, strParams, abstractKernelParams,
+          weightsData, mulsBiasesOrThresholdsData, scratchBytes))) {
     return failure();
   }
 
@@ -122,7 +122,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
       mulsBiasesOrThresholdsType, mulsBiasesOrThresholdsData);
   auto mulsBiasesOrThresholdsConstantOp = rewriter.create<arith::ConstantOp>(
       conv2DOp.getLoc(), mulsBiasesOrThresholdsAttr);
-  
+
   // Create the Conv2DV2 Op with the params and kernel type
   auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
       conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(),

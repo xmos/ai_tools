@@ -250,14 +250,14 @@ LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
 LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
     const TFLConvArgs &args, std::string &otStr, OtType &otType,
     std::vector<int16_t> &mulsBiasesData) const {
-  
+
   otType = OtType::Group;
 
   nn::MulsAndBias mulAndBiases =
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
           args.effectiveMultiplier, args.bias, args.filter, args.inputZeroPoint,
           args.outputZeroPoint, args.outputDepth);
-  //Try group OT
+  // Try group OT
   auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
       quantizer.quantise_activation(mulAndBiases, false);
@@ -265,35 +265,36 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulAndBiases, qp, args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
-    //Try channelwise OT
+    // Try channelwise OT
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
         quantizer.quantise_activation(mulAndBiases, false);
 
-    quantError = nn::OutputTransformFnInt8::get_quant_error(
-      mulAndBiases, qp, false);
-      
-    if(quantError > args.quantErrorThreshold) {
+    quantError =
+        nn::OutputTransformFnInt8::get_quant_error(mulAndBiases, qp, false);
+
+    if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
       msg << "Quantization error of " << quantError
           << " larger than set threshold of " << args.quantErrorThreshold
           << ", therefore reverting to reference Conv2D op!" << std::endl
           << "Inspect the output, and if suitable, set a "
-            "higher threshold with --xcore-conv-err-threshold."
+             "higher threshold with --xcore-conv-err-threshold."
           << std::endl;
       args.convOp->emitWarning(
           utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
       return failure();
-    }
-    else {
+    } else {
       otType = OtType::Channelwise;
 
       auto serialisedMultipliersAndBiases =
-        nn::OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers, qp.biases);
-      nn::OutputTransformFn::pad_final_access(
-          serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
+          nn::OutputTransformFn::serialise_memory(qp.initial_shifts,
+                                                  qp.multipliers, qp.biases);
+      nn::OutputTransformFn::pad_final_access(serialisedMultipliersAndBiases,
+                                              VPU_INT16_EPV,
+                                              (int16_t)args.padValue);
       nn::OT_int8_channelwise::Params otParams((int32_t)args.outputDepth,
-                                  qp.final_shr);
+                                               qp.final_shr);
 
       otStr = otParams.serialise<nn::OT_int8_channelwise::Params>();
       mulsBiasesData = serialisedMultipliersAndBiases;
@@ -301,18 +302,18 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
     }
   }
 
-  if(otType == OtType::Group) {
+  if (otType == OtType::Group) {
     auto serialisedMultipliersAndBiases =
         nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(
         serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
-                                qp.final_shr);
+                                 qp.final_shr);
 
     otStr = otParams.serialise<nn::OT_int8::Params>();
     mulsBiasesData = serialisedMultipliersAndBiases;
   }
-  
+
   return success();
 }
 
@@ -467,7 +468,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
           args.effectiveMultiplier, args.bias, args.filter, filterShape,
           args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
-  //Try group OT
+  // Try group OT
   auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
       quantizer.quantise_activation(mulAndBiases, false);
@@ -475,54 +476,55 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulAndBiases, qp, args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
-    //Try channelwise OT
+    // Try channelwise OT
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
         quantizer.quantise_activation(mulAndBiases, false);
 
     quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(
-      mulAndBiases, qp, false);
-    if(quantError > args.quantErrorThreshold) {
+        mulAndBiases, qp, false);
+    if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
       msg << "Quantization error of " << quantError
           << " larger than set threshold of " << args.quantErrorThreshold
-          << ", therefore reverting to reference DepthwiseConv2D op!" << std::endl
+          << ", therefore reverting to reference DepthwiseConv2D op!"
+          << std::endl
           << "Inspect the output, and if suitable, set a "
-            "higher threshold with --xcore-conv-err-threshold."
+             "higher threshold with --xcore-conv-err-threshold."
           << std::endl;
       args.convOp->emitWarning(
           utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
       return failure();
-    }
-    else {
+    } else {
       otType = OtType::Channelwise;
 
       auto serialisedMultipliersAndBiases =
-        nn::OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers, qp.biases);
-      nn::OutputTransformFn::pad_final_access(
-          serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
+          nn::OutputTransformFn::serialise_memory(qp.initial_shifts,
+                                                  qp.multipliers, qp.biases);
+      nn::OutputTransformFn::pad_final_access(serialisedMultipliersAndBiases,
+                                              VPU_INT16_EPV,
+                                              (int16_t)args.padValue);
       nn::OT_int8_channelwise::Params otParams((int32_t)args.outputDepth,
-                                  qp.final_shr);
+                                               qp.final_shr);
 
       otStr = otParams.serialise<nn::OT_int8_channelwise::Params>();
       mulsBiasesData = serialisedMultipliersAndBiases;
       return success();
     }
   }
-  if(otType == OtType::Group) {
+  if (otType == OtType::Group) {
     auto serialisedMultipliersAndBiases =
         nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(
         serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
-                                qp.final_shr);
+                                 qp.final_shr);
 
     otStr = otParams.serialise<nn::OT_int8::Params>();
     mulsBiasesData = serialisedMultipliersAndBiases;
     return success();
   }
 }
-
 
 LogicalResult
 ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DValidDirectParams(

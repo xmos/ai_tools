@@ -271,7 +271,7 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
         quantizer.quantise_activation(mulAndBiases, false);
 
     quantError =
-        nn::OutputTransformFnInt8::get_quant_error(mulAndBiases, qp, false);
+        nn::OutputTransformFnInt8_Channelwise::get_quant_error(mulAndBiases, qp, true);
 
     if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
@@ -482,7 +482,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
         quantizer.quantise_activation(mulAndBiases, false);
 
     quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(
-        mulAndBiases, qp, false);
+        mulAndBiases, qp, true);
     if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
       msg << "Quantization error of " << quantError

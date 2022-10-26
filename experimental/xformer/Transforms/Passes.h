@@ -25,13 +25,15 @@ void buildXCorePassPipeline(OpPassManager &pm);
 std::unique_ptr<OperationPass<func::FuncOp>> createApplyTFLPatternsPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createInsertStridedSlicePatternsPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createInsertConcatPass();
-std::unique_ptr<OperationPass<func::FuncOp>> createReplaceAvgPoolWithConv2DPass();
+std::unique_ptr<OperationPass<func::FuncOp>> 
+createReplaceAvgPoolWithConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceFCWithConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createPad3to4Conv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceStridedSlicePass();
 std::unique_ptr<OperationPass<func::FuncOp>> createApplyXCPatternsPass();
-std::unique_ptr<OperationPass<func::FuncOp>> createApplyLoadConstantOpPatternsPass();
+std::unique_ptr<OperationPass<func::FuncOp>> 
+createApplyLoadConstantOpPatternsPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createWriteFlashImagePass();
 std::unique_ptr<OperationPass<func::FuncOp>> createTranslateToCustomOpPass();
 

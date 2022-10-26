@@ -27,8 +27,6 @@ def get_xformed_model(model, args):
 
         params_path = pathlib.Path(dirname) / "output.params"
         output_path = pathlib.Path(dirname) / "output.tflite"
-        if args.tc is None:
-            args.tc ="1"
         cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path),
         "--xcore-thread-count=" + args.tc,
         "--xcore-flash-image-file=" + str(params_path),
@@ -165,17 +163,17 @@ def test_inference(args):
 
         # Compare outputs
         for i in range(num_of_outputs):
-            # print("Comparing output number " + str(i) + "...")
+            print("Comparing output number " + str(i) + "...")
             try:
-                print("original output")
-                print(outputs[i])
-                print("xformed output")
+                print("xformer output")
                 print(xformer_outputs[i])
-                # np.testing.assert_equal(outputs[i], xformer_outputs[i])
+                print("compared output")
+                print(outputs[i])
+                np.testing.assert_equal(outputs[i], xformer_outputs[i])
             except Exception as e:
                 num_of_fails += 1
                 print(e)
-                # print("Run #" + str(test) + " failed")
+                print("Run #" + str(test) + " failed")
             #np.testing.assert_equal(outputs[i], outputs2[i])
     if args.device:
         ie.close()    
@@ -195,5 +193,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     num_of_fails = test_inference(args)
-    # print("\nTotal tests = " + str(args.n))
-    # print("Total fails = " + str(num_of_fails))
+    print("\nTotal tests = " + str(args.n))
+    print("Total fails = " + str(num_of_fails))

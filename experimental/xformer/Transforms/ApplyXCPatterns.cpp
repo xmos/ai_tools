@@ -8,7 +8,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include <numeric>
-#include "lib_nn/api/MemCpyFn.hpp"
 
 namespace mlir {
 namespace xcore {

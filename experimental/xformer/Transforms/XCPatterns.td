@@ -73,16 +73,16 @@ def HasNoFollowingConv2D : Constraint<CPred<"hasNoFollowingConv2D($0)">>;
 def : Pat<(XC_Conv2DV2Op
            : $cout(TFL_ReshapeOp
                    : $rout $input, $shape),
-             $weights, $muls, $kt, $mp, $aggp, $otp, $scratch, $tc, $akp),
-          (XC_Conv2DV2Op $input, $weights, $muls, $kt, $mp, $aggp, $otp,
+             $weights, $muls, $kt, $mp, $aggp, $otp, $ott, $scratch, $tc, $akp),
+          (XC_Conv2DV2Op $input, $weights, $muls, $kt, $mp, $aggp, $otp, $ott,
            $scratch, $tc, $akp)>;
 
 // Fuse Reshape(XC_Conv2D()) -> XC_Conv2D()
 def : Pat<(TFL_ReshapeOp
            : $rout(XC_Conv2DV2Op $input, $weights, $muls, $kt, $mp, $aggp, $otp,
-                   $scratch, $tc, $akp),
+                   $ott, $scratch, $tc, $akp),
              $shape),
-          (XC_Conv2DV2Op $input, $weights, $muls, $kt, $mp, $aggp, $otp,
+          (XC_Conv2DV2Op $input, $weights, $muls, $kt, $mp, $aggp, $otp, $ott,
            $scratch, $tc, $akp)>;
 
 // Replace LQ_QuantizeOp with XC_bsign_8

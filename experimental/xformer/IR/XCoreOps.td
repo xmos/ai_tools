@@ -67,6 +67,13 @@ def XC_Conv2D_TypeAttr : I32EnumAttr<"Conv2DType", "conv2d type enum", [
   XC_BNN_Conv2D_ValidDirect_Int8, XC_BNN_Conv2D_ValidIndirect_Int8
 ]>;
 
+def XC_Conv2D_Group : I32EnumAttrCase<"Group", 0>;
+def XC_Conv2D_Channelwise : I32EnumAttrCase<"Channelwise", 1>;
+
+def XC_Conv2D_OTAttr : I32EnumAttr<"OtType", "output transform type enum", [
+  XC_Conv2D_Group, XC_Conv2D_Channelwise
+]>;
+
 def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
   let summary = "Strided Slice op";
 
@@ -184,6 +191,7 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
     StrAttr:$memcpy_fn_param,
     StrAttr:$aggregate_fn_param,
     StrAttr:$output_transform_fn_param,
+    StrAttr:$output_transform_type,
     I32Attr:$scratch_bytes,
     I32Attr:$thread_count,
     StrArrayAttr:$abstract_kernel_params

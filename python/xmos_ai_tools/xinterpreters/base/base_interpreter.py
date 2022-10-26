@@ -462,10 +462,11 @@ class xcore_tflm_base_interpreter(ABC):
                 with open(self.model_path, "rb") as input_fd:
                     self.model_content = input_fd.read()
 
-            # Check if params_path exits but not params_content
+            # Check if params_path exists but not params_content
             if self.params_content is None and self.params_path is not None:
                 with open(self.params_path, "rb") as input_fd2:
                     self.params_content = input_fd2.read()
-            # If no params, set to empty byte array
-            else:
+ 
+            # If params_content is None, set to empty byte array
+            if self.params_content is None:
                 self.params_content = bytes([])

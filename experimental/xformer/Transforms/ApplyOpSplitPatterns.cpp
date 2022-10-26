@@ -17,6 +17,8 @@ namespace {
 struct InsertStridedSlicePatterns 
     : public PassWrapper<InsertStridedSlicePatterns, 
                          OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(InsertStridedSlicePatterns)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
@@ -175,11 +177,10 @@ static Value insertStridedSlice(PatternRewriter &rewriter, Operation *op,
 #include "Transforms/GeneratedInsertStridedSlicePatterns.inc"
 
 void InsertStridedSlicePatterns::runOnOperation() {
-  auto *ctx = &getContext();
+  RewritePatternSet patterns(&getContext());
   func::FuncOp func = getOperation();
 
-  RewritePatternSet patterns(ctx);
-  patterns.insert<InsertStridedSlicePatterns>(ctx);
+  populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 

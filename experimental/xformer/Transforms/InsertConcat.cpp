@@ -16,10 +16,12 @@ namespace {
 struct InsertConcat
     : public PassWrapper<InsertConcat,
                           OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(InsertConcat)
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
-   StringRef getArgument() const final { return "xcore-insert-concat"; }
+  StringRef getArgument() const final { return "xcore-insert-concat"; }
   StringRef getDescription() const final {
     return "Insert TFL Concat.";
   }

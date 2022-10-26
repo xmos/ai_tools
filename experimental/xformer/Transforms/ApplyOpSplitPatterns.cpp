@@ -14,11 +14,13 @@ namespace mlir {
 namespace xcore {
 
 namespace {
-struct InsertStridedSlicePatterns : public PassWrapper<InsertStridedSlicePatterns, FunctionPass> {
+struct InsertStridedSlicePatterns 
+    : public PassWrapper<InsertStridedSlicePatterns, 
+                         OperationPass<func::FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 bool HasNoFollowingStridedSlice(Value outputVal) {
@@ -172,11 +174,12 @@ static Value insertStridedSlice(PatternRewriter &rewriter, Operation *op,
 
 #include "Transforms/GeneratedInsertStridedSlicePatterns.inc"
 
-void InsertStridedSlicePatterns::runOnFunction() {
-  OwningRewritePatternList patterns(&getContext());
-  auto func = getFunction();
+void InsertStridedSlicePatterns::runOnOperation() {
+  auto *ctx = &getContext();
+  func::FuncOp func = getOperation();
 
-  populateWithGenerated(patterns);
+  RewritePatternSet patterns(ctx);
+  patterns.insert<InsertStridedSlicePatterns>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
@@ -186,7 +189,7 @@ void InsertStridedSlicePatterns::runOnFunction() {
 } // namespace
 
 // Creates an instance of the InsertStridedSlicePatterns pass.
-std::unique_ptr<OperationPass<FuncOp>> createInsertStridedSlicePatternsPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createInsertStridedSlicePatternsPass() {
   return std::make_unique<InsertStridedSlicePatterns>();
 }
 

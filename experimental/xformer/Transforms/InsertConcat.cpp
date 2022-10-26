@@ -14,7 +14,8 @@ namespace xcore {
 namespace {
 // Insert  Concat
 struct InsertConcat
-    : public PassWrapper<InsertConcat, FunctionPass> {
+    : public PassWrapper<InsertConcat,
+                          OperationPass<func::FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
@@ -22,7 +23,7 @@ struct InsertConcat
   StringRef getDescription() const final {
     return "Insert TFL Concat.";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 
@@ -63,17 +64,17 @@ struct InsertConcatPattern
   }
 };
 
-void InsertConcat::runOnFunction() {
+void InsertConcat::runOnOperation() {
   auto *ctx = &getContext();
-  auto func = getFunction();
-  OwningRewritePatternList patterns(ctx);
+  RewritePatternSet patterns(ctx);
+  func::FuncOp func = getOperation();
   patterns.insert<InsertConcatPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
 // Creates an instance of the InsertConcat pass.
-std::unique_ptr<OperationPass<FuncOp>> createInsertConcatPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> createInsertConcatPass() {
   return std::make_unique<InsertConcat>();
 }
 

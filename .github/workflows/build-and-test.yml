@@ -183,6 +183,8 @@ jobs:
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
           bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"
       - name: Build windows wheels
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
         shell: cmd
         run: |
           cd python
@@ -191,7 +193,7 @@ jobs:
         run: |
           pip install -r ./requirements.txt
           cd python/dist
-          pip install *
+          pip install xmos_ai_tools-0.1.1-py3-none-win_amd64.whl
           cd ../..
           pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 2 --reruns 5 --reruns-delay 1
 

@@ -262,8 +262,8 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
       quantizer.quantise_activation(mulAndBiases, false);
 
-  double quantError = nn::OutputTransformFnInt8::get_quant_error(
-      mulAndBiases, qp, args.quantErrorFullCheckEnabled);
+  double quantError = 
+    nn::OutputTransformFnInt8::get_quant_error(mulAndBiases, qp, args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
     // Try channelwise OT
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
@@ -271,7 +271,7 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
         quantizer.quantise_activation(mulAndBiases, false);
 
     quantError =
-        nn::OutputTransformFnInt8::get_quant_error(mulAndBiases, qp, false);
+        nn::OutputTransformFnInt8_Channelwise::get_quant_error(mulAndBiases, qp, true);
 
     if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
@@ -473,16 +473,16 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
       quantizer.quantise_activation(mulAndBiases, false);
 
-  double quantError = nn::OutputTransformFnInt8::get_quant_error(
-      mulAndBiases, qp, args.quantErrorFullCheckEnabled);
+  double quantError = 
+    nn::OutputTransformFnInt8::get_quant_error(mulAndBiases, qp, args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
     // Try channelwise OT
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
         quantizer.quantise_activation(mulAndBiases, false);
 
-    quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(
-        mulAndBiases, qp, false);
+    quantError = 
+      nn::OutputTransformFnInt8_Channelwise::get_quant_error(mulAndBiases, qp, true);
     if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
       msg << "Quantization error of " << quantError

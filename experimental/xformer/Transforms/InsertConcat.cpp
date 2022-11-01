@@ -31,36 +31,79 @@ struct InsertConcat
 
 
 struct InsertConcatPattern
-    : public OpRewritePattern<DummyStridedSliceOp> {
-  using OpRewritePattern<DummyStridedSliceOp>::OpRewritePattern;
+    : public OpRewritePattern<TFL::Conv2DOp> {
+  using OpRewritePattern<TFL::Conv2DOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(DummyStridedSliceOp stridedSliceOriginal,
+  // LogicalResult matchAndRewrite(DummyStridedSliceOp stridedSliceOriginal,
+  LogicalResult matchAndRewrite(TFL::Conv2DOp convOriginal,
                                 PatternRewriter &rewriter) const override {
 
-    auto stridedSliceInput = stridedSliceOriginal.input();
 
-	// Extract args from the op
-	auto inputType =
-	stridedSliceInput.getType().dyn_cast<RankedTensorType>();
-	auto inputHeight = inputType.getDimSize(1);
-	auto inputWidth = inputType.getDimSize(2);
-	auto inputDepth = inputType.getDimSize(3);
+    if (!convOriginal.output().hasOneUse()) {
+      return failure();
+    }
 
-	int32_t offset = (inputHeight*inputWidth*inputDepth)/2;
+    auto convReplacement   = rewriter.create<TFL::Conv2DOp>(
+      convOriginal.getLoc(), convOriginal.getType(),  convOriginal.input(),
+      convOriginal.filter(),
+      convOriginal.bias(),
+      convOriginal.dilation_h_factor(),
+      convOriginal.dilation_w_factor(),
+      convOriginal.fused_activation_function(),
+      convOriginal.padding(),
+      convOriginal.stride_h(),
+      convOriginal.stride_w() );
 
-	auto simpleSliceOp0  = rewriter.create<SimpleSliceOp>(
-		stridedSliceOriginal.getLoc(), stridedSliceOriginal.getType(),
-        stridedSliceInput, rewriter.getI32IntegerAttr(offset)) ; 
+    auto stridedSliceInput = convOriginal.input();
 
-	auto simpleSliceOp1  = rewriter.create<SimpleSliceOp>(
-		stridedSliceOriginal.getLoc(), stridedSliceOriginal.getType(),
-        stridedSliceInput, rewriter.getI32IntegerAttr(offset)) ; 
+    // Extract args from the op
+    auto inputType =
+    stridedSliceInput.getType().dyn_cast<RankedTensorType>();
+    auto inputHeight = inputType.getDimSize(1);
+    auto inputWidth = inputType.getDimSize(2);
+    auto inputDepth = inputType.getDimSize(3);
 
-	auto concatOp  = rewriter.create<ConcatOp>(
-		stridedSliceOriginal.getLoc(), stridedSliceOriginal.getType(),
-        simpleSliceOp0, simpleSliceOp0, offset );
+    int32_t offset = (inputHeight*inputWidth*inputDepth)/2;
 
-	rewriter.replaceOp(stridedSliceOriginal, concatOp.output());
+    auto simpleSliceOp0  = rewriter.create<SimpleSliceOp>(
+      convOriginal.getLoc(), convOriginal.getType(),
+          convReplacement, rewriter.getI32IntegerAttr(offset)) ; 
+
+    // SmallVector<Value> beginAttr;
+    // beginAttr.push_back(0);
+    // beginAttr.push_back(0);
+
+    // SmallVector<Value> endAttr;
+    // endAttr.push_back(4);
+    // endAttr.push_back(4);
+
+    // SmallVector<Value> stridesAttr;
+    // endAttr.push_back(1);
+    // endAttr.push_back(1);
+          
+    // auto simpleSliceOp0  = rewriter.create<TFL::StridedSliceOp>(
+    //   convOriginal.getLoc(), convOriginal.getType(),
+    //       convReplacement, beginAttr,endAttr,stridesAttr) ; 
+
+    SmallVector<Value> stridedSliceOps;
+    stridedSliceOps.push_back(simpleSliceOp0.getResult());
+
+    auto simpleSliceOp1  = rewriter.create<SimpleSliceOp>(
+      convOriginal.getLoc(), convOriginal.getType(),
+          convReplacement, rewriter.getI32IntegerAttr(offset)) ; 
+
+    stridedSliceOps.push_back(simpleSliceOp1.getResult());
+
+    RankedTensorType newOutputType = RankedTensorType::get(
+        convOriginal.output().getType().cast<RankedTensorType>().getShape(),
+        convOriginal.output().getType().cast<ShapedType>().getElementType());
+
+    StringRef fused_activation_function = "NONE";
+
+    auto newConcatOp = rewriter.create<TFL::ConcatenationOp>(
+          convOriginal.getLoc(), newOutputType, stridedSliceOps, 0, fused_activation_function);
+
+    rewriter.replaceOp(convOriginal, newConcatOp.output());
 
     return success();
   }

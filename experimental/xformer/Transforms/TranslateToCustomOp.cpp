@@ -28,29 +28,6 @@ std::vector<uint8_t> StridedSliceOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
-std::vector<uint8_t> DummyStridedSliceOp::buildCustomOptions() {
-  flexbuffers::Builder fbb;
-  auto rootMap = fbb.StartMap();
-
-  fbb.Int("begin_x", (int32_t)begin_x());
-  fbb.Int("begin_y", (int32_t)begin_y());
-  fbb.String("mp", memcpy_fn_param().str());
-
-  fbb.EndMap(rootMap);
-  fbb.Finish();
-  return fbb.GetBuffer();
-}
-
-std::vector<uint8_t> ConcatOp::buildCustomOptions() {
-  flexbuffers::Builder fbb;
-  auto rootMap = fbb.StartMap();
-
-  fbb.Int("offset", (int32_t)offset());
-
-  fbb.EndMap(rootMap);
-  fbb.Finish();
-  return fbb.GetBuffer();
-}
 std::vector<uint8_t> SimpleSliceOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
@@ -153,8 +130,6 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<StridedSliceOp>>(ctx);
   patterns.insert<RewriteToCustomOp<SimpleSliceOp>>(ctx);
-  patterns.insert<RewriteToCustomOp<DummyStridedSliceOp>>(ctx);
-  patterns.insert<RewriteToCustomOp<ConcatOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

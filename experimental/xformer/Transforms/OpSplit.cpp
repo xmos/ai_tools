@@ -65,34 +65,35 @@ struct OpSplitPattern
 
     int32_t offset = (inputHeight*inputWidth*inputDepth)/2;
 
-    auto simpleSliceOp0  = rewriter.create<SimpleSliceOp>(
-      convOriginal.getLoc(), convOriginal.getType(),
-          convReplacement, rewriter.getI32IntegerAttr(offset)) ; 
+    int32_t beginAttr [4] = {0,0,0,0};
+    auto beginConstantOp =
+      rewriter.create<arith::ConstantOp>(convOriginal.getLoc(), rewriter.getI32TensorAttr(beginAttr));
 
-    // SmallVector<Value> beginAttr;
-    // beginAttr.push_back(0);
-    // beginAttr.push_back(0);
+    int32_t endAttr [4] = {0,5,5,0};
+    auto endConstantOp =
+      rewriter.create<arith::ConstantOp>(convOriginal.getLoc(), rewriter.getI32TensorAttr(endAttr));
+  
+    int32_t stridesAttr [4] = {1,1,1,1};
+    auto stridesConstantOp =
+      rewriter.create<arith::ConstantOp>(convOriginal.getLoc(), rewriter.getI32TensorAttr(stridesAttr));
 
-    // SmallVector<Value> endAttr;
-    // endAttr.push_back(4);
-    // endAttr.push_back(4);
-
-    // SmallVector<Value> stridesAttr;
-    // endAttr.push_back(1);
-    // endAttr.push_back(1);
+    int32_t begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask;
+    begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask = 0;
           
-    // auto simpleSliceOp0  = rewriter.create<TFL::StridedSliceOp>(
-    //   convOriginal.getLoc(), convOriginal.getType(),
-    //       convReplacement, beginAttr,endAttr,stridesAttr) ; 
+    auto stridedSliceOp0  = rewriter.create<TFL::StridedSliceOp>(
+      convOriginal.getLoc(), convOriginal.getType(),
+          convReplacement, beginConstantOp,endConstantOp,stridesConstantOp,  begin_mask,  end_mask, 
+     ellipsis_mask,  new_axis_mask,  shrink_axis_mask);
 
     SmallVector<Value> stridedSliceOps;
-    stridedSliceOps.push_back(simpleSliceOp0.getResult());
+    stridedSliceOps.push_back(stridedSliceOp0.getResult());
 
-    auto simpleSliceOp1  = rewriter.create<SimpleSliceOp>(
+    auto stridedSliceOp1  = rewriter.create<TFL::StridedSliceOp>(
       convOriginal.getLoc(), convOriginal.getType(),
-          convReplacement, rewriter.getI32IntegerAttr(offset)) ; 
+          convReplacement, beginConstantOp,endConstantOp,stridesConstantOp,  begin_mask,  end_mask, 
+     ellipsis_mask,  new_axis_mask,  shrink_axis_mask);
 
-    stridedSliceOps.push_back(simpleSliceOp1.getResult());
+    stridedSliceOps.push_back(stridedSliceOp1.getResult());
 
     RankedTensorType newOutputType = RankedTensorType::get(
         convOriginal.output().getType().cast<RankedTensorType>().getShape(),

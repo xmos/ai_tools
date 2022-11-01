@@ -23,7 +23,7 @@ void buildXCorePassPipeline(OpPassManager &pm);
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<OperationPass<func::FuncOp>> createApplyTFLPatternsPass();
-std::unique_ptr<OperationPass<func::FuncOp>> createInsertConcatPass();
+std::unique_ptr<OperationPass<func::FuncOp>> createOpSplitPass();
 std::unique_ptr<OperationPass<func::FuncOp>>
 createReplaceAvgPoolWithConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceFCWithConv2DPass();

@@ -12,25 +12,25 @@ namespace mlir {
 namespace xcore {
 
 namespace {
-// Insert  Concat
-struct InsertConcat
-    : public PassWrapper<InsertConcat,
+// OpSplit
+struct OpSplit
+    : public PassWrapper<OpSplit,
                           OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(InsertConcat)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpSplit)
 
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
-  StringRef getArgument() const final { return "xcore-insert-concat"; }
+  StringRef getArgument() const final { return "xcore-opsplit"; }
   StringRef getDescription() const final {
-    return "Insert TFL Concat.";
+    return "OpSplit.";
   }
   void runOnOperation() override;
 };
 
 
 
-struct InsertConcatPattern
+struct OpSplitPattern
     : public OpRewritePattern<TFL::Conv2DOp> {
   using OpRewritePattern<TFL::Conv2DOp>::OpRewritePattern;
 
@@ -109,21 +109,21 @@ struct InsertConcatPattern
   }
 };
 
-void InsertConcat::runOnOperation() {
+void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   RewritePatternSet patterns(ctx);
   func::FuncOp func = getOperation();
-  patterns.insert<InsertConcatPattern>(ctx);
+  patterns.insert<OpSplitPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
-// Creates an instance of the InsertConcat pass.
-std::unique_ptr<OperationPass<func::FuncOp>> createInsertConcatPass() {
-  return std::make_unique<InsertConcat>();
+// Creates an instance of the OpSplit pass.
+std::unique_ptr<OperationPass<func::FuncOp>> createOpSplitPass() {
+  return std::make_unique<OpSplit>();
 }
 
-static PassRegistration<InsertConcat> pass;
+static PassRegistration<OpSplit> pass;
 
 } // namespace xcore
 } // namespace mlir

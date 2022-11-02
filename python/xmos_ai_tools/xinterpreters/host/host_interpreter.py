@@ -136,7 +136,6 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
             self.obj,
             currentModel.model_content,
             len(currentModel.model_content),
-            10000000,
             currentModel.params_content,
         )
         if XTFLMInterpreterStatus(status) is XTFLMInterpreterStatus.ERROR:

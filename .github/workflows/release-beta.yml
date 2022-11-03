@@ -52,7 +52,7 @@ jobs:
           make build
 
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
                     
@@ -113,7 +113,7 @@ jobs:
           make build
 
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
                     
@@ -165,7 +165,7 @@ jobs:
         # be compatible for manylinux.
         run: |
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo -e 'build --remote_http_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
@@ -249,7 +249,7 @@ jobs:
 
           cd %GITHUB_WORKSPACE%/experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_http_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }} --google_default_credentials
+          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }} --google_default_credentials
       - name: Build windows wheels
         shell: cmd
         run: |

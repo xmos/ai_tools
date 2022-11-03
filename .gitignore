@@ -23,6 +23,7 @@ _build
 *.so*
 *.dylib
 /.bazelrc.user
+.bazelrc.user
 /.tf_configure.bazelrc
 /bazel-*
 /bazel_pip

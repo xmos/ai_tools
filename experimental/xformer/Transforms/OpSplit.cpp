@@ -55,6 +55,13 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     int32_t outputWidth = outputType.getDimSize(2);
     int32_t outputDepth = outputType.getDimSize(3);
 
+    auto outputShape = convOriginalOutput.getType().cast<RankedTensorType>().getShape();
+    ArrayRef newOutputShape = {outputShape[0],outputShape[1],outputShape[2]/2,outputShape[3]};
+
+    RankedTensorType newOutputType = RankedTensorType::get(
+        newOutputShape,
+        convOriginalOutput.getType().cast<ShapedType>().getElementType());
+
     int32_t sliceIndex = outputWidth / 2;
 
     int32_t beginAttr0[4] = {0, 0, 0, 0};
@@ -64,7 +71,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     int32_t endAttr0[4] = {1, outputHeight, sliceIndex, outputDepth};
     auto endConstantOp0 = rewriter.create<arith::ConstantOp>(
         convOriginal.getLoc(), rewriter.getI32TensorAttr(endAttr0));
-
+    
     int32_t beginAttr1[4] = {0, 0, sliceIndex, 0};
     auto beginConstantOp1 = rewriter.create<arith::ConstantOp>(
         convOriginal.getLoc(), rewriter.getI32TensorAttr(beginAttr1));
@@ -83,7 +90,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         0;
 
     auto stridedSliceOp0 = rewriter.create<TFL::StridedSliceOp>(
-        convOriginal.getLoc(), convOriginalOutput.getType(), convReplacement,
+        convOriginal.getLoc(), newOutputType, convReplacement,
         beginConstantOp0, endConstantOp0, stridesConstantOp, begin_mask,
         end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
@@ -91,20 +98,17 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     stridedSliceOps.push_back(stridedSliceOp0.getResult());
 
     auto stridedSliceOp1 = rewriter.create<TFL::StridedSliceOp>(
-        convOriginal.getLoc(), convOriginalOutput.getType(), convReplacement,
+        convOriginal.getLoc(), newOutputType, convReplacement,
         beginConstantOp1, endConstantOp1, stridesConstantOp, begin_mask,
         end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
     stridedSliceOps.push_back(stridedSliceOp1.getResult());
 
-    RankedTensorType newOutputType = RankedTensorType::get(
-        convOriginal.output().getType().cast<RankedTensorType>().getShape(),
-        convOriginal.output().getType().cast<ShapedType>().getElementType());
 
     StringRef fused_activation_function = "NONE";
 
     auto newConcatOp = rewriter.create<TFL::ConcatenationOp>(
-        convOriginal.getLoc(), newOutputType, stridedSliceOps, 0,
+        convOriginal.getLoc(), convOriginalOutput.getType(), stridedSliceOps, 2,
         fused_activation_function);
 
     rewriter.replaceOp(convOriginal, newConcatOp.output());

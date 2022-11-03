@@ -28,17 +28,6 @@ std::vector<uint8_t> StridedSliceOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
-std::vector<uint8_t> SimpleSliceOp::buildCustomOptions() {
-  flexbuffers::Builder fbb;
-  auto rootMap = fbb.StartMap();
-
-  fbb.Int("offset", (int32_t)offset());
-
-  fbb.EndMap(rootMap);
-  fbb.Finish();
-  return fbb.GetBuffer();
-}
-
 std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
@@ -129,7 +118,6 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<StridedSliceOp>>(ctx);
-  patterns.insert<RewriteToCustomOp<SimpleSliceOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

@@ -90,21 +90,6 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-
-def XC_SimpleSliceOp : XC_Op<"simple_slice", [NoSideEffect]> {
-  let summary = "simple_slice op";
-
-  let description = [{"simple_slice op.}];
-
-  let arguments = (ins
-    TensorOf<[QI8]>:$input,
-
-    I32Attr:$offset
-  );
-
-  let results = (outs TensorOf<[QI8]> : $output);
-}
-
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
   let summary = "Conv2D V2 op";
 

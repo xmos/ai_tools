@@ -7,7 +7,7 @@ on:
     branches:
       - develop
 env:
-  BAZEL_CACHE_URL: https://storage.googleapis.com/bazel_remote_cache_0
+  BAZEL_CACHE_URL: https://storage.googleapis.com/bazel_remote_cache_0/gh_actions
 
 jobs:
   macos-release-wheel:
@@ -41,13 +41,13 @@ jobs:
           cd $GITHUB_WORKSPACE
           make build
 
+          cd $GITHUB_WORKSPACE/experimental/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo "using Google Cloud Storage cache"
-            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
-                    
-          cd $GITHUB_WORKSPACE/experimental/xformer
+
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
           
           cd $GITHUB_WORKSPACE/python
@@ -93,13 +93,13 @@ jobs:
           cd $GITHUB_WORKSPACE
           make build
 
+          cd $GITHUB_WORKSPACE/experimental/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo "using Google Cloud Storage cache"
-            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-arm64-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
-                    
-          cd $GITHUB_WORKSPACE/experimental/xformer
+
           bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
           
           cd $GITHUB_WORKSPACE/python
@@ -136,11 +136,13 @@ jobs:
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
+          pushd $GITHUB_WORKSPACE/experimental/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo "using Google Cloud Storage cache"
-            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }}' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
+          popd
 
           docker run \
             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
@@ -212,7 +214,7 @@ jobs:
 
           cd %GITHUB_WORKSPACE%/experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }} --google_default_credentials
+          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials
       - name: Build windows wheels
         shell: cmd
         run: |

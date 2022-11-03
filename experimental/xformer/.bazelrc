@@ -99,3 +99,6 @@ build:asan --linkopt -fsanitize=address
 # Use the default Bazel C++ toolchain to build the tools used during the
 # build.
 #build:linux_config --host_crosstool_top=//toolchain:gnu_suite
+
+# Put user-specific options in .bazelrc.user
+try-import %workspace%/.bazelrc.user

@@ -126,7 +126,7 @@ jobs:
 
   manylinux-release-wheel:
     name: Build release wheels for manylinux2014
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.8]

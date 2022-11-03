@@ -10,7 +10,7 @@ pipeline {
     }
     environment {
         BAZEL_CACHE_KEY_FILE = credentials('BAZEL_REMOTE_CACHE_JSON_KEY')
-        BAZEL_CACHE_URL = 'https://storage.googleapis.com/bazel_remote_cache_0'
+        BAZEL_CACHE_URL = 'https://storage.googleapis.com/bazel_remote_cache_0/jenkins'
     }
     parameters { // Available to modify on the job page within Jenkins if starting a build
         string( // use to try different tools versions

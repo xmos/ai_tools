@@ -13,6 +13,7 @@ on:
 env:
   TAG_VERSION: ${{ github.event.inputs.version }}
   PRETEND_VERSION: 0.1.1
+  BAZEL_CACHE_URL: https://storage.googleapis.com/bazel_remote_cache_0
 
 
 
@@ -43,6 +44,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: google-github-actions/auth@v0
+        continue-on-error: true
+        with:
+          credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Build macOS wheels
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
@@ -55,6 +60,11 @@ jobs:
           make build
           cd $GITHUB_WORKSPACE
           make build
+
+          if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
+            echo -e 'build --remote_http_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --google_default_credentials' >> .bazelrc.user
+          fi
                     
           cd $GITHUB_WORKSPACE/experimental/xformer
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
@@ -95,6 +105,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: google-github-actions/auth@v0
+        continue-on-error: true
+        with:
+          credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Build macOS arm wheels
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
@@ -108,6 +122,11 @@ jobs:
           make build
           cd $GITHUB_WORKSPACE
           make build
+
+          if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
+            echo -e 'build --remote_http_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --google_default_credentials' >> .bazelrc.user
+          fi
                     
           cd $GITHUB_WORKSPACE/experimental/xformer
           bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
@@ -148,6 +167,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: google-github-actions/auth@v0
+        continue-on-error: true
+        with:
+          credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Build manylinux2014 wheels
         # The SETUPTOOLS_SCM_PRETEND_VERSION var is passed via docker to the
         # python setup.py script to add the version info for the wheel file.
@@ -155,7 +178,14 @@ jobs:
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
+          if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
+            echo -e 'build --remote_http_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --google_default_credentials' >> .bazelrc.user
+          fi
+
           docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
+            -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
+            -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:2.10-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
@@ -201,6 +231,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: google-github-actions/auth@v0
+        continue-on-error: true
+        with:
+          credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Configure pagefile
         uses: al-cheb/configure-pagefile-action@v1.2
         with:
@@ -229,7 +263,7 @@ jobs:
                               
           cd %GITHUB_WORKSPACE%/experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"  
+          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_http_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-python${{ matrix.python-version }} --google_default_credentials
       - name: Build windows wheels
         shell: cmd
         env:

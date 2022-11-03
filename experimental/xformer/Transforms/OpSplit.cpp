@@ -55,8 +55,10 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     int32_t outputWidth = outputType.getDimSize(2);
     int32_t outputDepth = outputType.getDimSize(3);
 
-    auto outputShape = convOriginalOutput.getType().cast<RankedTensorType>().getShape();
-    ArrayRef newOutputShape = {outputShape[0],outputShape[1],outputShape[2]/2,outputShape[3]};
+    auto outputShape =
+        convOriginalOutput.getType().cast<RankedTensorType>().getShape();
+    ArrayRef newOutputShape = {outputShape[0], outputShape[1],
+                               outputShape[2] / 2, outputShape[3]};
 
     RankedTensorType newOutputType = RankedTensorType::get(
         newOutputShape,
@@ -71,7 +73,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     int32_t endAttr0[4] = {1, outputHeight, sliceIndex, outputDepth};
     auto endConstantOp0 = rewriter.create<arith::ConstantOp>(
         convOriginal.getLoc(), rewriter.getI32TensorAttr(endAttr0));
-    
+
     int32_t beginAttr1[4] = {0, 0, sliceIndex, 0};
     auto beginConstantOp1 = rewriter.create<arith::ConstantOp>(
         convOriginal.getLoc(), rewriter.getI32TensorAttr(beginAttr1));
@@ -90,20 +92,19 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         0;
 
     auto stridedSliceOp0 = rewriter.create<TFL::StridedSliceOp>(
-        convOriginal.getLoc(), newOutputType, convReplacement,
-        beginConstantOp0, endConstantOp0, stridesConstantOp, begin_mask,
-        end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
+        convOriginal.getLoc(), newOutputType, convReplacement, beginConstantOp0,
+        endConstantOp0, stridesConstantOp, begin_mask, end_mask, ellipsis_mask,
+        new_axis_mask, shrink_axis_mask);
 
     SmallVector<Value> stridedSliceOps;
     stridedSliceOps.push_back(stridedSliceOp0.getResult());
 
     auto stridedSliceOp1 = rewriter.create<TFL::StridedSliceOp>(
-        convOriginal.getLoc(), newOutputType, convReplacement,
-        beginConstantOp1, endConstantOp1, stridesConstantOp, begin_mask,
-        end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
+        convOriginal.getLoc(), newOutputType, convReplacement, beginConstantOp1,
+        endConstantOp1, stridesConstantOp, begin_mask, end_mask, ellipsis_mask,
+        new_axis_mask, shrink_axis_mask);
 
     stridedSliceOps.push_back(stridedSliceOp1.getResult());
-
 
     StringRef fused_activation_function = "NONE";
 

@@ -1,4 +1,4 @@
-// RUN: xcore-opt --mlir-io --xcore-opsplit %s
+// RUN: xcore-opt --mlir-io --xcore-op-split %s
 
 func.func @main(%arg0: tensor<?x6x6x4x!quant.uniform<i8:f32, 0.0039214449934661388:-128>> {tf_saved_model.index_path = ["input_2"]}) -> (tensor<?x144x!quant.uniform<i8:f32, 0.0032160764094442129:-128>> {tf_saved_model.index_path = ["flatten_1"]}) attributes {tf.entry_function = {inputs = "serving_default_input_2:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
   // CHECK: tfl.strided_slice

@@ -19,7 +19,7 @@ struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
-  StringRef getArgument() const final { return "xcore-opsplit"; }
+  StringRef getArgument() const final { return "xcore-op-split"; }
   StringRef getDescription() const final { return "OpSplit."; }
   void runOnOperation() override;
 };

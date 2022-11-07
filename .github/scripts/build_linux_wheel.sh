@@ -26,7 +26,7 @@ CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make build
 # Crosstool toolchain info is mentioned here, "--crosstool_top"
 # https://github.com/tensorflow/tensorflow/blob/master/.bazelrc
 cd experimental/xformer
-bazel build //:xcore-opt --linkopt=-lrt --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain --execution_log_binary_file=../../logs/exec.log
+bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain --execution_log_binary_file=../../logs/exec.log
 
 
 # Build python wheel

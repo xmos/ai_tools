@@ -36,7 +36,7 @@ jobs:
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
-      - name: Build macOS wheels
+      - name: Build setup
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
         shell: bash
@@ -51,16 +51,23 @@ jobs:
 
           cd $GITHUB_WORKSPACE
           mkdir -p logs
-                    
+      - name: Build xformer
+        shell: bash
+        run: |
           cd $GITHUB_WORKSPACE/experimental/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo "using Google Cloud Storage cache"
             echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_upload_local_results=true' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --execution_log_binary_file=$GITHUB_WORKSPACE/logs/exec.log
-          
+          bazelisk build //:xcore-opt --verbose_failures --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --execution_log_binary_file=$GITHUB_WORKSPACE/logs/exec.log
+      - name: Build macOS wheels
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
+        shell: bash
+        run: |
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
           
@@ -102,6 +109,7 @@ jobs:
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo "using Google Cloud Storage cache"
             echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_upload_local_results=true' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
           popd
@@ -159,7 +167,7 @@ jobs:
         shell: pwsh
         run: |
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
-      - name: Build xcore-opt and xtflm-interpreter
+      - name: Build setup
         shell: cmd
         run: |
           python --version
@@ -178,10 +186,12 @@ jobs:
 
           cd %GITHUB_WORKSPACE%
           mkdir -p logs
-
+      - name: Build xformer
+        shell: cmd
+        run: |
           cd %GITHUB_WORKSPACE%/experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --execution_log_binary_file=%GITHUB_WORKSPACE%/logs/exec.log
+          bazelisk build //:xcore-opt --verbose_failures --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --remote_upload_local_results=true --execution_log_binary_file=%GITHUB_WORKSPACE%/logs/exec.log
       - name: Build windows wheels
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}

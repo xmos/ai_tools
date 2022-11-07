@@ -44,9 +44,9 @@ jobs:
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
 
-          cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
+          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
           patch -p0 < ../../../patches/tflite-micro.patch
-          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/host
+          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/host
           mkdir -p build
           cd build
           cmake ..

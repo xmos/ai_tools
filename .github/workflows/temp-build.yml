@@ -43,11 +43,14 @@ jobs:
         run: |
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
-          
-          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
-          make build
-          cd $GITHUB_WORKSPACE
-          make build
+
+          cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
+          patch -p0 < ../../../patches/tflite-micro.patch
+          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/host
+          mkdir -p build
+          cd build
+          cmake ..
+          cmake --build . -t install --parallel --config Release
 
           cd $GITHUB_WORKSPACE
           mkdir -p logs
@@ -58,11 +61,11 @@ jobs:
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo "using Google Cloud Storage cache"
             echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }}' >> .bazelrc.user
-            echo -e 'build --remote_upload_local_results=true' >> .bazelrc.user
+            echo -e 'build --remote_upload_local_results=true --experimental_remote_cache_compression' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          bazelisk build //:xcore-opt --verbose_failures --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --execution_log_binary_file=$GITHUB_WORKSPACE/logs/exec.log
+          bazelisk build //:xcore-opt --verbose_failures --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
       - name: Build macOS wheels
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
@@ -70,11 +73,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
-          
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ runner.os }}-logs
-          path: logs
+
           
   
 
@@ -191,7 +190,7 @@ jobs:
         run: |
           cd %GITHUB_WORKSPACE%/experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --verbose_failures --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --remote_upload_local_results=true --execution_log_binary_file=%GITHUB_WORKSPACE%/logs/exec.log
+          bazelisk build //:xcore-opt --verbose_failures --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --remote_upload_local_results=true --experimental_remote_cache_compression
       - name: Build windows wheels
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
@@ -199,8 +198,4 @@ jobs:
         run: |
           cd python
           python setup.py bdist_wheel
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ runner.os }}-logs
-          path: logs
 

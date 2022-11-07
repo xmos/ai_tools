@@ -167,7 +167,7 @@ jobs:
             .github/scripts/build_linux_wheel.sh
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
-          python -m pip install auditwheel --no-cache-dir
+          python -m pip install auditwheel==5.2.0 --no-cache-dir
           cd python
           for f in dist/*.whl; do
             auditwheel repair --plat manylinux2014_x86_64 $f

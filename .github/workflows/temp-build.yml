@@ -1,4 +1,4 @@
-name: xmos-ai-tools-build-and-test
+name: xmos-ai-tools-build
 
 on:
   workflow_dispatch:
@@ -48,6 +48,9 @@ jobs:
           make build
           cd $GITHUB_WORKSPACE
           make build
+
+          cd $GITHUB_WORKSPACE
+          mkdir -p logs
                     
           cd $GITHUB_WORKSPACE/experimental/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
@@ -56,68 +59,15 @@ jobs:
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
+          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --execution_log_binary_file=$GITHUB_WORKSPACE/logs/exec.log
           
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
           
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ runner.os }}-wheels
-          path: python/dist
-
-
-
-  macos-arm-release-wheel:
-    name: Build release wheels for macOS arm64
-    runs-on: macos-11
-    strategy:
-      matrix:
-        python-version: [3.8]
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-          fetch-depth: 0
-          ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - uses: google-github-actions/auth@v0
-        continue-on-error: true
-        with:
-          credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
-      - name: Build macOS arm wheels
-        env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
-          CMAKE_ENABLE_DARWIN_TARGET_ARM64: 1
-        shell: bash
-        run: |
-          python --version
-          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
-          
-          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
-          make build
-          cd $GITHUB_WORKSPACE
-          make build
-
-          cd $GITHUB_WORKSPACE/experimental/xformer
-          if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo "using Google Cloud Storage cache"
-            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-arm64-python${{ matrix.python-version }}' >> .bazelrc.user
-            echo -e 'build --google_default_credentials' >> .bazelrc.user
-          fi
-
-          bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
-          
-          cd $GITHUB_WORKSPACE/python
-          python setup.py bdist_wheel --plat-name macosx_11_0_arm64
-          
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ runner.os }}-arm-wheels
-          path: python/dist
+          name: ${{ runner.os }}-logs
+          path: logs
           
   
 
@@ -156,6 +106,9 @@ jobs:
           fi
           popd
 
+          cd $GITHUB_WORKSPACE
+          mkdir -p logs
+
           docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
             -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
@@ -172,11 +125,10 @@ jobs:
           
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ runner.os }}-wheels
-          # auditwheel creates the output wheel in the wheelhouse folder
-          path: python/wheelhouse
+          name: ${{ runner.os }}-logs
+          path: logs
 
-
+ 
 
   windows-release-wheel:
     name: Build release wheels for windows
@@ -213,9 +165,9 @@ jobs:
           python --version
           python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           python -c "import sys; print(sys.executable)"
-          
+
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          
+
           cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
           patch -p0 < ../../../patches/tflite-micro.patch
           cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/host
@@ -223,18 +175,22 @@ jobs:
           cd build
           cmake ..
           cmake --build . -t install --parallel --config Release
-                              
+
+          cd %GITHUB_WORKSPACE%
+          mkdir -p logs
+
           cd %GITHUB_WORKSPACE%/experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials
+          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --execution_log_binary_file=%GITHUB_WORKSPACE%/logs/exec.log
       - name: Build windows wheels
-        shell: cmd
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
+        shell: cmd
         run: |
           cd python
           python setup.py bdist_wheel
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ runner.os }}-wheels
-          path: python/dist
+          name: ${{ runner.os }}-logs
+          path: logs
+

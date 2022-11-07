@@ -33,6 +33,37 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     if (convOriginal->hasAttr(kSplitLabel))
       return failure();
 
+    auto inputWidth =
+        convOriginal.input().getType().dyn_cast<RankedTensorType>().getDimSize(2);
+
+    // Only handles inputWidth dimensions divisible by 2
+    if (inputWidth % 2 != 0)
+      return failure();
+    
+
+    auto inputElementalType =
+        convOriginal.input().getType().cast<ShapedType>().getElementType();
+
+    // Check for invalid types and return
+    // Input type must be QI8
+    if (!(inputElementalType.isa<quant::QuantizedType>() &&
+          inputElementalType.cast<quant::QuantizedType>().isSigned() &&
+          inputElementalType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    auto outputElementalType =
+        convOriginal.output().getType().cast<ShapedType>().getElementType();
+
+    // Output type must be QI8
+    if (!(outputElementalType.isa<quant::QuantizedType>() &&
+          outputElementalType.cast<quant::QuantizedType>().isSigned() &&
+          outputElementalType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
     auto convReplacement = rewriter.create<TFL::Conv2DOp>(
         convOriginal.getLoc(), convOriginal.getType(), convOriginal.input(),
         convOriginal.filter(), convOriginal.bias(),

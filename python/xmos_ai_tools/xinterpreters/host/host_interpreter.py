@@ -64,7 +64,6 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
             ctypes.c_void_p,
             ctypes.c_char_p,
             ctypes.c_size_t,
-            ctypes.c_size_t,
             ctypes.c_char_p,
         ]
 
@@ -137,7 +136,6 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
             self.obj,
             currentModel.model_content,
             len(currentModel.model_content),
-            10000000,
             currentModel.params_content,
         )
         if XTFLMInterpreterStatus(status) is XTFLMInterpreterStatus.ERROR:

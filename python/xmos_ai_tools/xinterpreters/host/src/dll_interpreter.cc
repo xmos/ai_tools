@@ -93,8 +93,7 @@ DLLEXPORT void delete_interpreter(inference_engine *ie) {
 }
 
 DLLEXPORT int initialize(inference_engine *ie, const char *model_content,
-               size_t model_content_size, size_t tensor_arena_size,
-               const char *param_content) {
+               size_t model_content_size, const char *param_content) {
   // We need to keep a copy of the model content
   inference_engine_unload_model(ie);
   uint32_t *m = (uint32_t *)model_content;

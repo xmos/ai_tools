@@ -113,6 +113,7 @@ jobs:
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
           patch -p0 < ../../../patches/tflite-micro.patch
 
+          cd $GITHUB_WORKSPACE
           docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
             -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \

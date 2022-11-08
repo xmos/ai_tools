@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -e -x
 
-ROOTDIR=$(pwd)
-
 # get latest pip
 pip uninstall pip --yes
 wget https://bootstrap.pypa.io/get-pip.py
@@ -16,21 +14,21 @@ git config --global --add safe.directory /ai_tools
 git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
 git describe --tags
 
+cd third_party/lib_tflite_micro
+# Use gcc9 toolchain from the docker file and apply patch
+CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make build
 # Use gcc9 toolchain from the docker file to build xinterpreters
-cd $ROOTDIR/python/xmos_ai_tools/xinterpreters/host
-mkdir -p build
-cd build
-cmake ..
-CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ cmake --build . -t install --parallel --config Release
+cd ../..
+CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make build
 
 
 # Build xcore-opt
 # Crosstool toolchain info is mentioned here, "--crosstool_top"
 # https://github.com/tensorflow/tensorflow/blob/master/.bazelrc
-cd $ROOTDIR/experimental/xformer
+cd experimental/xformer
 bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain
 
 
 # Build python wheel
-cd $ROOTDIR/python
+cd ../../python
 python setup.py bdist_wheel

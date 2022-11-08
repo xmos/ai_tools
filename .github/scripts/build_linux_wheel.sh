@@ -14,19 +14,19 @@ git config --global --add safe.directory /ai_tools
 git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
 git describe --tags
 
-cd third_party/lib_tflite_micro
-# Use gcc9 toolchain from the docker file and apply patch
-CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make build
 # Use gcc9 toolchain from the docker file to build xinterpreters
-cd ../..
-CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make build
+cd python/xmos_ai_tools/xinterpreters/host
+mkdir -p build
+cd build
+cmake ..
+CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ cmake --build . -t install --parallel --config Release
 
 
 # Build xcore-opt
 # Crosstool toolchain info is mentioned here, "--crosstool_top"
 # https://github.com/tensorflow/tensorflow/blob/master/.bazelrc
 cd experimental/xformer
-bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain --execution_log_binary_file=../../logs/exec.log
+bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain
 
 
 # Build python wheel

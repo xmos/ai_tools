@@ -100,6 +100,9 @@ jobs:
       - name: Build xformer and manylinux2014 wheel in docker
         # The SETUPTOOLS_SCM_PRETEND_VERSION var is passed via docker to the
         # python setup.py script to add the version info for the wheel file.
+        #
+        # auditwheel requires patchelf and repairs the created wheel file to
+        # be compatible for manylinux.
         run: |
           pushd $GITHUB_WORKSPACE/experimental/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
@@ -121,10 +124,6 @@ jobs:
             tensorflow/build:2.10-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
 
-      - name: Repair wheel with auditwheel
-        # auditwheel requires patchelf and repairs the created wheel file to 
-        # be compatible for manylinux.
-        run: |
           sudo apt-get -y -qq install patchelf --no-install-recommends
           python -m pip install auditwheel==5.2.0
           cd python

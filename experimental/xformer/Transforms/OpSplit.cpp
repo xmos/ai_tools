@@ -33,14 +33,31 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     if (convOriginal->hasAttr(kSplitLabel))
       return failure();
 
+    auto filterHeight =
+        convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(1);
+    if (filterHeight != 1)
+      return failure();
+      
+    auto filterWidth =
+        convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(2);
+    if (filterWidth != 1)
+      return failure();
+
+    if (convOriginal.stride_h() != 1)
+      return failure();
+
+    if (convOriginal.stride_w() != 1)
+      return failure();
+
+    if (convOriginal.padding() != "VALID")
+      return failure();
+
     auto inputWidth =
         convOriginal.input().getType().dyn_cast<RankedTensorType>().getDimSize(2);
-
     // Only handles inputWidth dimensions divisible by 2
     if (inputWidth % 2 != 0)
       return failure();
     
-
     auto inputElementalType =
         convOriginal.input().getType().cast<ShapedType>().getElementType();
 

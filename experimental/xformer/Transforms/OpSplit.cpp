@@ -140,6 +140,8 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         endConstantOp0, stridesConstantOp, begin_mask, end_mask, ellipsis_mask,
         new_axis_mask, shrink_axis_mask);
 
+    stridedSliceOp0->setAttr(kSplitLabel, rewriter.getUnitAttr());
+
     SmallVector<Value> stridedSliceOps;
     stridedSliceOps.push_back(stridedSliceOp0.getResult());
 
@@ -147,6 +149,8 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         convOriginal.getLoc(), newOutputType, convReplacement, beginConstantOp1,
         endConstantOp1, stridesConstantOp, begin_mask, end_mask, ellipsis_mask,
         new_axis_mask, shrink_axis_mask);
+
+    stridedSliceOp1->setAttr(kSplitLabel, rewriter.getUnitAttr());
 
     stridedSliceOps.push_back(stridedSliceOp1.getResult());
 

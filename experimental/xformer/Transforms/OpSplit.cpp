@@ -166,12 +166,37 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
   }
 };
 
+struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
+  using OpRewritePattern<TFL::StridedSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
+                                PatternRewriter &rewriter) const override {
+
+    static constexpr char kSplitLabel[] = "__split_op__";
+    static constexpr char kRaisedStridedSlice[] = "kRaisedStridedSlice";
+
+    if (!(stridedSlice->hasAttr(kSplitLabel)))
+      return failure();
+
+    if (stridedSlice->hasAttr(kRaisedStridedSlice))
+     return failure();
+
+    stridedSlice->setAttr(kRaisedStridedSlice, rewriter.getUnitAttr());
+
+    return success();
+  }
+};
+
 void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   RewritePatternSet patterns(ctx);
   func::FuncOp func = getOperation();
   patterns.insert<OpSplitPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+
+  RewritePatternSet patterns2(ctx);
+  patterns2.insert<RaiseStridedSlicePattern>(ctx);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
 }
 } // namespace
 

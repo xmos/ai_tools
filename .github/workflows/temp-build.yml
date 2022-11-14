@@ -72,6 +72,14 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
+      - name: Test macOS wheels
+        run: |
+          pip install -r ./requirements.txt
+          cd python/dist
+          pip install *
+          cd ../..
+          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 3 --reruns 5 --reruns-delay 1
+
 
           
   
@@ -127,6 +135,13 @@ jobs:
           for f in dist/*.whl; do
             auditwheel repair --plat manylinux2014_x86_64 $f
           done
+      - name: Test linux wheels
+        run: |
+          pip install -r ./requirements.txt
+          cd python/wheelhouse
+          pip install *
+          cd ../..
+          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 2 --reruns 5 --reruns-delay 1
 
  
 
@@ -190,4 +205,11 @@ jobs:
         run: |
           cd python
           python setup.py bdist_wheel
+      - name: Test windows wheels
+        run: |
+          pip install -r ./requirements.txt
+          cd python/dist
+          pip install xmos_ai_tools-0.1.1-py3-none-win_amd64.whl
+          cd ../..
+          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 2 --reruns 5 --reruns-delay 1
 

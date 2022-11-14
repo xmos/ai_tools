@@ -6,6 +6,7 @@ on:
       version:
         description: "Provide a valid branch or commit hash"
         required: true
+  pull_request:
 
 # Save the tag version in an environment variable
 # The pretend version is used for the wheel as the
@@ -17,7 +18,7 @@ env:
 
 jobs:
   macos-release-wheel:
-    name: Build release wheels for macOS
+    name: Build and test release wheels for macOS
     runs-on: macos-latest
     strategy:
       matrix:
@@ -32,35 +33,46 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
       - uses: google-github-actions/auth@v0
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
-      - name: Build macOS wheels
+      - name: Build setup
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
         shell: bash
         run: |
           python --version
-          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
-          
-          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
-          make build
-          cd $GITHUB_WORKSPACE
-          make build
-                    
+          python -m pip install wheel setuptools setuptools-scm numpy six
+
+          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
+          patch -p0 < ../../../patches/tflite-micro.patch
+          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/host
+          mkdir -p build
+          cd build
+          cmake ..
+          cmake --build . -t install --parallel --config Release
+
+      - name: Build xformer
+        shell: bash
+        run: |
           cd $GITHUB_WORKSPACE/experimental/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo "using Google Cloud Storage cache"
             echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_upload_local_results=true --experimental_remote_cache_compression' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
 
-          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
-          
+          bazelisk build //:xcore-opt --verbose_failures --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
+      - name: Build macOS wheels
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
+        shell: bash
+        run: |
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
-          
       - name: Test macOS wheels
         run: |
           pip install -r ./requirements.txt
@@ -70,67 +82,11 @@ jobs:
           pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 3 --reruns 5 --reruns-delay 1
 
 
-
-
-  macos-arm-release-wheel:
-    name: Build release wheels for macOS arm64
-    runs-on: macos-11
-    strategy:
-      matrix:
-        python-version: [3.8]
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-          fetch-depth: 0
-          ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - uses: google-github-actions/auth@v0
-        continue-on-error: true
-        with:
-          credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
-      - name: Build macOS arm wheels
-        env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}
-          CMAKE_ENABLE_DARWIN_TARGET_ARM64: 1
-        shell: bash
-        run: |
-          python --version
-          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
-          
-          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
-          make build
-          cd $GITHUB_WORKSPACE
-          make build
-
-          cd $GITHUB_WORKSPACE/experimental/xformer
-          if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
-            echo "using Google Cloud Storage cache"
-            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-arm64-python${{ matrix.python-version }}' >> .bazelrc.user
-            echo -e 'build --google_default_credentials' >> .bazelrc.user
-          fi
-
-          bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
-          
-          cd $GITHUB_WORKSPACE/python
-          python setup.py bdist_wheel --plat-name macosx_11_0_arm64
-          
-      - name: Test macOS arm64 wheels
-        run: |
-          pip install -r ./requirements.txt
-          cd python/dist
-          pip install *
-          cd ../..
-          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 3 --reruns 5 --reruns-delay 1
-
           
   
 
   manylinux-release-wheel:
-    name: Build release wheels for manylinux2014
+    name: Build and test release wheels for manylinux2014
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -145,39 +101,41 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
       - uses: google-github-actions/auth@v0
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
-      - name: Build manylinux2014 wheels
+      - name: Build xformer and manylinux2014 wheel in docker
         # The SETUPTOOLS_SCM_PRETEND_VERSION var is passed via docker to the
         # python setup.py script to add the version info for the wheel file.
         #
-        # auditwheel requires patchelf and repairs the created wheel file to 
+        # auditwheel requires patchelf and repairs the created wheel file to
         # be compatible for manylinux.
         run: |
           pushd $GITHUB_WORKSPACE/experimental/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo "using Google Cloud Storage cache"
             echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --remote_upload_local_results=true --experimental_remote_cache_compression' >> .bazelrc.user
             echo -e 'build --google_default_credentials' >> .bazelrc.user
           fi
           popd
 
+          cd $GITHUB_WORKSPACE
           docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
             -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:2.10-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
-          
+
           sudo apt-get -y -qq install patchelf --no-install-recommends
-          python -m pip install auditwheel==5.2.0 --no-cache-dir
+          python -m pip install auditwheel==5.2.0
           cd python
           for f in dist/*.whl; do
             auditwheel repair --plat manylinux2014_x86_64 $f
           done
-          
       - name: Test linux wheels
         run: |
           pip install -r ./requirements.txt
@@ -189,7 +147,7 @@ jobs:
  
 
   windows-release-wheel:
-    name: Build release wheels for windows
+    name: Build and test release wheels for windows
     runs-on: windows-2019
     strategy:
       matrix:
@@ -204,6 +162,7 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
       - uses: google-github-actions/auth@v0
         continue-on-error: true
         with:
@@ -217,11 +176,11 @@ jobs:
         shell: pwsh
         run: |
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
-      - name: Build xcore-opt and xtflm-interpreter
+      - name: Build setup
         shell: cmd
         run: |
           python --version
-          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
+          python -m pip install wheel setuptools setuptools-scm numpy six
           python -c "import sys; print(sys.executable)"
 
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
@@ -234,9 +193,12 @@ jobs:
           cmake ..
           cmake --build . -t install --parallel --config Release
 
+      - name: Build xformer
+        shell: cmd
+        run: |
           cd %GITHUB_WORKSPACE%/experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials
+          bazelisk build //:xcore-opt --verbose_failures --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --remote_upload_local_results=true --experimental_remote_cache_compression
       - name: Build windows wheels
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}

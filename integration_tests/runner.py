@@ -298,6 +298,9 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                 LOGGER.error("Run #" + str(test) + " failed")
     if testing_on_tflmc_option:
        tflmc_temp_dirname.cleanup()
-    # Free allocated objects and cleanp
-    ie.close()
+    else:
+        # Free allocated objects and cleanup
+        # For tflmc testing, we don't create xcore interpreter ie
+        # Test comparison is done only on Tensorflow interpreter
+        ie.close()
     assert num_of_fails == 0

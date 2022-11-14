@@ -70,9 +70,8 @@ def XC_Conv2D_TypeAttr : I32EnumAttr<"Conv2DType", "conv2d type enum", [
 def XC_Conv2D_Group : I32EnumAttrCase<"Group", 0>;
 def XC_Conv2D_Channelwise : I32EnumAttrCase<"Channelwise", 1>;
 
-def XC_Conv2D_OTAttr : I32EnumAttr<"OtType", "output transform type enum", [
-  XC_Conv2D_Group, XC_Conv2D_Channelwise
-]>;
+def XC_Conv2D_OTAttr : I32EnumAttr<"OtType", "output transform type enum",
+                                   [XC_Conv2D_Group, XC_Conv2D_Channelwise]>;
 
 def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
   let summary = "Strided Slice op";

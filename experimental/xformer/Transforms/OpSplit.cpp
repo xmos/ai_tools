@@ -33,13 +33,16 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     if (convOriginal->hasAttr(kSplitLabel))
       return failure();
 
+    // Check for invalid cases and return
     auto filterHeight =
-        convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(1);
+        convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(
+            1);
     if (filterHeight != 1)
       return failure();
-      
+
     auto filterWidth =
-        convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(2);
+        convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(
+            2);
     if (filterWidth != 1)
       return failure();
 
@@ -53,15 +56,15 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
       return failure();
 
     auto inputWidth =
-        convOriginal.input().getType().dyn_cast<RankedTensorType>().getDimSize(2);
+        convOriginal.input().getType().dyn_cast<RankedTensorType>().getDimSize(
+            2);
     // Only handles inputWidth dimensions divisible by 2
     if (inputWidth % 2 != 0)
       return failure();
-    
+
     auto inputElementalType =
         convOriginal.input().getType().cast<ShapedType>().getElementType();
 
-    // Check for invalid types and return
     // Input type must be QI8
     if (!(inputElementalType.isa<quant::QuantizedType>() &&
           inputElementalType.cast<quant::QuantizedType>().isSigned() &&
@@ -81,54 +84,49 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
       return failure();
     }
 
-    auto convReplacement = rewriter.create<TFL::Conv2DOp>(
-        convOriginal.getLoc(), convOriginal.getType(), convOriginal.input(),
-        convOriginal.filter(), convOriginal.bias(),
-        convOriginal.dilation_h_factor(), convOriginal.dilation_w_factor(),
-        convOriginal.fused_activation_function(), convOriginal.padding(),
-        convOriginal.stride_h(), convOriginal.stride_w());
+    // Clone the op as we want to replace it with the same conv op but with
+    // strided slices and concat inserted after it
+    auto convReplacement =
+        llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
 
     // Apply label, so that the same op is not rewritten a second time.
     convReplacement->setAttr(kSplitLabel, rewriter.getUnitAttr());
 
-    auto convOriginalOutput = convOriginal.output();
+    auto convOutput = convReplacement.output();
 
     // Extract args from the op
-    auto outputType = convOriginalOutput.getType().dyn_cast<RankedTensorType>();
+    auto outputType = convOutput.getType().dyn_cast<RankedTensorType>();
     int32_t outputHeight = outputType.getDimSize(1);
     int32_t outputWidth = outputType.getDimSize(2);
     int32_t outputDepth = outputType.getDimSize(3);
 
-    auto outputShape =
-        convOriginalOutput.getType().cast<RankedTensorType>().getShape();
-    ArrayRef newOutputShape = {outputShape[0], outputShape[1],
-                               outputShape[2] / 2, outputShape[3]};
+    auto outputShape = convOutput.getType().cast<RankedTensorType>().getShape();
 
     RankedTensorType newOutputType = RankedTensorType::get(
-        newOutputShape,
-        convOriginalOutput.getType().cast<ShapedType>().getElementType());
+        {outputShape[0], outputShape[1], outputShape[2] / 2, outputShape[3]},
+        convOutput.getType().cast<ShapedType>().getElementType());
 
     int32_t sliceIndex = outputWidth / 2;
 
     int32_t beginAttr0[4] = {0, 0, 0, 0};
     auto beginConstantOp0 = rewriter.create<arith::ConstantOp>(
-        convOriginal.getLoc(), rewriter.getI32TensorAttr(beginAttr0));
+        convReplacement.getLoc(), rewriter.getI32TensorAttr(beginAttr0));
 
     int32_t endAttr0[4] = {1, outputHeight, sliceIndex, outputDepth};
     auto endConstantOp0 = rewriter.create<arith::ConstantOp>(
-        convOriginal.getLoc(), rewriter.getI32TensorAttr(endAttr0));
+        convReplacement.getLoc(), rewriter.getI32TensorAttr(endAttr0));
 
     int32_t beginAttr1[4] = {0, 0, sliceIndex, 0};
     auto beginConstantOp1 = rewriter.create<arith::ConstantOp>(
-        convOriginal.getLoc(), rewriter.getI32TensorAttr(beginAttr1));
+        convReplacement.getLoc(), rewriter.getI32TensorAttr(beginAttr1));
 
     int32_t endAttr1[4] = {1, outputHeight, outputWidth, outputDepth};
     auto endConstantOp1 = rewriter.create<arith::ConstantOp>(
-        convOriginal.getLoc(), rewriter.getI32TensorAttr(endAttr1));
+        convReplacement.getLoc(), rewriter.getI32TensorAttr(endAttr1));
 
     int32_t stridesAttr[4] = {1, 1, 1, 1};
     auto stridesConstantOp = rewriter.create<arith::ConstantOp>(
-        convOriginal.getLoc(), rewriter.getI32TensorAttr(stridesAttr));
+        convReplacement.getLoc(), rewriter.getI32TensorAttr(stridesAttr));
 
     int32_t begin_mask, end_mask, ellipsis_mask, new_axis_mask,
         shrink_axis_mask;
@@ -136,9 +134,9 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         0;
 
     auto stridedSliceOp0 = rewriter.create<TFL::StridedSliceOp>(
-        convOriginal.getLoc(), newOutputType, convReplacement, beginConstantOp0,
-        endConstantOp0, stridesConstantOp, begin_mask, end_mask, ellipsis_mask,
-        new_axis_mask, shrink_axis_mask);
+        convReplacement.getLoc(), newOutputType, convReplacement,
+        beginConstantOp0, endConstantOp0, stridesConstantOp, begin_mask,
+        end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
     stridedSliceOp0->setAttr(kSplitLabel, rewriter.getUnitAttr());
 
@@ -146,9 +144,9 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     stridedSliceOps.push_back(stridedSliceOp0.getResult());
 
     auto stridedSliceOp1 = rewriter.create<TFL::StridedSliceOp>(
-        convOriginal.getLoc(), newOutputType, convReplacement, beginConstantOp1,
-        endConstantOp1, stridesConstantOp, begin_mask, end_mask, ellipsis_mask,
-        new_axis_mask, shrink_axis_mask);
+        convReplacement.getLoc(), newOutputType, convReplacement,
+        beginConstantOp1, endConstantOp1, stridesConstantOp, begin_mask,
+        end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
     stridedSliceOp1->setAttr(kSplitLabel, rewriter.getUnitAttr());
 
@@ -157,7 +155,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     StringRef fused_activation_function = "NONE";
 
     auto newConcatOp = rewriter.create<TFL::ConcatenationOp>(
-        convOriginal.getLoc(), convOriginalOutput.getType(), stridedSliceOps, 2,
+        convReplacement.getLoc(), convOutput.getType(), stridedSliceOps, 2,
         fused_activation_function);
 
     rewriter.replaceOp(convOriginal, newConcatOp.output());

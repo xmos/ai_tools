@@ -16,6 +16,7 @@ extern llvm::cl::opt<bool> reduceMemoryOption;
 extern llvm::cl::opt<double> convQuantErrorThresholdOption;
 extern llvm::cl::opt<bool> convForceErrorCheckOption;
 extern llvm::cl::opt<unsigned> convMultiplierFactorOption;
+extern llvm::cl::opt<bool> opSplitTensorArenaOption;
 
 } // namespace xcore
 } // namespace mlir

@@ -79,6 +79,11 @@ cl::opt<unsigned> convMultiplierFactorOption(
              "(default = UINT32_MAX)."),
     cl::init(UINT32_MAX));
 
+cl::opt<bool> opSplitTensorArenaOption(
+    "xcore-op-split-tensor-arena",
+    cl::desc("Enable prototype op split to reduce tensor arena size."),
+    cl::init(false));
+
 } // namespace xcore
 } // namespace mlir
 

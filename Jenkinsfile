@@ -97,7 +97,7 @@ pipeline {
             steps {
                 // xformer2 unit tests
         sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel test --remote_cache=${BAZEL_CACHE_URL} --google_credentials=${BAZEL_CACHE_KEY_FILE} //Test:all --verbose_failures
+                      bazel test --remote_cache=${BAZEL_CACHE_URL} --google_credentials=${BAZEL_CACHE_KEY_FILE} //Test:all --verbose_failures --test_output=errors
                 """
         // xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&

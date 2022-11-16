@@ -27,10 +27,10 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
   LogicalResult matchAndRewrite(TFL::Conv2DOp convOriginal,
                                 PatternRewriter &rewriter) const override {
 
-    static constexpr char kSplitLabel[] = "__split_op__";
+    static constexpr char insertLabel[] = "insertLabel";
 
     // Do not split ops already split
-    if (convOriginal->hasAttr(kSplitLabel))
+    if (convOriginal->hasAttr(insertLabel))
       return failure();
 
     // Check for invalid cases and return
@@ -90,7 +90,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
 
     // Apply label, so that the same op is not rewritten a second time.
-    convReplacement->setAttr(kSplitLabel, rewriter.getUnitAttr());
+    convReplacement->setAttr(insertLabel, rewriter.getUnitAttr());
 
     auto convOutput = convReplacement.output();
 
@@ -138,7 +138,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         beginConstantOp0, endConstantOp0, stridesConstantOp, begin_mask,
         end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
-    stridedSliceOp0->setAttr(kSplitLabel, rewriter.getUnitAttr());
+    stridedSliceOp0->setAttr(insertLabel, rewriter.getUnitAttr());
 
     SmallVector<Value> stridedSliceOps;
     stridedSliceOps.push_back(stridedSliceOp0.getResult());
@@ -148,7 +148,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         beginConstantOp1, endConstantOp1, stridesConstantOp, begin_mask,
         end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
-    stridedSliceOp1->setAttr(kSplitLabel, rewriter.getUnitAttr());
+    stridedSliceOp1->setAttr(insertLabel, rewriter.getUnitAttr());
 
     stridedSliceOps.push_back(stridedSliceOp1.getResult());
 
@@ -170,8 +170,8 @@ struct SplitOpPattern : public OpRewritePattern<TFL::StridedSliceOp> {
   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
                                 PatternRewriter &rewriter) const override {
 
-    static constexpr char kSplitLabel[] = "__split_op__";
-    if (!(stridedSlice->hasAttr(kSplitLabel)))
+    static constexpr char insertLabel[] = "insertLabel";
+    if (!(stridedSlice->hasAttr(insertLabel)))
       return failure();
 
     static constexpr char kRaisedStridedSlice[] = "kRaisedStridedSlice";
@@ -194,6 +194,33 @@ struct SplitOpPattern : public OpRewritePattern<TFL::StridedSliceOp> {
   }
 };
 
+// struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
+//   using OpRewritePattern<TFL::StridedSliceOp>::OpRewritePattern;
+
+//   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
+//                                 PatternRewriter &rewriter) const override {
+
+//     static constexpr char kRaisedStridedSlice[] = "kRaisedStridedSlice";
+//     if (!((stridedSlice->hasAttr(kRaisedStridedSlice)))
+//      return failure();
+
+//     stridedSliceReplacement->setAttr(kRaisedStridedSlice, rewriter.getUnitAttr());
+
+//     auto definingOp = stridedSlice.input().getDefiningOp();
+//     auto definingOpReplacement =
+//         llvm::cast<TFL::Conv2DOp>(rewriter.clone(*definingOp));
+     
+//     auto stridedSliceReplacement =
+//         llvm::cast<TFL::StridedSliceOp>(rewriter.clone(*stridedSlice));
+
+//     stridedSliceReplacement.setOperand(0,definingOpReplacement);
+    
+//     rewriter.replaceOp(stridedSlice, stridedSliceReplacement.output());
+     
+//     return success();
+//   }
+// };
+
 void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   RewritePatternSet patterns(ctx);
@@ -204,6 +231,10 @@ void OpSplit::runOnOperation() {
   RewritePatternSet patterns2(ctx);
   patterns2.insert<SplitOpPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
+
+  // RewritePatternSet patterns3(ctx);
+  // patterns3.insert<RaiseStridedSlicePattern>(ctx);
+  // (void)applyPatternsAndFoldGreedily(func, std::move(patterns3));
 }
 } // namespace
 

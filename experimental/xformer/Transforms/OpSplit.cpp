@@ -174,8 +174,8 @@ struct SplitOpPattern : public OpRewritePattern<TFL::StridedSliceOp> {
     if (!(stridedSlice->hasAttr(insertLabel)))
       return failure();
 
-    static constexpr char kRaisedStridedSlice[] = "kRaisedStridedSlice";
-    if (stridedSlice->hasAttr(kRaisedStridedSlice))
+    static constexpr char splitOpLabel[] = "splitOpLabel";
+    if (stridedSlice->hasAttr(splitOpLabel))
      return failure();
 
     auto definingOp = stridedSlice.input().getDefiningOp();
@@ -184,7 +184,7 @@ struct SplitOpPattern : public OpRewritePattern<TFL::StridedSliceOp> {
      
     auto stridedSliceReplacement =
         llvm::cast<TFL::StridedSliceOp>(rewriter.clone(*stridedSlice));
-    stridedSliceReplacement->setAttr(kRaisedStridedSlice, rewriter.getUnitAttr());
+    stridedSliceReplacement->setAttr(splitOpLabel, rewriter.getUnitAttr());
 
     stridedSliceReplacement.setOperand(0,definingOpReplacement);
     
@@ -200,11 +200,11 @@ struct SplitOpPattern : public OpRewritePattern<TFL::StridedSliceOp> {
 //   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
 //                                 PatternRewriter &rewriter) const override {
 
-//     static constexpr char kRaisedStridedSlice[] = "kRaisedStridedSlice";
-//     if (!((stridedSlice->hasAttr(kRaisedStridedSlice)))
+//     static constexpr char splitOpLabel[] = "splitOpLabel";
+//     if (!((stridedSlice->hasAttr(splitOpLabel)))
 //      return failure();
 
-//     stridedSliceReplacement->setAttr(kRaisedStridedSlice, rewriter.getUnitAttr());
+//     stridedSliceReplacement->setAttr(splitOpLabel, rewriter.getUnitAttr());
 
 //     auto definingOp = stridedSlice.input().getDefiningOp();
 //     auto definingOpReplacement =

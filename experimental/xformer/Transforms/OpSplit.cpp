@@ -164,77 +164,101 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
   }
 };
 
-struct SplitOpPattern : public OpRewritePattern<TFL::StridedSliceOp> {
+struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
   using OpRewritePattern<TFL::StridedSliceOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
                                 PatternRewriter &rewriter) const override {
 
     static constexpr char insertLabel[] = "insertLabel";
-    if (!(stridedSlice->hasAttr(insertLabel)))
+    if (!((stridedSlice->hasAttr(insertLabel))))
       return failure();
 
-    static constexpr char splitOpLabel[] = "splitOpLabel";
-    if (stridedSlice->hasAttr(splitOpLabel))
-     return failure();
+    static constexpr char raiseStridedSliceLabel[] = "raiseStridedSliceLabel";
+    if (stridedSlice->hasAttr(raiseStridedSliceLabel))
+      return failure();
 
-    auto definingOp = stridedSlice.input().getDefiningOp();
-    auto definingOpReplacement =
-        llvm::cast<TFL::Conv2DOp>(rewriter.clone(*definingOp));
-     
-    auto stridedSliceReplacement =
-        llvm::cast<TFL::StridedSliceOp>(rewriter.clone(*stridedSlice));
-    stridedSliceReplacement->setAttr(splitOpLabel, rewriter.getUnitAttr());
+    auto convOriginal =
+        llvm::cast<TFL::Conv2DOp>(stridedSlice.input().getDefiningOp());
 
-    stridedSliceReplacement.setOperand(0,definingOpReplacement);
+    auto convOutput = convOriginal.output();
+
+    // Extract args from the op
+    auto outputType = convOutput.getType().dyn_cast<RankedTensorType>();
+    int32_t outputHeight = outputType.getDimSize(1);
+    int32_t outputWidth = outputType.getDimSize(2);
+    int32_t outputDepth = outputType.getDimSize(3);
+
+    auto outputShape = convOutput.getType().cast<RankedTensorType>().getShape();
+
+    auto inputShape =
+        convOriginal.input().getType().cast<RankedTensorType>().getShape();
+
+    RankedTensorType stridedSliceType = RankedTensorType::get(
+        {inputShape[0], inputShape[1], inputShape[2] / 2, inputShape[3]},
+        convOriginal.input().getType().cast<ShapedType>().getElementType());
+
+    int32_t sliceIndex = outputWidth / 2;
     
-    rewriter.replaceOp(stridedSlice, stridedSliceReplacement.output());
-     
+    int32_t beginAttr0[4] = {0, 0, 0, 0};
+    auto beginConstantOp0 = rewriter.create<arith::ConstantOp>(
+        convOriginal.getLoc(), rewriter.getI32TensorAttr(beginAttr0));
+
+    int32_t endAttr0[4] = {1, outputHeight, sliceIndex, outputDepth};
+    auto endConstantOp0 = rewriter.create<arith::ConstantOp>(
+        convOriginal.getLoc(), rewriter.getI32TensorAttr(endAttr0));
+
+    int32_t beginAttr1[4] = {0, 0, sliceIndex, 0};
+    auto beginConstantOp1 = rewriter.create<arith::ConstantOp>(
+        convOriginal.getLoc(), rewriter.getI32TensorAttr(beginAttr1));
+
+    int32_t endAttr1[4] = {1, outputHeight, outputWidth, outputDepth};
+    auto endConstantOp1 = rewriter.create<arith::ConstantOp>(
+        convOriginal.getLoc(), rewriter.getI32TensorAttr(endAttr1));
+
+    int32_t stridesAttr[4] = {1, 1, 1, 1};
+    auto stridesConstantOp = rewriter.create<arith::ConstantOp>(
+        convOriginal.getLoc(), rewriter.getI32TensorAttr(stridesAttr));
+
+    int32_t begin_mask, end_mask, ellipsis_mask, new_axis_mask,
+        shrink_axis_mask;
+    begin_mask = end_mask = ellipsis_mask = new_axis_mask = shrink_axis_mask =
+        0;
+
+    auto stridedSliceReplacement = rewriter.create<TFL::StridedSliceOp>(
+        stridedSlice.getLoc(), stridedSliceType, convOriginal.input(),
+        beginConstantOp0, endConstantOp0, stridesConstantOp, begin_mask,
+        end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
+    stridedSliceReplacement->setAttr(raiseStridedSliceLabel, rewriter.getUnitAttr());
+
+    RankedTensorType newOutputType = RankedTensorType::get(
+        {outputShape[0], outputShape[1], outputShape[2] / 2, outputShape[3]},
+        convOriginal.output().getType().cast<ShapedType>().getElementType());
+
+    auto convReplacement = rewriter.create<TFL::Conv2DOp>(
+        stridedSlice.getLoc(), newOutputType, stridedSliceReplacement,
+        convOriginal.filter(), convOriginal.bias(),
+        convOriginal.dilation_h_factor(), convOriginal.dilation_w_factor(),
+        convOriginal.fused_activation_function(), convOriginal.padding(),
+        convOriginal.stride_h(), convOriginal.stride_w());
+
+    rewriter.replaceOp(stridedSlice, convReplacement.output());
+
     return success();
   }
 };
 
-// struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
-//   using OpRewritePattern<TFL::StridedSliceOp>::OpRewritePattern;
-
-//   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
-//                                 PatternRewriter &rewriter) const override {
-
-//     static constexpr char splitOpLabel[] = "splitOpLabel";
-//     if (!((stridedSlice->hasAttr(splitOpLabel)))
-//      return failure();
-
-//     stridedSliceReplacement->setAttr(splitOpLabel, rewriter.getUnitAttr());
-
-//     auto definingOp = stridedSlice.input().getDefiningOp();
-//     auto definingOpReplacement =
-//         llvm::cast<TFL::Conv2DOp>(rewriter.clone(*definingOp));
-     
-//     auto stridedSliceReplacement =
-//         llvm::cast<TFL::StridedSliceOp>(rewriter.clone(*stridedSlice));
-
-//     stridedSliceReplacement.setOperand(0,definingOpReplacement);
-    
-//     rewriter.replaceOp(stridedSlice, stridedSliceReplacement.output());
-     
-//     return success();
-//   }
-// };
-
 void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
-  RewritePatternSet patterns(ctx);
   func::FuncOp func = getOperation();
+
+  RewritePatternSet patterns(ctx);
   patterns.insert<OpSplitPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 
   RewritePatternSet patterns2(ctx);
-  patterns2.insert<SplitOpPattern>(ctx);
+  patterns2.insert<RaiseStridedSlicePattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
-
-  // RewritePatternSet patterns3(ctx);
-  // patterns3.insert<RaiseStridedSlicePattern>(ctx);
-  // (void)applyPatternsAndFoldGreedily(func, std::move(patterns3));
 }
 } // namespace
 

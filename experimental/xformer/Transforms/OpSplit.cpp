@@ -9,6 +9,7 @@ namespace mlir {
 namespace xcore {
 
 namespace {
+static constexpr char opSplitLabel[] = "opSplitLabel";
 // OpSplit
 struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpSplit)
@@ -17,7 +18,7 @@ struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
   StringRef getArgument() const final { return "xcore-op-split"; }
-  StringRef getDescription() const final { return "OpSplit."; }
+  StringRef getDescription() const final { return "Op Split."; }
   void runOnOperation() override;
 };
 
@@ -26,11 +27,8 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
 
   LogicalResult matchAndRewrite(TFL::Conv2DOp convOriginal,
                                 PatternRewriter &rewriter) const override {
-
-    static constexpr char insertLabel[] = "insertLabel";
-
     // Do not split ops already split
-    if (convOriginal->hasAttr(insertLabel))
+    if (convOriginal->hasAttr(opSplitLabel))
       return failure();
 
     // Check for invalid cases and return
@@ -90,7 +88,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
 
     // Apply label, so that the same op is not rewritten a second time.
-    convReplacement->setAttr(insertLabel, rewriter.getUnitAttr());
+    convReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     auto convOutput = convReplacement.output();
 
@@ -102,11 +100,13 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
 
     auto outputShape = convOutput.getType().cast<RankedTensorType>().getShape();
 
+    int numSplits = 2;
     RankedTensorType newOutputType = RankedTensorType::get(
-        {outputShape[0], outputShape[1], outputShape[2] / 2, outputShape[3]},
+        {outputShape[0], outputShape[1], outputShape[2] / numSplits,
+         outputShape[3]},
         convOutput.getType().cast<ShapedType>().getElementType());
 
-    int32_t sliceIndex = outputWidth / 2;
+    int32_t sliceIndex = outputWidth / numSplits;
 
     int32_t beginAttr0[4] = {0, 0, 0, 0};
     auto beginConstantOp0 = rewriter.create<arith::ConstantOp>(
@@ -138,7 +138,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         beginConstantOp0, endConstantOp0, stridesConstantOp, begin_mask,
         end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
-    stridedSliceOp0->setAttr(insertLabel, rewriter.getUnitAttr());
+    stridedSliceOp0->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     SmallVector<Value> stridedSliceOps;
     stridedSliceOps.push_back(stridedSliceOp0.getResult());
@@ -148,7 +148,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         beginConstantOp1, endConstantOp1, stridesConstantOp, begin_mask,
         end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
-    stridedSliceOp1->setAttr(insertLabel, rewriter.getUnitAttr());
+    stridedSliceOp1->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     stridedSliceOps.push_back(stridedSliceOp1.getResult());
 
@@ -169,78 +169,45 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
 
   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
                                 PatternRewriter &rewriter) const override {
-
-    static constexpr char insertLabel[] = "insertLabel";
-    if (!((stridedSlice->hasAttr(insertLabel))))
+    if (!((stridedSlice->hasAttr(opSplitLabel))))
       return failure();
 
-    static constexpr char raiseStridedSliceLabel[] = "raiseStridedSliceLabel";
-    if (stridedSlice->hasAttr(raiseStridedSliceLabel))
+    static constexpr char raisedStridedSliceLabel[] = "raisedStridedSliceLabel";
+    if (stridedSlice->hasAttr(raisedStridedSliceLabel))
       return failure();
 
     auto convOriginal =
         llvm::cast<TFL::Conv2DOp>(stridedSlice.input().getDefiningOp());
 
-    auto convOutput = convOriginal.output();
+    auto convOriginalOutputShape =
+        convOriginal.output().getType().cast<RankedTensorType>().getShape();
+    auto stridedSliceOutputShape =
+        stridedSlice.output().getType().cast<RankedTensorType>().getShape();
 
-    // Extract args from the op
-    auto outputType = convOutput.getType().dyn_cast<RankedTensorType>();
-    int32_t outputHeight = outputType.getDimSize(1);
-    int32_t outputWidth = outputType.getDimSize(2);
-    int32_t outputDepth = outputType.getDimSize(3);
-
-    auto outputShape = convOutput.getType().cast<RankedTensorType>().getShape();
-
-    auto inputShape =
+    auto convOriginalInputShape =
         convOriginal.input().getType().cast<RankedTensorType>().getShape();
 
-    RankedTensorType stridedSliceType = RankedTensorType::get(
-        {inputShape[0], inputShape[1], inputShape[2] / 2, inputShape[3]},
+    RankedTensorType newStridedSliceType = RankedTensorType::get(
+        {stridedSliceOutputShape[0], stridedSliceOutputShape[1],
+         stridedSliceOutputShape[2], convOriginalInputShape[3]},
         convOriginal.input().getType().cast<ShapedType>().getElementType());
 
-    int32_t sliceIndex = outputWidth / 2;
-    
-    int32_t beginAttr0[4] = {0, 0, 0, 0};
-    auto beginConstantOp0 = rewriter.create<arith::ConstantOp>(
-        convOriginal.getLoc(), rewriter.getI32TensorAttr(beginAttr0));
+    auto stridedSliceReplacement =
+        llvm::cast<TFL::StridedSliceOp>(rewriter.clone(*stridedSlice));
+    stridedSliceReplacement->setAttr(raisedStridedSliceLabel,
+                                     rewriter.getUnitAttr());
+    stridedSliceReplacement->getResult(0).setType(newStridedSliceType);
+    stridedSliceReplacement.setOperand(0, convOriginal.input());
 
-    int32_t endAttr0[4] = {1, outputHeight, sliceIndex, outputDepth};
-    auto endConstantOp0 = rewriter.create<arith::ConstantOp>(
-        convOriginal.getLoc(), rewriter.getI32TensorAttr(endAttr0));
-
-    int32_t beginAttr1[4] = {0, 0, sliceIndex, 0};
-    auto beginConstantOp1 = rewriter.create<arith::ConstantOp>(
-        convOriginal.getLoc(), rewriter.getI32TensorAttr(beginAttr1));
-
-    int32_t endAttr1[4] = {1, outputHeight, outputWidth, outputDepth};
-    auto endConstantOp1 = rewriter.create<arith::ConstantOp>(
-        convOriginal.getLoc(), rewriter.getI32TensorAttr(endAttr1));
-
-    int32_t stridesAttr[4] = {1, 1, 1, 1};
-    auto stridesConstantOp = rewriter.create<arith::ConstantOp>(
-        convOriginal.getLoc(), rewriter.getI32TensorAttr(stridesAttr));
-
-    int32_t begin_mask, end_mask, ellipsis_mask, new_axis_mask,
-        shrink_axis_mask;
-    begin_mask = end_mask = ellipsis_mask = new_axis_mask = shrink_axis_mask =
-        0;
-
-    auto stridedSliceReplacement = rewriter.create<TFL::StridedSliceOp>(
-        stridedSlice.getLoc(), stridedSliceType, convOriginal.input(),
-        beginConstantOp0, endConstantOp0, stridesConstantOp, begin_mask,
-        end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
-    stridedSliceReplacement->setAttr(raiseStridedSliceLabel, rewriter.getUnitAttr());
-
-    RankedTensorType newOutputType = RankedTensorType::get(
-        {outputShape[0], outputShape[1], outputShape[2] / 2, outputShape[3]},
+    RankedTensorType newConvType = RankedTensorType::get(
+        {convOriginalOutputShape[0], convOriginalOutputShape[1],
+         stridedSliceOutputShape[2], convOriginalOutputShape[3]},
         convOriginal.output().getType().cast<ShapedType>().getElementType());
 
-    auto convReplacement = rewriter.create<TFL::Conv2DOp>(
-        stridedSlice.getLoc(), newOutputType, stridedSliceReplacement,
-        convOriginal.filter(), convOriginal.bias(),
-        convOriginal.dilation_h_factor(), convOriginal.dilation_w_factor(),
-        convOriginal.fused_activation_function(), convOriginal.padding(),
-        convOriginal.stride_h(), convOriginal.stride_w());
+    auto convReplacement =
+        llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
+    convReplacement->getResult(0).setType(newConvType);
+    convReplacement.setOperand(0, stridedSliceReplacement);
 
     rewriter.replaceOp(stridedSlice, convReplacement.output());
 

@@ -9,6 +9,7 @@ namespace mlir {
 namespace xcore {
 
 namespace {
+static constexpr char opSplitLabel[] = "opSplitLabel";
 // OpSplit
 struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpSplit)
@@ -17,7 +18,7 @@ struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
   StringRef getArgument() const final { return "xcore-op-split"; }
-  StringRef getDescription() const final { return "OpSplit."; }
+  StringRef getDescription() const final { return "Op Split."; }
   void runOnOperation() override;
 };
 
@@ -26,11 +27,8 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
 
   LogicalResult matchAndRewrite(TFL::Conv2DOp convOriginal,
                                 PatternRewriter &rewriter) const override {
-
-    static constexpr char kSplitLabel[] = "__split_op__";
-
     // Do not split ops already split
-    if (convOriginal->hasAttr(kSplitLabel))
+    if (convOriginal->hasAttr(opSplitLabel))
       return failure();
 
     // Check for invalid cases and return
@@ -90,7 +88,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
 
     // Apply label, so that the same op is not rewritten a second time.
-    convReplacement->setAttr(kSplitLabel, rewriter.getUnitAttr());
+    convReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     auto convOutput = convReplacement.output();
 
@@ -102,11 +100,13 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
 
     auto outputShape = convOutput.getType().cast<RankedTensorType>().getShape();
 
+    int numSplits = 2;
     RankedTensorType newOutputType = RankedTensorType::get(
-        {outputShape[0], outputShape[1], outputShape[2] / 2, outputShape[3]},
+        {outputShape[0], outputShape[1], outputShape[2] / numSplits,
+         outputShape[3]},
         convOutput.getType().cast<ShapedType>().getElementType());
 
-    int32_t sliceIndex = outputWidth / 2;
+    int32_t sliceIndex = outputWidth / numSplits;
 
     int32_t beginAttr0[4] = {0, 0, 0, 0};
     auto beginConstantOp0 = rewriter.create<arith::ConstantOp>(
@@ -138,7 +138,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         beginConstantOp0, endConstantOp0, stridesConstantOp, begin_mask,
         end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
-    stridedSliceOp0->setAttr(kSplitLabel, rewriter.getUnitAttr());
+    stridedSliceOp0->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     SmallVector<Value> stridedSliceOps;
     stridedSliceOps.push_back(stridedSliceOp0.getResult());
@@ -148,7 +148,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
         beginConstantOp1, endConstantOp1, stridesConstantOp, begin_mask,
         end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
-    stridedSliceOp1->setAttr(kSplitLabel, rewriter.getUnitAttr());
+    stridedSliceOp1->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     stridedSliceOps.push_back(stridedSliceOp1.getResult());
 
@@ -164,12 +164,68 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
   }
 };
 
+struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
+  using OpRewritePattern<TFL::StridedSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
+                                PatternRewriter &rewriter) const override {
+    if (!((stridedSlice->hasAttr(opSplitLabel))))
+      return failure();
+
+    static constexpr char raisedStridedSliceLabel[] = "raisedStridedSliceLabel";
+    if (stridedSlice->hasAttr(raisedStridedSliceLabel))
+      return failure();
+
+    auto convOriginal =
+        llvm::cast<TFL::Conv2DOp>(stridedSlice.input().getDefiningOp());
+
+    auto convOriginalOutputShape =
+        convOriginal.output().getType().cast<RankedTensorType>().getShape();
+    auto stridedSliceOutputShape =
+        stridedSlice.output().getType().cast<RankedTensorType>().getShape();
+
+    auto convOriginalInputShape =
+        convOriginal.input().getType().cast<RankedTensorType>().getShape();
+
+    RankedTensorType newStridedSliceType = RankedTensorType::get(
+        {stridedSliceOutputShape[0], stridedSliceOutputShape[1],
+         stridedSliceOutputShape[2], convOriginalInputShape[3]},
+        convOriginal.input().getType().cast<ShapedType>().getElementType());
+
+    auto stridedSliceReplacement =
+        llvm::cast<TFL::StridedSliceOp>(rewriter.clone(*stridedSlice));
+    stridedSliceReplacement->setAttr(raisedStridedSliceLabel,
+                                     rewriter.getUnitAttr());
+    stridedSliceReplacement->getResult(0).setType(newStridedSliceType);
+    stridedSliceReplacement.setOperand(0, convOriginal.input());
+
+    RankedTensorType newConvType = RankedTensorType::get(
+        {convOriginalOutputShape[0], convOriginalOutputShape[1],
+         stridedSliceOutputShape[2], convOriginalOutputShape[3]},
+        convOriginal.output().getType().cast<ShapedType>().getElementType());
+
+    auto convReplacement =
+        llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
+    convReplacement->getResult(0).setType(newConvType);
+    convReplacement.setOperand(0, stridedSliceReplacement);
+
+    rewriter.replaceOp(stridedSlice, convReplacement.output());
+
+    return success();
+  }
+};
+
 void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
-  RewritePatternSet patterns(ctx);
   func::FuncOp func = getOperation();
+
+  RewritePatternSet patterns(ctx);
   patterns.insert<OpSplitPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+
+  RewritePatternSet patterns2(ctx);
+  patterns2.insert<RaiseStridedSlicePattern>(ctx);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
 }
 } // namespace
 

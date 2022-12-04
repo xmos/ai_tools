@@ -38,7 +38,6 @@ xformer2_integration_test:
 build: xcore_interpreters_build
 
 .PHONY: test
-test: xinterpreters_smoke_test_host
 test: xformer2_integration_test
 
 #**************************

@@ -62,9 +62,9 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
     // Constants are usually allocated in the beginning of the function.
     // Lowering them to load from flash op leads to loading constants from flash
     // occurring in the beginning of graph execution before other ops are
-    // executed, thereby needing a much larger tensor arena. 
-    // We move the op to right before the user op (user op would be conv or 
-    // lookup op etc, any op that is using the constant). 
+    // executed, thereby needing a much larger tensor arena.
+    // We move the op to right before the user op (user op would be conv or
+    // lookup op etc, any op that is using the constant).
     // This is so that when we lower to flatbuffer the loadOp will be located
     // in the graph close to the user op.
     if (loadOp.getResult().hasOneUse()) {

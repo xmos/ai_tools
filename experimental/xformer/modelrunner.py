@@ -17,6 +17,8 @@ from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter, xcore_tflm_
 XFORMER2_PATH = (pathlib.Path(__file__).resolve().parents[0] / "bazel-bin" /
                  "xcore-opt")
 
+def dequantize(arr: np.ndarray, scale: float, zero_point: int) -> np.float32:
+    return np.float32(arr.astype(np.int32) - np.int32(zero_point)) * np.float32(scale)
 
 def get_xformed_model(model, args):
     with tempfile.TemporaryDirectory(suffix=str(os.getpid())) as dirname:
@@ -30,7 +32,7 @@ def get_xformed_model(model, args):
         cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path),
         "--xcore-thread-count=" + args.tc,
         "--xcore-flash-image-file=" + str(params_path),
-        #"--xcore-replace-avgpool-with-conv2d",
+        #"--lce-translate-tfl",
         #"--xcore-replace-with-conv2dv2",
         #"--xcore-translate-to-customop"
         ]
@@ -124,6 +126,8 @@ def test_inference(args):
             print("Creating random input...")
             for i in range(num_of_inputs):
                 input_tensor.append(np.array(256 * np.random.random_sample(input_tensor_shape[i]) - 127, dtype=input_tensor_type[i]))
+                #input_tensor.append(np.array(10 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
+
 
         if args.bnn:
             print("Invoking LCE interpreter...")
@@ -140,10 +144,17 @@ def test_inference(args):
 
             num_of_outputs = len(interpreter.get_output_details())
             outputs = []
+            output_scales = []
+            output_zero_points = []
             for i in range(num_of_outputs):
                 outputs.append(
                     interpreter.get_tensor(
                         interpreter.get_output_details()[i]["index"]))
+                quant_params = interpreter.get_output_details()[i][
+                    "quantization_parameters"
+                ]
+                output_scales.append(quant_params["scales"])
+                output_zero_points.append(quant_params["zero_points"])
 
         # print("Creating 2nd LCE interpreter...")
         # ie = lce.testing.Interpreter(xformed_model, num_threads=1, use_reference_bconv=True)
@@ -169,6 +180,14 @@ def test_inference(args):
                 print(xformer_outputs[i])
                 print("compared output")
                 print(outputs[i])
+                #if quantized output, we dequantize it before comparing
+                if output_scales[i]:
+                    outputs[i] = dequantize(
+                    outputs[i], output_scales[i], output_zero_points[i]
+                )
+                    xformer_outputs[i] = dequantize(
+                    xformer_outputs[i], output_scales[i], output_zero_points[i]
+                )
                 np.testing.assert_equal(outputs[i], xformer_outputs[i])
             except Exception as e:
                 num_of_fails += 1

@@ -70,9 +70,8 @@ def XC_Conv2D_TypeAttr : I32EnumAttr<"Conv2DType", "conv2d type enum", [
 def XC_Conv2D_Group : I32EnumAttrCase<"Group", 0>;
 def XC_Conv2D_Channelwise : I32EnumAttrCase<"Channelwise", 1>;
 
-def XC_Conv2D_OTAttr : I32EnumAttr<"OtType", "output transform type enum", [
-  XC_Conv2D_Group, XC_Conv2D_Channelwise
-]>;
+def XC_Conv2D_OTAttr : I32EnumAttr<"OtType", "output transform type enum",
+                                   [XC_Conv2D_Group, XC_Conv2D_Channelwise]>;
 
 def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
   let summary = "Strided Slice op";
@@ -85,6 +84,25 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
     I32Attr:$begin_x,
     I32Attr:$begin_y,
     StrAttr:$memcpy_fn_param
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_AddOp : XC_Op<"add", [NoSideEffect]> {
+  let summary = "Add op";
+
+  let description = [{Add op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input1,
+    TensorOf<[QI8]>:$input2,
+    StrAttr:$fused_activation_function,
+
+    I32Attr:$multiplier1,
+    I32Attr:$multiplier2,
+    I32Attr:$bias,
+    I32Attr:$shift
   );
 
   let results = (outs TensorOf<[QI8]> : $output);

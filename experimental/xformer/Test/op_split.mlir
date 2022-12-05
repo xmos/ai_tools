@@ -1,7 +1,7 @@
 // RUN: xcore-opt --mlir-io --xcore-op-split %s
 
-// CHECK-LABEL: conv2d_1x1
-func.func @conv2d_1x1(%arg0: tensor<?x6x6x4x!quant.uniform<i8:f32, 0.0039214449934661388:-128>> {tf_saved_model.index_path = ["input_2"]}) -> (tensor<?x144x!quant.uniform<i8:f32, 0.0032160764094442129:-128>> {tf_saved_model.index_path = ["flatten_1"]}) attributes {tf.entry_function = {inputs = "serving_default_input_2:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
+// CHECK-LABEL: conv2d_1x1_stride_1
+func.func @conv2d_1x1_stride_1(%arg0: tensor<?x6x6x4x!quant.uniform<i8:f32, 0.0039214449934661388:-128>> {tf_saved_model.index_path = ["input_2"]}) -> (tensor<?x144x!quant.uniform<i8:f32, 0.0032160764094442129:-128>> {tf_saved_model.index_path = ["flatten_1"]}) attributes {tf.entry_function = {inputs = "serving_default_input_2:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
   // CHECK: tfl.strided_slice
   // CHECK: tfl.strided_slice
   // CHECK: tfl.conv_2d
@@ -15,8 +15,8 @@ func.func @conv2d_1x1(%arg0: tensor<?x6x6x4x!quant.uniform<i8:f32, 0.00392144499
   return %4 : tensor<?x144x!quant.uniform<i8:f32, 0.0032160764094442129:-128>>
 }
 
-// CHECK-LABEL: conv2d_2x2
-func.func @conv2d_2x2(%arg0: tensor<?x96x129x16x!quant.uniform<i8:f32, 0.0039215688593685627:-128>> {tf_saved_model.index_path = ["input_1"]}) -> (tensor<?x778240x!quant.uniform<i8:f32, 0.0060480642132461071:-128>> {tf_saved_model.index_path = ["flatten"]}) attributes {tf.entry_function = {inputs = "serving_default_input_1:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
+// CHECK-LABEL: conv2d_2x2_stride_1
+func.func @conv2d_2x2_stride_1(%arg0: tensor<?x96x129x16x!quant.uniform<i8:f32, 0.0039215688593685627:-128>> {tf_saved_model.index_path = ["input_1"]}) -> (tensor<?x778240x!quant.uniform<i8:f32, 0.0060480642132461071:-128>> {tf_saved_model.index_path = ["flatten"]}) attributes {tf.entry_function = {inputs = "serving_default_input_1:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
   // CHECK: tfl.strided_slice
   // CHECK: tfl.strided_slice
   // CHECK: tfl.conv_2d

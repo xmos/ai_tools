@@ -35,6 +35,12 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     if (convOriginal.padding() != "VALID")
       return failure();
 
+    if (convOriginal.stride_h() != 1)
+      return failure();
+
+    if (convOriginal.stride_w() != 1)
+      return failure();
+
     auto convOutput = convOriginal.output();
 
     // Extract args from the op

@@ -70,12 +70,6 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
       return failure();
     }
 
-    // Fused activation function must be RELU
-    // if (!(addOp.fused_activation_function() == "RELU")) {
-    //   addOp.emitError("Only RELU is supported for XC Add!");
-    //   return failure();
-    // }
-
     auto lhsQType = lhsType.dyn_cast<mlir::quant::UniformQuantizedType>();
     auto lhsScale = lhsQType.getScale();
     auto lhsZeroPoint = lhsQType.getZeroPoint();
@@ -91,21 +85,18 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
     double lhsRatio = lhsScale / outputScale;
     double rhsRatio = rhsScale / outputScale;
 
+    // We find the max in case there is a large difference
+    // between lhs and rhs scales.
     double maxR = std::max(lhsRatio, rhsRatio);
-    // Why 128
+    // We want the max shift to be 14 bits
     int shift = int(floor(log2(pow(2, 14) / maxR)));
-    // shift = 7 - shift;
 
-    // Explain math
+    // Multipliers are converted to fixed-point
     int m1 = round(lhsRatio * pow(2, shift));
     int m2 = round(rhsRatio * pow(2, shift));
     int bias = round((outputZeroPoint - (lhsZeroPoint * lhsRatio) -
                       (rhsZeroPoint * rhsRatio)) *
                      pow(2, shift));
-
-    // int bias = (outputZeroPoint << shift)
-    //         - m1 * lhsZeroPoint
-    //         - m2 * rhsZeroPoint;
 
     auto xcAddOp = rewriter.create<AddOp>(
         addOp.getLoc(), addOp.getType(), addOp.lhs(), addOp.rhs(),

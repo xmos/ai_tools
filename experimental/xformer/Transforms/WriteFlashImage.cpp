@@ -71,15 +71,63 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
       auto use = loadOp->use_begin();
       Operation *op = use->getOwner();
       loadOp->moveBefore(op);
+
+      SmallVector<Type> outputTypes;
+      SmallVector<int> opNums;
+      std::vector<char> tensorData;
+
+      for (int i = 0; i < op->getNumOperands(); i++) {
+        auto loadOp =
+            dyn_cast_or_null<LoadConstantOp>(op->getOperand(i).getDefiningOp());
+
+        if (loadOp) {
+
+          DenseElementsAttr attr;
+          if (loadOp.input()
+                  .getType()
+                  .cast<ShapedType>()
+                  .getElementType()
+                  .isa<quant::QuantizedType>()) {
+            auto qConstOp =
+                dyn_cast<TFL::QConstOp>(loadOp.input().getDefiningOp());
+            attr = qConstOp.value().template cast<DenseElementsAttr>();
+          } else if (!matchPattern(loadOp.input(), m_Constant(&attr))) {
+            return failure();
+          }
+
+          int n = attr.isSplat() ? attr.getNumElements() : 1;
+          for (int i = 0; i < n; ++i) {
+            tensorData.insert(tensorData.end(), attr.getRawData().begin(),
+                              attr.getRawData().end());
+          }
+
+          outputTypes.push_back(loadOp.getType());
+          opNums.push_back(i);
+        }
+      }
+
+      int address = 0;
+      for (auto const &t : *tensorsVec_) {
+        address += t.size();
+      }
+
+      auto loadFlashOp = rewriter.create<LoadFlashOp>(
+          loadOp.getLoc(), outputTypes, address, tensorData.size());
+
+      for (int i = 0; i < opNums.size(); i++) {
+        op->setOperand(opNums[i], loadFlashOp.getResult(i));
+      }
+      loadOp.erase();
+    } else {
+      auto loadFlashOp = rewriter.create<LoadFlashOp>(
+          loadOp.getLoc(), loadOp.getType(), address, tensorData.size());
+      rewriter.replaceOp(loadOp, loadFlashOp.output());
     }
 
-    // Create a LoadFlashOp with data addr and tensor size
-    auto loadFlashOp = rewriter.create<LoadFlashOp>(
-        loadOp.getLoc(), loadOp.getType(), address, tensorData.size());
     tensorsVec_->push_back(tensorData);
 
     // Replace the LoadOp with the new LoadFlashOp
-    rewriter.replaceOp(loadOp, loadFlashOp.output());
+    // rewriter.replaceOp(loadOp, loadFlashOp.output());
     return success();
   }
 

@@ -35,10 +35,13 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     if (convOriginal.padding() != "VALID")
       return failure();
 
-    if (convOriginal.stride_h() != 1)
-      return failure();
-
-    if (convOriginal.stride_w() != 1)
+    auto filterHeight =
+        convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(
+            1);
+    auto filterWidth =
+        convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(
+            2);
+    if (filterHeight != filterWidth)
       return failure();
 
     auto convOutput = convOriginal.output();
@@ -98,7 +101,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     int32_t beginAttr0[4] = {0, 0, 0, 0};
     auto beginConstantOp0 = rewriter.create<arith::ConstantOp>(
         convReplacement.getLoc(), rewriter.getI32TensorAttr(beginAttr0));
-    
+
     int32_t endAttr0[4] = {1, outputHeight, sliceIndex, outputDepth};
     auto endConstantOp0 = rewriter.create<arith::ConstantOp>(
         convReplacement.getLoc(), rewriter.getI32TensorAttr(endAttr0));
@@ -174,26 +177,6 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     auto convOriginalInputShape =
         convOriginal.input().getType().cast<RankedTensorType>().getShape();
 
-    // If Padding = Valid
-    // OutputWidth =ceil(  (InputWidth – FilterWidth + 1) /  StrideWidth )
-
-    // floor(OutputWidth) = (InputWidth – FilterWidth + 1) /  StrideWidth
-    // OutputWidth is always an integer, no need for floor
-    // OutputWidth = (InputWidth – FilterWidth + 1) /  StrideWidth
-    // OutputWidth * StrideWidth = InputWidth – FilterWidth + 1
-    // OutputWidth * StrideWidth - 1 = InputWidth – FilterWidth
-    // OutputWidth * StrideWidth - 1 = InputWidth – FilterWidth
-    // OutputWidth * StrideWidth - 1 + FilterWidth = InputWidth
-
-    // InputWidth = OutputWidth * StrideWidth - 1 + FilterWidth
-
-    // If Padding = Same
-    // OutputWidth = ceil( InputWidth / StrideWidth)
-    // OutputWidth is always an integer, no need for floor
-    // OutputWidth = InputWidth / StrideWidth
-    // OutputWidth * StrideWidth = InputWidth
-    // InputWidth = OutputWidth * StrideWidth
-
     auto filterWidth =
         convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(
             2);
@@ -203,19 +186,16 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     if (!matchPattern(stridedSlice.begin(), m_Constant(&attr))) {
       return failure();
     }
-    auto beginWidth = attr.getValues<int32_t>()[2];
+    auto beginIndex = attr.getValues<int32_t>()[2];
     if (!matchPattern(stridedSlice.end(), m_Constant(&attr))) {
       return failure();
     }
-    auto endWidth = attr.getValues<int32_t>()[2];
+    auto endIndex = attr.getValues<int32_t>()[2];
 
-    auto outputWidth = endWidth - beginWidth;
+    auto outputWidth = stridedSliceOutputShape[2];
 
     int32_t newOutputWidth;
-    if (convOriginal.padding() == "VALID")
-      newOutputWidth = outputWidth * strideWidth - 1 + filterWidth;
-    else if (convOriginal.padding() == "SAME")
-      newOutputWidth = outputWidth * strideWidth;
+    newOutputWidth = outputWidth * strideWidth - strideWidth + filterWidth;
 
     RankedTensorType newStridedSliceType = RankedTensorType::get(
         {convOriginalInputShape[0], convOriginalInputShape[1], newOutputWidth,
@@ -225,41 +205,28 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     arith::ConstantOp beginConstantOp;
     arith::ConstantOp endConstantOp;
 
-    if (beginWidth == 0) {
+    if (beginIndex == 0) {
       int32_t beginAttr[4] = {0, 0, 0, 0};
-
       beginConstantOp = rewriter.create<arith::ConstantOp>(
           stridedSlice.getLoc(), rewriter.getI32TensorAttr(beginAttr));
 
-      int32_t newEndWidth;
-      if (convOriginal.padding() == "VALID")
-        newEndWidth = endWidth * strideWidth - 1 + filterWidth;
-      else if (convOriginal.padding() == "SAME")
-        newEndWidth = endWidth * strideWidth;
-
       int32_t endAttr[4] = {1, static_cast<int32_t>(convOriginalInputShape[1]),
-                            newEndWidth,
+                            newOutputWidth,
                             static_cast<int32_t>(convOriginalInputShape[3])};
       endConstantOp = rewriter.create<arith::ConstantOp>(
           stridedSlice.getLoc(), rewriter.getI32TensorAttr(endAttr));
-
     } else {
-      int32_t newBeginWidth;
-      if (convOriginal.padding() == "VALID")
-        newBeginWidth = beginWidth * strideWidth - 1 + filterWidth;
-      else if (convOriginal.padding() == "SAME")
-        newBeginWidth = beginWidth * strideWidth;
-
-      int32_t beginAttr[4] = {0, 0, newBeginWidth, 0};
-
-      beginConstantOp = rewriter.create<arith::ConstantOp>(
-          stridedSlice.getLoc(), rewriter.getI32TensorAttr(beginAttr));
-
+      auto newEndIndex = endIndex * strideWidth - strideWidth + filterWidth;
       int32_t endAttr[4] = {1, static_cast<int32_t>(convOriginalInputShape[1]),
-                            static_cast<int32_t>(convOriginalInputShape[2]),
+                            static_cast<int32_t>(newEndIndex),
                             static_cast<int32_t>(convOriginalInputShape[3])};
       endConstantOp = rewriter.create<arith::ConstantOp>(
           stridedSlice.getLoc(), rewriter.getI32TensorAttr(endAttr));
+
+      int32_t beginAttr[4] = {
+          0, 0, static_cast<int32_t>(newEndIndex - newOutputWidth), 0};
+      beginConstantOp = rewriter.create<arith::ConstantOp>(
+          stridedSlice.getLoc(), rewriter.getI32TensorAttr(beginAttr));
     }
 
     auto stridedSliceReplacement = rewriter.create<TFL::StridedSliceOp>(

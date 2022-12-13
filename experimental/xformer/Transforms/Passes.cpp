@@ -25,6 +25,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
     pm.addPass(createOpSplitPass());
   }
   // XC passes
+  pm.addPass(createReplaceAddPass());
   pm.addPass(createReplaceStridedSlicePass());
   pm.addPass(createReplaceConv2DPass());
   pm.addPass(createApplyXCPatternsPass());

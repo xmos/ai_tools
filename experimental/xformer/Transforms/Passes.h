@@ -30,6 +30,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplaceFCWithConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createPad3to4Conv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceStridedSlicePass();
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceAddPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createApplyXCPatternsPass();
 std::unique_ptr<OperationPass<func::FuncOp>>
 createApplyLoadConstantOpPatternsPass();

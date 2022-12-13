@@ -89,6 +89,25 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_AddOp : XC_Op<"add", [NoSideEffect]> {
+  let summary = "Add op";
+
+  let description = [{Add op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input1,
+    TensorOf<[QI8]>:$input2,
+    StrAttr:$fused_activation_function,
+
+    I32Attr:$multiplier1,
+    I32Attr:$multiplier2,
+    I32Attr:$bias,
+    I32Attr:$shift
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
   let summary = "Conv2D V2 op";
 

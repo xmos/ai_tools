@@ -32,6 +32,7 @@ filegroup(
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_detection_post.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_load_from_flash.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_lookup.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_add.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_strided_slice.cc",
     ],
 )

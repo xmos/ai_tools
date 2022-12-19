@@ -45,7 +45,6 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
       return failure();
 
 
-
     auto inputElementalType =
         convOriginal.input().getType().cast<ShapedType>().getElementType();
 
@@ -213,71 +212,7 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
         llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
     convReplacement->getResult(0).setType(newConvType);
 
-    if (convOriginal.padding() == "VALID"){
-      convReplacement.setOperand(0, stridedSliceReplacement);
-    }
-    else {
-      // Find padding values
-      auto inputType = convReplacement.input().getType().dyn_cast<RankedTensorType>();
-      auto filterType = convReplacement.filter().getType().dyn_cast<RankedTensorType>();
-      auto inputHeight = inputType.getDimSize(1);
-      auto inputWidth = inputType.getDimSize(2);
-      auto filterHeight = filterType.getDimSize(1);
-      auto filterWidth = filterType.getDimSize(2);
-
-      int64_t newHeight, newWidth;
-      int64_t padTop, padBottom, padLeft, padRight;
-      tensorflow::GetWindowedOutputSizeVerboseV2(
-          inputHeight, filterHeight, convReplacement.dilation_height_factor(),
-          convReplacement.stride_height(), tensorflow::Padding::SAME, &newHeight,
-          &padTop, &padBottom)
-      tensorflow::GetWindowedOutputSizeVerboseV2(
-              inputWidth, filterWidth, convReplacement.dilation_width_factor(),
-              convReplacement.stride_width(), tensorflow::Padding::SAME, &newWidth,
-              &padLeft, &padRight)
-
-      if (!matchPattern(stridedSlice.begin(), m_Constant(&attr))) {
-        return failure();
-      }
-      auto beginIndex = attr.getValues<int32_t>()[2];
-      if (beginIndex != 0) {
-        padLeft = 0;
-      }
-
-      std::vector<int32_t> paddingValues{0,
-                                     0,
-                                     static_cast<int>(padTop),
-                                     static_cast<int>(padBottom),
-                                     static_cast<int>(padLeft),
-                                     static_cast<int>(padRight),
-                                     0,
-                                     0};
-
-      auto stridedSliceReplacementOutputShape =
-        stridedSliceReplacement.output().getType().cast<RankedTensorType>().getShape();
-
-      int batch = stridedSliceReplacementOutputShape[0] + paddingValues[0] + paddingValues[1];
-      int height = stridedSliceReplacementOutputShape[0] + paddingValues[2] + paddingValues[3];
-      int width = stridedSliceReplacementOutputShape[0] + paddingValues[4] + paddingValues[5];
-      int depth = stridedSliceReplacementOutputShape[0] + paddingValues[6] + paddingValues[7];
-
-      auto paddedResultType = RankedTensorType::get(
-        {batch, height, width, depth},
-        stridedSliceReplacement.output().getType().cast<ShapedType>().getElementType());
-
-      RankedTensorType paddingsType =
-        RankedTensorType::get({4, 2}, rewriter.getI32Type());
-      
-      Value paddings = rewriter.create<TFL::ConstOp>(
-        stridedSlice.getLoc(),
-        DenseIntElementsAttr::get(paddingsType, paddingsValues));
-      
-      Value padOp = rewriter.create<TFL::PadOp>(
-        stridedSlice.getLoc(), paddedResultType, stridedSliceReplacement, paddings);
-
-      convReplacement.setOperand(0, padOp);
-      convReplacement.padding() = "VALID";
-    }
+    convReplacement.setOperand(0, stridedSliceReplacement);
 
     rewriter.replaceOp(stridedSlice, convReplacement.output());
 

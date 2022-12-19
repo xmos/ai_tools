@@ -44,7 +44,6 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     if (filterHeight != filterWidth)
       return failure();
 
-
     auto inputElementalType =
         convOriginal.input().getType().cast<ShapedType>().getElementType();
 
@@ -75,7 +74,6 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     // Apply label, so that the same op is not rewritten a second time.
     convReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
-
     int32_t stridesAttr[4] = {1, 1, 1, 1};
     auto stridesConstantOp = rewriter.create<arith::ConstantOp>(
         convReplacement.getLoc(), rewriter.getI32TensorAttr(stridesAttr));
@@ -96,33 +94,31 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     int numSplits = 4;
     int32_t sliceWidth = outputWidth / numSplits;
     int32_t sliceWidthRemainder = outputWidth % numSplits;
-  
+
     int32_t prevEndIndex = 0;
-    for (size_t i = 0; i < numSplits; i++)
-    {
+    for (size_t i = 0; i < numSplits; i++) {
       int32_t currentSliceWidth = sliceWidth;
       if (i < sliceWidthRemainder)
-        currentSliceWidth++; 
-      
+        currentSliceWidth++;
+
       RankedTensorType newOutputType = RankedTensorType::get(
-        {1, outputHeight, currentSliceWidth,
-         outputDepth},
-        convOutput.getType().cast<ShapedType>().getElementType());
+          {1, outputHeight, currentSliceWidth, outputDepth},
+          convOutput.getType().cast<ShapedType>().getElementType());
 
       int32_t beginAttr[4] = {0, 0, prevEndIndex, 0};
       auto beginConstantOp = rewriter.create<arith::ConstantOp>(
-        convReplacement.getLoc(), rewriter.getI32TensorAttr(beginAttr));
+          convReplacement.getLoc(), rewriter.getI32TensorAttr(beginAttr));
 
       int32_t endIndex = prevEndIndex + currentSliceWidth;
       int32_t endAttr[4] = {1, outputHeight, endIndex, outputDepth};
       auto endConstantOp = rewriter.create<arith::ConstantOp>(
-        convReplacement.getLoc(), rewriter.getI32TensorAttr(endAttr));
+          convReplacement.getLoc(), rewriter.getI32TensorAttr(endAttr));
       prevEndIndex = endIndex;
 
       auto stridedSliceOp = rewriter.create<TFL::StridedSliceOp>(
-        convReplacement.getLoc(), newOutputType, convReplacement,
-        beginConstantOp, endConstantOp, stridesConstantOp, begin_mask,
-        end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
+          convReplacement.getLoc(), newOutputType, convReplacement,
+          beginConstantOp, endConstantOp, stridesConstantOp, begin_mask,
+          end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
       stridedSliceOp->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
@@ -162,7 +158,8 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
         convOriginal.input().getType().cast<RankedTensorType>().getShape();
     auto convOriginalOutputShape =
         convOriginal.output().getType().cast<RankedTensorType>().getShape();
-    auto filterWidth = convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(
+    auto filterWidth =
+        convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(
             2);
     auto strideWidth = convOriginal.stride_w();
 
@@ -182,18 +179,19 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
 
     auto outputWidth = stridedSliceOutputShape[2];
 
-    int32_t newOutputWidth = outputWidth * strideWidth - strideWidth + filterWidth;
+    int32_t newOutputWidth =
+        outputWidth * strideWidth - strideWidth + filterWidth;
 
     int32_t beginAttr[4] = {
         0, 0, static_cast<int32_t>(newEndIndex - newOutputWidth), 0};
     auto beginConstantOp = rewriter.create<arith::ConstantOp>(
         stridedSlice.getLoc(), rewriter.getI32TensorAttr(beginAttr));
-       
+
     RankedTensorType newStridedSliceType = RankedTensorType::get(
         {convOriginalInputShape[0], convOriginalInputShape[1], newOutputWidth,
          convOriginalInputShape[3]},
         convOriginal.input().getType().cast<ShapedType>().getElementType());
-   
+
     auto stridedSliceReplacement = rewriter.create<TFL::StridedSliceOp>(
         stridedSlice.getLoc(), newStridedSliceType, convOriginal.input(),
         beginConstantOp, endConstantOp, stridedSlice.strides(),

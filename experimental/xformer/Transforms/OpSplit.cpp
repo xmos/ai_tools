@@ -210,7 +210,7 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     int32_t newOutputWidth =
         outputWidth * strideWidth - strideWidth + filterWidth;
 
-    // Set begin tensor to zero or all dims except width
+    // Set begin tensor to zero for all dims except width
     // set width to new end index - new output width
     int32_t beginAttr[4] = {
         0, 0, static_cast<int32_t>(newEndIndex - newOutputWidth), 0};

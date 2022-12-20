@@ -33,8 +33,7 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
                          MLIRContext *context)
       : OpRewritePattern<LoadConstantOp>(context), tensorsVec_(tensorsVec) {}
 
-  LogicalResult matchAndRewrite(LoadConstantOp loadOp,
-                                PatternRewriter &rewriter) const override {
+  std::vector<char> getTensorData(LoadConstantOp loadOp) const {
     DenseElementsAttr attr;
     if (loadOp.input()
             .getType()
@@ -43,8 +42,8 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
             .isa<quant::QuantizedType>()) {
       auto qConstOp = dyn_cast<TFL::QConstOp>(loadOp.input().getDefiningOp());
       attr = qConstOp.value().template cast<DenseElementsAttr>();
-    } else if (!matchPattern(loadOp.input(), m_Constant(&attr))) {
-      return failure();
+    } else {
+      matchPattern(loadOp.input(), m_Constant(&attr));
     }
 
     std::vector<char> tensorData;
@@ -53,6 +52,13 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
       tensorData.insert(tensorData.end(), attr.getRawData().begin(),
                         attr.getRawData().end());
     }
+    return tensorData;
+  }
+
+  LogicalResult matchAndRewrite(LoadConstantOp loadOp,
+                                PatternRewriter &rewriter) const override {
+    std::vector<char> tensorData;
+    SmallVector<Attribute> dataSizes;
 
     int address = 0;
     for (auto const &t : *tensorsVec_) {
@@ -69,17 +75,46 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
     // in the graph close to the user op.
     if (loadOp.getResult().hasOneUse()) {
       auto use = loadOp->use_begin();
-      Operation *op = use->getOwner();
-      loadOp->moveBefore(op);
+      Operation *ownerOp = use->getOwner();
+      loadOp->moveBefore(ownerOp);
+
+      SmallVector<Type> outputTypes;
+      SmallVector<int> opNums;
+
+      for (int i = 0; i < ownerOp->getNumOperands(); i++) {
+        auto loadOpForOwnerOp = dyn_cast_or_null<LoadConstantOp>(
+            ownerOp->getOperand(i).getDefiningOp());
+
+        if (loadOpForOwnerOp) {
+          std::vector<char> loadOpData = getTensorData(loadOpForOwnerOp);
+          dataSizes.push_back(rewriter.getI32IntegerAttr(loadOpData.size()));
+          tensorData.insert(tensorData.end(), loadOpData.begin(),
+                            loadOpData.end());
+          outputTypes.push_back(loadOpForOwnerOp.getType());
+          opNums.push_back(i);
+        }
+      }
+
+      auto loadFlashOp =
+          rewriter.create<LoadFlashOp>(loadOp.getLoc(), outputTypes, address,
+                                       rewriter.getArrayAttr(dataSizes));
+
+      for (int i = 0; i < opNums.size(); i++) {
+        ownerOp->setOperand(opNums[i], loadFlashOp.getResult(i));
+      }
+      loadOp.erase();
+    } else {
+      std::vector<char> loadOpData = getTensorData(loadOp);
+      dataSizes.push_back(rewriter.getI32IntegerAttr(loadOpData.size()));
+      tensorData.insert(tensorData.end(), loadOpData.begin(), loadOpData.end());
+      auto loadFlashOp = rewriter.create<LoadFlashOp>(
+          loadOp.getLoc(), loadOp.getType(), address,
+          rewriter.getArrayAttr(dataSizes));
+      rewriter.replaceOp(loadOp, loadFlashOp.output());
     }
 
-    // Create a LoadFlashOp with data addr and tensor size
-    auto loadFlashOp = rewriter.create<LoadFlashOp>(
-        loadOp.getLoc(), loadOp.getType(), address, tensorData.size());
     tensorsVec_->push_back(tensorData);
 
-    // Replace the LoadOp with the new LoadFlashOp
-    rewriter.replaceOp(loadOp, loadFlashOp.output());
     return success();
   }
 

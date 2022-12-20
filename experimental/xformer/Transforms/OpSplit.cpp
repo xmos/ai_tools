@@ -83,6 +83,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     // Will hold stridec slice op to insert after conv op
     SmallVector<Value> stridedSliceOps;
 
+    // Data from conv needed later
     auto convOutput = convOriginal.output();
     auto outputType = convOutput.getType().dyn_cast<RankedTensorType>();
     int32_t outputHeight = outputType.getDimSize(1);
@@ -144,13 +145,14 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     // Concat op does not have activation function
     StringRef fused_activation_function = "NONE";
 
-    auto newConcatOp = rewriter.create<TFL::ConcatenationOp>(
+    // Create concat op that concats on dim 2, width
+    auto concatOp = rewriter.create<TFL::ConcatenationOp>(
         convReplacement.getLoc(), convOutput.getType(), stridedSliceOps, 2,
         fused_activation_function);
 
     // Replace Conv with
     // Cloned Conv -> Strided Slices -> Concat
-    rewriter.replaceOp(convOriginal, newConcatOp.output());
+    rewriter.replaceOp(convOriginal, concatOp.output());
 
     return success();
   }
@@ -170,6 +172,7 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     if (stridedSlice->hasAttr(raisedStridedSliceLabel))
       return failure();
 
+    // Get data from conv needed to raise strided slice
     auto convOriginal =
         llvm::cast<TFL::Conv2DOp>(stridedSlice.input().getDefiningOp());
     auto convOriginalInputShape =
@@ -181,57 +184,72 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
             2);
     auto strideWidth = convOriginal.stride_w();
 
+    // get end index of strided slice
     DenseElementsAttr attr;
     if (!matchPattern(stridedSlice.end(), m_Constant(&attr))) {
       return failure();
     }
     auto endIndex = attr.getValues<int32_t>()[2];
 
+    // Calculate new end index for slice after being raised above conv
     auto newEndIndex = endIndex * strideWidth - strideWidth + filterWidth;
 
+    // Set end tensor for slice to be above conv with new end index
     int32_t endAttr[4] = {1, static_cast<int32_t>(convOriginalInputShape[1]),
                           static_cast<int32_t>(newEndIndex),
                           static_cast<int32_t>(convOriginalInputShape[3])};
     auto endConstantOp = rewriter.create<arith::ConstantOp>(
         stridedSlice.getLoc(), rewriter.getI32TensorAttr(endAttr));
 
+    // Get original slice's output width
     auto stridedSliceOutputShape =
         stridedSlice.output().getType().cast<RankedTensorType>().getShape();
     auto outputWidth = stridedSliceOutputShape[2];
 
+    // Calculate new output width after raising slice above conv
     int32_t newOutputWidth =
         outputWidth * strideWidth - strideWidth + filterWidth;
 
+    // Set begin tensor to zero or all dims except width
+    // set width to new end index - new output width
     int32_t beginAttr[4] = {
         0, 0, static_cast<int32_t>(newEndIndex - newOutputWidth), 0};
     auto beginConstantOp = rewriter.create<arith::ConstantOp>(
         stridedSlice.getLoc(), rewriter.getI32TensorAttr(beginAttr));
 
+    // New strided slice output shape is conv input shape except width
+    // The new calculated output width is used for width
     RankedTensorType newStridedSliceType = RankedTensorType::get(
         {convOriginalInputShape[0], convOriginalInputShape[1], newOutputWidth,
          convOriginalInputShape[3]},
         convOriginal.input().getType().cast<ShapedType>().getElementType());
 
+    // Create new strided slice for above conv
     auto stridedSliceReplacement = rewriter.create<TFL::StridedSliceOp>(
         stridedSlice.getLoc(), newStridedSliceType, convOriginal.input(),
         beginConstantOp, endConstantOp, stridedSlice.strides(),
         stridedSlice.begin_mask(), stridedSlice.end_mask(),
         stridedSlice.ellipsis_mask(), stridedSlice.new_axis_mask(),
         stridedSlice.shrink_axis_mask());
+
+    // Label it as raised so it is not raised again
     stridedSliceReplacement->setAttr(raisedStridedSliceLabel,
                                      rewriter.getUnitAttr());
 
+    auto convReplacement =
+        llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
+
+    // Set new conv output shape with old slice width
     RankedTensorType newConvType = RankedTensorType::get(
         {convOriginalOutputShape[0], convOriginalOutputShape[1],
          stridedSliceOutputShape[2], convOriginalOutputShape[3]},
         convOriginal.output().getType().cast<ShapedType>().getElementType());
-
-    auto convReplacement =
-        llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
     convReplacement->getResult(0).setType(newConvType);
 
+    // Connect new conv's input to new strided slice
     convReplacement.setOperand(0, stridedSliceReplacement);
 
+    // replace stided slice with new strided slice -> new conv
     rewriter.replaceOp(stridedSlice, convReplacement.output());
 
     return success();

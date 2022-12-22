@@ -239,21 +239,21 @@ int main(int argc, char **argv) {
       requiredThreadCount = attr.cast<mlir::IntegerAttr>().getInt();
     }
 
-    struct shared_config::xcore_metadata cfg;
+    struct shared_config::xcore_metadata sharedCfg;
     // Store version info
-    cfg.lib_nn_major_version = lib_nn::major_version;
-    cfg.lib_nn_minor_version = lib_nn::minor_version;
-    cfg.lib_nn_patch_version = lib_nn::patch_version;
-    cfg.lib_tflite_micro_major_version = lib_tflite_micro::major_version;
-    cfg.lib_tflite_micro_minor_version = lib_tflite_micro::minor_version;
-    cfg.lib_tflite_micro_patch_version = lib_tflite_micro::patch_version;
-    cfg.xformer_major_version = xformer::majorVersion;
-    cfg.xformer_minor_version = xformer::minorVersion;
-    cfg.xformer_patch_version = xformer::patchVersion;
+    sharedCfg.lib_nn_major_version = lib_nn::major_version;
+    sharedCfg.lib_nn_minor_version = lib_nn::minor_version;
+    sharedCfg.lib_nn_patch_version = lib_nn::patch_version;
+    sharedCfg.lib_tflite_micro_major_version = lib_tflite_micro::major_version;
+    sharedCfg.lib_tflite_micro_minor_version = lib_tflite_micro::minor_version;
+    sharedCfg.lib_tflite_micro_patch_version = lib_tflite_micro::patch_version;
+    sharedCfg.xformer_major_version = xformer::majorVersion;
+    sharedCfg.xformer_minor_version = xformer::minorVersion;
+    sharedCfg.xformer_patch_version = xformer::patchVersion;
     // Store number of threads needed to execute the model
-    cfg.required_thread_count = requiredThreadCount;
+    sharedCfg.required_thread_count = requiredThreadCount;
     auto bufferData =
-        std::string((char *)&cfg, sizeof(shared_config::xcore_metadata));
+        std::string((char *)&sharedCfg, sizeof(shared_config::xcore_metadata));
 
     std::map<std::string, std::string> metadata;
     auto xcoreConfigMetadata =
@@ -275,7 +275,7 @@ int main(int argc, char **argv) {
     // Invoke tflmc and get info
     std::stringstream tflmcSourceString, tflmcHeaderString;
     try {
-      tflmc::Compiler compiler(flatBufferString.data(), tflmcPrefixOption,
+      tflmc::Compiler compiler(flatBufferString.data(), &sharedCfg, tflmcPrefixOption,
                                tflmcPrintEnabled);
       emitRemark(UnknownLoc::get(module.getContext()))
           << "Tensor arena size : " << compiler.getTensorArenaSize();

@@ -63,6 +63,19 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
       return failure();
     }
 
+    // Data from conv needed later
+    auto convOutput = convOriginal.output();
+    auto outputType = convOutput.getType().dyn_cast<RankedTensorType>();
+    int32_t outputHeight = outputType.getDimSize(1);
+    int32_t outputWidth = outputType.getDimSize(2);
+    int32_t outputDepth = outputType.getDimSize(3);
+    int32_t outputSize = outputHeight*outputWidth*outputDepth;
+
+    int32_t splitTensorSize = 98304;
+    // Only op split if output size is too big
+    if (outputSize < 2*splitTensorSize)
+      return failure();
+
     // Clone the op as we want to replace it with the same conv op but with
     // strided slices and concat inserted after it
     auto convReplacement =
@@ -83,16 +96,8 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     // Will hold stridec slice op to insert after conv op
     SmallVector<Value> stridedSliceOps;
 
-    // Data from conv needed later
-    auto convOutput = convOriginal.output();
-    auto outputType = convOutput.getType().dyn_cast<RankedTensorType>();
-    int32_t outputHeight = outputType.getDimSize(1);
-    int32_t outputWidth = outputType.getDimSize(2);
-    int32_t outputDepth = outputType.getDimSize(3);
-
-    // The number of splits is hardcoded for now,
-    // but it should be determined by conv output size
-    int numSplits = 4;
+    // The number of splits is determined by conv output size
+    int numSplits = ceil(outputSize / splitTensorSize);
 
     int32_t sliceWidth = outputWidth / numSplits;
 

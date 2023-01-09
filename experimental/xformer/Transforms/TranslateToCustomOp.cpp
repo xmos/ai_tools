@@ -42,10 +42,14 @@ std::vector<uint8_t> StridedSliceOp::buildCustomOptions() {
 
 std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
-  fbb.Map([&]() {
-    fbb.Int("addr", (int32_t)address());
-    fbb.Int("size", (int32_t)size());
-  });
+  auto rootMap = fbb.StartMap();
+  fbb.Int("addr", (int32_t)address());
+  auto sizesVec = fbb.StartVector("sizes");
+  for (int i = 0; i < sizes().cast<ArrayAttr>().size(); ++i) {
+    fbb.Int(sizes().cast<ArrayAttr>()[i].cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(sizesVec, false, false);
+  fbb.EndMap(rootMap);
   fbb.Finish();
   return fbb.GetBuffer();
 }

@@ -219,9 +219,9 @@ def XC_LoadFlashOp : XC_Op<"ld_flash", [NoSideEffect]> {
 
   let description = [{Load from flash op.}];
 
-  let arguments = (ins I32Attr : $address, I32Attr : $size);
+  let arguments = (ins I32Attr : $address, I32ArrayAttr : $sizes);
 
-  let results = (outs AnyTensor : $output);
+  let results = (outs Variadic<AnyTensor> : $output);
 }
 
 def XC_Bsign8Op : XC_Op<"bsign_8", [NoSideEffect]> {

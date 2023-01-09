@@ -69,11 +69,11 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     int32_t outputHeight = outputType.getDimSize(1);
     int32_t outputWidth = outputType.getDimSize(2);
     int32_t outputDepth = outputType.getDimSize(3);
-    int32_t outputSize = outputHeight*outputWidth*outputDepth;
+    int32_t outputSize = outputHeight * outputWidth * outputDepth;
 
     int32_t splitTensorSize = 98304;
     // Only op split if output size is too big
-    if (outputSize < 2*splitTensorSize)
+    if (outputSize < 2 * splitTensorSize)
       return failure();
 
     // Clone the op as we want to replace it with the same conv op but with

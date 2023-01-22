@@ -1,3 +1,4 @@
+BYTES_FOR_MAGIC_PATTERN = 32
 BYTES_FOR_HEADER = 4
 BYTES_PER_ENGINE_BLOCK = 16
 VERSION_MAJOR = 1
@@ -69,6 +70,10 @@ class FlashBuilder:
             data.append((integr >> (8 * i)) & 0xFF)
         return bytes(data)
 
+    @staticmethod
+    def swap_nibbles(x):
+        return ( (x & 0x0F)<<4 | (x & 0xF0)>>4 )
+
     def add_params(self, engine, params=None, filename=None):
         image = FlashBuilder.create_params_image(params, filename)
         self.params[engine] = image
@@ -84,7 +89,7 @@ class FlashBuilder:
         The whole thing should be written as is to flash
         """
         headers = [None] * self.engines
-        start = BYTES_FOR_HEADER + BYTES_PER_ENGINE_BLOCK * self.engines
+        start = BYTES_FOR_MAGIC_PATTERN + BYTES_FOR_HEADER + BYTES_PER_ENGINE_BLOCK * self.engines
         for i in range(self.engines):
             headers[i] = FlashBuilder.Header(
                 len(self.models[i]),
@@ -95,7 +100,19 @@ class FlashBuilder:
             )
             start += headers[i].length
 
+        # We add the magic fast flash pattern of 32 bytes at the very beginning
+        # After that comes the version
         output = bytes(
+            [0xff, 0x00, 0x0f, 0x0f,
+            0x0f, 0x0f, 0x0f, 0x0f,
+            0xff, 0x00, 0xff, 0x00,
+            0xff, 0x00, 0xff, 0x00,
+            0x31, 0xf7, 0xce, 0x08,
+            0x31, 0xf7, 0xce, 0x08,
+            0x9c, 0x63, 0x9c, 0x63,
+            0x9c, 0x63, 0x9c, 0x63])
+
+        output += bytes(
             [VERSION_MAJOR, VERSION_MINOR, 0xFF ^ VERSION_MAJOR, 0xFF ^ VERSION_MINOR]
         )
 
@@ -124,8 +141,10 @@ class FlashBuilder:
         Builds a file for the host system that comprises a single parameter blob.
         """
         output = self.flash_image()
+        # swap nibbles around
+        swapped_output = bytes([FlashBuilder.swap_nibbles(byte) for byte in output])
         with open(filename, "wb") as output_fd:
-            output_fd.write(output)
+            output_fd.write(swapped_output)
 
 
 def generate_flash(model_file, params_file, output_file):
@@ -133,3 +152,5 @@ def generate_flash(model_file, params_file, output_file):
     fb.add_model(0, filename=model_file)
     fb.add_params(0, filename=params_file)
     fb.flash_file(output_file)
+
+

@@ -12,6 +12,7 @@ namespace xcore {
 
 namespace {
 static constexpr char opSplitLabel[] = "opSplitLabel";
+static constexpr char raisedStridedSliceLabel[] = "raisedStridedSliceLabel";
 
 // OpSplit
 struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
@@ -176,7 +177,6 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
       return failure();
 
     // Do not raise slices that have already been raised
-    static constexpr char raisedStridedSliceLabel[] = "raisedStridedSliceLabel";
     if (stridedSlice->hasAttr(raisedStridedSliceLabel))
       return failure();
 

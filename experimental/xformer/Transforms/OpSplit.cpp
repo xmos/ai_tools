@@ -12,7 +12,6 @@ namespace xcore {
 
 namespace {
 static constexpr char opSplitLabel[] = "opSplitLabel";
-static constexpr char raisedStridedSliceLabel[] = "raisedStridedSliceLabel";
 
 // OpSplit
 struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
@@ -102,7 +101,6 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
 
     // The number of splits is determined by conv output size
     int numSplits = ceil(outputSize / splitTensorSize);
-    // int numSplits = 2;
 
     int32_t sliceWidth = outputWidth / numSplits;
 
@@ -177,6 +175,7 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     if (!((stridedSlice->hasAttr(opSplitLabel))))
       return failure();
 
+    static constexpr char raisedStridedSliceLabel[] = "raisedStridedSliceLabel";
     // Do not raise slices that have already been raised
     if (stridedSlice->hasAttr(raisedStridedSliceLabel))
       return failure();
@@ -388,5 +387,3 @@ static PassRegistration<OpSplit> pass;
 
 } // namespace xcore
 } // namespace mlir
-//
-//

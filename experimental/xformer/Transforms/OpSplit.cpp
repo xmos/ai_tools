@@ -175,8 +175,8 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     if (!((stridedSlice->hasAttr(opSplitLabel))))
       return failure();
 
-    static constexpr char raisedStridedSliceLabel[] = "raisedStridedSliceLabel";
     // Do not raise slices that have already been raised
+    static constexpr char raisedStridedSliceLabel[] = "raisedStridedSliceLabel";
     if (stridedSlice->hasAttr(raisedStridedSliceLabel))
       return failure();
 

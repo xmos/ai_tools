@@ -335,7 +335,54 @@ int main(int argc, char **argv) {
     std::map<std::string, std::string> metadata;
     auto xcoreConfigMetadata =
         std::make_pair(shared_config::xcoreMetadataName, bufferData);
+
+    // Offline offsets metadata
+    std::vector<int> offline_offsets = {
+        16384, -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
+        -1,    -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
+        -1,    -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
+        -1,    -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
+        -1,    -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
+        -1,    -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
+        -1,    -1,    -1,    -1,    -1,   -1,    0,     16384, 0,  8192,  0,
+        20480, 0,     32768, 16384, 0,    16384, 0,     8192,  0,  53248, 24576,
+        0,     24576, 49152, 24576, 0,    24576, 28672, 12288, 0,  12288, 24576,
+        12288, 0,     12288, 0,     6144, 0,     26624, 12288, 0,  12288, 24576,
+        12288, 0,     12288, 3584,  0,    3584,  1056,  -1,    -1, 0};
+    constexpr char kOfflineMemAllocMetadata[] = "OfflineMemoryAllocation";
+    /*
+    | 0 | Offline allocation format version |
+    | 1 | Subgraph index to which this allocation applies |
+    | 2 | Number offsets following: n |
+    | 3 | Byte offset of tensor #0 or -1 to allocate at runtime |
+    | 4 | Byte offset of tensor #1 or -1 to allocate at runtime |
+    | ... | ... |
+    | 3+(n-1) | Byte offset of tensor #(n-1) or -1 to allocate at runtime |
+    */
+    offline_offsets.insert(offline_offsets.begin(),
+                           {0, 0, (int)offline_offsets.size()});
+    offline_offsets.resize(((offline_offsets.size() + 15) / 16) * 16);
+    printf("\n");
+    for (int i = 0; i < offline_offsets.size(); i++) {
+      printf("%d, ", offline_offsets[i]);
+    }
+    printf("\n");
+
+    auto offlineOffsetsData =
+        std::string((char *)offline_offsets.data(), offline_offsets.size() * 4);
+
+    auto k = (int32_t *)offlineOffsetsData.data();
+    printf("\n");
+    for (int i = 0; i < offline_offsets.size(); i++) {
+      printf("%d, ", k[i]);
+    }
+    printf("\n");
+
+    auto offlineOffsetsMetadata =
+        std::make_pair(kOfflineMemAllocMetadata, offlineOffsetsData);
+
     metadata.insert(xcoreConfigMetadata);
+    // metadata.insert(offlineOffsetsMetadata);
 
     std::string flatBufferString;
     if (failed(xcore::utils::getFlatBufferStringFromMLIR(

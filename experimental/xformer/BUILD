@@ -169,7 +169,7 @@ gentbl_cc_library(
 
 cc_library(
     name = "xcore_passes",
-    srcs = glob(["Transforms/*.cpp"]) + [
+    srcs = glob(["Transforms/*.cpp"]) + glob(["Analysis/*.cpp"]) +[
         "IR/XCoreEnumOps.h.inc",
         "IR/XCoreEnumOps.cpp.inc",
         "IR/XCoreOps.cpp",
@@ -184,6 +184,7 @@ cc_library(
         "Transforms/GeneratedConvRevertPatterns.inc"
     ],
     hdrs = [
+        "Analysis/MemoryPlanner.h",
         "Transforms/ConvPatterns.h",
         "Transforms/Options.h",
         "Transforms/Passes.h",

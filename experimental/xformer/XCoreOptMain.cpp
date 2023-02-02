@@ -275,8 +275,8 @@ int main(int argc, char **argv) {
     // Invoke tflmc and get info
     std::stringstream tflmcSourceString, tflmcHeaderString;
     try {
-      tflmc::Compiler compiler(flatBufferString.data(), &sharedCfg, tflmcPrefixOption,
-                               tflmcPrintEnabled);
+      tflmc::Compiler compiler(flatBufferString.data(), &sharedCfg,
+                               tflmcPrefixOption, tflmcPrintEnabled);
       emitRemark(UnknownLoc::get(module.getContext()))
           << "Tensor arena size : " << compiler.getTensorArenaSize();
       compiler.writeSource(tflmcSourceString);

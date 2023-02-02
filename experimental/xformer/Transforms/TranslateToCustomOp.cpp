@@ -56,7 +56,10 @@ std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
 
 std::vector<uint8_t> PadOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
-  fbb.Map([&]() { fbb.Int("pad_value", (int32_t)pad_value()); });
+  fbb.Map([&]() {
+    fbb.String("pp", padding_plan().str());
+    fbb.Int("pv", (int32_t)pad_value());
+  });
   fbb.Finish();
   return fbb.GetBuffer();
 }

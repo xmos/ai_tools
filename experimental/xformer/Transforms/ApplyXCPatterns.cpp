@@ -4,6 +4,7 @@
 #include "IR/XCoreOps.h"
 
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
+#include "lib_nn/api/nn_layers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
@@ -28,22 +29,30 @@ struct ApplyXCPatterns
   void runOnOperation() override;
 };
 
-// TODO: Remove when we have fusing of Pad and Conv2D in xformer2
-// Replacing pad when there is a following Conv2D after a Pad is breaking fusing
-// passes in xformer1
-bool hasNoFollowingConv2D(Value outputVal) {
-  if (outputVal.hasOneUse()) {
-    if (llvm::isa<TFL::CustomOp>(*outputVal.getUsers().begin())) {
-      auto op = dyn_cast<TFL::CustomOp>(*outputVal.getUsers().begin());
-      if (op.custom_code().startswith("XC_bconv2d"))
-        return false;
-    } else if (llvm::isa<TFL::DepthwiseConv2DOp>(
-                   *outputVal.getUsers().begin()) ||
-               llvm::isa<TFL::Conv2DOp>(*outputVal.getUsers().begin())) {
-      return false;
-    }
+StringAttr getPaddingPlan(PatternRewriter &rewriter, TFL::PadOp padOp) {
+  DenseIntElementsAttr paddingAttr;
+  if (!matchPattern(padOp.padding(), m_Constant(&paddingAttr))) {
+    padOp.emitError("Could not obtain padding values.");
   }
-  return true;
+  padding_sizes_t paddingSizes = {
+      .top = paddingAttr.getValues<int32_t>()[{1, 0}],
+      .bottom = paddingAttr.getValues<int32_t>()[{1, 1}],
+      .left = paddingAttr.getValues<int32_t>()[{2, 0}],
+      .right = paddingAttr.getValues<int32_t>()[{2, 1}],
+  };
+  auto inputType =
+      padOp.input().getType().template dyn_cast<RankedTensorType>();
+  nn_image_params_t imageParams = {
+      .height = static_cast<uint32_t>(inputType.getDimSize(1)),
+      .width = static_cast<uint32_t>(inputType.getDimSize(2)),
+      .channels = static_cast<channel_count_t>(inputType.getDimSize(3)),
+  };
+
+  nn_pad_plan_t paddingPlan;
+  pad_prepare(&paddingPlan, &paddingSizes, &imageParams, imageParams.channels);
+  auto paddingPlanData = std::string((char *)&paddingPlan, sizeof(paddingPlan));
+
+  return rewriter.getStringAttr(paddingPlanData);
 }
 
 IntegerAttr getPadValue(PatternRewriter &rewriter, Value inputVal) {

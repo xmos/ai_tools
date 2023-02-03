@@ -74,7 +74,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     int32_t outputSize = outputHeight * outputWidth * outputDepth;
 
     // Number chosen for testing purposes
-    // Actul number will depend on application
+    // Actual number will depend on application
     int32_t splitTensorSize = 98304;
     // Only op split if output size is too big
     if (outputSize < 2 * splitTensorSize)
@@ -97,7 +97,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     begin_mask = end_mask = ellipsis_mask = new_axis_mask = shrink_axis_mask =
         0;
 
-    // Will hold stridec slice op to insert after conv op
+    // Will hold strided slice op to insert after conv op
     SmallVector<Value> stridedSliceOps;
 
     // The number of splits is determined by conv output size
@@ -105,22 +105,22 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
 
     int32_t sliceWidth = outputWidth / numSplits;
 
-    // The remainder will be distrubed between the splits
+    // The remainder will be distributed between the splits
     // to keep them about the same size
     int32_t sliceWidthRemainder = outputWidth % numSplits;
 
     // For loop uses end index of previous strided slice created
-    // needs to intializec to zero for first slice
+    // needs to initalized to zero for first slice
     int32_t prevEndIndex = 0;
 
     // Loops creates strided slices with correct params
     for (size_t i = 0; i < numSplits; i++) {
-      // Distibutes remainder between slices
+      // Distributes remainder between slices
       int32_t currentSliceWidth = sliceWidth;
       if (i < sliceWidthRemainder)
         currentSliceWidth++;
 
-      // Descibes output tensor of strided slice
+      // Describes output tensor of strided slice
       // Only currentSliceWidth can be unique to each strided slice
       RankedTensorType stridedSliceOutputType = RankedTensorType::get(
           {1, outputHeight, currentSliceWidth, outputDepth},
@@ -184,13 +184,16 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     auto convOriginal =
         llvm::cast<TFL::Conv2DOp>(stridedSlice.input().getDefiningOp());
 
-    auto convOriginalInputShape =
-        convOriginal.input().getType().cast<RankedTensorType>().getShape();
-    auto inputHeight = convOriginalInputShape[1];
-    auto inputWidth = convOriginalInputShape[2];
+    auto convOriginalInput =
+        convOriginal.input().getType().cast<RankedTensorType>();
+    auto inputHeight = convOriginalInput.getDimSize(1);
+    auto inputWidth = convOriginalInput.getDimSize(2);
+    auto inputChannels = convOriginalInput.getDimSize(3);
 
-    auto convOriginalOutputShape =
-        convOriginal.output().getType().cast<RankedTensorType>().getShape();
+    auto convOriginalOutput =
+        convOriginal.output().getType().cast<RankedTensorType>();
+    auto outputWidth = convOriginalOutput.getDimSize(2);
+    auto outputChannels = convOriginalOutput.getDimSize(3);
 
     auto filterType =
         convOriginal.filter().getType().dyn_cast<RankedTensorType>();
@@ -207,9 +210,9 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     auto endIndex = attr.getValues<int32_t>()[2];
 
     // Get original slice's output width
-    auto stridedSliceOutputShape =
-        stridedSlice.output().getType().cast<RankedTensorType>().getShape();
-    auto outputWidth = stridedSliceOutputShape[2];
+    auto stridedSliceOutput =
+        stridedSlice.output().getType().cast<RankedTensorType>();
+    auto stridedSliceOutputWidth = stridedSliceOutput.getDimSize(2);
 
     int32_t newEndIndex;
     int32_t newOutputWidth;
@@ -257,7 +260,7 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
         // Left split is not padded on right
         padRight = 0;
 
-      } else if (endIndex == convOriginalOutputShape[2]) { // end
+      } else if (endIndex == outputWidth) { // end
         // Calculate new end index for slice after being raised above conv
         newEndIndex = endIndex * strideWidth - strideWidth + filterWidth -
                       padLeft - padRight;
@@ -277,15 +280,15 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     }
 
     // Set end tensor for slice to be above conv with new end index
-    int32_t endAttr[4] = {1, static_cast<int32_t>(convOriginalInputShape[1]),
+    int32_t endAttr[4] = {1, static_cast<int32_t>(inputHeight),
                           static_cast<int32_t>(newEndIndex),
-                          static_cast<int32_t>(convOriginalInputShape[3])};
+                          static_cast<int32_t>(inputChannels)};
     auto endConstantOp = rewriter.create<arith::ConstantOp>(
         stridedSlice.getLoc(), rewriter.getI32TensorAttr(endAttr));
 
     // Calculate new output width after raising slice above conv
-    newOutputWidth = outputWidth * strideWidth - strideWidth + filterWidth -
-                     padLeft - padRight;
+    newOutputWidth = stridedSliceOutputWidth * strideWidth - strideWidth +
+                     filterWidth - padLeft - padRight;
 
     // Set begin tensor to zero for all dims except width
     // set width to new end index - new output width
@@ -297,8 +300,7 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     // New strided slice output shape is conv input shape except width
     // The new calculated output width is used for width
     RankedTensorType newStridedSliceType = RankedTensorType::get(
-        {convOriginalInputShape[0], convOriginalInputShape[1], newOutputWidth,
-         convOriginalInputShape[3]},
+        {1, inputHeight, newOutputWidth, inputChannels},
         convOriginal.input().getType().cast<ShapedType>().getElementType());
 
     // Create new strided slice for above conv
@@ -311,49 +313,52 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     // Label it as raised so it is not raised again
     stridedSliceReplacement->setAttr(raisedStridedSliceLabel,
                                      rewriter.getUnitAttr());
-    
+
     // Adjust shape for padding
     // For valid conv the shapes will not change since pad values are zero
-    auto paddedHeight = convOriginalInputShape[1] + padTop + padBottom;
+    auto paddedHeight = inputHeight + padTop + padBottom;
     auto paddedWidth = newOutputWidth + padLeft + padRight;
 
-    std::vector<int32_t> paddingValues{0,
-                                       0,
-                                       static_cast<int>(padTop),
-                                       static_cast<int>(padBottom),
-                                       static_cast<int>(padLeft),
-                                       static_cast<int>(padRight),
-                                       0,
-                                       0};
+    // If padding is same, create pad op to extract padding
+    TFL::PadOp padOp;
+    if (convOriginal.padding() == "SAME") {
+      std::vector<int32_t> paddingValues{0,
+                                         0,
+                                         static_cast<int>(padTop),
+                                         static_cast<int>(padBottom),
+                                         static_cast<int>(padLeft),
+                                         static_cast<int>(padRight),
+                                         0,
+                                         0};
 
-    RankedTensorType paddingsType =
-        RankedTensorType::get({4, 2}, rewriter.getI32Type());
+      RankedTensorType paddingsType =
+          RankedTensorType::get({4, 2}, rewriter.getI32Type());
 
-    Value paddings = rewriter.create<TFL::ConstOp>(
-        stridedSlice.getLoc(),
-        DenseIntElementsAttr::get(paddingsType, paddingValues));
+      Value paddings = rewriter.create<TFL::ConstOp>(
+          stridedSlice.getLoc(),
+          DenseIntElementsAttr::get(paddingsType, paddingValues));
 
-    auto paddedResultType = RankedTensorType::get(
-        {convOriginalInputShape[0], paddedHeight, paddedWidth,
-         convOriginalInputShape[3]},
-        convOriginal.input().getType().cast<ShapedType>().getElementType());
+      auto paddedResultType = RankedTensorType::get(
+          {1, paddedHeight, paddedWidth, inputChannels},
+          convOriginal.input().getType().cast<ShapedType>().getElementType());
 
-    auto padOp =
-        rewriter.create<TFL::PadOp>(stridedSlice.getLoc(), paddedResultType,
-                                    stridedSliceReplacement, paddings);
+      padOp =
+          rewriter.create<TFL::PadOp>(stridedSlice.getLoc(), paddedResultType,
+                                      stridedSliceReplacement, paddings);
+    }
 
     auto convReplacement =
         llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
 
     RankedTensorType newConvType = RankedTensorType::get(
-        {convOriginalInputShape[0],
-         (paddedHeight + strideWidth - filterWidth) / strideWidth,
+        {1, (paddedHeight + strideWidth - filterWidth) / strideWidth,
          (paddedWidth + strideWidth - filterWidth) / strideWidth,
-         convOriginalOutputShape[3]},
+         outputChannels},
         convOriginal.output().getType().cast<ShapedType>().getElementType());
     convReplacement->getResult(0).setType(newConvType);
 
-    // if valid padding no need for pad op, else connect to pad op
+    // if valid padding no need for pad op, connect to strided slice
+    // else connect to pad op
     if (convOriginal.padding() == "VALID") {
       // Connect new conv's input to new strided slice
       convReplacement.setOperand(0, stridedSliceReplacement);
@@ -361,13 +366,14 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     } else if (convOriginal.padding() == "SAME") {
       // Connect new conv's input to pad op
       convReplacement.setOperand(0, padOp);
+
+      // Change padding on cloned conv to valid since
+      // padding was extracted to pad op
+      convReplacement->setAttr(rewriter.getStringAttr("padding"),
+                               rewriter.getStringAttr("VALID"));
     }
 
-    // Change padding setting on conv to valic
-    convReplacement->setAttr(rewriter.getStringAttr("padding"),
-                             rewriter.getStringAttr("VALID"));
-
-    // replace stided slice with new strided slice -> new conv
+    // replace strided slice with new strided slice -> new conv
     // or new strided slice -> pad -> new conv
     rewriter.replaceOp(stridedSlice, convReplacement.output());
 

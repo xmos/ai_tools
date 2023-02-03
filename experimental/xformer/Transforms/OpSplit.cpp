@@ -369,7 +369,7 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
 
       // Change padding on cloned conv to valid since
       // padding was extracted to pad op
-      convReplacement->setAttr(rewriter.getStringAttr("padding"),
+      convReplacement->setAttr("padding",
                                rewriter.getStringAttr("VALID"));
     }
 

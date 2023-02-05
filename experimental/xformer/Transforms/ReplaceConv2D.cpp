@@ -157,21 +157,6 @@ struct ReplaceConv2D
   void runOnOperation() override;
 };
 
-bool shouldReduceMemory() { return reduceMemoryOption; }
-
-Type getPadOpOutputType(PatternRewriter &rewriter, Value input,
-                        std::vector<int32_t> paddingValues) {
-  auto inputType = input.getType().dyn_cast<RankedTensorType>();
-  int batch = inputType.getDimSize(0) + paddingValues[0] + paddingValues[1];
-  int height = inputType.getDimSize(1) + paddingValues[2] + paddingValues[3];
-  int width = inputType.getDimSize(2) + paddingValues[4] + paddingValues[5];
-  int depth = inputType.getDimSize(3) + paddingValues[6] + paddingValues[7];
-
-  RankedTensorType outputType = RankedTensorType::get(
-      {batch, height, width, depth}, inputType.getElementType());
-  return outputType;
-}
-
 namespace convpatterns {
 #include "Transforms/GeneratedConvPatterns.inc"
 }

@@ -16,21 +16,3 @@ def : Pat<(XC_FakeDepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $pv,
            $sh, $sw, $dm),
           (TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw,
            $dm)>;
-
-def getPadOpOutputType
-    : NativeCodeCall<
-          "getPadOpOutputType($_builder, $0, "
-          "std::vector<int32_t>($1.cast<DenseIntElementsAttr>().getValues<"
-          "int32_t>().begin(), "
-          "$1.cast<DenseIntElementsAttr>().getValues<int32_t>().end()))">;
-
-def : Pat<(XC_FakeDepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf,
-           ConstantStrAttr<StrAttr, "EXPLICIT">,
-           (TFL_ConstOp
-            : $pv_op $pv),
-           $sh, $sw, $dm),
-          (TFL_DepthwiseConv2DOp(TFL_PadOp $input, $pv_op,
-                                 (returnType(getPadOpOutputType $input, $pv))),
-           $f, $b, $dh, $dw, $faf, ConstantStrAttr<StrAttr, "VALID">, $sh, $sw,
-           $dm),
-          [], (addBenefit 10)>;

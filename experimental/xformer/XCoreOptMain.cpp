@@ -43,12 +43,6 @@ cl::opt<unsigned> loadExternallyIfLargerOption(
              "xcore-flash-image-file is not provided."),
     cl::init(96));
 
-cl::opt<bool> reduceMemoryOption(
-    "xcore-reduce-memory",
-    cl::desc(
-        "Try to reduce memory usage by possibly increasing execution time."),
-    cl::init(true));
-
 // This option is to provide an error threshold.
 // The maximum average error between the reference and quantised
 // implementations of the output transform over each channel is used to decide

@@ -34,18 +34,20 @@ StringAttr getPaddingPlan(PatternRewriter &rewriter, TFL::PadOp padOp) {
   if (!matchPattern(padOp.padding(), m_Constant(&paddingAttr))) {
     padOp.emitError("Could not obtain padding values.");
   }
+  // Struct designated initializers not supported on Windows yet for C++17
+  // Hence not used here
   padding_sizes_t paddingSizes = {
-      .top = paddingAttr.getValues<int32_t>()[{1, 0}],
-      .bottom = paddingAttr.getValues<int32_t>()[{1, 1}],
-      .left = paddingAttr.getValues<int32_t>()[{2, 0}],
-      .right = paddingAttr.getValues<int32_t>()[{2, 1}],
+      /*.top = */ paddingAttr.getValues<int32_t>()[{1, 0}],
+      /*.bottom = */ paddingAttr.getValues<int32_t>()[{1, 1}],
+      /*.left = */ paddingAttr.getValues<int32_t>()[{2, 0}],
+      /*.right = */ paddingAttr.getValues<int32_t>()[{2, 1}],
   };
   auto inputType =
       padOp.input().getType().template dyn_cast<RankedTensorType>();
   nn_image_params_t imageParams = {
-      .height = static_cast<uint32_t>(inputType.getDimSize(1)),
-      .width = static_cast<uint32_t>(inputType.getDimSize(2)),
-      .channels = static_cast<channel_count_t>(inputType.getDimSize(3)),
+      /*.height = */ static_cast<uint32_t>(inputType.getDimSize(1)),
+      /*.width = */ static_cast<uint32_t>(inputType.getDimSize(2)),
+      /*.channels = */ static_cast<channel_count_t>(inputType.getDimSize(3)),
   };
 
   nn_pad_plan_t paddingPlan;

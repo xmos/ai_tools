@@ -8,6 +8,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/PriorityQueue.h"
 
+#include <set>
+
 namespace mlir {
 namespace xcore {
 
@@ -19,26 +21,34 @@ namespace xcore {
 used op
 */
 
-struct LivenessInfo {
-  int firstUsed;
-  int lastUsed;
-};
-
 class MemoryPlanner {
 public:
   using QueueItem = std::pair<Value, size_t>;
+  struct AscendingOffsetsComparator {
+    bool operator()(const QueueItem &lhs, const QueueItem &rhs) const {
+      return (lhs.second < rhs.second);
+    }
+  };
+  using OrderedOffsets = std::multiset<QueueItem, AscendingOffsetsComparator>;
+
+  struct LivenessInfo {
+    int firstUsed;
+    int lastUsed;
+  };
 
   MemoryPlanner(func::FuncOp op);
 
   std::vector<int> getOffsets();
 
 private:
-  int getNewOffset(Value v, int size,
-                                  std::vector<std::pair<Value, int>> &selected);
+  int getNewOffset(Value v, int size, OrderedOffsets &selected);
 
   DenseMap<Value, size_t> valueIds;
+  DenseMap<Value, size_t> valueSizes;
 
   std::vector<Value> values;
+
+  DenseMap<Value, LivenessInfo> livenessInfo;
 
   // Maps each Operation to a unique ID according to the program sequence.
   DenseMap<Operation *, size_t> operationIds;

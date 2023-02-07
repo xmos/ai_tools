@@ -362,21 +362,21 @@ int main(int argc, char **argv) {
     offline_offsets.insert(offline_offsets.begin(),
                            {0, 0, (int)offline_offsets.size()});
     offline_offsets.resize(((offline_offsets.size() + 15) / 16) * 16);
-    printf("\n");
-    for (int i = 0; i < offline_offsets.size(); i++) {
-      printf("%d, ", offline_offsets[i]);
-    }
-    printf("\n");
+    // printf("\n");
+    // for (int i = 0; i < offline_offsets.size(); i++) {
+    //   printf("%d, ", offline_offsets[i]);
+    // }
+    // printf("\n");
 
     auto offlineOffsetsData =
         std::string((char *)offline_offsets.data(), offline_offsets.size() * 4);
 
     auto k = (int32_t *)offlineOffsetsData.data();
-    printf("\n");
-    for (int i = 0; i < offline_offsets.size(); i++) {
-      printf("%d, ", k[i]);
-    }
-    printf("\n");
+    // printf("\n");
+    // for (int i = 0; i < offline_offsets.size(); i++) {
+    //   printf("%d, ", k[i]);
+    // }
+    // printf("\n");
 
     auto offlineOffsetsMetadata =
         std::make_pair(kOfflineMemAllocMetadata, offlineOffsetsData);

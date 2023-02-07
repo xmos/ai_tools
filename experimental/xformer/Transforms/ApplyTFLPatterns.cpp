@@ -28,10 +28,15 @@ struct ApplyTFLPatterns
   void runOnOperation() override;
 };
 
-SmallVector<Value, 2> getBConv2DPaddingValues(PatternRewriter &rewriter,
-                                              mlir::lq::Bconv2dOp conv2DOp) {
-  auto inputType = conv2DOp.input().getType().dyn_cast<RankedTensorType>();
-  auto filterType = conv2DOp.filter().getType().dyn_cast<RankedTensorType>();
+template <typename T>
+SmallVector<Value, 2>
+getConvPaddingValues(PatternRewriter &rewriter, T conv2DOp,
+                     int64_t dilationHeight, int64_t dilationWidth,
+                     int64_t strideHeight, int64_t strideWidth) {
+  auto inputType =
+      conv2DOp.input().getType().template dyn_cast<RankedTensorType>();
+  auto filterType =
+      conv2DOp.filter().getType().template dyn_cast<RankedTensorType>();
   auto inputHeight = inputType.getDimSize(1);
   auto inputWidth = inputType.getDimSize(2);
   auto filterHeight = filterType.getDimSize(1);
@@ -41,16 +46,16 @@ SmallVector<Value, 2> getBConv2DPaddingValues(PatternRewriter &rewriter,
   int64_t newHeight, newWidth;
   int64_t padTop, padBottom, padLeft, padRight;
   if (tensorflow::GetWindowedOutputSizeVerboseV2(
-          inputHeight, filterHeight, conv2DOp.dilation_height_factor(),
-          conv2DOp.stride_height(), tensorflow::Padding::SAME, &newHeight,
-          &padTop, &padBottom) != tensorflow::Status::OK()) {
-    conv2DOp->emitError("Could not obtain SAME padding values for BConv2D!");
+          inputHeight, filterHeight, dilationHeight, strideHeight,
+          tensorflow::Padding::SAME, &newHeight, &padTop,
+          &padBottom) != tensorflow::Status::OK()) {
+    conv2DOp->emitError("Could not obtain SAME padding values for Conv op!");
   }
   if (tensorflow::GetWindowedOutputSizeVerboseV2(
-          inputWidth, filterWidth, conv2DOp.dilation_width_factor(),
-          conv2DOp.stride_width(), tensorflow::Padding::SAME, &newWidth,
-          &padLeft, &padRight) != tensorflow::Status::OK()) {
-    conv2DOp->emitError("Could not obtain SAME padding values for BConv2D!");
+          inputWidth, filterWidth, dilationWidth, strideWidth,
+          tensorflow::Padding::SAME, &newWidth, &padLeft,
+          &padRight) != tensorflow::Status::OK()) {
+    conv2DOp->emitError("Could not obtain SAME padding values for Conv op!");
   }
 
   std::vector<int32_t> paddingValues{0,
@@ -69,18 +74,32 @@ SmallVector<Value, 2> getBConv2DPaddingValues(PatternRewriter &rewriter,
 
   // Obtain the output type so that we can use it to denote the returnType for
   // the PadOp in Tablegen DRR
-  auto batch = 1;
+  auto batch = inputType.getDimSize(0);
   auto depth = inputType.getDimSize(3);
   auto outputHeight = inputHeight + padTop + padBottom;
   auto outputWidth = inputWidth + padLeft + padRight;
-  std::vector<int32_t> dummy(batch * outputHeight * outputWidth * depth, 0);
   RankedTensorType outputType = RankedTensorType::get(
-      {batch, outputHeight, outputWidth, depth}, rewriter.getI32Type());
+      {batch, outputHeight, outputWidth, depth}, inputType.getElementType());
   auto outputTypeOp = rewriter.create<arith::ConstantOp>(
-      conv2DOp->getLoc(), outputType,
-      DenseIntElementsAttr::get(outputType, dummy));
+      conv2DOp->getLoc(), outputType, rewriter.getUnitAttr());
 
   return SmallVector<Value, 2>({paddingOp, outputTypeOp});
+}
+
+template <typename T>
+SmallVector<Value, 2> getConv2DPaddingValues(PatternRewriter &rewriter,
+                                             T conv2DOp) {
+  return getConvPaddingValues<T>(
+      rewriter, conv2DOp, conv2DOp.dilation_h_factor(),
+      conv2DOp.dilation_w_factor(), conv2DOp.stride_h(), conv2DOp.stride_w());
+}
+
+SmallVector<Value, 2> getBConv2DPaddingValues(PatternRewriter &rewriter,
+                                              mlir::lq::Bconv2dOp conv2DOp) {
+  return getConvPaddingValues<mlir::lq::Bconv2dOp>(
+      rewriter, conv2DOp, conv2DOp.dilation_height_factor(),
+      conv2DOp.dilation_width_factor(), conv2DOp.stride_height(),
+      conv2DOp.stride_width());
 }
 
 struct HoistQuantizeAboveConcatPattern

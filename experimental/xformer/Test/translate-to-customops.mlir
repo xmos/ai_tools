@@ -12,11 +12,10 @@ func.func @activation_lowering(%arg0: tensor<1x12x4x7x!quant.uniform<i8:f32, 0.0
 // -----
 
 // CHECK-LABEL: replace_pad
-func.func @replace_pad(%arg0: tensor<?x4x1x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>) -> tensor<?x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>> attributes {tf.entry_function = {inputs = "zero_padding2d_input_int8", outputs = "Identity_int8"}} {
-    %cst = arith.constant dense<[[0, 0], [0, 0], [2, 0], [0, 0]]> : tensor<4x2xi32>
+func.func @replace_pad(%arg0: tensor<?x4x1x48x!quant.uniform<i8:f32, 0.0078384801745414734:10>>) -> tensor<?x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:10>> attributes {tf.entry_function = {inputs = "zero_padding2d_input_int8", outputs = "Identity_int8"}} {
 // CHECK: tfl.custom
 // CHECK-SAME: XC_pad
-// CHECK-SAME: custom_option = opaque<"xc", "0x7061645F76616C756500010B010101FF04022401">
-    %0 = "xc.pad"(%arg0, %cst) {pad_value = -1 : i32} : (tensor<?x4x1x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>, tensor<4x2xi32>) -> tensor<?x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
-    return %0 : tensor<?x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
+// CHECK-SAME: custom_option = opaque<"xc", "0x7070001800000000040000006000000030000000000000000000000000707600022105000300000001000000020000002C0000000A0A0A0A14060A2601">
+    %0 = "xc.pad"(%arg0) {pad_value = 168430090 : i32, padding_plan = "\00\00\00\00\04\00\00\00`\00\00\000\00\00\00\00\00\00\00\00\00\00\00"} : (tensor<?x4x1x48x!quant.uniform<i8:f32, 0.0078384801745414734:10>>) -> tensor<?x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:10>>
+    return %0 : tensor<?x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:10>>
   }

@@ -78,7 +78,6 @@ getConvPaddingValues(PatternRewriter &rewriter, T conv2DOp,
   auto depth = inputType.getDimSize(3);
   auto outputHeight = inputHeight + padTop + padBottom;
   auto outputWidth = inputWidth + padLeft + padRight;
-  std::vector<int32_t> dummy(10, 0);
   RankedTensorType outputType = RankedTensorType::get(
       {batch, outputHeight, outputWidth, depth}, inputType.getElementType());
   auto outputTypeOp = rewriter.create<arith::ConstantOp>(

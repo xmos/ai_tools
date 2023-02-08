@@ -13,7 +13,7 @@ build --nocheck_visibility
 # Auto pick OS-specific config
 build --enable_platform_specific_config
 
-# C++14 standard version is required.
+# C++17 standard version is required.
 build:linux --cxxopt=-std=c++17
 build:linux --host_cxxopt=-std=c++17
 build:macos --cxxopt=-std=c++17

@@ -194,13 +194,12 @@ def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
   let description = [{Pad op.}];
 
   let arguments = (ins
-    TensorOf<[F32, I32, QI8]>:$input,
-    TensorOf<[I32]>:$padding,
-
+    TensorOf<[QI8]>:$input,
+    StrAttr:$padding_plan,
     I32Attr:$pad_value
     );
 
-  let results = (outs TensorOf<[F32, I32, QI8]> : $output);
+  let results = (outs TensorOf<[QI8]> : $output);
 }
 
 def XC_LoadConstantOp

@@ -7,8 +7,6 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 
 include "IR/XCoreOps.td"
 
-def ShouldReduceMemory : Constraint<CPred<"shouldReduceMemory()">>;
-
 def CreateNoneValue : NativeCodeCall<"$_builder.create<TFL::NoValueOp>($0."
                                      "getLoc(), $_builder.getUnitAttr())">;
 
@@ -37,12 +35,3 @@ def : Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]
               (HasValidDepth $input),
               (HasValidDepth $output)
               ]>;
-
-// Replace XC_FakeDepthwiseConv2D(Pad()) of VALID padding with
-// XC_FakeDepthwiseConv2D() of EXPLICIT padding
-def : Pat<(XC_FakeDepthwiseConv2DOp(TFL_PadOp $input, $padding_values), $f, $b,
-           $dh, $dw, $faf, TFL_PAD_Valid, $dummy_values, $sh, $sw, $dm),
-          (XC_FakeDepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf,
-           ConstantStrAttr<StrAttr, "EXPLICIT">, $padding_values, $sh, $sw,
-           $dm),
-          [(ShouldReduceMemory)]>;

@@ -26,10 +26,11 @@ struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
   void runOnOperation() override;
 };
 
-struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
-  using OpRewritePattern<TFL::Conv2DOp>::OpRewritePattern;
+template <typename ConvOp>
+struct OpSplitPattern : public OpRewritePattern<ConvOp> {
+  using OpRewritePattern<ConvOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(TFL::Conv2DOp convOriginal,
+  LogicalResult matchAndRewrite(ConvOp convOriginal,
                                 PatternRewriter &rewriter) const override {
     // Do not split ops already split
     if (convOriginal->hasAttr(opSplitLabel))
@@ -38,36 +39,44 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
     //
     // Check for invalid cases and return
     //
-    auto filterHeight =
-        convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(
-            1);
-    auto filterWidth =
-        convOriginal.filter().getType().dyn_cast<RankedTensorType>().getDimSize(
-            2);
+    auto filterHeight = convOriginal.filter()
+                            .getType()
+                            .template dyn_cast<RankedTensorType>()
+                            .getDimSize(1);
+    auto filterWidth = convOriginal.filter()
+                           .getType()
+                           .template dyn_cast<RankedTensorType>()
+                           .getDimSize(2);
     if (filterHeight != filterWidth)
       return failure();
-    auto inputElementalType =
-        convOriginal.input().getType().cast<ShapedType>().getElementType();
+    auto inputElementalType = convOriginal.input()
+                                  .getType()
+                                  .template cast<ShapedType>()
+                                  .getElementType();
     // Input type must be QI8
-    if (!(inputElementalType.isa<quant::QuantizedType>() &&
-          inputElementalType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementalType.cast<quant::QuantizedType>()
+    if (!(inputElementalType.template isa<quant::QuantizedType>() &&
+          inputElementalType.template cast<quant::QuantizedType>().isSigned() &&
+          inputElementalType.template cast<quant::QuantizedType>()
                   .getStorageTypeIntegralWidth() == 8)) {
       return failure();
     }
-    auto outputElementalType =
-        convOriginal.output().getType().cast<ShapedType>().getElementType();
+    auto outputElementalType = convOriginal.output()
+                                   .getType()
+                                   .template cast<ShapedType>()
+                                   .getElementType();
     // Output type must be QI8
-    if (!(outputElementalType.isa<quant::QuantizedType>() &&
-          outputElementalType.cast<quant::QuantizedType>().isSigned() &&
-          outputElementalType.cast<quant::QuantizedType>()
+    if (!(outputElementalType.template isa<quant::QuantizedType>() &&
+          outputElementalType.template cast<quant::QuantizedType>()
+              .isSigned() &&
+          outputElementalType.template cast<quant::QuantizedType>()
                   .getStorageTypeIntegralWidth() == 8)) {
       return failure();
     }
 
     // Data from conv needed later
     auto convOutput = convOriginal.output();
-    auto outputType = convOutput.getType().dyn_cast<RankedTensorType>();
+    auto outputType =
+        convOutput.getType().template dyn_cast<RankedTensorType>();
     int32_t outputHeight = outputType.getDimSize(1);
     int32_t outputWidth = outputType.getDimSize(2);
     int32_t outputDepth = outputType.getDimSize(3);
@@ -82,8 +91,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
 
     // Clone the op as we want to replace it with the same conv op but with
     // strided slices and concat inserted after it
-    auto convReplacement =
-        llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
+    auto convReplacement = llvm::cast<ConvOp>(rewriter.clone(*convOriginal));
 
     // Apply label, so that the same op is not rewritten a second time.
     convReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
@@ -124,7 +132,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
       // Only currentSliceWidth can be unique to each strided slice
       RankedTensorType stridedSliceOutputType = RankedTensorType::get(
           {1, outputHeight, currentSliceWidth, outputDepth},
-          convOutput.getType().cast<ShapedType>().getElementType());
+          convOutput.getType().template cast<ShapedType>().getElementType());
 
       // Start where the prev slice ended
       int32_t beginAttr[4] = {0, 0, prevEndIndex, 0};
@@ -167,6 +175,7 @@ struct OpSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
   }
 };
 
+template <typename ConvOp>
 struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
   using OpRewritePattern<TFL::StridedSliceOp>::OpRewritePattern;
 
@@ -180,23 +189,27 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
     if (stridedSlice->hasAttr(raisedStridedSliceLabel))
       return failure();
 
+    if (!isa<ConvOp>(stridedSlice.input().getDefiningOp())) {
+      return failure();
+    }
+
     // Get data from conv needed to raise strided slice
     auto convOriginal =
-        llvm::cast<TFL::Conv2DOp>(stridedSlice.input().getDefiningOp());
+        llvm::cast<ConvOp>(stridedSlice.input().getDefiningOp());
 
     auto convOriginalInput =
-        convOriginal.input().getType().cast<RankedTensorType>();
+        convOriginal.input().getType().template cast<RankedTensorType>();
     auto inputHeight = convOriginalInput.getDimSize(1);
     auto inputWidth = convOriginalInput.getDimSize(2);
     auto inputChannels = convOriginalInput.getDimSize(3);
 
     auto convOriginalOutput =
-        convOriginal.output().getType().cast<RankedTensorType>();
+        convOriginal.output().getType().template cast<RankedTensorType>();
     auto outputWidth = convOriginalOutput.getDimSize(2);
     auto outputChannels = convOriginalOutput.getDimSize(3);
 
     auto filterType =
-        convOriginal.filter().getType().dyn_cast<RankedTensorType>();
+        convOriginal.filter().getType().template dyn_cast<RankedTensorType>();
     auto filterHeight = filterType.getDimSize(1);
     auto filterWidth = filterType.getDimSize(2);
 
@@ -299,9 +312,12 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
 
     // New strided slice output shape is conv input shape except width
     // The new calculated output width is used for width
-    RankedTensorType newStridedSliceType = RankedTensorType::get(
-        {1, inputHeight, newOutputWidth, inputChannels},
-        convOriginal.input().getType().cast<ShapedType>().getElementType());
+    RankedTensorType newStridedSliceType =
+        RankedTensorType::get({1, inputHeight, newOutputWidth, inputChannels},
+                              convOriginal.input()
+                                  .getType()
+                                  .template cast<ShapedType>()
+                                  .getElementType());
 
     // Create new strided slice for above conv
     auto stridedSliceReplacement = rewriter.create<TFL::StridedSliceOp>(
@@ -338,23 +354,28 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
           stridedSlice.getLoc(),
           DenseIntElementsAttr::get(paddingsType, paddingValues));
 
-      auto paddedResultType = RankedTensorType::get(
-          {1, paddedHeight, paddedWidth, inputChannels},
-          convOriginal.input().getType().cast<ShapedType>().getElementType());
+      auto paddedResultType =
+          RankedTensorType::get({1, paddedHeight, paddedWidth, inputChannels},
+                                convOriginal.input()
+                                    .getType()
+                                    .template cast<ShapedType>()
+                                    .getElementType());
 
       padOp =
           rewriter.create<TFL::PadOp>(stridedSlice.getLoc(), paddedResultType,
                                       stridedSliceReplacement, paddings);
     }
 
-    auto convReplacement =
-        llvm::cast<TFL::Conv2DOp>(rewriter.clone(*convOriginal));
+    auto convReplacement = llvm::cast<ConvOp>(rewriter.clone(*convOriginal));
 
     RankedTensorType newConvType = RankedTensorType::get(
         {1, (paddedHeight + strideWidth - filterWidth) / strideWidth,
          (paddedWidth + strideWidth - filterWidth) / strideWidth,
          outputChannels},
-        convOriginal.output().getType().cast<ShapedType>().getElementType());
+        convOriginal.output()
+            .getType()
+            .template cast<ShapedType>()
+            .getElementType());
     convReplacement->getResult(0).setType(newConvType);
 
     // if valid padding no need for pad op, connect to strided slice
@@ -369,8 +390,7 @@ struct RaiseStridedSlicePattern : public OpRewritePattern<TFL::StridedSliceOp> {
 
       // Change padding on cloned conv to valid since
       // padding was extracted to pad op
-      convReplacement->setAttr("padding",
-                               rewriter.getStringAttr("VALID"));
+      convReplacement->setAttr("padding", rewriter.getStringAttr("VALID"));
     }
 
     // replace strided slice with new strided slice -> new conv
@@ -386,11 +406,17 @@ void OpSplit::runOnOperation() {
   func::FuncOp func = getOperation();
 
   RewritePatternSet patterns(ctx);
-  patterns.insert<OpSplitPattern>(ctx);
+
+  patterns.insert<OpSplitPattern<TFL::Conv2DOp>>(ctx);
+  patterns.insert<OpSplitPattern<TFL::DepthwiseConv2DOp>>(ctx);
+
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 
   RewritePatternSet patterns2(ctx);
-  patterns2.insert<RaiseStridedSlicePattern>(ctx);
+
+  patterns2.insert<RaiseStridedSlicePattern<TFL::Conv2DOp>>(ctx);
+  patterns2.insert<RaiseStridedSlicePattern<TFL::DepthwiseConv2DOp>>(ctx);
+
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
 }
 } // namespace

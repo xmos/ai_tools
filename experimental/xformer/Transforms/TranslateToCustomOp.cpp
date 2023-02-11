@@ -140,7 +140,11 @@ void TranslateToCustomOp::runOnOperation() {
   func::FuncOp func = getOperation();
 
   MemoryPlanner mp(func);
-  mp.getOffsets();
+  auto offsets = mp.getOffsets();
+  // Store as an attribute in the module
+  auto module = func->getParentOfType<ModuleOp>();
+  OpBuilder builder(func);
+  module->setAttr("xc.offsets", builder.getI32VectorAttr(offsets));
 
   patterns.insert<RewriteToCustomOp<AddOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);

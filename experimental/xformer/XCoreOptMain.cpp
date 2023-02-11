@@ -193,6 +193,8 @@ int main(int argc, char **argv) {
   static cl::opt<bool> tflmcPrintEnabled(
       "xcore-tflmc-print", cl::desc("Print out memory allocation plan"),
       cl::init(false));
+  static cl::opt<bool> offlineOffsetsEnabled(
+      "xcore-offline-offsets", cl::desc("Offline offsets"), cl::init(false));
   static cl::opt<std::string> versionLibTfliteMicro(
       "xcore-compatible-with-lib-tflite-micro",
       cl::desc("Check if lib_tflite_micro version is compatible"), cl::init(""),
@@ -337,18 +339,15 @@ int main(int argc, char **argv) {
         std::make_pair(shared_config::xcoreMetadataName, bufferData);
 
     // Offline offsets metadata
-    std::vector<int> offline_offsets = {
-        16384, -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
-        -1,    -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
-        -1,    -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
-        -1,    -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
-        -1,    -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
-        -1,    -1,    -1,    -1,    -1,   -1,    -1,    -1,    -1, -1,    -1,
-        -1,    -1,    -1,    -1,    -1,   -1,    0,     16384, 0,  8192,  0,
-        20480, 0,     32768, 16384, 0,    16384, 0,     8192,  0,  53248, 24576,
-        0,     24576, 49152, 24576, 0,    24576, 28672, 12288, 0,  12288, 24576,
-        12288, 0,     12288, 0,     6144, 0,     26624, 12288, 0,  12288, 24576,
-        12288, 0,     12288, 3584,  0,    3584,  1056,  -1,    -1, 0};
+
+    // std::vector<int> offline_offsets = {
+    //    73728, -1, -1, -1, -1, -1, -1, 0, 129024, 73728, 166272, 132096,
+    //    73728, 153984, 132096, 73728, 132096, 73728, 0, 52224, 0};
+    auto attr = module->getAttr("xc.offsets");
+    auto offline_offsets = std::vector<int>{
+        attr.cast<mlir::DenseIntElementsAttr>().getValues<int32_t>().begin(),
+        attr.cast<mlir::DenseIntElementsAttr>().getValues<int32_t>().end()};
+
     constexpr char kOfflineMemAllocMetadata[] = "OfflineMemoryAllocation";
     /*
     | 0 | Offline allocation format version |
@@ -372,17 +371,20 @@ int main(int argc, char **argv) {
         std::string((char *)offline_offsets.data(), offline_offsets.size() * 4);
 
     auto k = (int32_t *)offlineOffsetsData.data();
-    // printf("\n");
-    // for (int i = 0; i < offline_offsets.size(); i++) {
-    //   printf("%d, ", k[i]);
-    // }
-    // printf("\n");
+    printf("\n");
+    for (int i = 0; i < offline_offsets.size(); i++) {
+      printf("%d, ", k[i]);
+    }
+    printf("\n");
 
     auto offlineOffsetsMetadata =
         std::make_pair(kOfflineMemAllocMetadata, offlineOffsetsData);
 
     metadata.insert(xcoreConfigMetadata);
-    // metadata.insert(offlineOffsetsMetadata);
+    if (offlineOffsetsEnabled) {
+      printf("\n\nOFFLINE OFFSETS ENABLED!\n\n");
+      metadata.insert(offlineOffsetsMetadata);
+    }
 
     std::string flatBufferString;
     if (failed(xcore::utils::getFlatBufferStringFromMLIR(

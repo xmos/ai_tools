@@ -9,8 +9,32 @@ namespace mlir {
 namespace xcore {
 
 MemoryPlanner::MemoryPlanner(func::FuncOp op) : funcOp(op), liveness(op) {
+  auto getValueSize = [](Value v) {
+    auto type = v.getType().dyn_cast<ShapedType>();
+    size_t typeSizeInBytes;
+    if (type.getElementType().isa<quant::QuantizedType>()) {
+      // we only support QI8
+      typeSizeInBytes = 1;
+    } else {
+      typeSizeInBytes =
+          type.getElementType().getIntOrFloatBitWidth() / CHAR_BIT;
+    }
+
+    size_t k = typeSizeInBytes;
+    llvm::ArrayRef<int64_t> shape_ref = type.getShape();
+    for (auto &dim : shape_ref) {
+      k *= (dim == -1 ? 1 : dim);
+    }
+
+    // Align size up to four bytes
+    k = ((k + 3) / 4) * 4;
+
+    return k;
+  };
+
   for (BlockArgument argument : funcOp.getArguments()) {
-    valueIds.insert({argument, valueIds.size()});
+    valueInfo.insert(
+        {argument, {valueInfo.size(), getValueSize(argument), false, -1, -1}});
     values.push_back(argument);
   }
 
@@ -22,16 +46,30 @@ MemoryPlanner::MemoryPlanner(func::FuncOp op) : funcOp(op), liveness(op) {
     operationIds.insert({op, operationIds.size()});
     operations.push_back(op);
 
+    bool isConstantOp = false;
     // TODO(renjieliu): Find a generic way to deal with const ops.
     if (op->hasTrait<OpTrait::IsTerminator>() ||
-        llvm::isa<TFL::QConstOp, TFL::ConstOp, arith::ConstantOp>(op))
-      return;
+        llvm::isa<TFL::QConstOp, TFL::ConstOp, arith::ConstantOp>(op)) {
+      isConstantOp = true;
+    }
 
     for (Value result : op->getResults()) {
-      valueIds.insert({result, valueIds.size()});
+      valueInfo.insert(
+          {result,
+           {valueInfo.size(), getValueSize(result), isConstantOp, -1, -1}});
       values.push_back(result);
     }
   });
+
+  //   for (auto v : values) {
+  //   auto type = v.getType().dyn_cast<ShapedType>();
+  //   int k = 1;
+  //   llvm::ArrayRef<int64_t> shape_ref = type.getShape();
+  //   for (auto &dim : shape_ref) {
+  //     k *= (dim == -1 ? 1 : dim);
+  //   }
+  //   valueSizes[v] = k;
+  // }
 
   // Liveness
   // Struct with start op and end op
@@ -43,39 +81,15 @@ MemoryPlanner::MemoryPlanner(func::FuncOp op) : funcOp(op), liveness(op) {
   const LivenessBlockInfo *lvb = liveness.getLiveness(block);
   for (auto v : values) {
     Operation *startOp = lvb->getStartOperation(v);
-    livenessInfo[v].firstUsed = operationIds[startOp];
-    livenessInfo[v].lastUsed = operationIds[lvb->getEndOperation(v, startOp)];
+    valueInfo[v].firstUsed = operationIds[startOp];
+    valueInfo[v].lastUsed = operationIds[lvb->getEndOperation(v, startOp)];
   }
 
-  for (auto v : values) {
-    auto type = v.getType().dyn_cast<ShapedType>();
-    int k = 1;
-    llvm::ArrayRef<int64_t> shape_ref = type.getShape();
-    for (auto &dim : shape_ref) {
-      k *= (dim == -1 ? 1 : dim);
-    }
-
-    // if (type.getElementType().isa<quant::QuantizedType>()) {
-    //   if (type.getElementType().cast<quant::QuantizedType>().isSigned() &&
-    //       type.getElementType()
-    //               .cast<quant::QuantizedType>()
-    //               .getStorageTypeIntegralWidth() == 8) {
-    //     k = type.getNumElements();
-    //   } else {
-    //     // Not QI8
-    //     assert(false);
-    //   }
-    // } else {
-    //   k = type.getSizeInBits() / 8;
-    // }
-
-    valueSizes[v] = k;
-  }
   printf("\n\n");
 
   for (auto v : values) {
-    printf("\nvalue %d size = %d start op = %d end op = %d", valueIds[v],
-           valueSizes[v], livenessInfo[v].firstUsed, livenessInfo[v].lastUsed);
+    printf("\nvalue %d size = %d start op = %d end op = %d", valueInfo[v].id,
+           valueInfo[v].size, valueInfo[v].firstUsed, valueInfo[v].lastUsed);
   }
   printf("\n\n");
 
@@ -88,7 +102,8 @@ MemoryPlanner::MemoryPlanner(func::FuncOp op) : funcOp(op), liveness(op) {
     }
     int size = 0;
     for (auto v : lvb->currentlyLiveValues(o)) {
-      size += valueSizes[v];
+      if (!valueInfo[v].constant)
+        size += valueInfo[v].size;
     }
     if (size > maxSize) {
       maxSize = size;
@@ -105,6 +120,10 @@ MemoryPlanner::MemoryPlanner(func::FuncOp op) : funcOp(op), liveness(op) {
 int MemoryPlanner::getNewOffset(Value v, int size, OrderedOffsets &selected) {
   int possibleOffset = 0;
 
+  if (valueInfo[v].constant) {
+    return -1;
+  }
+
   // Go through all selected buffers
   // They are ordered by offset
 
@@ -112,23 +131,22 @@ int MemoryPlanner::getNewOffset(Value v, int size, OrderedOffsets &selected) {
     Value c = i.first;
     int cOffset = i.second;
 
-    if ((livenessInfo[v].firstUsed >= livenessInfo[c].firstUsed &&
-         livenessInfo[v].firstUsed <= livenessInfo[c].lastUsed) ||
-        (livenessInfo[v].lastUsed >= livenessInfo[c].firstUsed &&
-         livenessInfo[v].lastUsed <= livenessInfo[c].lastUsed)) {
-      // overlap
+    if ((valueInfo[c].firstUsed > valueInfo[v].lastUsed) ||
+        (valueInfo[v].firstUsed > valueInfo[c].lastUsed)) {
+      // no overlap
+      continue;
+    }
 
-      if (cOffset - possibleOffset > size) {
-        // there is a gap
-        break;
-      } else {
-        // not enough space
-        // move offset to end of current buffer
-        int end = cOffset + valueSizes[c];
+    // overlapping buffer
+    if (cOffset - possibleOffset > size) {
+      // there is a gap
+      break;
+    } else {
+      // move offset to end of current buffer if larger
+      int end = cOffset + valueInfo[c].size;
 
-        if (end > possibleOffset) {
-          possibleOffset = end;
-        }
+      if (end > possibleOffset) {
+        possibleOffset = end;
       }
     }
   }
@@ -138,9 +156,20 @@ int MemoryPlanner::getNewOffset(Value v, int size, OrderedOffsets &selected) {
 
 std::vector<int> MemoryPlanner::getOffsets() {
   std::vector<int> offsets;
+
+  auto OrderedDescendingSizesComparator = [&](QueueItem &lhs, QueueItem &rhs) {
+    if (lhs.second != rhs.second) {
+      return lhs.second < rhs.second;
+    }
+    return valueInfo[lhs.first].id < valueInfo[rhs.first].id;
+  };
+  // The top item is the largest one.
+  llvm::PriorityQueue<QueueItem, std::vector<QueueItem>,
+                      decltype(OrderedDescendingSizesComparator)>
+      queue(OrderedDescendingSizesComparator);
   // insert all values and size into priority queue
   for (auto v : values) {
-    queue.push({v, valueSizes[v]});
+    queue.push({v, valueInfo[v].size});
   }
 
   // ordered by offset
@@ -169,7 +198,7 @@ std::vector<int> MemoryPlanner::getOffsets() {
   printf("\n\n");
 
   auto cmp = [&](QueueItem a, QueueItem b) {
-    return valueIds[a.first] < valueIds[b.first];
+    return valueInfo[a.first].id < valueInfo[b.first].id;
   };
   std::multiset<QueueItem, decltype(cmp)> Offsets(cmp);
   for (auto i : selected) {
@@ -178,10 +207,40 @@ std::vector<int> MemoryPlanner::getOffsets() {
 
   printf("\nAllocated offsets : ");
   for (auto i : Offsets) {
-    printf("\nValue %d, size %d, offset %d ", valueIds[i.first],
-           valueSizes[i.first], i.second);
+    offsets.push_back(i.second);
+    printf("\nValue %d, size %d, offset %d ", valueInfo[i.first].id,
+           valueInfo[i.first].size, i.second);
   }
   printf("\n\n");
+
+  // funcOp.walk<WalkOrder::PreOrder>([&](Operation *op) {
+  //   if (op == funcOp) {
+  //     return;
+  //   }
+
+  //   // TODO(renjieliu): Find a generic way to deal with const ops.
+  //   if (op->hasTrait<OpTrait::IsTerminator>() ||
+  //       llvm::isa<TFL::QConstOp, TFL::ConstOp, arith::ConstantOp>(op)) {
+  //     for (Value result : op->getResults()) {
+  //       offsets.push_back(-1);
+  //     }
+  //   } else {
+  //     for (Value result : op->getResults()) {
+  //       if (auto search = Offsets.find(result); search != Offsets.end()) {
+  //         offsets.push_back(search->second);
+  //       } else {
+  //         assert(false);
+  //       }
+  //     }
+  //   }
+  // });
+
+  // printf("\n\n");
+
+  // for (auto i : offsets) {
+  //   printf("%d, ", i);
+  // }
+  // printf("\n\n");
 
   return offsets;
 }

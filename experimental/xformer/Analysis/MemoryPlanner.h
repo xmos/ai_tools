@@ -29,9 +29,13 @@ public:
       return (lhs.second < rhs.second);
     }
   };
+
   using OrderedOffsets = std::multiset<QueueItem, AscendingOffsetsComparator>;
 
-  struct LivenessInfo {
+  struct ValueInfo {
+    size_t id;
+    size_t size;
+    bool constant;
     int firstUsed;
     int lastUsed;
   };
@@ -43,22 +47,15 @@ public:
 private:
   int getNewOffset(Value v, int size, OrderedOffsets &selected);
 
-  DenseMap<Value, size_t> valueIds;
-  DenseMap<Value, size_t> valueSizes;
+  DenseMap<Value, ValueInfo> valueInfo;
 
   std::vector<Value> values;
-
-  DenseMap<Value, LivenessInfo> livenessInfo;
 
   // Maps each Operation to a unique ID according to the program sequence.
   DenseMap<Operation *, size_t> operationIds;
 
   // Stores all operations according to the program sequence.
   std::vector<Operation *> operations;
-
-  // The top item is the largest one.
-  llvm::PriorityQueue<QueueItem, std::vector<QueueItem>, llvm::less_second>
-      queue;
 
   Liveness liveness;
 

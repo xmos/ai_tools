@@ -34,8 +34,22 @@ def HasNoPaddingForBatchAndChannel
           "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 1}] == "
           "0)">>;
 
+def HasOnlyPadding3To4ForChannel
+    : Constraint<CPred<
+          "$0.cast<DenseIntElementsAttr>().getNumElements() == 8 && "
+          "($0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{0, 0}] == 0 "
+          "&&"
+          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{0, 1}] == 0 &&"
+          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{1, 0}] == 0 &&"
+          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{1, 1}] == 0 &&"
+          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{2, 0}] == 0 &&"
+          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{2, 1}] == 0 &&"
+          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 0}] == 0 &&"
+          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 1}] == "
+          "1)">>;
+
 // Check that bytes per pixel is a multiple of four
-def HasValidBytesPerPixel
+def HasMultipleOfFourBytesPerPixel
     : Constraint<
           CPred<"$0.getType().cast<ShapedType>().getDimSize(3) % 4 == 0">>;
 
@@ -52,7 +66,15 @@ def:
                               : $padding_op $padding_attr)),
           (XC_PadOp $input, (getPaddingPlan $output), (getPadValue $input)), [
             (HasNoPaddingForBatchAndChannel $padding_attr),
-            (HasValidBytesPerPixel $input)
+            (HasMultipleOfFourBytesPerPixel $input)
+          ]>;
+
+def:
+  Pat<(TFL_PadOp
+           : $output TensorOf<[QI8]>:$input, (constOp
+                              : $padding_op $padding_attr)),
+          (XC_Pad3To4Op $input, (getPadValue $input)), [
+            (HasOnlyPadding3To4ForChannel $padding_attr),
           ]>;
 }
 

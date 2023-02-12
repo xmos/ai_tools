@@ -64,6 +64,13 @@ std::vector<uint8_t> PadOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> Pad3To4Op::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("pv", (int32_t)pad_value()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
@@ -131,13 +138,14 @@ void TranslateToCustomOp::runOnOperation() {
   RewritePatternSet patterns(ctx);
   func::FuncOp func = getOperation();
 
-  patterns.insert<RewriteToCustomOp<LookupOp>>(ctx);
-  patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<AddOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Conv2DV2Op>>(ctx);
   patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
-  patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<LookupOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<Pad3To4Op>>(ctx);
   patterns.insert<RewriteToCustomOp<StridedSliceOp>>(ctx);
-  patterns.insert<RewriteToCustomOp<AddOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

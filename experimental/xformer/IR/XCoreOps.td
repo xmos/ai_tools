@@ -202,6 +202,19 @@ def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [NoSideEffect]> {
+  let summary = "Pad 3 to 4 op";
+
+  let description = [{Pad 3 to 4 op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+    I32Attr:$pad_value
+    );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_LoadConstantOp
     : XC_Op<"ld_constant", [NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Load constant op";

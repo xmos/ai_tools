@@ -4,6 +4,13 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
+genrule(
+    name = "version_check",
+    srcs = ["version_check.sh"],
+    cmd = "cp $< $@ && chmod +x $@ && $@",
+    outs = ["version_check_output"],
+)
+
 td_library(
     name = "xc_dialect_td",
     srcs = [
@@ -230,4 +237,5 @@ cc_binary(
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:MlirOptLib",
     ],
+    data = [":version_check_output"],
 )

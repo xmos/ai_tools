@@ -1,4 +1,5 @@
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -221,6 +222,17 @@ cc_library(
     ],
 ) 
 
+bool_flag(
+    name = "disable_version_check",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "have_disabled_version_check",
+    flag_values = { ":disable_version_check": "true" }
+)
+
 cc_binary(
     name = "xcore-opt",
     srcs = ["XCoreOptMain.cpp", "Version.h"],
@@ -238,7 +250,7 @@ cc_binary(
         "@llvm-project//mlir:MlirOptLib",
     ],
     data = select({
-        "@bazel_tools//src/conditions:windows": [],
+        ":have_disabled_version_check": [],
         "//conditions:default": [
             ":version_check_output",
         ],

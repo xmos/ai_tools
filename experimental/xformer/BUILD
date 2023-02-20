@@ -237,5 +237,10 @@ cc_binary(
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:MlirOptLib",
     ],
-    data = [":version_check_output"],
+    data = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "//conditions:default": [
+            ":version_check_output",
+        ],
+    }),
 )

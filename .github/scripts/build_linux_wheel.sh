@@ -11,6 +11,8 @@ pip install cmake
 # and https://github.blog/2022-04-12-git-security-vulnerability-announced/
 # This was preventing setuptools-scm from detecting the version as it uses git
 git config --global --add safe.directory /ai_tools
+git config --global --add safe.directory /ai_tools/third_party/lib_nn
+git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro
 git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
 git describe --tags
 

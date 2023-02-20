@@ -135,29 +135,22 @@ struct FoldTransposeWCHToInput : public OpRewritePattern<TFL::TransposeOp> {
     // Check for invalid types and return
     // Defining op must be block arg?
 
-    // if (failed(
-    //         verifyCompatibleShapes(addOp.lhs().getType().cast<ShapedType>(),
-    //                                addOp.rhs().getType().cast<ShapedType>())))
-    //                                {
-    //   return failure();
-    // }
+    int k = 0;
 
-    // auto lhsType = addOp.lhs().getType().cast<ShapedType>().getElementType();
-    // // Lhs type must be QI8
-    // if (!(lhsType.isa<quant::QuantizedType>() &&
-    //       lhsType.cast<quant::QuantizedType>().isSigned() &&
-    //       lhsType.cast<quant::QuantizedType>().getStorageTypeIntegralWidth()
-    //       ==
-    //           8)) {
-    //   return failure();
-    // }
+    if (auto block_arg = op.input().dyn_cast<BlockArgument>()) {
+      auto funcOp = cast<func::FuncOp>(block_arg.getOwner()->getParentOp());
+      FunctionType func_type = funcOp.getFunctionType();
+      llvm::SmallVector<Type, 4> new_input_types(func_type.getInputs().begin(),
+                                                 func_type.getInputs().end());
+      new_input_types[block_arg.getArgNumber()] = op.output().getType();
+      auto newFuncType = FunctionType::get(
+          rewriter.getContext(), new_input_types, funcOp.getResultTypes());
+      funcOp.setType(newFuncType);
 
-    // auto xcAddOp = rewriter.create<AddOp>(
-    //     addOp.getLoc(), addOp.getType(), addOp.lhs(), addOp.rhs(),
-    //     rewriter.getStringAttr(addOp.fused_activation_function()),
-    //     rewriter.getI32IntegerAttr(m1), rewriter.getI32IntegerAttr(m2),
-    //     rewriter.getI32IntegerAttr(bias), rewriter.getI32IntegerAttr(shift));
-    // rewriter.replaceOp(addOp, xcAddOp.output());
+      block_arg.setType(op.output().getType());
+
+      rewriter.replaceOp(op, op.input());
+    }
 
     return success();
   }

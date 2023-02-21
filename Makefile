@@ -36,6 +36,7 @@ xformer2_integration_test:
 
 .PHONY: build
 build: xcore_interpreters_build
+	cd ./experimental/xformer && ./version_check.sh
 
 .PHONY: test
 test: xformer2_integration_test

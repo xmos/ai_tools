@@ -8,7 +8,7 @@ package(
 genrule(
     name = "version_check",
     srcs = ["version_check.sh"],
-    cmd = "cp $< $@ && chmod +x $@ && $@",
+    cmd = "cp $< $@ && chmod +x $@ && $@ BAZEL_BUILD",
     outs = ["version_check_output"],
 )
 

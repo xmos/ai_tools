@@ -33,10 +33,12 @@ xformer2_integration_test:
 #**************************
 # default build and test targets
 #**************************
+.PHONY: version_check
+version_check:
+		cd ./experimental/xformer && ./version_check.sh
 
 .PHONY: build
-build: xcore_interpreters_build
-	cd ./experimental/xformer && ./version_check.sh
+build: version_check xcore_interpreters_build
 
 .PHONY: test
 test: xformer2_integration_test

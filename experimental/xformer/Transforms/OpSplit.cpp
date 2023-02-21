@@ -13,6 +13,8 @@ namespace xcore {
 namespace {
 static constexpr char opSplitLabel[] = "opSplitLabel";
 static constexpr char raisedStridedSliceLabel[] = "raisedStridedSliceLabel";
+static constexpr char opSplitLabel1[] = "opSplitLabel1";
+static constexpr char opSplitLabel2[] = "opSplitLabel2";
 
 // OpSplit
 struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
@@ -33,12 +35,10 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
   LogicalResult matchAndRewrite(TargetOp targetOp,
                                 PatternRewriter &rewriter) const override {
     // Do not split ops already split
-    if (targetOp->hasAttr(opSplitLabel))
+    if (targetOp->hasAttr(opSplitLabel2))
       return failure();
 
-    //
     // Check for invalid cases and return
-    //
     auto outputElementalType = targetOp.output()
                                    .getType()
                                    .template cast<ShapedType>()
@@ -73,7 +73,7 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
     auto targetReplacement = llvm::cast<TargetOp>(rewriter.clone(*targetOp));
 
     // Apply label, so that the same op is not rewritten a second time.
-    targetReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
+    targetReplacement->setAttr(opSplitLabel2, rewriter.getUnitAttr());
 
     // variables that are the same for all strided slices to be created
     int32_t stridesAttr[4] = {1, 1, 1, 1};
@@ -132,7 +132,7 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
           end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
       // Add label, for safety when raising slice later
-      stridedSliceOp->setAttr(opSplitLabel, rewriter.getUnitAttr());
+      stridedSliceOp->setAttr(opSplitLabel2, rewriter.getUnitAttr());
 
       // Store created strided slice op to use as input to concat
       stridedSliceOps.push_back(stridedSliceOp.getResult());
@@ -161,7 +161,7 @@ struct RaiseStridedSliceHorizontalAddPattern
   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
                                 PatternRewriter &rewriter) const override {
     // Only raise slices that have been inserted with op split pass
-    if (!((stridedSlice->hasAttr(opSplitLabel))))
+    if (!((stridedSlice->hasAttr(opSplitLabel2))))
       return failure();
 
     // Do not raise slices that have already been raised
@@ -269,7 +269,7 @@ struct RaiseStridedSliceHorizontalPattern
   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
                                 PatternRewriter &rewriter) const override {
     // Only raise slices that have been inserted with op split pass
-    if (!((stridedSlice->hasAttr(opSplitLabel))))
+    if (!((stridedSlice->hasAttr(opSplitLabel2))))
       return failure();
 
     // Do not raise slices that have already been raised
@@ -414,9 +414,12 @@ struct RaiseStridedSliceHorizontalPattern
         stridedSlice.begin_mask(), stridedSlice.end_mask(),
         stridedSlice.ellipsis_mask(), stridedSlice.new_axis_mask(),
         stridedSlice.shrink_axis_mask());
-    // Label it as raised so it is not raised again
-    stridedSliceReplacement->setAttr(raisedStridedSliceLabel,
-                                     rewriter.getUnitAttr());
+    if (stridedSlice->hasAttr(opSplitLabel1))
+      // Label it as raised so it is not raised again
+      stridedSliceReplacement->setAttr(raisedStridedSliceLabel,
+                                       rewriter.getUnitAttr());
+    if (stridedSlice->hasAttr(opSplitLabel2))
+      stridedSliceReplacement->setAttr(opSplitLabel1, rewriter.getUnitAttr());
 
     // Adjust shape for padding
     // For valid conv the shapes will not change since pad values are zero

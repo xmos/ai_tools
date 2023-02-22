@@ -79,6 +79,11 @@ cl::opt<bool> opSplitTensorArenaOption(
     cl::desc("Enable prototype op split to reduce tensor arena size."),
     cl::init(false));
 
+cl::opt<bool> allowInputModificationOption(
+    "xcore-allow-input-modification",
+    cl::desc("Allow the compiler to modify input tensor for optimizations."),
+    cl::init(false));
+
 } // namespace xcore
 } // namespace mlir
 

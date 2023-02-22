@@ -1,10 +1,9 @@
-// Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
+// Copyright 2023 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
 #include "IR/XCoreOps.h"
+#include "Transforms/Options.h"
 
-#include "lib_nn/api/MemCpyFn.hpp"
-#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
@@ -133,23 +132,42 @@ struct FoldTransposeWCHToInput : public OpRewritePattern<TFL::TransposeOp> {
                                 PatternRewriter &rewriter) const override {
 
     // Check for invalid types and return
-    // Defining op must be block arg?
+    // Get transpose permutation
+    DenseIntElementsAttr perm;
+    if (!matchPattern(op.perm(), m_Constant(&perm))) {
+      return failure();
+    }
 
-    int k = 0;
+    // Confirm transpose permutation is 0,2,3,1 i.e., NWCH
+    // Remnants of Pytorch to TFlite conversion
+    auto permVal = perm.getValues<int32_t>();
+    if (permVal[0] != 0 || permVal[1] != 2 || permVal[2] != 3 ||
+        permVal[3] != 1) {
+      return failure();
+    }
 
-    if (auto block_arg = op.input().dyn_cast<BlockArgument>()) {
-      auto funcOp = cast<func::FuncOp>(block_arg.getOwner()->getParentOp());
-      FunctionType func_type = funcOp.getFunctionType();
-      llvm::SmallVector<Type, 4> new_input_types(func_type.getInputs().begin(),
-                                                 func_type.getInputs().end());
-      new_input_types[block_arg.getArgNumber()] = op.output().getType();
-      auto newFuncType = FunctionType::get(
-          rewriter.getContext(), new_input_types, funcOp.getResultTypes());
-      funcOp.setType(newFuncType);
+    // If input to the transpose is block arg, and block arg has only one use,
+    // we can fold the transpose
+    if (auto blockArg = op.input().dyn_cast<BlockArgument>()) {
+      if (blockArg.hasOneUse()) {
+        auto funcOp = cast<func::FuncOp>(blockArg.getOwner()->getParentOp());
 
-      block_arg.setType(op.output().getType());
+        // Set function type to the transpose output type as we are changing the
+        // input
+        FunctionType funcType = funcOp.getFunctionType();
+        llvm::SmallVector<Type, 4> newInputTypes(funcType.getInputs().begin(),
+                                                 funcType.getInputs().end());
+        newInputTypes[blockArg.getArgNumber()] = op.output().getType();
+        auto newFuncType = FunctionType::get(
+            rewriter.getContext(), newInputTypes, funcOp.getResultTypes());
+        funcOp.setType(newFuncType);
 
-      rewriter.replaceOp(op, op.input());
+        // Set block arg type to the transpose output type
+        blockArg.setType(op.output().getType());
+
+        // Remove transpose
+        rewriter.replaceOp(op, op.input());
+      }
     }
 
     return success();
@@ -163,7 +181,9 @@ void OptimizeTranspose::runOnOperation() {
 
   patterns.insert<HoistTransposeWCHAbovePadPattern>(ctx);
   patterns.insert<FoldCancellableTransposePattern>(ctx);
-  patterns.insert<FoldTransposeWCHToInput>(ctx);
+  if (allowInputModificationOption) {
+    patterns.insert<FoldTransposeWCHToInput>(ctx);
+  }
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

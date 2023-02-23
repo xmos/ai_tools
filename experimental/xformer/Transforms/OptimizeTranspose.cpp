@@ -49,8 +49,8 @@ struct HoistTransposeWCHAbovePadPattern
     // Confirm transpose permutation is 0,2,3,1 i.e., NWCH
     // Remnants of Pytorch to TFlite conversion
     auto permVal = perm.getValues<int32_t>();
-    if (permVal[0] != 0 || permVal[1] != 2 || permVal[2] != 3 ||
-        permVal[3] != 1) {
+    if (perm.size() != 4 || permVal[0] != 0 || permVal[1] != 2 ||
+        permVal[2] != 3 || permVal[3] != 1) {
       return failure();
     }
 
@@ -141,8 +141,8 @@ struct FoldTransposeWCHToInput : public OpRewritePattern<TFL::TransposeOp> {
     // Confirm transpose permutation is 0,2,3,1 i.e., NWCH
     // Remnants of Pytorch to TFlite conversion
     auto permVal = perm.getValues<int32_t>();
-    if (permVal[0] != 0 || permVal[1] != 2 || permVal[2] != 3 ||
-        permVal[3] != 1) {
+    if (perm.size() != 4 || permVal[0] != 0 || permVal[1] != 2 ||
+        permVal[2] != 3 || permVal[3] != 1) {
       return failure();
     }
 

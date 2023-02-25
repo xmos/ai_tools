@@ -84,7 +84,7 @@ pipeline {
                       make build
                 """
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel build --remote_cache=${BAZEL_CACHE_URL} --google_credentials=${BAZEL_CACHE_KEY_FILE} //:xcore-opt --verbose_failures --//:disable_version_check
+                      bazel build --remote_cache=${BAZEL_CACHE_URL} --google_credentials=${BAZEL_CACHE_KEY_FILE} //:xcore-opt --verbose_failures
                 """
                 sh """. activate ./ai_tools_venv &&
                       (cd python && python3 setup.py bdist_wheel) &&
@@ -97,7 +97,7 @@ pipeline {
             steps {
                 // xformer2 unit tests
         sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel test --remote_cache=${BAZEL_CACHE_URL} --google_credentials=${BAZEL_CACHE_KEY_FILE} //Test:all --verbose_failures --test_output=errors --//:disable_version_check
+                      bazel test --remote_cache=${BAZEL_CACHE_URL} --google_credentials=${BAZEL_CACHE_KEY_FILE} //Test:all --verbose_failures --test_output=errors
                 """
         // xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&

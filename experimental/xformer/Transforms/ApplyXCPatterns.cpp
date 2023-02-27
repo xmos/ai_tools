@@ -57,7 +57,8 @@ StringAttr getPaddingPlan(PatternRewriter &rewriter, TFL::PadOp padOp) {
   return rewriter.getStringAttr(paddingPlanData);
 }
 
-IntegerAttr getPadValue(PatternRewriter &rewriter, Value inputVal) {
+IntegerAttr getPadValue(PatternRewriter &rewriter, Value inputVal,
+                        bool dontPack = false) {
   auto inputType = inputVal.getType().cast<ShapedType>();
   auto elementType = inputType.getElementType();
 
@@ -70,13 +71,18 @@ IntegerAttr getPadValue(PatternRewriter &rewriter, Value inputVal) {
     elementType = elementType.cast<quant::QuantizedType>().getStorageType();
   }
 
-  assert(elementType.isIntOrFloat() &&
-         "Type has to be I32, F32, or I8 if quantized!");
-  // padValue has to be four bytes
-  // For input type of int8, this would be arranged as b,b,b,b
-  if (elementType.isInteger(8)) {
-    padValue = padValue << 24 | (padValue << 16 & 0x00FFFFFF) |
-               (padValue << 8 & 0x0000FFFF) | (padValue & 0x000000FF);
+  if (!dontPack) {
+    // padValue has to be four bytes
+    // For int8, this would be arranged as b,b,b,b
+    if (elementType.isInteger(8)) {
+      padValue = padValue << 24 | (padValue << 16 & 0x00FFFFFF) |
+                 (padValue << 8 & 0x0000FFFF) | (padValue & 0x000000FF);
+    }
+  } else {
+    // TODO: Temp fix, need to pad negative values
+    if (padValue < 0) {
+      padValue = -padValue;
+    }
   }
 
   return rewriter.getI32IntegerAttr(padValue);

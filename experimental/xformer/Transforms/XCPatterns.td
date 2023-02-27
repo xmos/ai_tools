@@ -23,8 +23,9 @@ def:
             $output)))>;
 }
 
-def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
-
+def getPackedPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
+def getBytePadValue
+    : NativeCodeCall<"getPadValue($_builder, $0, /*dontPack=*/true)">;
 def getPaddingPlan
     : NativeCodeCall<
           "getPaddingPlan($_builder, $0.getDefiningOp<TFL::PadOp>())">;
@@ -34,7 +35,7 @@ def:
   Pat<(TFL_PadOp
            : $output TensorOf<[QI8]>:$input, (constOp
                               : $padding_op $padding_attr)),
-          (XC_PadOp $input, (getPaddingPlan $output), (getPadValue $input)), [
+          (XC_PadOp $input, (getPaddingPlan $output), (getPackedPadValue $input)), [
             (HasNoPaddingForBatchAndChannel $padding_attr),
             (HasMultipleOfNBytesPerPixel<4> $input)
           ]>;
@@ -43,7 +44,7 @@ def:
   Pat<(TFL_PadOp
            : $output TensorOf<[QI8]>:$input, (constOp
                               : $padding_op $padding_attr)),
-          (XC_Pad3To4Op $input, (getPadValue $input)), [
+          (XC_Pad3To4Op $input, (getBytePadValue $input)), [
             (HasOnlyPadding3To4ForChannel $padding_attr),
           ]>;
 }

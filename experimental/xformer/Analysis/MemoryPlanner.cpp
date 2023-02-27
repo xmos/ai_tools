@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "Analysis/MemoryPlanner.h"
+#include "IR/XCoreOps.h"
 
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
@@ -157,6 +158,51 @@ int MemoryPlanner::getNewOffset(Value v, int size, OrderedOffsets &selected) {
 std::vector<int> MemoryPlanner::getOffsets() {
   std::vector<int> offsets;
 
+  // Find linked values,
+  // increase input value size
+  // add only input values,
+  // stitch up after allocation and fix input and output value offsets
+  llvm::DenseMap<Value, std::pair<Value, int>> outInVals;
+  for (auto o : operations) {
+
+    if (o->hasTrait<OpTrait::IsTerminator>() ||
+        llvm::isa<TFL::QConstOp, TFL::ConstOp, arith::ConstantOp>(o)) {
+      continue;
+    }
+
+    // if (llvm::isa<PadOp>(o)) {
+    //   auto in = o->getOperand(0);
+    //   auto out = o->getResult(0);
+    //   int offset = valueInfo[out].size - valueInfo[in].size;
+    //   outInVals[out] = {in, offset};
+    //   valueInfo[in].size += offset;
+    //   valueInfo[in].lastUsed = valueInfo[out].lastUsed;
+    // }
+
+    if (llvm::isa<Conv2DV2Op>(o)) {
+      auto convOp = dyn_cast<Conv2DV2Op>(o);
+      if (symbolizeConv2DType(convOp.conv2d_kernel_type()) !=
+          Conv2DType::ValidIndirect) {
+        continue;
+      }
+      auto in = o->getOperand(0);
+      auto out = o->getResult(0);
+      int offset = 576;//valueInfo[out].size - valueInfo[in].size;
+      outInVals[out] = {in, offset};
+      valueInfo[in].size += offset;
+      valueInfo[in].lastUsed = valueInfo[out].lastUsed;
+    }
+  }
+
+  // Fix up consecutive overlapping allocations
+  // for (auto val : inputOutputPair) {
+  //   Value currentInput = val.first;
+  //   while(inputOutputPair.count(currentInput)) {
+  //     currentInput = inputOutputPair[currentInput];
+  //   }
+  //   inputOutputPair[val.first] = inputOutputPair[currentInput];
+  // }
+
   auto OrderedDescendingSizesComparator = [&](QueueItem &lhs, QueueItem &rhs) {
     if (lhs.second != rhs.second) {
       return lhs.second < rhs.second;
@@ -167,9 +213,12 @@ std::vector<int> MemoryPlanner::getOffsets() {
   llvm::PriorityQueue<QueueItem, std::vector<QueueItem>,
                       decltype(OrderedDescendingSizesComparator)>
       queue(OrderedDescendingSizesComparator);
+
   // insert all values and size into priority queue
   for (auto v : values) {
-    queue.push({v, valueInfo[v].size});
+    if (!outInVals.count(v)) {
+      queue.push({v, valueInfo[v].size});
+    }
   }
 
   // ordered by offset
@@ -196,6 +245,24 @@ std::vector<int> MemoryPlanner::getOffsets() {
     selected.insert({v, newOffset});
   }
   printf("\n\n");
+
+  for (auto val : outInVals) {
+    auto out = val.first;
+    auto in = val.second.first;
+    auto offset = val.second.second;
+
+    auto it = std::find_if(selected.begin(), selected.end(),
+                           [&](const QueueItem &p) { return p.first == in; });
+
+    if (it != selected.end()) {
+      int currentOffset = it->second;
+      selected.erase(it);
+      selected.insert({in, currentOffset + offset});
+      selected.insert({out, currentOffset});
+    } else {
+      assert(false);
+    }
+  }
 
   auto cmp = [&](QueueItem a, QueueItem b) {
     return valueInfo[a.first].id < valueInfo[b.first].id;

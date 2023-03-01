@@ -48,7 +48,7 @@ pipeline {
                     extensions: [[$class: 'SubmoduleOption',
                                   threads: 8,
                                   timeout: 20,
-                                  shallow: true,
+                                  shallow: false,
                                   parentCredentials: true,
                                   recursiveSubmodules: true],
                                  [$class: 'CleanCheckout']],

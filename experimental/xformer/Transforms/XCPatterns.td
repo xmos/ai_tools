@@ -8,6 +8,7 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
 
 include "IR/XCoreOps.td"
+include "Utils/Utils.td"
 
 // Activation lowering patterns
 def getLookupTable
@@ -22,37 +23,6 @@ def:
             $output)))>;
 }
 
-// Pad pattern
-// We only support spatial padding
-def HasNoPaddingForBatchAndChannel
-    : Constraint<CPred<
-          "$0.cast<DenseIntElementsAttr>().getNumElements() == 8 && "
-          "($0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{0, 0}] == 0 "
-          "&&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{0, 1}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 0}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 1}] == "
-          "0)">>;
-
-def HasOnlyPadding3To4ForChannel
-    : Constraint<CPred<
-          "$0.cast<DenseIntElementsAttr>().getNumElements() == 8 && "
-          "($0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{0, 0}] == 0 "
-          "&&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{0, 1}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{1, 0}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{1, 1}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{2, 0}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{2, 1}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 0}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 1}] == "
-          "1)">>;
-
-// Check that bytes per pixel is a multiple of four
-def HasMultipleOfFourBytesPerPixel
-    : Constraint<
-          CPred<"$0.getType().cast<ShapedType>().getDimSize(3) % 4 == 0">>;
-
 def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
 
 def getPaddingPlan
@@ -66,7 +36,7 @@ def:
                               : $padding_op $padding_attr)),
           (XC_PadOp $input, (getPaddingPlan $output), (getPadValue $input)), [
             (HasNoPaddingForBatchAndChannel $padding_attr),
-            (HasMultipleOfFourBytesPerPixel $input)
+            (HasMultipleOfNBytesPerPixel<4> $input)
           ]>;
 
 def:

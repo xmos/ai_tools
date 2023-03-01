@@ -350,7 +350,7 @@ struct RaiseStridedSliceHorizontalPattern
       if (!matchPattern(stridedSlice.begin(), m_Constant(&attr))) {
         return failure();
       }
-      auto beginIndex = attr.getValues<int32_t>()[2];
+      auto beginIndex = attr.getValues<int32_t>()[1];
 
       // Check if this is left most split
       if (beginIndex == 0) {

@@ -14,6 +14,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -78,6 +79,11 @@ cl::opt<bool> opSplitTensorArenaOption(
     cl::desc("Enable prototype op split to reduce tensor arena size."),
     cl::init(false));
 
+cl::opt<bool> allowInputModificationOption(
+    "xcore-allow-input-modification",
+    cl::desc("Allow the compiler to modify input tensor for optimizations."),
+    cl::init(false));
+
 } // namespace xcore
 } // namespace mlir
 
@@ -103,6 +109,36 @@ LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
   } else {
     xcore::buildXCorePassPipeline(pm);
     if (failed(pm.run(*mod))) {
+      return failure();
+    }
+  }
+  return success();
+}
+
+LogicalResult isCompatibleVersion(cl::opt<std::string> &version,
+                                  int32_t majorVersion, int32_t minorVersion,
+                                  int32_t patchVersion) {
+  if (!version.empty()) {
+    SmallVector<StringRef> partsStr;
+    llvm::SplitString(version, partsStr, ".");
+    if (partsStr.size() != 3) {
+      return failure();
+    }
+    SmallVector<int> parts;
+    int val = 0;
+    for (auto &i : partsStr) {
+      if (!llvm::to_integer(i, val, 10)) {
+        return failure();
+      }
+      parts.push_back(val);
+    }
+
+    // Check provided repo version with compiler version
+    // If major version is zero, then minor versions must match
+    // Otherwise, major versions must match and compiler version
+    // must be less or equal to provided repo version
+    if ((majorVersion == 0 && parts[0] == 0 && minorVersion != parts[1]) ||
+        (majorVersion != parts[0]) || (minorVersion > parts[1])) {
       return failure();
     }
   }
@@ -138,6 +174,14 @@ int main(int argc, char **argv) {
   static cl::opt<bool> tflmcPrintEnabled(
       "xcore-tflmc-print", cl::desc("Print out memory allocation plan"),
       cl::init(false));
+  static cl::opt<std::string> versionLibTfliteMicro(
+      "xcore-compatible-with-lib-tflite-micro",
+      cl::desc("Check if lib_tflite_micro version is compatible"), cl::init(""),
+      cl::Hidden);
+  static cl::opt<std::string> versionLibNN(
+      "xcore-compatible-with-lib-nn",
+      cl::desc("Check if lib_nn version is compatible"), cl::init(""),
+      cl::Hidden);
 
   // Register any command line options.
   registerAsmPrinterCLOptions();
@@ -173,6 +217,26 @@ int main(int argc, char **argv) {
       mlir::xcore::threadCountOption > 8) {
     return failedMessage(
         "Please specify a thread count between one and eight!");
+  }
+
+  if (failed(isCompatibleVersion(
+          versionLibTfliteMicro, lib_tflite_micro::major_version,
+          lib_tflite_micro::minor_version, lib_tflite_micro::patch_version))) {
+    return failedMessage("Incompatible lib_tflite_micro version!\n\nPlease use "
+                         "lib_tflite_micro version " +
+                         Twine(lib_tflite_micro::major_version) + "." +
+                         Twine(lib_tflite_micro::minor_version) + "." +
+                         Twine(lib_tflite_micro::patch_version));
+  }
+
+  if (failed(isCompatibleVersion(versionLibNN, lib_nn::major_version,
+                                 lib_nn::minor_version,
+                                 lib_nn::patch_version))) {
+    return failedMessage("Incompatible lib_nn version!\n\nPlease use "
+                         "lib_nn version " +
+                         Twine(lib_nn::major_version) + "." +
+                         Twine(lib_nn::minor_version) + "." +
+                         Twine(lib_nn::patch_version));
   }
 
   // Parse input.

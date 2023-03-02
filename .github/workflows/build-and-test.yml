@@ -37,6 +37,7 @@ jobs:
       - uses: google-github-actions/auth@v0
         continue-on-error: true
         with:
+          create_credentials_file: true
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Build setup
         env:
@@ -105,6 +106,7 @@ jobs:
       - uses: google-github-actions/auth@v0
         continue-on-error: true
         with:
+          create_credentials_file: true
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Build xformer and manylinux2014 wheel in docker
         # The SETUPTOOLS_SCM_PRETEND_VERSION var is passed via docker to the
@@ -166,6 +168,7 @@ jobs:
       - uses: google-github-actions/auth@v0
         continue-on-error: true
         with:
+          create_credentials_file: true
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Configure pagefile
         uses: al-cheb/configure-pagefile-action@v1.2

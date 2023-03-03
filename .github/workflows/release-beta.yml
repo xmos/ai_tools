@@ -6,7 +6,8 @@ on:
       - closed
     branches:
       - develop
-
+env:
+  BAZEL_CACHE_URL: https://storage.googleapis.com/bazel_remote_cache_0/gh_actions
 
 jobs:
   macos-release-wheel:
@@ -18,16 +19,6 @@ jobs:
         python-version: [3.8]
       fail-fast: false
     steps:
-      # Caches and restores the bazelisk download directory, the bazel build directory.
-      - name: Cache bazel
-        uses: actions/cache@v2.1.4
-        env:
-          cache-name: bazel-cache
-        with:
-          path: |
-            ~/.cache/bazelisk
-            ~/.cache/bazel
-          key: ${{ runner.os }}-${{ env.cache-name }}
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -35,6 +26,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: google-github-actions/auth@v0
+        continue-on-error: true
+        with:
+          credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Build macOS wheels
         shell: bash
         run: |
@@ -45,9 +40,15 @@ jobs:
           make build
           cd $GITHUB_WORKSPACE
           make build
-                    
+
           cd $GITHUB_WORKSPACE/experimental/xformer
-          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false
+          if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
+            echo "using Google Cloud Storage cache"
+            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --google_default_credentials' >> .bazelrc.user
+          fi
+
+          bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --//:disable_version_check
           
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat macosx_10_9_x86_64
@@ -68,16 +69,6 @@ jobs:
         python-version: [3.8]
       fail-fast: false
     steps:
-      # Caches and restores the bazelisk download directory, the bazel build directory.
-      - name: Cache bazel
-        uses: actions/cache@v2.1.4
-        env:
-          cache-name: bazel-cache
-        with:
-          path: |
-            ~/.cache/bazelisk
-            ~/.cache/bazel
-          key: ${{ runner.os }}-arm-${{ env.cache-name }}
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -85,6 +76,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: google-github-actions/auth@v0
+        continue-on-error: true
+        with:
+          credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Build macOS arm wheels
         env:
           CMAKE_ENABLE_DARWIN_TARGET_ARM64: 1
@@ -97,9 +92,15 @@ jobs:
           make build
           cd $GITHUB_WORKSPACE
           make build
-                    
+
           cd $GITHUB_WORKSPACE/experimental/xformer
-          bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip
+          if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
+            echo "using Google Cloud Storage cache"
+            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-arm64-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --google_default_credentials' >> .bazelrc.user
+          fi
+
+          bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check
           
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat-name macosx_11_0_arm64
@@ -114,22 +115,12 @@ jobs:
   manylinux-release-wheel:
     if: github.event.pull_request.merged == true
     name: Build release wheels for manylinux2014
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.8]
       fail-fast: false
     steps:
-      # Caches and restores the bazelisk download directory, the bazel build directory.
-      - name: Cache bazel
-        uses: actions/cache@v2.1.4
-        env:
-          cache-name: bazel-cache
-        with:
-          path: |
-            ~/.cache/bazelisk
-            ~/.cache/bazel
-          key: ${{ runner.os }}-${{ env.cache-name }}
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -137,17 +128,31 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: google-github-actions/auth@v0
+        continue-on-error: true
+        with:
+          credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Build manylinux2014 wheels
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
+          pushd $GITHUB_WORKSPACE/experimental/xformer
+          if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
+            echo "using Google Cloud Storage cache"
+            echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }}' >> .bazelrc.user
+            echo -e 'build --google_default_credentials' >> .bazelrc.user
+          fi
+          popd
+
           docker run \
+            -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
+            -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:2.10-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
-          python -m pip install auditwheel --no-cache-dir
+          python -m pip install auditwheel==5.2.0 --no-cache-dir
           cd python
           for f in dist/*.whl; do
             auditwheel repair --plat manylinux2014_x86_64 $f
@@ -170,16 +175,6 @@ jobs:
         python-version: [3.8]
       fail-fast: false
     steps:
-      # Caches and restores the bazelisk download directory, the bazel build directory.
-      - name: Cache bazel
-        uses: actions/cache@v2.1.4
-        env:
-          cache-name: bazel-cache
-        with:
-          path: |
-            ~/.cache/bazelisk
-            ~/.cache/bazel
-          key: ${{ runner.os }}-${{ env.cache-name }}
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -187,6 +182,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: google-github-actions/auth@v0
+        continue-on-error: true
+        with:
+          credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Configure pagefile
         uses: al-cheb/configure-pagefile-action@v1.2
         with:
@@ -215,7 +214,7 @@ jobs:
 
           cd %GITHUB_WORKSPACE%/experimental/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe"  
+          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --//:disable_version_check
       - name: Build windows wheels
         shell: cmd
         run: |

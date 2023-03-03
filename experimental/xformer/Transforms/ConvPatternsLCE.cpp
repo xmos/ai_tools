@@ -234,11 +234,12 @@ LogicalResult ReplaceBConv2DPattern::getKernelType(const BConvArgs &args,
 }
 
 LogicalResult ReplaceBConv2DPattern::getSerializedParamsAndTensors(
-    const BConvArgs &args, const Conv2DType &kt,
+    const BConvArgs &args, const Conv2DType &kt, OtType &otType,
     llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &thresholdsData,
     int &scratchBytes) const {
+  otType = OtType::Group;
   switch (kt) {
   case Conv2DType::BNNValidDirectBinary:
     if (failed(getBConv2DValidDirectBinaryParams(
@@ -376,8 +377,9 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectInt8Params(
       args.clampMin, args.clampMax, args.outputDepth);
   auto accuOverlaps = nn::OT_int8_clamped::get_accumulator_overlaps(
       receptiveVolume, args.outputDepth, rw);
-  nn::QuantisationParams qp =
-      nn::OutputTransformFnInt8::quantise_activation(mulAndBiases);
+  auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
+  nn::OutputTransformFnInt8_Group::QuantisationParams qp =
+      quantizer.quantise_activation(mulAndBiases, false);
 
   auto serialisedOffsetsMultipliersAndBiases =
       nn::OutputTransformFn::serialise_memory(accuOverlaps, qp.multipliers,
@@ -430,8 +432,9 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
       args.clampMin, args.clampMax, args.outputDepth);
   auto accuOverlaps = nn::OT_int8_clamped::get_accumulator_overlaps(
       receptiveVolume, args.outputDepth, rw);
-  nn::QuantisationParams qp =
-      nn::OutputTransformFnInt8::quantise_activation(mulAndBiases);
+  auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
+  nn::OutputTransformFnInt8_Group::QuantisationParams qp =
+      quantizer.quantise_activation(mulAndBiases, false);
 
   auto serialisedOffsetsMultipliersAndBiases =
       nn::OutputTransformFn::serialise_memory(accuOverlaps, qp.multipliers,

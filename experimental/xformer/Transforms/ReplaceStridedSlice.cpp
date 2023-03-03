@@ -34,33 +34,36 @@ struct ReplaceStridedSlicePattern
   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSliceOp,
                                 PatternRewriter &rewriter) const override {
 
-    auto inputElementalType =
-        stridedSliceOp.input().getType().cast<ShapedType>().getElementType();
+    auto inputType = stridedSliceOp.input().getType().cast<RankedTensorType>();
+    auto inputElementType = inputType.getElementType();
 
     // Check for invalid types and return
     // Input type must be QI8
-    if (!(inputElementalType.isa<quant::QuantizedType>() &&
-          inputElementalType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementalType.cast<quant::QuantizedType>()
+    if (!(inputElementType.isa<quant::QuantizedType>() &&
+          inputElementType.cast<quant::QuantizedType>().isSigned() &&
+          inputElementType.cast<quant::QuantizedType>()
                   .getStorageTypeIntegralWidth() == 8)) {
       return failure();
     }
 
-    auto outputElementalType =
-        stridedSliceOp.output().getType().cast<ShapedType>().getElementType();
+    auto outputType =
+        stridedSliceOp.output().getType().cast<RankedTensorType>();
+    auto outputElementType = outputType.getElementType();
 
     // Output type must be QI8
-    if (!(outputElementalType.isa<quant::QuantizedType>() &&
-          outputElementalType.cast<quant::QuantizedType>().isSigned() &&
-          outputElementalType.cast<quant::QuantizedType>()
+    if (!(outputElementType.isa<quant::QuantizedType>() &&
+          outputElementType.cast<quant::QuantizedType>().isSigned() &&
+          outputElementType.cast<quant::QuantizedType>()
                   .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    // Depth must be a multiple of four
+    if (inputType.getDimSize(3) % 4 != 0 || outputType.getDimSize(3) % 4 != 0) {
       return failure();
     }
 
     // Extract args from the op
-    auto inputType =
-        stridedSliceOp.input().getType().dyn_cast<RankedTensorType>();
-
     DenseElementsAttr beginAttr;
     matchPattern(stridedSliceOp.begin(), m_Constant(&beginAttr));
 
@@ -90,7 +93,8 @@ struct ReplaceStridedSlicePattern
                            {beginY, beginX}, {1, 1, 1}, {strideY, strideX});
 
     nn::ImToColValid::Params imToColParams(image_geom, window_geom,
-                                           static_cast<int>(inputDepth));
+                                           static_cast<int>(inputDepth),
+                                           /*dont_zero_pad_at_the_end=*/true);
 
     std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
 

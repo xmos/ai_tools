@@ -67,6 +67,12 @@ def XC_Conv2D_TypeAttr : I32EnumAttr<"Conv2DType", "conv2d type enum", [
   XC_BNN_Conv2D_ValidDirect_Int8, XC_BNN_Conv2D_ValidIndirect_Int8
 ]>;
 
+def XC_Conv2D_Group : I32EnumAttrCase<"Group", 0>;
+def XC_Conv2D_Channelwise : I32EnumAttrCase<"Channelwise", 1>;
+
+def XC_Conv2D_OTAttr : I32EnumAttr<"OtType", "output transform type enum",
+                                   [XC_Conv2D_Group, XC_Conv2D_Channelwise]>;
+
 def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
   let summary = "Strided Slice op";
 
@@ -78,6 +84,25 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
     I32Attr:$begin_x,
     I32Attr:$begin_y,
     StrAttr:$memcpy_fn_param
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_AddOp : XC_Op<"add", [NoSideEffect]> {
+  let summary = "Add op";
+
+  let description = [{Add op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input1,
+    TensorOf<[QI8]>:$input2,
+    StrAttr:$fused_activation_function,
+
+    I32Attr:$multiplier1,
+    I32Attr:$multiplier2,
+    I32Attr:$bias,
+    I32Attr:$shift
   );
 
   let results = (outs TensorOf<[QI8]> : $output);
@@ -98,6 +123,7 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
     StrAttr:$memcpy_fn_param,
     StrAttr:$aggregate_fn_param,
     StrAttr:$output_transform_fn_param,
+    StrAttr:$output_transform_type,
     I32Attr:$scratch_bytes,
     I32Attr:$thread_count,
     StrArrayAttr:$abstract_kernel_params
@@ -168,13 +194,25 @@ def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
   let description = [{Pad op.}];
 
   let arguments = (ins
-    TensorOf<[F32, I32, QI8]>:$input,
-    TensorOf<[I32]>:$padding,
-
+    TensorOf<[QI8]>:$input,
+    StrAttr:$padding_plan,
     I32Attr:$pad_value
     );
 
-  let results = (outs TensorOf<[F32, I32, QI8]> : $output);
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [NoSideEffect]> {
+  let summary = "Pad 3 to 4 op";
+
+  let description = [{Pad 3 to 4 op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+    I32Attr:$pad_value
+    );
+
+  let results = (outs TensorOf<[QI8]> : $output);
 }
 
 def XC_LoadConstantOp
@@ -193,9 +231,9 @@ def XC_LoadFlashOp : XC_Op<"ld_flash", [NoSideEffect]> {
 
   let description = [{Load from flash op.}];
 
-  let arguments = (ins I32Attr : $address, I32Attr : $size);
+  let arguments = (ins I32Attr : $address, I32ArrayAttr : $sizes);
 
-  let results = (outs AnyTensor : $output);
+  let results = (outs Variadic<AnyTensor> : $output);
 }
 
 def XC_Bsign8Op : XC_Op<"bsign_8", [NoSideEffect]> {

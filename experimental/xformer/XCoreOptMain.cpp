@@ -14,6 +14,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -42,12 +43,6 @@ cl::opt<unsigned> loadExternallyIfLargerOption(
              "(default = 96 bytes). Cannot be specified when "
              "xcore-flash-image-file is not provided."),
     cl::init(96));
-
-cl::opt<bool> reduceMemoryOption(
-    "xcore-reduce-memory",
-    cl::desc(
-        "Try to reduce memory usage by possibly increasing execution time."),
-    cl::init(true));
 
 // This option is to provide an error threshold.
 // The maximum average error between the reference and quantised
@@ -78,6 +73,16 @@ cl::opt<unsigned> convMultiplierFactorOption(
              "minimum multiplier."
              "(default = UINT32_MAX)."),
     cl::init(UINT32_MAX));
+
+cl::opt<bool> opSplitTensorArenaOption(
+    "xcore-op-split-tensor-arena",
+    cl::desc("Enable prototype op split to reduce tensor arena size."),
+    cl::init(false));
+
+cl::opt<bool> allowInputModificationOption(
+    "xcore-allow-input-modification",
+    cl::desc("Allow the compiler to modify input tensor for optimizations."),
+    cl::init(false));
 
 } // namespace xcore
 } // namespace mlir
@@ -110,6 +115,36 @@ LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
   return success();
 }
 
+LogicalResult isCompatibleVersion(cl::opt<std::string> &version,
+                                  int32_t majorVersion, int32_t minorVersion,
+                                  int32_t patchVersion) {
+  if (!version.empty()) {
+    SmallVector<StringRef> partsStr;
+    llvm::SplitString(version, partsStr, ".");
+    if (partsStr.size() != 3) {
+      return failure();
+    }
+    SmallVector<int> parts;
+    int val = 0;
+    for (auto &i : partsStr) {
+      if (!llvm::to_integer(i, val, 10)) {
+        return failure();
+      }
+      parts.push_back(val);
+    }
+
+    // Check provided repo version with compiler version
+    // If major version is zero, then minor versions must match
+    // Otherwise, major versions must match and compiler version
+    // must be less or equal to provided repo version
+    if ((majorVersion == 0 && parts[0] == 0 && minorVersion != parts[1]) ||
+        (majorVersion != parts[0]) || (minorVersion > parts[1])) {
+      return failure();
+    }
+  }
+  return success();
+}
+
 int main(int argc, char **argv) {
   llvm::InitLLVM y(argc, argv);
 
@@ -136,6 +171,17 @@ int main(int argc, char **argv) {
   static cl::alias aliasTflmcPrefixOption(
       "xp", cl::desc("Alias for --xcore-naming-prefix"),
       cl::aliasopt(tflmcPrefixOption));
+  static cl::opt<bool> tflmcPrintEnabled(
+      "xcore-tflmc-print", cl::desc("Print out memory allocation plan"),
+      cl::init(false));
+  static cl::opt<std::string> versionLibTfliteMicro(
+      "xcore-compatible-with-lib-tflite-micro",
+      cl::desc("Check if lib_tflite_micro version is compatible"), cl::init(""),
+      cl::Hidden);
+  static cl::opt<std::string> versionLibNN(
+      "xcore-compatible-with-lib-nn",
+      cl::desc("Check if lib_nn version is compatible"), cl::init(""),
+      cl::Hidden);
 
   // Register any command line options.
   registerAsmPrinterCLOptions();
@@ -171,6 +217,26 @@ int main(int argc, char **argv) {
       mlir::xcore::threadCountOption > 8) {
     return failedMessage(
         "Please specify a thread count between one and eight!");
+  }
+
+  if (failed(isCompatibleVersion(
+          versionLibTfliteMicro, lib_tflite_micro::major_version,
+          lib_tflite_micro::minor_version, lib_tflite_micro::patch_version))) {
+    return failedMessage("Incompatible lib_tflite_micro version!\n\nPlease use "
+                         "lib_tflite_micro version " +
+                         Twine(lib_tflite_micro::major_version) + "." +
+                         Twine(lib_tflite_micro::minor_version) + "." +
+                         Twine(lib_tflite_micro::patch_version));
+  }
+
+  if (failed(isCompatibleVersion(versionLibNN, lib_nn::major_version,
+                                 lib_nn::minor_version,
+                                 lib_nn::patch_version))) {
+    return failedMessage("Incompatible lib_nn version!\n\nPlease use "
+                         "lib_nn version " +
+                         Twine(lib_nn::major_version) + "." +
+                         Twine(lib_nn::minor_version) + "." +
+                         Twine(lib_nn::patch_version));
   }
 
   // Parse input.
@@ -231,21 +297,21 @@ int main(int argc, char **argv) {
       requiredThreadCount = attr.cast<mlir::IntegerAttr>().getInt();
     }
 
-    struct shared_config::xcore_metadata cfg;
+    struct shared_config::xcore_metadata sharedCfg;
     // Store version info
-    cfg.lib_nn_major_version = lib_nn::major_version;
-    cfg.lib_nn_minor_version = lib_nn::minor_version;
-    cfg.lib_nn_patch_version = lib_nn::patch_version;
-    cfg.lib_tflite_micro_major_version = lib_tflite_micro::major_version;
-    cfg.lib_tflite_micro_minor_version = lib_tflite_micro::minor_version;
-    cfg.lib_tflite_micro_patch_version = lib_tflite_micro::patch_version;
-    cfg.xformer_major_version = xformer::majorVersion;
-    cfg.xformer_minor_version = xformer::minorVersion;
-    cfg.xformer_patch_version = xformer::patchVersion;
+    sharedCfg.lib_nn_major_version = lib_nn::major_version;
+    sharedCfg.lib_nn_minor_version = lib_nn::minor_version;
+    sharedCfg.lib_nn_patch_version = lib_nn::patch_version;
+    sharedCfg.lib_tflite_micro_major_version = lib_tflite_micro::major_version;
+    sharedCfg.lib_tflite_micro_minor_version = lib_tflite_micro::minor_version;
+    sharedCfg.lib_tflite_micro_patch_version = lib_tflite_micro::patch_version;
+    sharedCfg.xformer_major_version = xformer::majorVersion;
+    sharedCfg.xformer_minor_version = xformer::minorVersion;
+    sharedCfg.xformer_patch_version = xformer::patchVersion;
     // Store number of threads needed to execute the model
-    cfg.required_thread_count = requiredThreadCount;
+    sharedCfg.required_thread_count = requiredThreadCount;
     auto bufferData =
-        std::string((char *)&cfg, sizeof(shared_config::xcore_metadata));
+        std::string((char *)&sharedCfg, sizeof(shared_config::xcore_metadata));
 
     std::map<std::string, std::string> metadata;
     auto xcoreConfigMetadata =
@@ -258,10 +324,17 @@ int main(int argc, char **argv) {
       return failedMessage("Failed to obtain flatbuffer string from MLIR!");
     }
 
+    // Write tflite file
+    std::string outFilename(outputFilename);
+    if (failed(xcore::utils::writeDataToFile(outFilename, flatBufferString))) {
+      return failedMessage("Failed to write output tflite file!");
+    }
+
     // Invoke tflmc and get info
     std::stringstream tflmcSourceString, tflmcHeaderString;
     try {
-      tflmc::Compiler compiler(flatBufferString.data(), tflmcPrefixOption);
+      tflmc::Compiler compiler(flatBufferString.data(), &sharedCfg,
+                               tflmcPrefixOption, tflmcPrintEnabled);
       emitRemark(UnknownLoc::get(module.getContext()))
           << "Tensor arena size : " << compiler.getTensorArenaSize();
       compiler.writeSource(tflmcSourceString);
@@ -270,11 +343,6 @@ int main(int argc, char **argv) {
       return failedMessage(e.what());
     } catch (...) {
       return failedMessage("Unknown exception while invoking tflmc!");
-    }
-
-    std::string outFilename(outputFilename);
-    if (failed(xcore::utils::writeDataToFile(outFilename, flatBufferString))) {
-      return failedMessage("Failed to write output tflite file!");
     }
 
     std::string tflmcSourceFilename(outputFilename + ".cpp");

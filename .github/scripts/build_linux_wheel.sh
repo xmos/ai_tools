@@ -11,6 +11,8 @@ pip install cmake
 # and https://github.blog/2022-04-12-git-security-vulnerability-announced/
 # This was preventing setuptools-scm from detecting the version as it uses git
 git config --global --add safe.directory /ai_tools
+git config --global --add safe.directory /ai_tools/third_party/lib_nn
+git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro
 git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
 git describe --tags
 
@@ -26,7 +28,7 @@ CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make build
 # Crosstool toolchain info is mentioned here, "--crosstool_top"
 # https://github.com/tensorflow/tensorflow/blob/master/.bazelrc
 cd experimental/xformer
-bazel build //:xcore-opt --linkopt=-lrt --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain
+bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain --//:disable_version_check
 
 
 # Build python wheel

@@ -8,6 +8,7 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
 
 include "IR/XCoreOps.td"
+include "Utils/Utils.td"
 
 // Activation lowering patterns
 def getLookupTable
@@ -22,67 +23,45 @@ def:
             $output)))>;
 }
 
-// Pad pattern
-// We only support padding for 4 dimensions
-def HasValidPaddingShape
-    : Constraint<CPred<"$0.getType().cast<ShapedType>().getDimSize(0) == 4">>;
-
-// We only support spatial padding
-def HasNoPaddingForBatchAndChannel
-    : Constraint<CPred<
-          "$0.cast<DenseIntElementsAttr>().getNumElements() == 8 && "
-          "($0.cast<DenseIntElementsAttr>().getValue<int32_t>({0,0}) == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValue<int32_t>({0,1}) == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValue<int32_t>({3,0}) == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValue<int32_t>({3,1}) == 0)">>;
-
-// We only support bytes per pixel being a multiple of four
-// Check if channel dimension size * sizeof(input type) is divisible by 4
-def HasValidBytesPerPixel : Constraint<Or<[
-  CPred<"$0.getType().cast<ShapedType>().getElementType().isIntOrFloat() &&"
-        "($0.getType().cast<ShapedType>().getElementType()."
-        "getIntOrFloatBitWidth() / 8 *  "
-        "$0.getType().cast<ShapedType>().getDimSize(3)) % 4 == 0">,
-  CPred<"$0.getType().cast<ShapedType>().getElementType().isa<quant::"
-        "QuantizedType>() &&"
-        "($0.getType().cast<ShapedType>().getElementType().cast<quant::"
-        "QuantizedType>().getStorageTypeIntegralWidth() / 8 * "
-        "$0.getType().cast<ShapedType>().getDimSize(3)) % 4 == 0">
-]>>;
-
 def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
 
-// TODO: Remove when we have fusing of Pad and Conv2D in xformer2
-// Replacing pad when there is a following Conv2D after a Pad is breaking fusing
-// passes in xformer1
-def HasNoFollowingConv2D : Constraint<CPred<"hasNoFollowingConv2D($0)">>;
+def getPaddingPlan
+    : NativeCodeCall<
+          "getPaddingPlan($_builder, $0.getDefiningOp<TFL::PadOp>())">;
 
-// TODO : DPK
-// Not using XC_Pad in our runtime at the moment
-// Would fail with "Failed to get registration from op code CUSTOM"
-// def : Pat<(TFL_PadOp
-//            : $output $input, (TFL_ConstOp
-//                               : $padding_op $padding_attr)),
-//           (XC_PadOp $input, $padding_op, (getPadValue $input)), [
-//             (HasValidPaddingShape $padding_op),
-//             (HasNoPaddingForBatchAndChannel $padding_attr),
-//             (HasValidBytesPerPixel $input), (HasNoFollowingConv2D $output)
-//           ]>;
+foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
+def:
+  Pat<(TFL_PadOp
+           : $output TensorOf<[QI8]>:$input, (constOp
+                              : $padding_op $padding_attr)),
+          (XC_PadOp $input, (getPaddingPlan $output), (getPadValue $input)), [
+            (HasNoPaddingForBatchAndChannel $padding_attr),
+            (HasMultipleOfNBytesPerPixel<4> $input)
+          ]>;
+
+def:
+  Pat<(TFL_PadOp
+           : $output TensorOf<[QI8]>:$input, (constOp
+                              : $padding_op $padding_attr)),
+          (XC_Pad3To4Op $input, (getPadValue $input)), [
+            (HasOnlyPadding3To4ForChannel $padding_attr),
+          ]>;
+}
 
 // Fuse XC_Conv2D(Reshape()) -> XC_Conv2D()
 def : Pat<(XC_Conv2DV2Op
            : $cout(TFL_ReshapeOp
                    : $rout $input, $shape),
-             $weights, $muls, $kt, $mp, $aggp, $otp, $scratch, $tc, $akp),
-          (XC_Conv2DV2Op $input, $weights, $muls, $kt, $mp, $aggp, $otp,
+             $weights, $muls, $kt, $mp, $aggp, $otp, $ott, $scratch, $tc, $akp),
+          (XC_Conv2DV2Op $input, $weights, $muls, $kt, $mp, $aggp, $otp, $ott,
            $scratch, $tc, $akp)>;
 
 // Fuse Reshape(XC_Conv2D()) -> XC_Conv2D()
 def : Pat<(TFL_ReshapeOp
            : $rout(XC_Conv2DV2Op $input, $weights, $muls, $kt, $mp, $aggp, $otp,
-                   $scratch, $tc, $akp),
+                   $ott, $scratch, $tc, $akp),
              $shape),
-          (XC_Conv2DV2Op $input, $weights, $muls, $kt, $mp, $aggp, $otp,
+          (XC_Conv2DV2Op $input, $weights, $muls, $kt, $mp, $aggp, $otp, $ott,
            $scratch, $tc, $akp)>;
 
 // Replace LQ_QuantizeOp with XC_bsign_8

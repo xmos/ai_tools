@@ -253,10 +253,17 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
 
   otType = OtType::Group;
 
+  if (convDebugOption) {
+    std::stringstream msg;
+    msg << "Conv debug" << std::endl;
+    args.convOp->emitRemark(
+        utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
+  }
+
   nn::MulsAndBias mulAndBiases =
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
           args.effectiveMultiplier, args.bias, args.filter, args.inputZeroPoint,
-          args.outputZeroPoint, args.outputDepth);
+          args.outputZeroPoint, args.outputDepth, convDebugOption);
   // Try group OT
   auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
@@ -464,10 +471,18 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
 
   otType = OtType::Group;
 
+  if (convDebugOption) {
+    std::stringstream msg;
+    msg << "Conv debug" << std::endl;
+    args.convOp->emitRemark(
+        utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
+  }
+
   nn::MulsAndBias mulAndBiases =
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
           args.effectiveMultiplier, args.bias, args.filter, filterShape,
-          args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
+          args.inputZeroPoint, args.outputZeroPoint, args.outputDepth,
+          convDebugOption);
   // Try group OT
   auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =

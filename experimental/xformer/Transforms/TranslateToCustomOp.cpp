@@ -137,11 +137,12 @@ struct RewriteToCustomOp : public OpRewritePattern<XCoreOp> {
 void TranslateToCustomOp::runOnOperation() {
   auto *ctx = &getContext();
   RewritePatternSet patterns(ctx);
-  func::FuncOp func = getOperation();
 
-  MemoryPlanner mp(func);
-  auto offsets = mp.getOffsets();
+  auto &m = getAnalysis<MemoryPlanner>();
+  auto offsets = m.getOffsets();
+
   // Store as an attribute in the module
+  func::FuncOp func = getOperation();
   auto module = func->getParentOfType<ModuleOp>();
   OpBuilder builder(func);
   module->setAttr("xc.offsets", builder.getI32VectorAttr(offsets));

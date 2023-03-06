@@ -254,10 +254,14 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
   otType = OtType::Group;
 
   if (convDebugOption) {
+    std::string message;
+    llvm::raw_string_ostream os(message);
+    args.convOp->print(os);
     std::stringstream msg;
-    msg << "Conv debug" << std::endl;
-    args.convOp->emitRemark(
-        utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
+    msg << "Conv2D DEBUG" << std::endl;
+    std::cout << message << std::endl
+              << utils::getMsgWithLocPrefix(*args.convOp, msg.str())
+              << std::endl;
   }
 
   nn::MulsAndBias mulAndBiases =
@@ -472,10 +476,14 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
   otType = OtType::Group;
 
   if (convDebugOption) {
+    std::string message;
+    llvm::raw_string_ostream os(message);
+    args.convOp->print(os);
     std::stringstream msg;
-    msg << "Conv debug" << std::endl;
-    args.convOp->emitRemark(
-        utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
+    msg << "DepthwiseConv2D DEBUG" << std::endl;
+    std::cout << message << std::endl
+              << utils::getMsgWithLocPrefix(*args.convOp, msg.str())
+              << std::endl;
   }
 
   nn::MulsAndBias mulAndBiases =

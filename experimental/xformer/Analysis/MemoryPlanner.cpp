@@ -9,7 +9,14 @@
 namespace mlir {
 namespace xcore {
 
-MemoryPlanner::MemoryPlanner(func::FuncOp op) : funcOp(op), liveness(op) {
+MemoryPlanner::MemoryPlanner(Operation *op) : liveness(op) {
+
+  if(!llvm::isa<func::FuncOp>(op)){
+    return;
+  }
+
+  auto funcOp = dyn_cast<func::FuncOp>(op);
+
   auto getValueSize = [](Value v) {
     auto type = v.getType().dyn_cast<ShapedType>();
     size_t typeSizeInBytes;
@@ -32,6 +39,7 @@ MemoryPlanner::MemoryPlanner(func::FuncOp op) : funcOp(op), liveness(op) {
 
     return k;
   };
+
 
   for (BlockArgument argument : funcOp.getArguments()) {
     valueInfo.insert(
@@ -170,28 +178,30 @@ std::vector<int> MemoryPlanner::getOffsets() {
       continue;
     }
 
-    // if (llvm::isa<PadOp>(o)) {
+    if (llvm::isa<PadOp>(o)) {
+      auto in = o->getOperand(0);
+      if (in.hasOneUse()) {
+        auto out = o->getResult(0);
+        int offset = valueInfo[out].size - valueInfo[in].size;
+        outInVals[out] = {in, offset};
+        valueInfo[in].size += offset;
+        valueInfo[in].lastUsed = valueInfo[out].lastUsed;
+      }
+    }
+
+    // if (llvm::isa<Conv2DV2Op>(o)) {
+    //   auto convOp = dyn_cast<Conv2DV2Op>(o);
+    //   if (symbolizeConv2DType(convOp.conv2d_kernel_type()) !=
+    //       Conv2DType::ValidIndirect) {
+    //     continue;
+    //   }
     //   auto in = o->getOperand(0);
     //   auto out = o->getResult(0);
-    //   int offset = valueInfo[out].size - valueInfo[in].size;
+    //   int offset = 576;//valueInfo[out].size - valueInfo[in].size;
     //   outInVals[out] = {in, offset};
     //   valueInfo[in].size += offset;
     //   valueInfo[in].lastUsed = valueInfo[out].lastUsed;
     // }
-
-    if (llvm::isa<Conv2DV2Op>(o)) {
-      auto convOp = dyn_cast<Conv2DV2Op>(o);
-      if (symbolizeConv2DType(convOp.conv2d_kernel_type()) !=
-          Conv2DType::ValidIndirect) {
-        continue;
-      }
-      auto in = o->getOperand(0);
-      auto out = o->getResult(0);
-      int offset = 576;//valueInfo[out].size - valueInfo[in].size;
-      outInVals[out] = {in, offset};
-      valueInfo[in].size += offset;
-      valueInfo[in].lastUsed = valueInfo[out].lastUsed;
-    }
   }
 
   // Fix up consecutive overlapping allocations

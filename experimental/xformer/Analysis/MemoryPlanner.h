@@ -40,7 +40,7 @@ public:
     int lastUsed;
   };
 
-  MemoryPlanner(func::FuncOp op);
+  MemoryPlanner(Operation *op);
 
   std::vector<int> getOffsets();
 
@@ -58,8 +58,6 @@ private:
   std::vector<Operation *> operations;
 
   Liveness liveness;
-
-  func::FuncOp funcOp;
 };
 
 /*

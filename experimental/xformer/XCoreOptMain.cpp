@@ -361,12 +361,8 @@ int main(int argc, char **argv) {
       */
       offline_offsets.insert(offline_offsets.begin(),
                              {0, 0, (int)offline_offsets.size()});
-      offline_offsets.resize(((offline_offsets.size() + 15) / 16) * 16);
-      // printf("\n");
-      // for (int i = 0; i < offline_offsets.size(); i++) {
-      //   printf("%d, ", offline_offsets[i]);
-      // }
-      // printf("\n");
+      // Align to sixteen bytes as metadata value has to be 16-byte aligned buffer
+      offline_offsets.resize(((offline_offsets.size() + 3) / 4) * 4);
 
       auto offlineOffsetsData = std::string((char *)offline_offsets.data(),
                                             offline_offsets.size() * 4);

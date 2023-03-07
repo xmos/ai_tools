@@ -9,8 +9,7 @@ pipeline {
         }
     }
     environment {
-        BAZEL_CACHE_KEY_FILE = credentials('BAZEL_REMOTE_CACHE_JSON_KEY')
-        BAZEL_CACHE_URL = 'https://storage.googleapis.com/bazel_remote_cache_0/jenkins'
+        BAZEL_CACHE_URL = 'http://srv-bri-bld-cache:8080'
     }
     parameters { // Available to modify on the job page within Jenkins if starting a build
         string( // use to try different tools versions
@@ -84,7 +83,7 @@ pipeline {
                       make build
                 """
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel build --remote_cache=${BAZEL_CACHE_URL} --google_credentials=${BAZEL_CACHE_KEY_FILE} //:xcore-opt --verbose_failures
+                      bazel build --remote_cache=${BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check
                 """
                 sh """. activate ./ai_tools_venv &&
                       (cd python && python3 setup.py bdist_wheel) &&
@@ -97,7 +96,7 @@ pipeline {
             steps {
                 // xformer2 unit tests
         sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel test --remote_cache=${BAZEL_CACHE_URL} --google_credentials=${BAZEL_CACHE_KEY_FILE} //Test:all --verbose_failures --test_output=errors
+                      bazel test --remote_cache=${BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check
                 """
         // xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&

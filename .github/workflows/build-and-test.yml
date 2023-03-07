@@ -37,6 +37,7 @@ jobs:
       - uses: google-github-actions/auth@v0
         continue-on-error: true
         with:
+          create_credentials_file: true
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Build setup
         env:
@@ -105,6 +106,7 @@ jobs:
       - uses: google-github-actions/auth@v0
         continue-on-error: true
         with:
+          create_credentials_file: true
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Build xformer and manylinux2014 wheel in docker
         # The SETUPTOOLS_SCM_PRETEND_VERSION var is passed via docker to the
@@ -166,6 +168,7 @@ jobs:
       - uses: google-github-actions/auth@v0
         continue-on-error: true
         with:
+          create_credentials_file: true
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Configure pagefile
         uses: al-cheb/configure-pagefile-action@v1.2
@@ -197,8 +200,9 @@ jobs:
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%/experimental/xformer
+          IF DEFINED GOOGLE_APPLICATION_CREDENTIALS set "BAZEL_EXTRA_ARGS=--remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --remote_upload_local_results=true --experimental_remote_cache_compression"
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --verbose_failures --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --remote_upload_local_results=true --experimental_remote_cache_compression --//:disable_version_check
+          bazelisk build //:xcore-opt --verbose_failures --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" %BAZEL_EXTRA_ARGS% --//:disable_version_check
       - name: Build windows wheels
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PRETEND_VERSION }}

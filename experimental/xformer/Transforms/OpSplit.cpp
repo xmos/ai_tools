@@ -491,8 +491,8 @@ void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
 
-  int startOp = 14;
-  int endOp = 11;
+  int startOp = 9;
+  int endOp = 5;
   int numSplits = 2;
   int k = 0;
   OpBuilder builder(func);
@@ -516,16 +516,14 @@ void OpSplit::runOnOperation() {
 
   RewritePatternSet patterns2(ctx);
 
+  patterns2.insert<RaiseStridedSliceHorizontalAddPattern>(ctx);
   patterns2.insert<RaiseStridedSliceHorizontalPattern<TFL::Conv2DOp>>(ctx);
   patterns2.insert<RaiseStridedSliceHorizontalPattern<TFL::DepthwiseConv2DOp>>(
       ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
 
-  RewritePatternSet patterns3(ctx);
-  patterns3.insert<RaiseStridedSliceHorizontalAddPattern>(ctx);
-  (void)applyPatternsAndFoldGreedily(func, std::move(patterns3));
-}
+ }
 } // namespace
 
 // Creates an instance of the OpSplit pass.

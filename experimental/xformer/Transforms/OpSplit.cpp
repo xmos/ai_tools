@@ -12,9 +12,7 @@ namespace xcore {
 
 namespace {
 static constexpr char opSplitLabel[] = "opSplitLabel";
-static constexpr char raisedStridedSliceLabel[] = "raisedStridedSliceLabel";
-static constexpr char opSplitLabel1[] = "opSplitLabel1";
-static constexpr char opSplitLabel2[] = "opSplitLabel2";
+static constexpr char opSplitLabelNumSplits[] = "opSplitLabelNumSplits";
 
 // OpSplit
 struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
@@ -35,7 +33,14 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
   LogicalResult matchAndRewrite(TargetOp targetOp,
                                 PatternRewriter &rewriter) const override {
     // Do not split ops already split
-    if (targetOp->hasAttr(opSplitLabel2))
+    if (!(targetOp->hasAttr(opSplitLabelNumSplits)))
+      return failure();
+
+    int numSplits = 0;
+    auto attr = targetOp->getAttr(opSplitLabelNumSplits);
+    numSplits = attr.template cast<mlir::IntegerAttr>().getInt();
+
+    if (targetOp->hasAttr(opSplitLabel))
       return failure();
 
     // Check for invalid cases and return
@@ -61,19 +66,12 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
     int32_t outputDepth = outputType.getDimSize(3);
     int32_t outputSize = outputHeight * outputWidth * outputDepth;
 
-    // Number chosen for testing purposes
-    // Actual number will depend on application
-    int32_t splitTensorSize = 98304;
-    // Only op split if output size is too big
-    if (outputSize < 2 * splitTensorSize)
-      return failure();
-
     // Clone the op as we want to replace it with the same op type but with
     // strided slices and concat inserted after it
     auto targetReplacement = llvm::cast<TargetOp>(rewriter.clone(*targetOp));
 
     // Apply label, so that the same op is not rewritten a second time.
-    targetReplacement->setAttr(opSplitLabel2, rewriter.getUnitAttr());
+    targetReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     // variables that are the same for all strided slices to be created
     int32_t stridesAttr[4] = {1, 1, 1, 1};
@@ -86,9 +84,6 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
 
     // Will hold strided slice op to insert after target op
     SmallVector<Value> stridedSliceOps;
-
-    // The number of splits is determined by target op output size
-    int numSplits = ceil(outputSize / splitTensorSize);
 
     int32_t sliceHeight = outputHeight / numSplits;
 
@@ -132,7 +127,7 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
           end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
 
       // Add label, for safety when raising slice later
-      stridedSliceOp->setAttr(opSplitLabel2, rewriter.getUnitAttr());
+      stridedSliceOp->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
       // Store created strided slice op to use as input to concat
       stridedSliceOps.push_back(stridedSliceOp.getResult());
@@ -161,12 +156,13 @@ struct RaiseStridedSliceHorizontalAddPattern
   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
                                 PatternRewriter &rewriter) const override {
     // Only raise slices that have been inserted with op split pass
-    if (!((stridedSlice->hasAttr(opSplitLabel2))))
+    if (!((stridedSlice->hasAttr(opSplitLabel))))
       return failure();
 
-    // Do not raise slices that have already been raised
-    if (stridedSlice->hasAttr(raisedStridedSliceLabel))
+    // If strided slice does not have a defining op, return failure
+    if (!(stridedSlice.input().getDefiningOp())) {
       return failure();
+    }
 
     if (!isa<TFL::AddOp>(stridedSlice.input().getDefiningOp())) {
       return failure();
@@ -175,6 +171,10 @@ struct RaiseStridedSliceHorizontalAddPattern
     // Get data from conv needed to raise strided slice
     auto addOriginal =
         llvm::cast<TFL::AddOp>(stridedSlice.input().getDefiningOp());
+
+    // Do not raise strided slice if op does not have op split label
+    if (!(addOriginal->hasAttr(opSplitLabel)))
+      return failure();
 
     auto addOriginalOutput =
         addOriginal.output().getType().template cast<RankedTensorType>();
@@ -223,8 +223,6 @@ struct RaiseStridedSliceHorizontalAddPattern
             .template cast<ShapedType>()
             .getElementType());
     stridedSliceLHS->getResult(0).setType(stridedSliceLHSType);
-    // Label it as raised so it is not raised again
-    stridedSliceLHS->setAttr(raisedStridedSliceLabel, rewriter.getUnitAttr());
 
     // Create new strided slice for above conv
     auto stridedSliceRHS =
@@ -238,8 +236,6 @@ struct RaiseStridedSliceHorizontalAddPattern
             .template cast<ShapedType>()
             .getElementType());
     stridedSliceRHS->getResult(0).setType(stridedSliceRHSType);
-    // Label it as raised so it is not raised again
-    stridedSliceRHS->setAttr(raisedStridedSliceLabel, rewriter.getUnitAttr());
 
     auto addReplacement = llvm::cast<TFL::AddOp>(rewriter.clone(*addOriginal));
     RankedTensorType addReplacementType = RankedTensorType::get(
@@ -269,12 +265,13 @@ struct RaiseStridedSliceHorizontalPattern
   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSlice,
                                 PatternRewriter &rewriter) const override {
     // Only raise slices that have been inserted with op split pass
-    if (!((stridedSlice->hasAttr(opSplitLabel2))))
+    if (!(stridedSlice->hasAttr(opSplitLabel)))
       return failure();
 
-    // Do not raise slices that have already been raised
-    if (stridedSlice->hasAttr(raisedStridedSliceLabel))
+    // If strided slice does not have a defining op, return failure
+    if (!(stridedSlice.input().getDefiningOp())) {
       return failure();
+    }
 
     if (!isa<ConvOp>(stridedSlice.input().getDefiningOp())) {
       return failure();
@@ -283,6 +280,10 @@ struct RaiseStridedSliceHorizontalPattern
     // Get data from conv needed to raise strided slice
     auto convOriginal =
         llvm::cast<ConvOp>(stridedSlice.input().getDefiningOp());
+
+    // Do not raise strided slice if op does not have op split label
+    if (!(convOriginal->hasAttr(opSplitLabel)))
+      return failure();
 
     auto convOriginalInput =
         convOriginal.input().getType().template cast<RankedTensorType>();
@@ -414,12 +415,6 @@ struct RaiseStridedSliceHorizontalPattern
         stridedSlice.begin_mask(), stridedSlice.end_mask(),
         stridedSlice.ellipsis_mask(), stridedSlice.new_axis_mask(),
         stridedSlice.shrink_axis_mask());
-    if (stridedSlice->hasAttr(opSplitLabel1))
-      // Label it as raised so it is not raised again
-      stridedSliceReplacement->setAttr(raisedStridedSliceLabel,
-                                       rewriter.getUnitAttr());
-    if (stridedSlice->hasAttr(opSplitLabel2))
-      stridedSliceReplacement->setAttr(opSplitLabel1, rewriter.getUnitAttr());
 
     // Adjust shape for padding
     // For valid conv the shapes will not change since pad values are zero
@@ -495,6 +490,21 @@ struct RaiseStridedSliceHorizontalPattern
 void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
+
+  int startOp = 14;
+  int endOp = 11;
+  int numSplits = 2;
+  int k = 0;
+  OpBuilder builder(func);
+  func.walk([&](Operation *op) {
+    if (k == startOp) {
+      op->setAttr(opSplitLabelNumSplits, builder.getI32IntegerAttr(numSplits));
+    }
+    if (k < startOp && k > endOp) {
+      op->setAttr(opSplitLabel, builder.getUnitAttr());
+    }
+    k++;
+  });
 
   RewritePatternSet patterns(ctx);
 

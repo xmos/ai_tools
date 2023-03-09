@@ -1,8 +1,8 @@
 // Copyright 2023 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#ifndef XFORMER_ANALYSIS_MEMORYPLANNER_H
-#define XFORMER_ANALYSIS_MEMORYPLANNER_H
+#ifndef XFORMER_ANALYSIS_MEMORYPLAN_H
+#define XFORMER_ANALYSIS_MEMORYPLAN_H
 
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -21,31 +21,36 @@ namespace xcore {
 used op
 */
 
-class MemoryPlanner {
+class MemoryPlan {
 public:
+  MemoryPlan(Operation *op);
+
+  std::vector<int> getAllocatedOffsets();
+
+  // int getMaxMemoryUsed();
+
+  // OpSplitPlan getOpSplitPlan();
+
+private:
   using QueueItem = std::pair<Value, size_t>;
+  //
   struct AscendingOffsetsComparator {
     bool operator()(const QueueItem &lhs, const QueueItem &rhs) const {
       return (lhs.second < rhs.second);
     }
   };
-
+  //
   using OrderedOffsets = std::multiset<QueueItem, AscendingOffsetsComparator>;
 
   struct ValueInfo {
     size_t id;
     size_t size;
-    bool constant;
+    bool isConstant;
     int firstUsed;
     int lastUsed;
   };
 
-  MemoryPlanner(Operation *op);
-
-  std::vector<int> getOffsets();
-
-private:
-  int getNewOffset(Value v, int size, OrderedOffsets &selected);
+  int getOffset(Value v, int size, OrderedOffsets &selected);
 
   DenseMap<Value, ValueInfo> valueInfo;
 
@@ -80,4 +85,4 @@ https://hal.inria.fr/hal-01956260/document
 } // namespace xcore
 } // namespace mlir
 
-#endif // XFORMER_ANALYSIS_MEMORYPLANNER_H
+#endif // XFORMER_ANALYSIS_MEMORYPLAN_H

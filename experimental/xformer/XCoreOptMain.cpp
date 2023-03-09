@@ -103,6 +103,8 @@ cl::opt<bool> convDebugOption("xcore-conv-debug",
                               cl::desc("Enable conv debug prints."),
                               cl::init(false));
 
+cl::opt<bool> overlapOption("xcore-overlap", cl::desc("Overlap buffers."),
+                            cl::init(false));
 } // namespace xcore
 } // namespace mlir
 
@@ -361,7 +363,8 @@ int main(int argc, char **argv) {
       */
       offline_offsets.insert(offline_offsets.begin(),
                              {0, 0, (int)offline_offsets.size()});
-      // Align to sixteen bytes as metadata value has to be 16-byte aligned buffer
+      // Align to sixteen bytes as metadata value has to be 16-byte aligned
+      // buffer
       offline_offsets.resize(((offline_offsets.size() + 3) / 4) * 4);
 
       auto offlineOffsetsData = std::string((char *)offline_offsets.data(),

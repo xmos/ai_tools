@@ -1,17 +1,18 @@
 // Copyright 2023 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include "Analysis/MemoryPlanner.h"
+#include "Analysis/MemoryPlan.h"
 #include "IR/XCoreOps.h"
+#include "Transforms/Options.h"
 
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 namespace mlir {
 namespace xcore {
 
-MemoryPlanner::MemoryPlanner(Operation *op) : liveness(op) {
+MemoryPlan::MemoryPlan(Operation *op) : liveness(op) {
 
-  if(!llvm::isa<func::FuncOp>(op)){
+  if (!llvm::isa<func::FuncOp>(op)) {
     return;
   }
 
@@ -39,7 +40,6 @@ MemoryPlanner::MemoryPlanner(Operation *op) : liveness(op) {
 
     return k;
   };
-
 
   for (BlockArgument argument : funcOp.getArguments()) {
     valueInfo.insert(
@@ -111,7 +111,7 @@ MemoryPlanner::MemoryPlanner(Operation *op) : liveness(op) {
     }
     int size = 0;
     for (auto v : lvb->currentlyLiveValues(o)) {
-      if (!valueInfo[v].constant)
+      if (!valueInfo[v].isConstant)
         size += valueInfo[v].size;
     }
     if (size > maxSize) {
@@ -126,10 +126,10 @@ MemoryPlanner::MemoryPlanner(Operation *op) : liveness(op) {
   printf("\n\n");
 }
 
-int MemoryPlanner::getNewOffset(Value v, int size, OrderedOffsets &selected) {
+int MemoryPlan::getOffset(Value v, int size, OrderedOffsets &selected) {
   int possibleOffset = 0;
 
-  if (valueInfo[v].constant) {
+  if (valueInfo[v].isConstant) {
     return -1;
   }
 
@@ -163,7 +163,7 @@ int MemoryPlanner::getNewOffset(Value v, int size, OrderedOffsets &selected) {
   return possibleOffset;
 }
 
-std::vector<int> MemoryPlanner::getOffsets() {
+std::vector<int> MemoryPlan::getAllocatedOffsets() {
   std::vector<int> offsets;
 
   // Find linked values,
@@ -171,37 +171,33 @@ std::vector<int> MemoryPlanner::getOffsets() {
   // add only input values,
   // stitch up after allocation and fix input and output value offsets
   llvm::DenseMap<Value, std::pair<Value, int>> outInVals;
-  for (auto o : operations) {
-
-    if (o->hasTrait<OpTrait::IsTerminator>() ||
-        llvm::isa<TFL::QConstOp, TFL::ConstOp, arith::ConstantOp>(o)) {
-      continue;
-    }
-
-    if (llvm::isa<PadOp>(o)) {
-      auto in = o->getOperand(0);
-      if (in.hasOneUse()) {
-        auto out = o->getResult(0);
-        int offset = valueInfo[out].size - valueInfo[in].size;
-        outInVals[out] = {in, offset};
-        valueInfo[in].size += offset;
-        valueInfo[in].lastUsed = valueInfo[out].lastUsed;
+  if (overlapOption) {
+    for (auto o : operations) {
+      if (llvm::isa<PadOp>(o)) {
+        auto in = o->getOperand(0);
+        if (in.hasOneUse()) {
+          auto out = o->getResult(0);
+          int offset = valueInfo[out].size - valueInfo[in].size;
+          outInVals[out] = {in, offset};
+          valueInfo[in].size += offset;
+          valueInfo[in].lastUsed = valueInfo[out].lastUsed;
+        }
       }
-    }
 
-    // if (llvm::isa<Conv2DV2Op>(o)) {
-    //   auto convOp = dyn_cast<Conv2DV2Op>(o);
-    //   if (symbolizeConv2DType(convOp.conv2d_kernel_type()) !=
-    //       Conv2DType::ValidIndirect) {
-    //     continue;
-    //   }
-    //   auto in = o->getOperand(0);
-    //   auto out = o->getResult(0);
-    //   int offset = 576;//valueInfo[out].size - valueInfo[in].size;
-    //   outInVals[out] = {in, offset};
-    //   valueInfo[in].size += offset;
-    //   valueInfo[in].lastUsed = valueInfo[out].lastUsed;
-    // }
+      // if (llvm::isa<Conv2DV2Op>(o)) {
+      //   auto convOp = dyn_cast<Conv2DV2Op>(o);
+      //   if (symbolizeConv2DType(convOp.conv2d_kernel_type()) !=
+      //       Conv2DType::ValidIndirect) {
+      //     continue;
+      //   }
+      //   auto in = o->getOperand(0);
+      //   auto out = o->getResult(0);
+      //   int offset = 576;//valueInfo[out].size - valueInfo[in].size;
+      //   outInVals[out] = {in, offset};
+      //   valueInfo[in].size += offset;
+      //   valueInfo[in].lastUsed = valueInfo[out].lastUsed;
+      // }
+    }
   }
 
   // Fix up consecutive overlapping allocations
@@ -251,7 +247,7 @@ std::vector<int> MemoryPlanner::getOffsets() {
     queue.pop();
 
     // check with selected list
-    int newOffset = getNewOffset(v, size, selected);
+    int newOffset = getOffset(v, size, selected);
     selected.insert({v, newOffset});
   }
   printf("\n\n");

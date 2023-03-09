@@ -1,7 +1,7 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include "Analysis/MemoryPlanner.h"
+#include "Analysis/MemoryPlan.h"
 #include "IR/XCoreOps.h"
 #include "Transforms/Options.h"
 
@@ -138,8 +138,8 @@ void TranslateToCustomOp::runOnOperation() {
   auto *ctx = &getContext();
   RewritePatternSet patterns(ctx);
 
-  auto &m = getAnalysis<MemoryPlanner>();
-  auto offsets = m.getOffsets();
+  auto &m = getAnalysis<MemoryPlan>();
+  auto offsets = m.getAllocatedOffsets();
 
   // Store as an attribute in the module
   func::FuncOp func = getOperation();

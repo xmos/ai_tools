@@ -184,7 +184,7 @@ cc_library(
         "Transforms/GeneratedConvRevertPatterns.inc"
     ],
     hdrs = [
-        "Analysis/MemoryPlanner.h",
+        "Analysis/MemoryPlan.h",
         "Transforms/ConvPatterns.h",
         "Transforms/Options.h",
         "Transforms/Passes.h",

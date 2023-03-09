@@ -11,6 +11,8 @@
 
 #include "IR/XCoreEnumOps.cpp.inc"
 
+#include "mlir/IR/TypeUtilities.h"
+
 namespace mlir {
 namespace xcore {
 
@@ -20,5 +22,17 @@ void XCoreDialect::initialize() {
 #include "IR/XCoreOps.cpp.inc"
       >();
 }
+
+//===----------------------------------------------------------------------===//
+// PadOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
+  if (succeeded(verifyCompatibleShapes(input().getType(), output().getType())))
+    return input();
+
+  return {};
+}
+
 } // namespace xcore
 } // namespace mlir

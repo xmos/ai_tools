@@ -17,6 +17,7 @@ extern llvm::cl::opt<bool> convForceErrorCheckOption;
 extern llvm::cl::opt<unsigned> convMultiplierFactorOption;
 extern llvm::cl::opt<bool> opSplitTensorArenaOption;
 extern llvm::cl::opt<bool> allowInputModificationOption;
+extern llvm::cl::opt<bool> convDebugOption;
 
 } // namespace xcore
 } // namespace mlir

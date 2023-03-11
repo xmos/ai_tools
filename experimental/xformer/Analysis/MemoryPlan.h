@@ -5,7 +5,7 @@
 #define XFORMER_ANALYSIS_MEMORYPLAN_H
 
 #include "mlir/Analysis/Liveness.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Value.h"
 #include "llvm/ADT/PriorityQueue.h"
 
 #include <set>
@@ -13,34 +13,53 @@
 namespace mlir {
 namespace xcore {
 
-/*
+// Represents an analysis for memory planning of a given FuncOp for a model.
+// - Uses liveness analysis and a greedy algorithm to arrange buffers in memory.
+// - Tries to overlap input and output buffers based on the op characteristics.
+// - Calculates maximum width of the network for planning operator splitting.
 
-- Include liveness analysis
-- Save array of op pointers along with index for each
-- Create allocation info structure with liveness info of first used and last
-used op
-*/
+// Future optimizations to consider
+// - Reorder graph optimization
+// Associative Instruction Reordering to Alleviate Register Pressure
+// https://hal.inria.fr/hal-01956260/document
 
 class MemoryPlan {
 public:
   MemoryPlan(Operation *op);
 
+  // The offset allocation algorithm is similar in implementation to the greedy
+  // memory planner in tflite-micro. The algorithm works like this:
+  //  - The buffers are sorted in descending order of size. A PriorityQueue is
+  //  used for this.
+  //  - The largest buffer is allocated at offset zero.
+  //  - The rest of the buffers are popped from the queue in descending size
+  //  order.
+  //  - Every popped buffer is compared with the already allocated buffers.
+  //  - The first gap between simultaneously active buffers that the current
+  //    buffer fits into will be used.
+  //  - If no large-enough gap is found, the current buffer is placed after the
+  //    last buffer that's simultaneously active.
+  //  - This continues until all buffers are placed, and the offsets stored.
   std::vector<int> getAllocatedOffsets();
 
-  // int getMaxMemoryUsed();
+  int getMaxMemoryUsed();
 
   // OpSplitPlan getOpSplitPlan();
 
 private:
+  /// Initializes the internal mappings.
+  void build();
+
   using QueueItem = std::pair<Value, size_t>;
   //
-  struct AscendingOffsetsComparator {
+  struct IncreasingOffsetsComparator {
     bool operator()(const QueueItem &lhs, const QueueItem &rhs) const {
       return (lhs.second < rhs.second);
     }
   };
   //
-  using OrderedOffsets = std::multiset<QueueItem, AscendingOffsetsComparator>;
+  using ValuesOrderedByOffset =
+      std::multiset<QueueItem, IncreasingOffsetsComparator>;
 
   struct ValueInfo {
     size_t id;
@@ -50,7 +69,7 @@ private:
     int lastUsed;
   };
 
-  int getOffset(Value v, int size, OrderedOffsets &selected);
+  int getOffset(Value v, int size, ValuesOrderedByOffset &allocatedOffsets);
 
   DenseMap<Value, ValueInfo> valueInfo;
 
@@ -63,24 +82,9 @@ private:
   std::vector<Operation *> operations;
 
   Liveness liveness;
+
+  Operation *op;
 };
-
-/*
-- Memory planner structure with pointer to ops
-- Put op and op sizes in max priority heap
-- Greedy algorithm
-- Alignment for buffers?
-
-- How does export to flatbuffer work?
-- How to import offsets in tflite-micro?
-- Do we need to handle constant buffers also?
-
-
-- Reorder graph optimization
-Associative Instruction Reordering to Alleviate Register Pressure
-https://hal.inria.fr/hal-01956260/document
-
-*/
 
 } // namespace xcore
 } // namespace mlir

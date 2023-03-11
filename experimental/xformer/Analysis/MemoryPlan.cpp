@@ -10,8 +10,12 @@
 namespace mlir {
 namespace xcore {
 
-MemoryPlan::MemoryPlan(Operation *op) : liveness(op) {
+MemoryPlan::MemoryPlan(Operation *operation)
+    : liveness(operation), op(operation) {
+  build();
+}
 
+void MemoryPlan::build() {
   if (!llvm::isa<func::FuncOp>(op)) {
     return;
   }
@@ -70,16 +74,6 @@ MemoryPlan::MemoryPlan(Operation *op) : liveness(op) {
     }
   });
 
-  //   for (auto v : values) {
-  //   auto type = v.getType().dyn_cast<ShapedType>();
-  //   int k = 1;
-  //   llvm::ArrayRef<int64_t> shape_ref = type.getShape();
-  //   for (auto &dim : shape_ref) {
-  //     k *= (dim == -1 ? 1 : dim);
-  //   }
-  //   valueSizes[v] = k;
-  // }
-
   // Liveness
   // Struct with start op and end op
   assert(op->getNumRegions() == 1);
@@ -101,6 +95,11 @@ MemoryPlan::MemoryPlan(Operation *op) : liveness(op) {
            valueInfo[v].size, valueInfo[v].firstUsed, valueInfo[v].lastUsed);
   }
   printf("\n\n");
+}
+
+int MemoryPlan::getMaxMemoryUsed() {
+  Block *block = &op->getRegion(0).front();
+  const LivenessBlockInfo *lvb = liveness.getLiveness(block);
 
   int maxSize = -1;
   Operation *maxOp;
@@ -124,39 +123,39 @@ MemoryPlan::MemoryPlan(Operation *op) : liveness(op) {
   maxOp->dump();
   maxOp->getLoc().dump();
   printf("\n\n");
+  return maxSize;
 }
 
-int MemoryPlan::getOffset(Value v, int size, OrderedOffsets &selected) {
-  int possibleOffset = 0;
+int MemoryPlan::getOffset(Value v, int size,
+                          ValuesOrderedByOffset &allocatedValues) {
+  int offset = 0;
 
-  // Go through all selected buffers
+  // Go through all allocated buffers
   // They are ordered by offset
+  for (auto i : allocatedValues) {
+    Value allocatedVal = i.first;
+    int allocatedOffset = i.second;
 
-  for (auto i : selected) {
-    Value c = i.first;
-    int cOffset = i.second;
-
-    if ((valueInfo[c].firstUsed > valueInfo[v].lastUsed) ||
-        (valueInfo[v].firstUsed > valueInfo[c].lastUsed)) {
-      // no overlap
+    if ((valueInfo[allocatedVal].firstUsed > valueInfo[v].lastUsed) ||
+        (valueInfo[v].firstUsed > valueInfo[allocatedVal].lastUsed)) {
+      // No overlap
       continue;
     }
 
-    // overlapping buffer
-    if (cOffset - possibleOffset > size) {
-      // there is a gap
+    // Found an overlapping buffer
+    if (allocatedOffset - offset > size) {
+      // There is a gap
       break;
     } else {
-      // move offset to end of current buffer if larger
-      int end = cOffset + valueInfo[c].size;
-
-      if (end > possibleOffset) {
-        possibleOffset = end;
+      // Move offset to end of current buffer if larger
+      int end = allocatedOffset + valueInfo[allocatedVal].size;
+      if (end > offset) {
+        offset = end;
       }
     }
   }
 
-  return possibleOffset;
+  return offset;
 }
 
 std::vector<int> MemoryPlan::getAllocatedOffsets() {
@@ -205,7 +204,8 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
   //   inputOutputPair[val.first] = inputOutputPair[currentInput];
   // }
 
-  auto OrderedDescendingSizesComparator = [&](QueueItem &lhs, QueueItem &rhs) {
+  // The comparator keeps the buffers ordered by id if their sizes are the same
+  auto DecreasingSizesComparator = [&](QueueItem &lhs, QueueItem &rhs) {
     if (lhs.second != rhs.second) {
       return lhs.second < rhs.second;
     }
@@ -213,27 +213,20 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
   };
   // The top item is the largest one.
   llvm::PriorityQueue<QueueItem, std::vector<QueueItem>,
-                      decltype(OrderedDescendingSizesComparator)>
-      queue(OrderedDescendingSizesComparator);
+                      decltype(DecreasingSizesComparator)>
+      queue(DecreasingSizesComparator);
 
-  // insert all values and size into priority queue
+  // Insert values and their sizes into priority queue
   for (auto v : values) {
     if (!outInVals.count(v) && !valueInfo[v].isConstant) {
       queue.push({v, valueInfo[v].size});
     }
   }
 
-  // ordered by offset
-  OrderedOffsets selected;
-  Value l;
-
-  // Add first to selected list with offset zero
-  // while priority queue is not empty()
-  // pop and check with selected list
-
+  ValuesOrderedByOffset allocatedValues;
   auto v = queue.top().first;
   queue.pop();
-  selected.insert({v, 0});
+  allocatedValues.insert({v, 0});
 
   printf("\nSorted buffers : ");
   while (!queue.empty()) {
@@ -242,25 +235,26 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
     printf("%d ", size);
     queue.pop();
 
-    // check with selected list
-    int newOffset = getOffset(v, size, selected);
-    selected.insert({v, newOffset});
+    // check with allocatedValues list
+    int newOffset = getOffset(v, size, allocatedValues);
+    allocatedValues.insert({v, newOffset});
   }
   printf("\n\n");
 
+  // Patch up overlapped buffers
   for (auto val : outInVals) {
     auto out = val.first;
     auto in = val.second.first;
     auto offset = val.second.second;
 
-    auto it = std::find_if(selected.begin(), selected.end(),
+    auto it = std::find_if(allocatedValues.begin(), allocatedValues.end(),
                            [&](const QueueItem &p) { return p.first == in; });
 
-    if (it != selected.end()) {
+    if (it != allocatedValues.end()) {
       int currentOffset = it->second;
-      selected.erase(it);
-      selected.insert({in, currentOffset + offset});
-      selected.insert({out, currentOffset});
+      allocatedValues.erase(it);
+      allocatedValues.insert({in, currentOffset + offset});
+      allocatedValues.insert({out, currentOffset});
     } else {
       assert(false);
     }
@@ -268,55 +262,26 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
 
   for (auto v : values) {
     if (valueInfo[v].isConstant) {
-       selected.insert({v, -1});
+      allocatedValues.insert({v, -1});
     }
   }
 
-
+  // Sort the allocated offsets by id, i.e., execution order
   auto cmp = [&](QueueItem a, QueueItem b) {
     return valueInfo[a.first].id < valueInfo[b.first].id;
   };
-  std::multiset<QueueItem, decltype(cmp)> Offsets(cmp);
-  for (auto i : selected) {
-    Offsets.insert(i);
+  std::multiset<QueueItem, decltype(cmp)> allocatedValuesOrderedByID(cmp);
+  for (auto i : allocatedValues) {
+    allocatedValuesOrderedByID.insert(i);
   }
 
   printf("\nAllocated offsets : ");
-  for (auto i : Offsets) {
+  for (auto i : allocatedValuesOrderedByID) {
     offsets.push_back(i.second);
     printf("\nValue %d, size %d, offset %d ", valueInfo[i.first].id,
            valueInfo[i.first].size, i.second);
   }
   printf("\n\n");
-
-  // funcOp.walk<WalkOrder::PreOrder>([&](Operation *op) {
-  //   if (op == funcOp) {
-  //     return;
-  //   }
-
-  //   // TODO(renjieliu): Find a generic way to deal with const ops.
-  //   if (op->hasTrait<OpTrait::IsTerminator>() ||
-  //       llvm::isa<TFL::QConstOp, TFL::ConstOp, arith::ConstantOp>(op)) {
-  //     for (Value result : op->getResults()) {
-  //       offsets.push_back(-1);
-  //     }
-  //   } else {
-  //     for (Value result : op->getResults()) {
-  //       if (auto search = Offsets.find(result); search != Offsets.end()) {
-  //         offsets.push_back(search->second);
-  //       } else {
-  //         assert(false);
-  //       }
-  //     }
-  //   }
-  // });
-
-  // printf("\n\n");
-
-  // for (auto i : offsets) {
-  //   printf("%d, ", i);
-  // }
-  // printf("\n\n");
 
   return offsets;
 }

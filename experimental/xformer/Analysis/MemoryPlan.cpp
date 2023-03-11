@@ -129,10 +129,6 @@ MemoryPlan::MemoryPlan(Operation *op) : liveness(op) {
 int MemoryPlan::getOffset(Value v, int size, OrderedOffsets &selected) {
   int possibleOffset = 0;
 
-  if (valueInfo[v].isConstant) {
-    return -1;
-  }
-
   // Go through all selected buffers
   // They are ordered by offset
 
@@ -222,7 +218,7 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
 
   // insert all values and size into priority queue
   for (auto v : values) {
-    if (!outInVals.count(v)) {
+    if (!outInVals.count(v) && !valueInfo[v].isConstant) {
       queue.push({v, valueInfo[v].size});
     }
   }
@@ -269,6 +265,13 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
       assert(false);
     }
   }
+
+  for (auto v : values) {
+    if (valueInfo[v].isConstant) {
+       selected.insert({v, -1});
+    }
+  }
+
 
   auto cmp = [&](QueueItem a, QueueItem b) {
     return valueInfo[a.first].id < valueInfo[b.first].id;

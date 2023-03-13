@@ -84,6 +84,10 @@ cl::opt<bool> allowInputModificationOption(
     cl::desc("Allow the compiler to modify input tensor for optimizations."),
     cl::init(false));
 
+cl::opt<bool> convDebugOption("xcore-conv-debug",
+                              cl::desc("Enable conv debug prints."),
+                              cl::init(false));
+
 } // namespace xcore
 } // namespace mlir
 

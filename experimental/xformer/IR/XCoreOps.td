@@ -200,6 +200,8 @@ def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
     );
 
   let results = (outs TensorOf<[QI8]> : $output);
+
+  let hasFolder = 1;
 }
 
 def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [NoSideEffect]> {

@@ -253,14 +253,30 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
 
   otType = OtType::Group;
 
+  if (convDebugOption) {
+    std::string message;
+    llvm::raw_string_ostream os(message);
+    std::cout << std::endl;
+    args.convOp->print(os);
+    std::stringstream msg;
+    msg << "Conv2D DEBUG" << std::endl;
+    std::cout << message << std::endl
+              << utils::getMsgWithLocPrefix(*args.convOp, msg.str())
+              << std::endl;
+  }
+
   nn::MulsAndBias mulAndBiases =
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
           args.effectiveMultiplier, args.bias, args.filter, args.inputZeroPoint,
-          args.outputZeroPoint, args.outputDepth);
+          args.outputZeroPoint, args.outputDepth, convDebugOption);
+  if (convDebugOption) {
+    nn::OutputTransformFn::layerwise_stats(mulAndBiases);
+  }
+
   // Try group OT
   auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
-      quantizer.quantise_activation(mulAndBiases, false);
+      quantizer.quantise_activation(mulAndBiases, convDebugOption);
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulAndBiases, qp, args.quantErrorFullCheckEnabled);
@@ -268,7 +284,7 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
     // Try channelwise OT
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
-        quantizer.quantise_activation(mulAndBiases, false);
+        quantizer.quantise_activation(mulAndBiases, convDebugOption);
 
     quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(
         mulAndBiases, qp, true);
@@ -464,14 +480,31 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
 
   otType = OtType::Group;
 
+  if (convDebugOption) {
+    std::string message;
+    llvm::raw_string_ostream os(message);
+    std::cout << std::endl;
+    args.convOp->print(os);
+    std::stringstream msg;
+    msg << "DepthwiseConv2D DEBUG" << std::endl;
+    std::cout << message << std::endl
+              << utils::getMsgWithLocPrefix(*args.convOp, msg.str())
+              << std::endl;
+  }
+
   nn::MulsAndBias mulAndBiases =
       nn::OutputTransformFnInt8::canonicalise_mul_and_bias_dw(
           args.effectiveMultiplier, args.bias, args.filter, filterShape,
-          args.inputZeroPoint, args.outputZeroPoint, args.outputDepth);
+          args.inputZeroPoint, args.outputZeroPoint, args.outputDepth,
+          convDebugOption);
+  if (convDebugOption) {
+    nn::OutputTransformFn::layerwise_stats(mulAndBiases);
+  }
+
   // Try group OT
   auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
-      quantizer.quantise_activation(mulAndBiases, false);
+      quantizer.quantise_activation(mulAndBiases, convDebugOption);
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulAndBiases, qp, args.quantErrorFullCheckEnabled);
@@ -479,7 +512,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
     // Try channelwise OT
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
-        quantizer.quantise_activation(mulAndBiases, false);
+        quantizer.quantise_activation(mulAndBiases, convDebugOption);
 
     quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(
         mulAndBiases, qp, true);

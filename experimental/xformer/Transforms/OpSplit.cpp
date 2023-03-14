@@ -1,6 +1,8 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
+#include "Options.h"
+
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
@@ -659,9 +661,12 @@ void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
 
-  int startOp = 1;
+  int startOp = 0;
   int endOp = 0;
-  int numSplits = 4;
+  int numSplits = 0;
+  startOp = opSplitStartOpOption;
+  endOp = opSplitEndOpOption;
+  numSplits = opSplitNumSplitsOption;
   int k = 0;
   OpBuilder builder(func);
   func.walk([&](Operation *op) {

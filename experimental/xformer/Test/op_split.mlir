@@ -1,4 +1,4 @@
-// RUN: xcore-opt --mlir-io --xcore-op-split %s | FileCheck %s
+// RUN: xcore-opt --mlir-io --xcore-op-split --xcore-op-split-start-op=1 --xcore-op-split-end-op=0 --xcore-op-split-num-splits=4 %s | FileCheck %s
 
   // CHECK-LABEL: conv2d_depthwise 
   func.func @conv2d_depthwise(%arg0: tensor<?x192x256x3x!quant.uniform<i8:f32, 0.0039215679280459881:-128>> {tf_saved_model.index_path = ["input_3"]}) -> (tensor<?x49152x!quant.uniform<i8:f32, 0.001226827735081315:-128>> {tf_saved_model.index_path = ["flatten_2"]}) attributes {tf.entry_function = {inputs = "serving_default_input_3:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {

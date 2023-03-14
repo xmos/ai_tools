@@ -676,14 +676,14 @@ void OpSplit::runOnOperation() {
     }
   });
 
-  RewritePatternSet patterns(ctx);
+  RewritePatternSet patterns1(ctx);
 
-  patterns.insert<OpSplitHorizontalPattern<TFL::Conv2DOp>>(ctx);
-  patterns.insert<OpSplitHorizontalPattern<TFL::DepthwiseConv2DOp>>(ctx);
-  patterns.insert<OpSplitHorizontalPattern<TFL::AddOp>>(ctx);
-  patterns.insert<OpSplitHorizontalPattern<TFL::PadOp>>(ctx);
+  patterns1.insert<OpSplitHorizontalPattern<TFL::Conv2DOp>>(ctx);
+  patterns1.insert<OpSplitHorizontalPattern<TFL::DepthwiseConv2DOp>>(ctx);
+  patterns1.insert<OpSplitHorizontalPattern<TFL::AddOp>>(ctx);
+  patterns1.insert<OpSplitHorizontalPattern<TFL::PadOp>>(ctx);
 
-  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns1));
 
   RewritePatternSet patterns2(ctx);
 

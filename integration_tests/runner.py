@@ -14,6 +14,7 @@ from xmos_ai_tools.xinterpreters import (
 )
 from xmos_ai_tools import xformer
 from itertools import chain
+import yaml
 
 MAX_ABS_ERROR = 1
 ABS_AVG_ERROR = 1./4
@@ -137,9 +138,24 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     testing_on_tflmc_option = request.config.getoption("tflmc")
     number_of_samples_option = request.config.getoption("number_of_samples")
     testing_detection_postprocess_option = True if "detection_postprocess" in request.node.name else False
-    testing_pooling_option = True if "pool" in request.node.name else False
+
+    params = dict()
+    params['MAX_ABS_ERROR'] = MAX_ABS_ERROR
+    params['ABS_AVG_ERROR'] = ABS_AVG_ERROR
+    params['AVG_ABS_ERROR'] = AVG_ABS_ERROR
+    params['REQUIRED_OUTPUTS'] = REQUIRED_OUTPUTS
 
     model_path = pathlib.Path(filename).resolve()
+
+    yaml_filename = 'params.yaml'
+
+    yaml_filename = os.path.join(os.path.dirname(model_path), yaml_filename)
+    
+    if os.path.exists(yaml_filename):
+        with open (yaml_filename) as f:
+            yaml_params = yaml.safe_load(f)
+            params.update(yaml_params)
+
     if not model_path.exists():
         LOGGER.error("model file not found!")
         assert False
@@ -203,7 +219,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     running_output_abs_error = 0
     
     test = 0
-    while running_output_count < REQUIRED_OUTPUTS:
+    while running_output_count < params['REQUIRED_OUTPUTS']:
         LOGGER.info("Run #" + str(test))
         test += 1
 
@@ -273,7 +289,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             
             max_abs_error = np.amax(np.abs(errors))
 
-            if (max_abs_error > MAX_ABS_ERROR):
+            if (max_abs_error > params['MAX_ABS_ERROR']):
                 LOGGER.error("Max abs error is too high: " + str(max_abs_error))
                 assert max_abs_error <= 1 
 
@@ -283,16 +299,13 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     LOGGER.info(str(max_abs_error) + ' ' + str(avg_error) +' ' +  str(avg_abs_error))
     
     failed = False
-    if testing_pooling_option:
-        pass
-    else:
-        if (abs(avg_error) > ABS_AVG_ERROR):
-            failed = True
-            LOGGER.error("Abs avg error is too high: " + str(abs(avg_error)))
+    if (abs(avg_error) > params['ABS_AVG_ERROR']):
+        failed = True
+        LOGGER.error("Abs avg error is too high: " + str(abs(avg_error)))
 
-        if (avg_abs_error > AVG_ABS_ERROR):
-            failed = True
-            LOGGER.error("Avg abs error is too high: " + str(avg_abs_error))
+    if (avg_abs_error > params['AVG_ABS_ERROR']):
+        failed = True
+        LOGGER.error("Avg abs error is too high: " + str(avg_abs_error))
         
     if failed:
         num_of_fails+= 1

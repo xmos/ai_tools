@@ -170,7 +170,6 @@ struct RaiseStridedSliceHorizontalAddPattern
       return failure();
     }
 
-    // Get data from conv needed to raise strided slice
     auto addOriginal =
         llvm::cast<TFL::AddOp>(stridedSlice.input().getDefiningOp());
 
@@ -178,6 +177,7 @@ struct RaiseStridedSliceHorizontalAddPattern
     if (!(addOriginal->hasAttr(opSplitLabel)))
       return failure();
 
+    // Get data from add needed to raise strided slice
     auto addOriginalOutput =
         addOriginal.output().getType().template cast<RankedTensorType>();
     auto outputHeight = addOriginalOutput.getDimSize(1);
@@ -199,7 +199,7 @@ struct RaiseStridedSliceHorizontalAddPattern
     auto stridedSliceOutputWidth = stridedSliceOutput.getDimSize(2);
     auto stridedSliceOutputChannels = stridedSliceOutput.getDimSize(3);
 
-    // Set end tensor for slice to be above conv with new end index
+    // Set end tensor for slice to be above add with new end index
     int32_t endAttr[4] = {1, static_cast<int32_t>(endIndices[1]),
                           static_cast<int32_t>(endIndices[2]),
                           static_cast<int32_t>(endIndices[3])};
@@ -213,7 +213,7 @@ struct RaiseStridedSliceHorizontalAddPattern
     auto beginConstantOp = rewriter.create<arith::ConstantOp>(
         stridedSlice.getLoc(), rewriter.getI32TensorAttr(beginAttr));
 
-    // Create new strided slice for above conv
+    // Create new strided slice for above add
     auto stridedSliceLHS =
         llvm::cast<TFL::StridedSliceOp>(rewriter.clone(*stridedSlice));
     stridedSliceLHS.setOperand(0, addOriginal.lhs());
@@ -226,7 +226,7 @@ struct RaiseStridedSliceHorizontalAddPattern
             .getElementType());
     stridedSliceLHS->getResult(0).setType(stridedSliceLHSType);
 
-    // Create new strided slice for above conv
+    // Create new strided slice for above add
     auto stridedSliceRHS =
         llvm::cast<TFL::StridedSliceOp>(rewriter.clone(*stridedSlice));
     stridedSliceRHS.setOperand(0, addOriginal.rhs());
@@ -251,8 +251,7 @@ struct RaiseStridedSliceHorizontalAddPattern
     addReplacement.setOperand(0, stridedSliceLHS);
     addReplacement.setOperand(1, stridedSliceRHS);
 
-    // replace strided slice with new strided slice -> new conv
-    // or new strided slice -> pad -> new conv
+    // replace strided slice with new strided slice -> new add
     rewriter.replaceOp(stridedSlice, addReplacement.output());
 
     return success();
@@ -661,25 +660,34 @@ void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
 
-  int startOp = 0;
-  int endOp = 0;
-  int numSplits = 0;
-  startOp = opSplitStartOpOption;
-  endOp = opSplitEndOpOption;
-  numSplits = opSplitNumSplitsOption;
-  int k = 0;
+  llvm::cl::list<int> &startOp = opSplitStartOpOption;
+  llvm::cl::list<int> &endOp = opSplitEndOpOption;
+  llvm::cl::list<int> &numSplits = opSplitNumSplitsOption;
+
   OpBuilder builder(func);
-  func.walk([&](Operation *op) {
-    if (!(isa<TFL::ConstOp>(op) || isa<TFL::QConstOp>(op))) {
-      if (k == startOp) {
-        op->setAttr(opSplitLabelNumSplits,
-                    builder.getI32IntegerAttr(numSplits));
-      } else if (k < startOp && k >= endOp) {
-        op->setAttr(opSplitLabel, builder.getUnitAttr());
+  auto startOpIt = startOp.begin();
+  auto endOpIt = endOp.begin();
+  auto numSplitsIt = numSplits.begin();
+
+  while (numSplitsIt != numSplits.end()) {
+
+    int k = 0;
+    func.walk([&](Operation *op) {
+      if (!(isa<TFL::ConstOp>(op) || isa<TFL::QConstOp>(op))) {
+        if (k == *startOpIt) {
+          op->setAttr(opSplitLabelNumSplits,
+                      builder.getI32IntegerAttr(*numSplitsIt));
+        } else if (k < *startOpIt && k >= *endOpIt) {
+          op->setAttr(opSplitLabel, builder.getUnitAttr());
+        }
+        k++;
       }
-      k++;
-    }
-  });
+    });
+
+    ++startOpIt;
+    ++endOpIt;
+    ++numSplitsIt;
+  };
 
   RewritePatternSet patterns1(ctx);
 

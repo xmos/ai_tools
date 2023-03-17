@@ -508,7 +508,6 @@ struct RaiseStridedSliceHorizontalPadPattern
       return failure();
     }
 
-    // Get data from conv needed to raise strided slice
     auto padOriginal =
         llvm::cast<TFL::PadOp>(stridedSlice.input().getDefiningOp());
 
@@ -516,6 +515,7 @@ struct RaiseStridedSliceHorizontalPadPattern
     if (!(padOriginal->hasAttr(opSplitLabel)))
       return failure();
 
+    // Get data from pad needed to raise strided slice
     auto padOriginalInput =
         padOriginal.input().getType().template cast<RankedTensorType>();
     auto inputHeight = padOriginalInput.getDimSize(1);
@@ -562,21 +562,21 @@ struct RaiseStridedSliceHorizontalPadPattern
     int32_t newOutputHeight;
     // Check if this is left most split
     if (beginIndex == 0) {
-      // Calculate new end index for slice after being raised above conv
+      // Calculate new end index for slice after being raised above pad
       newEndIndex = endIndex - padTop;
 
       // Left split is not padded on right
       padBottom = 0;
 
     } else if (endIndex == outputHeight) { // end
-      // Calculate new end index for slice after being raised above conv
+      // Calculate new end index for slice after being raised above pad
       newEndIndex = endIndex - padTop - padBottom;
 
       // Right split is not padded on left
       padTop = 0;
 
     } else { // beginIndex not 0 or end
-      // Calculate new end index for slice after being raised above conv
+      // Calculate new end index for slice after being raised above pad
       newEndIndex = endIndex - padTop;
 
       // Center splits are not padded on left or right
@@ -601,7 +601,7 @@ struct RaiseStridedSliceHorizontalPadPattern
     auto beginConstantOp = rewriter.create<arith::ConstantOp>(
         stridedSlice.getLoc(), rewriter.getI32TensorAttr(beginAttr));
 
-    // New strided slice output shape is conv input shape except height
+    // New strided slice output shape is pad input shape except height
     // The new calculated output height is used for height
     RankedTensorType newStridedSliceType =
         RankedTensorType::get({1, newOutputHeight, inputWidth, inputChannels},
@@ -610,7 +610,7 @@ struct RaiseStridedSliceHorizontalPadPattern
                                   .template cast<ShapedType>()
                                   .getElementType());
 
-    // Create new strided slice for above conv
+    // Create new strided slice for above pad
     auto stridedSliceReplacement = rewriter.create<TFL::StridedSliceOp>(
         stridedSlice.getLoc(), newStridedSliceType, padOriginal.input(),
         beginConstantOp, endConstantOp, stridedSlice.strides(),

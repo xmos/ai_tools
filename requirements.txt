@@ -11,3 +11,4 @@ flatbuffers<2.0,>=1.12
 tflite==2.4.0
 pyusb>=1.2.1
 larq-compute-engine==0.8.0
+PyYAML==6.0

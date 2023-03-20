@@ -13,10 +13,13 @@ from xmos_ai_tools.xinterpreters import (
     xcore_tflm_usb_interpreter,
 )
 from xmos_ai_tools import xformer
+from itertools import chain
+import yaml
 
-# This error tolerance works for the models we have currently
-# The maximum error we see is 1.037735
-ABSOLUTE_ERROR_TOLERANCE = 1.04
+MAX_ABS_ERROR = 1
+ABS_AVG_ERROR = 1./4
+AVG_ABS_ERROR = 1./4
+REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
 LIB_TFLM_DIR_PATH = (pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_tflite_micro")
@@ -102,10 +105,6 @@ def get_tflmc_outputs(model_exe_path, input_tensor, tfl_outputs):
 
     return xformer_outputs
 
-def dequantize(arr: np.ndarray, scale: float, zero_point: int) -> np.float32:
-    return np.float32(arr.astype(np.int32) - np.int32(zero_point)) * np.float32(scale)
-
-
 def get_xformed_model(model: bytes) -> bytes:
     # write input model to temporary file
     input_file = tempfile.NamedTemporaryFile(delete=False)
@@ -140,7 +139,23 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     number_of_samples_option = request.config.getoption("number_of_samples")
     testing_detection_postprocess_option = True if "detection_postprocess" in request.node.name else False
 
+    params = dict()
+    params['MAX_ABS_ERROR'] = MAX_ABS_ERROR
+    params['ABS_AVG_ERROR'] = ABS_AVG_ERROR
+    params['AVG_ABS_ERROR'] = AVG_ABS_ERROR
+    params['REQUIRED_OUTPUTS'] = REQUIRED_OUTPUTS
+
     model_path = pathlib.Path(filename).resolve()
+
+    yaml_filename = 'params.yaml'
+
+    yaml_filename = os.path.join(os.path.dirname(model_path), yaml_filename)
+    
+    if os.path.exists(yaml_filename):
+        with open (yaml_filename) as f:
+            yaml_params = yaml.safe_load(f)
+            params.update(yaml_params)
+
     if not model_path.exists():
         LOGGER.error("model file not found!")
         assert False
@@ -198,8 +213,15 @@ def test_model(request: FixtureRequest, filename: str) -> None:
 
     # Run tests
     num_of_fails = 0
-    for test in range(0, int(number_of_samples_option)):
+
+    running_output_count = 0
+    running_output_error = 0
+    running_output_abs_error = 0
+    
+    test = 0
+    while running_output_count < params['REQUIRED_OUTPUTS']:
         LOGGER.info("Run #" + str(test))
+        test += 1
 
         input_tensor = []
         if testing_detection_postprocess_option:
@@ -252,50 +274,43 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             ie.invoke()
             xformer_outputs = []
             for i in range(num_of_outputs):
-                xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]["index"]))
+                output_tensor = ie.get_tensor(ie.get_output_details()[i]["index"])
+                LOGGER.info("outputs: " + str(output_tensor.shape))
+                xformer_outputs.append(output_tensor)
 
         # Compare outputs
-        for i in range(num_of_outputs):
-            LOGGER.info("Comparing output number " + str(i) + "...")
-            #if quantized output, we dequantize it before comparing
-            if output_scales[i]:
-                outputs[i] = dequantize(
-                    outputs[i], output_scales[i], output_zero_points[i]
-                )
-                xformer_outputs[i] = dequantize(
-                    xformer_outputs[i], output_scales[i], output_zero_points[i]
-                )
-            np.set_printoptions(threshold=np.inf)
-            LOGGER.debug("xformer output :\n{0}".format(xformer_outputs[i]))
-            LOGGER.debug("compared output :\n{0}".format(outputs[i]))
-            try:
-                np.testing.assert_allclose(
-                    xformer_outputs[i],
-                    outputs[i],
-                    atol=ABSOLUTE_ERROR_TOLERANCE,
-                )
-            except Exception as e:
-                num_of_fails += 1
-                LOGGER.error(e)
-                d = ~np.isclose(
-                    outputs[i],
-                    xformer_outputs[i],
-                    atol=ABSOLUTE_ERROR_TOLERANCE,
-                )
-                LOGGER.error(
-                    "Mismatched element indices :\n{0}".format(np.flatnonzero(d))
-                )
-                LOGGER.error(
-                    "Mismatched elements from xformer output :\n{0}".format(
-                        xformer_outputs[i][d]
-                    )
-                )
-                LOGGER.error(
-                    "Mismatched elements from compared output :\n{0}".format(
-                        outputs[i][d]
-                    )
-                )
-                LOGGER.error("Run #" + str(test) + " failed")
+        errors = np.array(list(chain(*[np.array(a-b).reshape(-1) for a, b in zip(outputs, xformer_outputs)]))).reshape(-1)
+
+        if len(errors) > 0:
+
+            running_output_count += np.prod(errors.shape)
+            running_output_error += np.sum(errors)
+            running_output_abs_error += np.sum(np.abs(errors))
+            
+            max_abs_error = np.amax(np.abs(errors))
+
+            if (max_abs_error > params['MAX_ABS_ERROR']):
+                LOGGER.error("Max abs error is too high: " + str(max_abs_error))
+                assert max_abs_error <= 1 
+
+    np.set_printoptions(threshold=np.inf)
+    avg_error = running_output_error / running_output_count
+    avg_abs_error = running_output_abs_error / running_output_count
+    LOGGER.info(str(max_abs_error) + ' ' + str(avg_error) +' ' +  str(avg_abs_error))
+    
+    failed = False
+    if (abs(avg_error) > params['ABS_AVG_ERROR']):
+        failed = True
+        LOGGER.error("Abs avg error is too high: " + str(abs(avg_error)))
+
+    if (avg_abs_error > params['AVG_ABS_ERROR']):
+        failed = True
+        LOGGER.error("Avg abs error is too high: " + str(avg_abs_error))
+        
+    if failed:
+        num_of_fails+= 1
+        LOGGER.error("Run #" + str(test) + " failed")
+            
     if testing_on_tflmc_option:
        tflmc_temp_dirname.cleanup()
     else:

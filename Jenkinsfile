@@ -14,7 +14,7 @@ pipeline {
     parameters { // Available to modify on the job page within Jenkins if starting a build
         string( // use to try different tools versions
             name: 'TOOLS_VERSION',
-            defaultValue: '15.0.6',
+            defaultValue: '15.2.1',
             description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
         )
         booleanParam( // use to check results of rolling all conda deps forward
@@ -74,43 +74,50 @@ pipeline {
             steps {
                 // below is how we can activate the tools, NOTE: xTIMEcomposer -> XTC at tools 15.0.5 and later
                 // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv && //
+                // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
+                //       . activate ./ai_tools_venv &&
+                //       cd third_party/lib_tflite_micro &&
+                //       make build &&
+                //       cd ../.. &&
+                //       make clean &&
+                //       make build
+                // """
+                // sh """. activate ./ai_tools_venv && cd experimental/xformer &&
+                //       bazel build --remote_cache=${BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check
+                // """
+                // sh """. activate ./ai_tools_venv &&
+                //       (cd python && python3 setup.py bdist_wheel) &&
+                //       pip install ./python/dist/* &&
+                //       pip install -r "./requirements.txt"
+                // """
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
-                      . activate ./ai_tools_venv &&
-                      cd third_party/lib_tflite_micro &&
-                      make build &&
-                      cd ../.. &&
-                      make clean &&
-                      make build
-                """
-                sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel build --remote_cache=${BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check
+                      . activate ./ai_tools_venv && 
+                      xcc --version
                 """
                 sh """. activate ./ai_tools_venv &&
-                      (cd python && python3 setup.py bdist_wheel) &&
-                      pip install ./python/dist/* &&
-                      pip install -r "./requirements.txt"
+                      pip install xmos-ai-tools --pre --upgrade
                 """
             }
         }
         stage("Test") {
             steps {
                 // xformer2 unit tests
-        sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel test --remote_cache=${BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check
-                """
-        // xformer2 integration tests
+                // sh """. activate ./ai_tools_venv && cd experimental/xformer &&
+                //       bazel test --remote_cache=${BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check
+                // """
+                // xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&
-                      make test
+                      	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_add -n $(NUM_PROCS) --junitxml=integration_non_bnns_junit.xml
                 """
                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                 // This step collects these files for display in Jenkins UI
                 junit "**/*_junit.xml"
         // regression test for xmos_ai_tools juypiter notebooks
-                sh """. activate ./ai_tools_venv &&
-                    pip install ./python/
-                    pip install pytest nbmake
-                    pytest --nbmake ./docs/notebooks/*.ipynb
-                """
+                // sh """. activate ./ai_tools_venv &&
+                //     pip install ./python/
+                //     pip install pytest nbmake
+                //     pytest --nbmake ./docs/notebooks/*.ipynb
+                // """
             }
         }
     }

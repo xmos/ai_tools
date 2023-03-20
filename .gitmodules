@@ -11,3 +11,18 @@
 [submodule "third_party/aisrv"]
 	path = third_party/aisrv
 	url = git@github.com:xmos/aisrv.git
+[submodule "third_party/lib_i2c"]
+	path = third_party/lib_i2c
+	url = git@github.com:xmos/lib_i2c.git
+[submodule "third_party/lib_xud"]
+	path = third_party/lib_xud
+	url = git@github.com:xmos/lib_xud.git
+[submodule "third_party/lib_mipi"]
+	path = third_party/lib_mipi
+	url = git@github.com:xmos/lib_mipi.git
+[submodule "third_party/lib_logging"]
+	path = third_party/lib_logging
+	url = git@github.com:xmos/lib_logging.git
+[submodule "third_party/lib_xassert"]
+	path = third_party/lib_xassert
+	url = git@github.com:xmos/lib_xassert.git

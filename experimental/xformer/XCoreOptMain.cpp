@@ -103,6 +103,8 @@ cl::opt<bool> convDebugOption("xcore-conv-debug",
                               cl::desc("Enable conv debug prints."),
                               cl::init(false));
 
+cl::opt<bool> overlapOption("xcore-overlap", cl::desc("Overlap buffers."),
+                            cl::init(false));
 } // namespace xcore
 } // namespace mlir
 
@@ -193,6 +195,8 @@ int main(int argc, char **argv) {
   static cl::opt<bool> tflmcPrintEnabled(
       "xcore-tflmc-print", cl::desc("Print out memory allocation plan"),
       cl::init(false));
+  static cl::opt<bool> offlineOffsetsEnabled(
+      "xcore-offline-offsets", cl::desc("Offline offsets"), cl::init(false));
   static cl::opt<std::string> versionLibTfliteMicro(
       "xcore-compatible-with-lib-tflite-micro",
       cl::desc("Check if lib_tflite_micro version is compatible"), cl::init(""),
@@ -335,6 +339,50 @@ int main(int argc, char **argv) {
     std::map<std::string, std::string> metadata;
     auto xcoreConfigMetadata =
         std::make_pair(shared_config::xcoreMetadataName, bufferData);
+
+    // Offline offsets metadata
+
+    // std::vector<int> offline_offsets = {
+    //    73728, -1, -1, -1, -1, -1, -1, 0, 129024, 73728, 166272, 132096,
+    //    73728, 153984, 132096, 73728, 132096, 73728, 0, 52224, 0};
+    if (offlineOffsetsEnabled) {
+      auto attr = module->getAttr("xc.offsets");
+      auto offline_offsets = std::vector<int>{
+          attr.cast<mlir::DenseIntElementsAttr>().getValues<int32_t>().begin(),
+          attr.cast<mlir::DenseIntElementsAttr>().getValues<int32_t>().end()};
+
+      constexpr char kOfflineMemAllocMetadata[] = "OfflineMemoryAllocation";
+      /*
+      | 0 | Offline allocation format version |
+      | 1 | Subgraph index to which this allocation applies |
+      | 2 | Number offsets following: n |
+      | 3 | Byte offset of tensor #0 or -1 to allocate at runtime |
+      | 4 | Byte offset of tensor #1 or -1 to allocate at runtime |
+      | ... | ... |
+      | 3+(n-1) | Byte offset of tensor #(n-1) or -1 to allocate at runtime |
+      */
+      offline_offsets.insert(offline_offsets.begin(),
+                             {0, 0, (int)offline_offsets.size()});
+      // Align to sixteen bytes as metadata value has to be 16-byte aligned
+      // buffer
+      offline_offsets.resize(((offline_offsets.size() + 3) / 4) * 4);
+
+      auto offlineOffsetsData = std::string((char *)offline_offsets.data(),
+                                            offline_offsets.size() * 4);
+
+      auto k = (int32_t *)offlineOffsetsData.data();
+      printf("\n");
+      for (int i = 0; i < offline_offsets.size(); i++) {
+        printf("%d, ", k[i]);
+      }
+      printf("\n");
+
+      auto offlineOffsetsMetadata =
+          std::make_pair(kOfflineMemAllocMetadata, offlineOffsetsData);
+
+      printf("\n\nOFFLINE OFFSETS ENABLED!\n\n");
+      metadata.insert(offlineOffsetsMetadata);
+    }
     metadata.insert(xcoreConfigMetadata);
 
     std::string flatBufferString;

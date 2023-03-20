@@ -108,7 +108,8 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             bpi = 1
         self._download_data(
             aisrv_cmd.CMD_SET_INPUT_TENSOR,
-            self.bytes_to_ints(bytes(value), bpi),
+            #self.bytes_to_ints(bytes(value), bpi),
+            value.tobytes(),
             tensor_num=count,
             engine_num=model_index,
         )
@@ -149,15 +150,21 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             engine_num=model_index,
         )
 
+        print(data_read)
+
         assert type(data_read) == list
         assert type(data_read[0]) == int
         if tensor_type == "float32":
             float_ = True
         else:
             float_ = False
-        output = self.bytes_to_ints(data_read, bpi, float_=float_)
+        #output = self.bytes_to_ints(data_read, bpi, float_=float_)
 
-        return np.reshape(np.asarray(output), tensor_details["shape"])
+        x = np.array(data_read, np.uint8)
+        bytes = x.tobytes()
+        #output = np.frombuffer(data_read, dtype=tensor_type)
+
+        return np.reshape(np.frombuffer(bytes, dtype=tensor_type), tensor_details["shape"])
 
     def get_input_tensor(self, input_index=0, model_index=0) -> List[Union[int, Tuple[float]]]:
         """! Abstract for reading the data in the input tensor of a model.

@@ -92,7 +92,8 @@ pipeline {
                 // """
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./ai_tools_venv && 
-                      xcc --version
+                      cd third_party/aisrv/app_integration_tests &&
+                      xmake -j8
                 """
                 sh """. activate ./ai_tools_venv &&
                       pip install xmos-ai-tools --pre --upgrade

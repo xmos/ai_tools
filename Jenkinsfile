@@ -37,7 +37,7 @@ pipeline {
             stages {
                 stage("Setup") {
                     steps {
-                        runningOn(env.NODE_NAME)
+                        println "Stage running on: ${env.NODE_NAME}"
                         // clone
                         checkout scm
                         sh 'git submodule update --init --recursive --depth 1 --jobs \$(nproc)'

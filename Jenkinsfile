@@ -32,7 +32,7 @@ pipeline {
     stages {
         stage("Build") {
             agent {
-                label "linux&&64"
+                label "linux && 64 && !noAVX2"
             }
             stages {
                 stage("Setup") {

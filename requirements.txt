@@ -1,3 +1,6 @@
+# python_version 3.8
+# pip_version 22.*
+
 tensorflow==2.9.1; platform_machine != 'arm64'
 tensorflow-macos==2.9.1; sys_platform == 'darwin' and platform_machine == 'arm64'
 numpy>=1.20
@@ -12,3 +15,4 @@ tflite==2.4.0
 pyusb>=1.2.1
 larq-compute-engine==0.8.0
 PyYAML==6.0
+h5py==3.6.0

@@ -32,7 +32,7 @@ pipeline {
     stages {
         stage("Build") {
             agent {
-                label "xcore.ai-explorer"
+                label "linux&&64"
             }
             stages {
                 stage("Setup") {
@@ -75,6 +75,7 @@ pipeline {
                                 }
                                 dir("third_party/aisrv/app_integration_tests") {
                                     sh "xmake -j8"
+                                    stash name:"app_integration_tests", includes: "bin/*"
                                 }
                                 sh "pip install xmos-ai-tools --pre --upgrade"
                             }
@@ -100,15 +101,49 @@ pipeline {
                         //     pip install pytest nbmake
                         //     pytest --nbmake ./docs/notebooks/*.ipynb
                         // """
-                        withTools(params.TOOLS_VERSION) {
-                            sh "xrun -l"
-                        }
                     }
                 }
             }
             post {
                 cleanup {
                     xcoreCleanSandbox()
+                }
+            }
+        }
+        stage("Hardware Test") {
+            agent {
+                label "xcore.ai-explorer"
+            }
+            stages {
+                stage("Setup") {
+                    steps {
+                        println "Stage running on: ${env.NODE_NAME}"
+                        // clone
+                        checkout scm
+                        sh 'git submodule update --init --recursive --depth 1 --jobs \$(nproc)'
+                        // create venv and install pip packages
+                        createVenv("requirements.txt")
+                        withVenv {
+                            sh "pip install -r requirements.txt"
+                        }
+                    }
+                }
+                stage("Unstash Prebuilt Binaries") {
+                    steps {
+                        dir("third_party/aisrv/app_integration_tests/bin") {
+                            unstash "app_integration_tests"
+                        }
+                    }
+                }
+                stage("Test") {
+                    steps {
+                        withTools(params.TOOLS_VERSION) {
+                            sh "xrun -l"
+                            timeout(5) {  //minutes
+                                sh "xrun third_party/aisrv/app_integration_tests/bin/*.xe"
+                            }
+                        }
+                    }
                 }
             }
         }

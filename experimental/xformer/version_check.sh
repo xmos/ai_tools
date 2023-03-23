@@ -14,12 +14,13 @@ if ! ../version_check.sh; then
     exit 1
 fi
 
-cd $CUR_DIR
+cd $CUR_DIR/Transforms
 printf "\nRunning version check for xformer..."
 
 # in xformer folder
 TAG=$(git describe --tags --abbrev=0)
 GIT_VERSION=$(printf ${TAG} | sed 's/v//')
+cd ..
 
 printf "\nGit version = "$GIT_VERSION
 

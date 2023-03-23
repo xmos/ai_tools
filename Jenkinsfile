@@ -82,25 +82,66 @@ pipeline {
                         }
                     }
                 }
-                stage("Test") {
-                    steps {
-                        // xformer2 unit tests
-                        // sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                        //       bazel test --remote_cache=${BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check
-                        // """
-                        // xformer2 integration tests
-                        withVenv {
-                            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_add -n 8 --junitxml=integration_non_bnns_junit.xml"
+                stage("Run Tests") {
+                    parallel {
+                        stage("Host Test") {
+                            steps {
+                                // xformer2 unit tests
+                                // sh """. activate ./ai_tools_venv && cd experimental/xformer &&
+                                //       bazel test --remote_cache=${BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check
+                                // """
+                                // xformer2 integration tests
+                                withVenv {
+                                    sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_add -n 8 --junitxml=integration_non_bnns_junit.xml"
+                                }
+                                // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
+                                // This step collects these files for display in Jenkins UI
+                                junit "**/*_junit.xml"
+                        // regression test for xmos_ai_tools juypiter notebooks
+                                // sh """. activate ./ai_tools_venv &&
+                                //     pip install ./python/
+                                //     pip install pytest nbmake
+                                //     pytest --nbmake ./docs/notebooks/*.ipynb
+                                // """
+                            }
                         }
-                        // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
-                        // This step collects these files for display in Jenkins UI
-                        junit "**/*_junit.xml"
-                // regression test for xmos_ai_tools juypiter notebooks
-                        // sh """. activate ./ai_tools_venv &&
-                        //     pip install ./python/
-                        //     pip install pytest nbmake
-                        //     pytest --nbmake ./docs/notebooks/*.ipynb
-                        // """
+                        stage("Hardware Test") {
+                            agent {
+                                label "xcore.ai-explorer"
+                            }
+                            stages {
+                                stage("Setup") {
+                                    steps {
+                                        println "Stage running on: ${env.NODE_NAME}"
+                                        // clone
+                                        checkout scm
+                                        sh 'git submodule update --init --recursive --depth 1 --jobs \$(nproc)'
+                                        // create venv and install pip packages
+                                        createVenv("requirements.txt")
+                                        withVenv {
+                                            sh "pip install -r requirements.txt"
+                                        }
+                                    }
+                                }
+                                stage("Unstash Prebuilt Binaries") {
+                                    steps {
+                                        dir("third_party/aisrv/app_integration_tests/bin") {
+                                            unstash "app_integration_tests"
+                                        }
+                                    }
+                                }
+                                stage("Test") {
+                                    steps {
+                                        withTools(params.TOOLS_VERSION) {
+                                            sh "xrun -l"
+                                            timeout(5) {  //minutes
+                                                sh "xrun third_party/aisrv/app_integration_tests/bin/app_int.xe"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -140,7 +181,7 @@ pipeline {
                         withTools(params.TOOLS_VERSION) {
                             sh "xrun -l"
                             timeout(5) {  //minutes
-                                sh "xrun third_party/aisrv/app_integration_tests/bin/*.xe"
+                                sh "xrun third_party/aisrv/app_integration_tests/bin/app_int.xe"
                             }
                         }
                     }

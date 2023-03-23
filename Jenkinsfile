@@ -85,6 +85,7 @@ pipeline {
                             dir ("python") {
                                 sh "python3 setup.py bdist_wheel"
                                 sh "pip install dist/*"
+                                stash name:"xmos_ai_tools_wheel", includes: "dist/*"
                             }
                             // xmake aisrv app for device integration testing
                             withTools(params.TOOLS_VERSION) {
@@ -136,6 +137,10 @@ pipeline {
                                         createVenv("requirements.txt")
                                         withVenv {
                                             sh "pip install -r requirements.txt"
+                                            dir ("python") {
+                                                unstash "xmos_ai_tools_wheel"
+                                                sh "pip install dist/*"
+                                            }
                                         }
                                     }
                                 }

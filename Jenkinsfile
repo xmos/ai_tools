@@ -69,15 +69,27 @@ pipeline {
                         //       pip install -r "./requirements.txt"
                         // """
                         withVenv {
+                            // apply tflite-micro patch
+                            dir("third_party/lib_tflite_micro") {
+                                sh "make patch"
+                            }
+                            // build xformer
+                            dir("experimental/xformer") {
+                                sh "bazel build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
+                            }
+                            // build dll_interpreter for python interface
+                            sh "make build"
+                            // build python wheel and install into env
+                            dir ("python") {
+                                sh "python3 setup.py bdist_wheel"
+                                sh "pip install dist/*"
+                            }
+                            // xmake aisrv app for device integration testing
                             withTools(params.TOOLS_VERSION) {
-                                dir("third_party/lib_tflite_micro") {
-                                    sh "make patch"
-                                }
                                 dir("third_party/aisrv/app_integration_tests") {
                                     sh "xmake -j8"
                                     stash name:"app_integration_tests", includes: "bin/*"
                                 }
-                                sh "pip install xmos-ai-tools --pre --upgrade"
                             }
                         }
                     }
@@ -92,17 +104,17 @@ pipeline {
                                 // """
                                 // xformer2 integration tests
                                 withVenv {
+                                    sh "bazel test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
                                     sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_add -n 8 --junitxml=integration_non_bnns_junit.xml"
                                 }
                                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                                 // This step collects these files for display in Jenkins UI
                                 junit "**/*_junit.xml"
-                        // regression test for xmos_ai_tools juypiter notebooks
-                                // sh """. activate ./ai_tools_venv &&
-                                //     pip install ./python/
-                                //     pip install pytest nbmake
-                                //     pytest --nbmake ./docs/notebooks/*.ipynb
-                                // """
+                                // regression test for xmos_ai_tools juypiter notebooks
+                                withVenv {
+                                    sh "pip install pytest nbmake"
+                                    sh "pytest --nbmake ./docs/notebooks/*.ipynb"
+                                }
                             }
                         }
                         stage("Hardware Test") {
@@ -131,12 +143,14 @@ pipeline {
                                             withTools(params.TOOLS_VERSION) {
                                                 sh "xrun -l"
                                                 sh "pwd"
-                                                sh "ls"
-                                                timeout(5) {  //minutes
-                                                    sh "xrun bin/app_int.xe"
-                                                }
+                                                sh "ls bin"
+                                                sh "xrun bin/app_int.xe"
                                             }
                                         }
+                                        withVenv {
+                                            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_add --device --junitxml=integration_device_non_bnns_junit.xml"
+                                        }
+                                        junit "**/*_junit.xml"
                                     }
                                 }
                             }

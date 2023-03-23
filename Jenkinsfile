@@ -40,7 +40,7 @@ pipeline {
                         println "Stage running on: ${env.NODE_NAME}"
                         // clone
                         checkout scm
-                        sh 'git submodule update --init --recursive --depth 1 --jobs \$(nproc)'
+                        sh 'git submodule update --init --recursive --jobs \$(nproc)'
                         // create venv and install pip packages
                         createVenv("requirements.txt")
                         withVenv {
@@ -73,15 +73,15 @@ pipeline {
                             dir("third_party/lib_tflite_micro") {
                                 sh "make patch"
                             }
+                            // build dll_interpreter for python interface
+                            sh "make build"
                             // build xformer
                             dir("experimental/xformer") {
                                 sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
                                 sh "chmod +x bazelisk-linux-amd64"
                                 sh "./bazelisk-linux-amd64 build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
                             }
-                            // build dll_interpreter for python interface
-                            sh "make build"
-                            // build python wheel and install into env
+                            // build python wheel with xformer and install into env
                             dir ("python") {
                                 sh "python3 setup.py bdist_wheel"
                                 sh "pip install dist/*"
@@ -131,7 +131,7 @@ pipeline {
                                         println "Stage running on: ${env.NODE_NAME}"
                                         // clone
                                         checkout scm
-                                        sh 'git submodule update --init --recursive --depth 1 --jobs \$(nproc)'
+                                        sh 'git submodule update --init --recursive --jobs \$(nproc)'
                                         // create venv and install pip packages
                                         createVenv("requirements.txt")
                                         withVenv {

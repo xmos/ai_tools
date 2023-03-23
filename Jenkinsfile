@@ -123,19 +123,17 @@ pipeline {
                                         }
                                     }
                                 }
-                                stage("Unstash Prebuilt Binaries") {
+                                stage("Test") {
                                     steps {
                                         dir("third_party/aisrv/app_integration_tests/bin") {
                                             unstash "app_integration_tests"
-                                        }
-                                    }
-                                }
-                                stage("Test") {
-                                    steps {
-                                        withTools(params.TOOLS_VERSION) {
-                                            sh "xrun -l"
-                                            timeout(5) {  //minutes
-                                                sh "xrun third_party/aisrv/app_integration_tests/bin/app_int.xe"
+                                            withTools(params.TOOLS_VERSION) {
+                                                sh "xrun -l"
+                                                sh "pwd"
+                                                sh "ls"
+                                                timeout(5) {  //minutes
+                                                    sh "xrun app_int.xe"
+                                                }
                                             }
                                         }
                                     }

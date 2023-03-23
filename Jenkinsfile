@@ -75,7 +75,7 @@ pipeline {
                             }
                             // build xformer
                             dir("experimental/xformer") {
-                                sh "https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
+                                sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
                                 sh "chmod +x bazelisk-linux-amd64"
                                 sh "./bazelisk-linux-amd64 build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
                             }

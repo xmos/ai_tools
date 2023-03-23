@@ -75,7 +75,9 @@ pipeline {
                             }
                             // build xformer
                             dir("experimental/xformer") {
-                                sh "bazel build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
+                                sh "https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
+                                sh "chmod +x bazelisk-linux-amd64"
+                                sh "./bazelisk-linux-amd64 build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
                             }
                             // build dll_interpreter for python interface
                             sh "make build"
@@ -104,7 +106,9 @@ pipeline {
                                 // """
                                 // xformer2 integration tests
                                 withVenv {
-                                    sh "bazel test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+                                    dir("experimental/xformer") {
+                                        sh "./bazelisk-linux-amd64 test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+                                    }
                                     sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_add -n 8 --junitxml=integration_non_bnns_junit.xml"
                                 }
                                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option

@@ -148,7 +148,7 @@ pipeline {
                                                 sh "xrun -l"
                                                 sh "pwd"
                                                 sh "ls bin"
-                                                sh "xrun bin/app_int.xe"
+                                                sh "xrun --id 0 bin/app_int.xe"
                                             }
                                         }
                                         withVenv {

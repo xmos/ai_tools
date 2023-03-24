@@ -85,14 +85,12 @@ pipeline {
                             dir ("python") {
                                 sh "python3 setup.py bdist_wheel"
                                 sh "pip install dist/*"
-                                stash name: "xmos_ai_tools_wheel", excludes: "**", allowEmpty: true
                                 stash name:"xmos_ai_tools_wheel", includes: "dist/*"
                             }
                             // xmake aisrv app for device integration testing
                             withTools(params.TOOLS_VERSION) {
                                 dir("third_party/aisrv/app_integration_tests") {
                                     sh "xmake -j8"
-                                    stash name: "app_integration_tests", excludes: "**", allowEmpty: true
                                     stash name:"app_integration_tests", includes: "bin/*"
                                 }
                             }
@@ -163,6 +161,11 @@ pipeline {
                                         }
                                         junit "**/*_junit.xml"
                                     }
+                                }
+                            }
+                            post {
+                                cleanup {
+                                    xcoreCleanSandbox()
                                 }
                             }
                         }

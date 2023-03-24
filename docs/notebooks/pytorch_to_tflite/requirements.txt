@@ -1,0 +1,9 @@
+jupyter
+torch==1.12.0
+torchvision==0.13.0
+onnx
+onnxruntime
+tensorflow
+onnx2tf
+onnx-graphsurgeon
+sng4onnx

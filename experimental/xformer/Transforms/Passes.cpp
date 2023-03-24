@@ -17,11 +17,16 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   // Larq dialect
   pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
   // TFL passes
+  pm.addPass(createOptimizeTransposePass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());
+  if (opSplitTensorArenaOption) {
+    pm.addPass(createOpSplitPass());
+  }
   pm.addPass(createApplyTFLPatternsPass());
   // XC passes
+  pm.addPass(createReplaceAddPass());
   pm.addPass(createReplaceStridedSlicePass());
   pm.addPass(createReplaceConv2DPass());
   pm.addPass(createApplyXCPatternsPass());

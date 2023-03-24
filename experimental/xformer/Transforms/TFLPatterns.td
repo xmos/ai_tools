@@ -2,9 +2,12 @@
 // XMOS Public License: Version 1
 
 include "mlir/IR/PatternBase.td"
+include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "mlir/Dialect/Func/IR/FuncOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
+
+include "Utils/Utils.td"
 
 // Casts $1 to a dequantized type and then casts that to a quantized type
 // using the quantization parameters from the type in $0
@@ -34,6 +37,55 @@ def : Pat<(TFL_QuantizeOp(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf,
            $qtype),
           (TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw,
            $dm)>;
+
+// Get padding values and output type as two return values
+def GetConv2DPaddingValues
+    : NativeCodeCall<"getConv2DPaddingValues<TFL::Conv2DOp>($_builder, "
+                     "$0.getDefiningOp<TFL::Conv2DOp>())",
+                     2>;
+
+// Get padding values and output type as two return values
+def GetDepthwiseConv2DPaddingValues
+    : NativeCodeCall<
+          "getConv2DPaddingValues<TFL::DepthwiseConv2DOp>($_builder, "
+          "$0.getDefiningOp<TFL::DepthwiseConv2DOp>())",
+          2>;
+
+// TFL_Conv2D() with SAME padding -> TFL_Conv2D(Pad())
+def : Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, TFL_PAD_Same, $sh, $sw),
+          (TFL_Conv2DOp (TFL_PadOp $input,
+                        (GetConv2DPaddingValues
+                         : $ret__0 $output),
+                        (returnType $ret__1)), $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw)>;
+
+// TFL_DepthwiseConv2D() with SAME padding-> TFL_DepthwiseConv2D(Pad())
+def : Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, TensorOf<[I32,QI32]>:$b, $dh, $dw, $faf, TFL_PAD_Same, $sh, $sw, $dm),
+          (TFL_DepthwiseConv2DOp (TFL_PadOp $input,
+                        (GetDepthwiseConv2DPaddingValues
+                         : $ret__0 $output),
+                        (returnType $ret__1)), $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw, $dm)>;
+
+def Pad3to4OutputType
+    : NativeCodeCall<
+          "RankedTensorType::get({$0.getType().cast<ShapedType>().getDimSize(0)"
+          ", $0.getType().cast<ShapedType>().getDimSize(1), "
+          "$0.getType().cast<ShapedType>().getDimSize(2), 4}, "
+          "$0.getType().cast<ShapedType>().getElementType())">;
+
+// Pad3to4(Pad3to3) to Pad4to4(Pad3to4)
+foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
+def:
+  Pat<(TFL_PadOp(TFL_PadOp $input, $padding3to3),
+       (constOp
+        : $padding3to4_op $padding3to4_attr)),
+      (TFL_PadOp(TFL_PadOp $input, $padding3to4_op,
+                 (returnType(Pad3to4OutputType $input))),
+       $padding3to3),
+      [
+        (HasMultipleOfNBytesPerPixel<3> $input),
+        (HasOnlyPadding3To4ForChannel $padding3to4_attr),
+      ]>;
+}
 
 // Get padding values and output type as two return values
 def GetBConv2DPaddingValues

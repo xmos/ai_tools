@@ -12,11 +12,16 @@ namespace xcore {
 extern llvm::cl::opt<unsigned> threadCountOption;
 extern llvm::cl::opt<std::string> flashImageFilenameOption;
 extern llvm::cl::opt<unsigned> loadExternallyIfLargerOption;
-extern llvm::cl::opt<bool> reduceMemoryOption;
 extern llvm::cl::opt<double> convQuantErrorThresholdOption;
 extern llvm::cl::opt<bool> convForceErrorCheckOption;
 extern llvm::cl::opt<unsigned> convMultiplierFactorOption;
-
+extern llvm::cl::opt<bool> opSplitTensorArenaOption;
+extern llvm::cl::list<int32_t> opSplitStartOpOption;
+extern llvm::cl::list<int32_t> opSplitEndOpOption;
+extern llvm::cl::list<int32_t> opSplitNumSplitsOption;
+extern llvm::cl::opt<bool> allowInputModificationOption;
+extern llvm::cl::opt<bool> convDebugOption;
+extern llvm::cl::opt<bool> overlapOption;
 } // namespace xcore
 } // namespace mlir
 

@@ -1,7 +1,15 @@
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 
 package(
     default_visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "version_check",
+    srcs = ["version_check.sh"],
+    cmd = "cp $< $@ && chmod +x $@ && $@ BAZEL_BUILD",
+    outs = ["version_check_output"],
 )
 
 td_library(
@@ -161,7 +169,7 @@ gentbl_cc_library(
 
 cc_library(
     name = "xcore_passes",
-    srcs = glob(["Transforms/*.cpp"]) + [
+    srcs = glob(["Transforms/*.cpp"]) + glob(["Analysis/*.cpp"]) +[
         "IR/XCoreEnumOps.h.inc",
         "IR/XCoreEnumOps.cpp.inc",
         "IR/XCoreOps.cpp",
@@ -176,6 +184,7 @@ cc_library(
         "Transforms/GeneratedConvRevertPatterns.inc"
     ],
     hdrs = [
+        "Analysis/MemoryPlan.h",
         "Transforms/ConvPatterns.h",
         "Transforms/Options.h",
         "Transforms/Passes.h",
@@ -214,6 +223,17 @@ cc_library(
     ],
 ) 
 
+bool_flag(
+    name = "disable_version_check",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "have_disabled_version_check",
+    flag_values = { ":disable_version_check": "true" }
+)
+
 cc_binary(
     name = "xcore-opt",
     srcs = ["XCoreOptMain.cpp", "Version.h"],
@@ -230,4 +250,10 @@ cc_binary(
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:MlirOptLib",
     ],
+    data = select({
+        ":have_disabled_version_check": [],
+        "//conditions:default": [
+            ":version_check_output",
+        ],
+    }),
 )

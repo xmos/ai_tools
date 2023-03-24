@@ -8,7 +8,9 @@ pipeline {
             args "-v /home/jenkins/.keras:/root/.keras -v /etc/passwd:/etc/passwd:ro"
         }
     }
-
+    environment {
+        BAZEL_CACHE_URL = 'http://srv-bri-bld-cache:8080'
+    }
     parameters { // Available to modify on the job page within Jenkins if starting a build
         string( // use to try different tools versions
             name: 'TOOLS_VERSION',
@@ -45,7 +47,7 @@ pipeline {
                     extensions: [[$class: 'SubmoduleOption',
                                   threads: 8,
                                   timeout: 20,
-                                  shallow: true,
+                                  shallow: false,
                                   parentCredentials: true,
                                   recursiveSubmodules: true],
                                  [$class: 'CleanCheckout']],
@@ -81,7 +83,7 @@ pipeline {
                       make build
                 """
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures
+                      bazel build --remote_cache=${BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check
                 """
                 sh """. activate ./ai_tools_venv &&
                       (cd python && python3 setup.py bdist_wheel) &&
@@ -94,7 +96,7 @@ pipeline {
             steps {
                 // xformer2 unit tests
         sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures
+                      bazel test --remote_cache=${BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check
                 """
         // xformer2 integration tests
                 sh """. activate ./ai_tools_venv &&

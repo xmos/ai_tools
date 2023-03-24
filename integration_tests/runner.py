@@ -13,10 +13,13 @@ from xmos_ai_tools.xinterpreters import (
     xcore_tflm_usb_interpreter,
 )
 from xmos_ai_tools import xformer
+from itertools import chain
+import yaml
 
-# This error tolerance works for the models we have currently
-# The maximum error we see is 1.037735
-ABSOLUTE_ERROR_TOLERANCE = 1.04
+MAX_ABS_ERROR = 1
+ABS_AVG_ERROR = 1./4
+AVG_ABS_ERROR = 1./4
+REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
 LIB_TFLM_DIR_PATH = (pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_tflite_micro")
@@ -102,10 +105,6 @@ def get_tflmc_outputs(model_exe_path, input_tensor, tfl_outputs):
 
     return xformer_outputs
 
-def dequantize(arr: np.ndarray, scale: float, zero_point: int) -> np.float32:
-    return np.float32(arr.astype(np.int32) - np.int32(zero_point)) * np.float32(scale)
-
-
 def get_xformed_model(model: bytes) -> bytes:
     # write input model to temporary file
     input_file = tempfile.NamedTemporaryFile(delete=False)
@@ -137,8 +136,26 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     testing_binary_models_option = request.config.getoption("bnn")
     testing_device_option = request.config.getoption("device")
     testing_on_tflmc_option = request.config.getoption("tflmc")
+    number_of_samples_option = request.config.getoption("number_of_samples")
+    testing_detection_postprocess_option = True if "detection_postprocess" in request.node.name else False
+
+    params = dict()
+    params['MAX_ABS_ERROR'] = MAX_ABS_ERROR
+    params['ABS_AVG_ERROR'] = ABS_AVG_ERROR
+    params['AVG_ABS_ERROR'] = AVG_ABS_ERROR
+    params['REQUIRED_OUTPUTS'] = REQUIRED_OUTPUTS
 
     model_path = pathlib.Path(filename).resolve()
+
+    yaml_filename = 'params.yaml'
+
+    yaml_filename = os.path.join(os.path.dirname(model_path), yaml_filename)
+    
+    if os.path.exists(yaml_filename):
+        with open (yaml_filename) as f:
+            yaml_params = yaml.safe_load(f)
+            params.update(yaml_params)
+
     if not model_path.exists():
         LOGGER.error("model file not found!")
         assert False
@@ -152,8 +169,12 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             model_content, num_threads=1, use_reference_bconv=True
         )
         # interpreter = lce.testing.Interpreter(model_content, num_threads=1)
-        input_tensor_type = interpreter.input_types[0]
-        input_tensor_shape = interpreter.input_shapes[0]
+        num_of_inputs = len(interpreter.input_types)
+        input_tensor_type = []
+        input_tensor_shape = []
+        for i in range(num_of_inputs):
+            input_tensor_type.append(interpreter.input_types[i])
+            input_tensor_shape.append(interpreter.input_shapes[i])
     else:
         LOGGER.info("Creating TFLite interpreter...")
         interpreter = tf.lite.Interpreter(
@@ -164,9 +185,12 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         # interpreter = tf.lite.Interpreter(
         #     model_content=model_content)
         interpreter.allocate_tensors()
-        input_tensor_details = interpreter.get_input_details()[0]
-        input_tensor_type = input_tensor_details["dtype"]
-        input_tensor_shape = input_tensor_details["shape"]
+        num_of_inputs = len(interpreter.get_input_details())
+        input_tensor_type = []
+        input_tensor_shape = []
+        for i in range(num_of_inputs):
+            input_tensor_type.append(interpreter.get_input_details()[i]["dtype"])
+            input_tensor_shape.append(interpreter.get_input_details()[i]["shape"])
 
     if testing_on_tflmc_option:
         LOGGER.info("Creating tflmc model exe...")
@@ -174,6 +198,10 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         tflmc_model_exe = get_tflmc_model_exe(model_content, tflmc_temp_dirname.name)
     else:    
         LOGGER.info("Invoking xformer to get xformed model...")
+        if testing_detection_postprocess_option:
+            LOGGER.info("Detection postprocess special case - loading int8 model for xcore...")
+            with open(model_path.parent.joinpath("test_dtp.xc"), "rb") as fd:
+                model_content = fd.read()
         xformed_model = get_xformed_model(model_content)
         LOGGER.info("Creating TFLM XCore interpreter...")
         if testing_device_option:
@@ -185,24 +213,28 @@ def test_model(request: FixtureRequest, filename: str) -> None:
 
     # Run tests
     num_of_fails = 0
-    number_of_samples = request.config.getoption("number_of_samples")
-    for test in range(0, int(number_of_samples)):
+
+    running_output_count = 0
+    running_output_error = 0
+    running_output_abs_error = 0
+    
+    test = 0
+    while running_output_count < params['REQUIRED_OUTPUTS']:
         LOGGER.info("Run #" + str(test))
-        LOGGER.info("Creating random input...")
-        # input_tensor = np.array(
-        #     np.random.uniform(-1, 1, input_tensor_shape), dtype=input_tensor_type
-        # )
-        input_tensor = np.array(
-            100 * np.random.random_sample(input_tensor_shape), dtype=input_tensor_type
-        )
-        # input_tensor = np.array(
-        #    100 * np.ones(input_tensor_shape), dtype=input_tensor_type
-        # )
-        #print(input_tensor)
-        #np.save("in" + str(test) + ".npy", input_tensor)
-        # input_tensor = np.load("in3.npy")
-        # LOGGER.info(input_tensor)
-        # LOGGER.info(input_tensor.dtype)
+        test += 1
+
+        input_tensor = []
+        if testing_detection_postprocess_option:
+            LOGGER.info("Detection postprocess special case - loading input from files...")
+            in1 = np.load(model_path.parent.joinpath("in1.npy"))
+            input_tensor.append(in1)
+            in2 = np.load(model_path.parent.joinpath("in2.npy"))
+            input_tensor.append(in2)
+        else:
+            LOGGER.info("Creating random input...")
+            for i in range(num_of_inputs):
+                input_tensor.append(np.array(256 * np.random.random_sample(input_tensor_shape[i]) - 127, dtype=input_tensor_type[i]))
+                #input_tensor.append(np.array(100 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
 
         if testing_binary_models_option:
             LOGGER.info("Invoking LCE interpreter...")
@@ -214,7 +246,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             output_scales = interpreter.output_scales
             output_zero_points = interpreter.output_zero_points
         else:
-            interpreter.set_tensor(input_tensor_details["index"], input_tensor)
+            for i in range(num_of_inputs):
+                interpreter.set_tensor(interpreter.get_input_details()[i]["index"], input_tensor[i])
             LOGGER.info("Invoking TFLite interpreter...")
             interpreter.invoke()
             num_of_outputs = len(interpreter.get_output_details())
@@ -236,56 +269,53 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             xformer_outputs = get_tflmc_outputs(tflmc_model_exe, input_tensor, outputs)
         else:
             LOGGER.info("Invoking XCORE interpreter...")
-            ie.set_tensor(0, input_tensor)
+            for i in range(num_of_inputs):
+                ie.set_tensor(i, input_tensor[i])
             ie.invoke()
             xformer_outputs = []
             for i in range(num_of_outputs):
-                xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]["index"]))
+                output_tensor = ie.get_tensor(ie.get_output_details()[i]["index"])
+                LOGGER.info("outputs: " + str(output_tensor.shape))
+                xformer_outputs.append(output_tensor)
 
         # Compare outputs
-        for i in range(num_of_outputs):
-            LOGGER.info("Comparing output number " + str(i) + "...")
-            #if quantized output, we dequantize it before comparing
-            if output_scales[i]:
-                outputs[i] = dequantize(
-                    outputs[i], output_scales[i], output_zero_points[i]
-                )
-                xformer_outputs[i] = dequantize(
-                    xformer_outputs[i], output_scales[i], output_zero_points[i]
-                )
-            np.set_printoptions(threshold=np.inf)
-            LOGGER.debug("xformer output :\n{0}".format(xformer_outputs[i]))
-            LOGGER.debug("compared output :\n{0}".format(outputs[i]))
-            try:
-                np.testing.assert_allclose(
-                    xformer_outputs[i],
-                    outputs[i],
-                    atol=ABSOLUTE_ERROR_TOLERANCE,
-                )
-            except Exception as e:
-                num_of_fails += 1
-                LOGGER.error(e)
-                d = ~np.isclose(
-                    outputs[i],
-                    xformer_outputs[i],
-                    atol=ABSOLUTE_ERROR_TOLERANCE,
-                )
-                LOGGER.error(
-                    "Mismatched element indices :\n{0}".format(np.flatnonzero(d))
-                )
-                LOGGER.error(
-                    "Mismatched elements from xformer output :\n{0}".format(
-                        xformer_outputs[i][d]
-                    )
-                )
-                LOGGER.error(
-                    "Mismatched elements from compared output :\n{0}".format(
-                        outputs[i][d]
-                    )
-                )
-                LOGGER.error("Run #" + str(test) + " failed")
+        errors = np.array(list(chain(*[np.array(a-b).reshape(-1) for a, b in zip(outputs, xformer_outputs)]))).reshape(-1)
+
+        if len(errors) > 0:
+
+            running_output_count += np.prod(errors.shape)
+            running_output_error += np.sum(errors)
+            running_output_abs_error += np.sum(np.abs(errors))
+            
+            max_abs_error = np.amax(np.abs(errors))
+
+            if (max_abs_error > params['MAX_ABS_ERROR']):
+                LOGGER.error("Max abs error is too high: " + str(max_abs_error))
+                assert max_abs_error <= 1 
+
+    np.set_printoptions(threshold=np.inf)
+    avg_error = running_output_error / running_output_count
+    avg_abs_error = running_output_abs_error / running_output_count
+    LOGGER.info(str(max_abs_error) + ' ' + str(avg_error) +' ' +  str(avg_abs_error))
+    
+    failed = False
+    if (abs(avg_error) > params['ABS_AVG_ERROR']):
+        failed = True
+        LOGGER.error("Abs avg error is too high: " + str(abs(avg_error)))
+
+    if (avg_abs_error > params['AVG_ABS_ERROR']):
+        failed = True
+        LOGGER.error("Avg abs error is too high: " + str(avg_abs_error))
+        
+    if failed:
+        num_of_fails+= 1
+        LOGGER.error("Run #" + str(test) + " failed")
+            
     if testing_on_tflmc_option:
        tflmc_temp_dirname.cleanup()
-    # Free allocated objects and cleanp
-    ie.close()
+    else:
+        # Free allocated objects and cleanup
+        # For tflmc testing, we don't create xcore interpreter ie
+        # Test comparison is done only on Tensorflow interpreter
+        ie.close()
     assert num_of_fails == 0

@@ -57,10 +57,14 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
     return failure();
   }
 
+  OtType otType;
+
   llvm::SmallVector<std::string> abstractKernelParams;
   std::string memcpyFnParam, aggregateFnParam, outputTransformFnParam,
-      kernelTypeEnumParam;
+      kernelTypeEnumParam, otTypeEnumParam;
+
   int32_t scratchByteParam;
+
   std::vector<int8_t> weightsData;
   std::vector<int16_t> mulsBiasesOrThresholdsData;
 
@@ -68,7 +72,6 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   const int threadCount = threadCountOption;
   llvm::SmallVector<std::string> strParams;
   int scratchBytes = 0;
-
   // Get image region splits for multiple threads
   args.imageRegionSplits = utils::getImageRegionThreadSplits(
       threadCount, args.Y.height, args.Y.width);
@@ -76,8 +79,8 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   // Obtain serialized params and calculated tensors from lib_nn for the
   // conv2d kernel type
   if (failed(builder->getSerializedParamsAndTensors(
-          args, kernelType, strParams, abstractKernelParams, weightsData,
-          mulsBiasesOrThresholdsData, scratchBytes))) {
+          args, kernelType, otType, strParams, abstractKernelParams,
+          weightsData, mulsBiasesOrThresholdsData, scratchBytes))) {
     return failure();
   }
 
@@ -93,6 +96,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   memcpyFnParam = strParams[0];
   aggregateFnParam = strParams[1];
   outputTransformFnParam = strParams[2];
+  otTypeEnumParam = stringifyOtType(otType).str();
   scratchByteParam = scratchBytes;
 
   // Create a string array attr from a vector of strings
@@ -127,6 +131,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
       rewriter.getStringAttr(memcpyFnParam),
       rewriter.getStringAttr(aggregateFnParam),
       rewriter.getStringAttr(outputTransformFnParam),
+      rewriter.getStringAttr(otTypeEnumParam),
       rewriter.getI32IntegerAttr(scratchByteParam),
       rewriter.getI32IntegerAttr(actualThreadCount),
       getStringArrayAttr(abstractKernelParams));
@@ -151,21 +156,6 @@ struct ReplaceConv2D
   }
   void runOnOperation() override;
 };
-
-bool shouldReduceMemory() { return reduceMemoryOption; }
-
-Type getPadOpOutputType(PatternRewriter &rewriter, Value input,
-                        std::vector<int32_t> paddingValues) {
-  auto inputType = input.getType().dyn_cast<RankedTensorType>();
-  int batch = inputType.getDimSize(0) + paddingValues[0] + paddingValues[1];
-  int height = inputType.getDimSize(1) + paddingValues[2] + paddingValues[3];
-  int width = inputType.getDimSize(2) + paddingValues[4] + paddingValues[5];
-  int depth = inputType.getDimSize(3) + paddingValues[6] + paddingValues[7];
-
-  RankedTensorType outputType = RankedTensorType::get(
-      {batch, height, width, depth}, inputType.getElementType());
-  return outputType;
-}
 
 namespace convpatterns {
 #include "Transforms/GeneratedConvPatterns.inc"

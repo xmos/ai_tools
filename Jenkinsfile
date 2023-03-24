@@ -32,7 +32,7 @@ pipeline {
     stages {
         stage("Build") {
             agent {
-                label "linux && 64 && !noAVX2"
+                label "ubuntu18"
             }
             stages {
                 stage("Setup") {

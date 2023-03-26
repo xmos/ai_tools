@@ -108,7 +108,6 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             bpi = 1
         self._download_data(
             aisrv_cmd.CMD_SET_INPUT_TENSOR,
-            #self.bytes_to_ints(bytes(value), bpi),
             value.tobytes(),
             tensor_num=count,
             engine_num=model_index,
@@ -137,10 +136,6 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             raise IndexError
 
         tensor_type = tensor_details["dtype"]
-        if tensor_type == np.int32 or tensor_type == np.float32:
-            bpi = 4
-        else:
-            bpi = 1
         tensor_length = self.get_tensor_size(tensor_index, model_index)
 
         data_read = self._upload_data(
@@ -150,21 +145,14 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             engine_num=model_index,
         )
 
-        print(data_read)
-
         assert type(data_read) == list
         assert type(data_read[0]) == int
-        if tensor_type == "float32":
-            float_ = True
-        else:
-            float_ = False
-        #output = self.bytes_to_ints(data_read, bpi, float_=float_)
 
         x = np.array(data_read, np.uint8)
         bytes = x.tobytes()
-        #output = np.frombuffer(data_read, dtype=tensor_type)
+        output = np.frombuffer(bytes, dtype=tensor_type)
 
-        return np.reshape(np.frombuffer(bytes, dtype=tensor_type), tensor_details["shape"])
+        return np.reshape(output, tensor_details["shape"])
 
     def get_input_tensor(self, input_index=0, model_index=0) -> List[Union[int, Tuple[float]]]:
         """! Abstract for reading the data in the input tensor of a model.
@@ -185,7 +173,11 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         assert type(data_read) == list
         assert type(data_read[0]) == int
 
-        return self.bytes_to_ints(data_read)
+        x = np.array(data_read, np.uint8)
+        bytes = x.tobytes()
+        output = np.frombuffer(bytes, dtype=np.uint32)
+
+        return output.tolist()
 
     @abstractmethod
     def invoke(self, model_index=0) -> None:
@@ -264,31 +256,6 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
             print("IO Error\n")
             raise IOError
 
-    # [Salman] There is an issue for this: https://github.com/xmos/ai_tools/issues/658
-    def bytes_to_ints(self, data_bytes: bytes, bpi=1, float_=False) -> List[Union[int, Tuple[float]]]:
-        """! Convert variable byte array to integers.
-        @param data_bytes Byte Array.
-        @param bpi Bytes per integer (eg 1 for int8, 4 for int32).
-        """
-        output_data_int = []
-
-        # TODO better way of doing this?
-        def get_converter(is_float: bool):
-            if is_float:
-                import struct
-                return lambda bytes_: struct.unpack("f", bytes_)
-            else:
-                return lambda bytes_: int.from_bytes(bytes_, byteorder="little", signed=True)
-
-        convert = get_converter(float_)
-
-        for i in range(0, len(data_bytes), bpi):
-            x = data_bytes[i: i + bpi]
-            y = convert(x)
-            output_data_int.append(y)
-
-        return output_data_int
-
     def read_debug_log(self) -> str:
         """! Read the debug log on device (TFLM Error Reporter)."""
         debug_string = self._upload_data(
@@ -309,9 +276,12 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         times_bytes = self._upload_data(
             aisrv_cmd.CMD_GET_TIMINGS, ops_length * 4, engine_num=model_index
         )
-        times_ints = self.bytes_to_ints(times_bytes, bpi=4)
 
-        return times_ints
+        x = np.array(times_bytes, np.uint8)
+        bytes = x.tobytes()
+        output = np.frombuffer(bytes, dtype=np.uint32)
+
+        return output.tolist()
 
     @abstractmethod
     def _upload_data(self, cmd, length, sign=False, tensor_num=0, engine_num=0) -> bytes:
@@ -320,90 +290,6 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
     @abstractmethod
     def _download_data(self, cmd, data_bytes, tensor_num=0, engine_num=0) -> bytes:
         raise NotImplementedError
-
-
-class xcore_tflm_spi_interpreter(xcore_tflm_device_interpreter):
-    def __init__(self, bus=0, device=0, speed=7800000):
-        self._dev = None
-        self._bus = bus
-        self._device = device
-        self._speed = speed
-        self._dummy_bytes = [0, 0, 0]  # cmd + 2 dummy
-        self._dummy_byte_count = len(self._dummy_bytes)
-        super().__init__()
-
-    def _download_data(self, cmd, data_bytes, tensor_num=0, engine_num=0):
-        data_len = len(data_bytes)
-        data_index = 0
-        data_ints = self.bytes_to_ints(data_bytes)
-
-        while data_len >= self._max_block_size:
-            self._wait_for_device()
-            to_send = [cmd]
-            to_send.extend(data_ints[data_index: data_index + self._max_block_size])
-
-            data_len = data_len - self._max_block_size
-            data_index = data_index + self._max_block_size
-
-            self._dev.xfer(to_send)
-
-        # Note, send a 0 length if size % XCORE_IE_MAX_BLOCK_SIZE == 0
-        status = self._wait_for_device()
-        to_send = [cmd]
-        to_send.extend(data_ints[data_index: data_index + data_len])
-        self._dev.xfer(to_send)
-
-    def _upload_data(self, cmd, length, sign=False, tensor_num=0, engine_num=0):
-        self._wait_for_device()
-        to_send = self._construct_packet(cmd, length + 1)
-        r = self._dev.xfer(to_send)
-
-        r = r[self._dummy_byte_count:]
-        return r[:length]
-
-    def _clear_error(self):
-        """Clear error bits in status register"""
-        # Error flags are cleared by GET_STATUS
-        pass
-
-    def connect(self):
-        import spidev
-
-        self._dev = spidev.SpiDev()
-        self._dev.open(self._bus, self._device)
-        self._dev.max_speed_hz = self._speed
-
-    def invoke(self, model_index=0):
-        to_send = self._construct_packet(aisrv_cmd.CMD_START_INFER, 0)
-        r = self._dev.xfer(to_send)
-
-    def _construct_packet(self, cmd, length):
-        def round_to_word(x):
-            return 4 * round(x / 4)
-
-        return [cmd] + self._dummy_bytes + (round_to_word(length) * [0])
-
-    def _read_status(self):
-        to_send = [aisrv_cmd.CMD_GET_STATUS] + self._dummy_bytes + (4 * [0])
-        r = self._dev.xfer(to_send)
-
-        return r[self._dummy_byte_count]  # TODO more than 1 status byte?
-
-    def _wait_for_device(self):
-        """Wait for device to report not busy. Raise exception on any error Status"""
-        while True:
-            status = self._read_status()
-
-            if status != 1:  # TODO STATUS_BUSY
-                if status == 0x04:  # TODO STATUS_ERROR_NO_MODEL
-                    raise NoModelError()
-                elif status == 0x08:  # TODO STATUS_ERROR_MODEL_ERR
-                    raise ModelError()
-                elif status == 0x10:  # TODO STATUS_ERROR_INFER_ERR
-                    raise InferenceError()
-                elif status == 0x20:  # TODO STATUS_BAD_CMD
-                    raise CommandError()
-                break
 
 
 class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):

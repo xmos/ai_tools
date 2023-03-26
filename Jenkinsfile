@@ -104,7 +104,7 @@ pipeline {
                         }
                         stage("Hardware Test") {
                             agent {
-                                label "xcore.ai-explorer"
+                                label "xcore.ai-explorer && !macos"
                             }
                             stages {
                                 stage("Setup") {

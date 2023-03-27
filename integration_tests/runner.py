@@ -208,7 +208,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             ie = xcore_tflm_usb_interpreter()
         else:
             ie = xcore_tflm_host_interpreter()
-        ie.set_model(model_content=xformed_model, secondary_memory=True)
+        ie.set_model(model_content=xformed_model, secondary_memory=False)
 
 
     # Run tests

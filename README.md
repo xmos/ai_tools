@@ -7,7 +7,7 @@ Installation
 It includes:
 - the MLIR-based XCore optimizer(xformer) to optimize Tensorflow Lite models for XCore
 - the XCore tflm interpreter to run the transformed models on host
-- the XCore tflm interpreter to run the transformed models on an xcore device connected over usb or spi
+- the XCore tflm interpreter to run the transformed models on an xcore device connected over usb (this requires an aisrv app server running on the xcore device)
 
 It can be installed with the following command:
 ```shell
@@ -33,21 +33,25 @@ make submodule_update
 Install at least version 15 of the XMOS tools from your preferred location and activate it by sourcing `SetEnv` in the installation root.
 
 [CMake 3.14](https://cmake.org/download/) or newer is required for building libraries and test firmware.
-A correct version of CMake (and `make`) is included in the Conda environment file, utils/environment.yml.
 To set up and activate the environment, simply run:
 ```shell
-conda env create -p ./ai_tools_venv -f environment.yml
-conda activate ai_tools_venv/
+python -m venv ./venv
+. ./venv/bin/activate
+```
+
+Install the necessary python packages using `pip` (inside the venv):
+```shell
+pip install -r "./requirements.txt"
+```
+
+Apply our patch for tflite-micro, run:
+```shell
+(cd third_party/lib_tflite_micro && make patch)
 ```
 
 Build the XCore host tflm interpreter libraries with default settings (see the [`Makefile`](Makefile) for more), run:
 ```shell
 make build
-```
-
-Install the necessary python packages and the `xtftlm_interpreter` python package using `pip` (inside the conda venv):
-```shell
-pip install -r "./requirements.txt"
 ```
 
 After following the above instructions, to build xformer, please follow the build instructions [here](https://github.com/xmos/ai_tools/tree/develop/experimental/xformer#readme).

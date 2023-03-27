@@ -58,3 +58,7 @@ _build
 *.y
 *.x
 
+**/notebooks/**/*.jpeg
+**/notebooks/**/*.jpg
+**/notebooks/**/*.txt.*
+

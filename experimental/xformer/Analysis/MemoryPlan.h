@@ -44,7 +44,13 @@ public:
 
   int getMaxMemoryUsed();
 
-  // OpSplitPlan getOpSplitPlan();
+  struct OpSplitPlan {
+    int opSplitStartOp;
+    int opSplitEndOp;
+    int opSplitNumSplits;
+  };
+
+  OpSplitPlan getOpSplitPlan();
 
 private:
   /// Initializes the internal mappings.

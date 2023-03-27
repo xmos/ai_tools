@@ -92,7 +92,7 @@ void MemoryPlan::build() {
 
   for (auto v : values) {
     printf("\nvalue %d size = %d start op = %d end op = %d", valueInfo[v].id,
-           valueInfo[v].size, valueInfo[v].firstUsed, valueInfo[v].lastUsed);
+     valueInfo[v].size, valueInfo[v].firstUsed, valueInfo[v].lastUsed);
   }
   printf("\n\n");
 }
@@ -124,6 +124,53 @@ int MemoryPlan::getMaxMemoryUsed() {
   maxOp->getLoc().dump();
   printf("\n\n");
   return maxSize;
+}
+
+MemoryPlan::OpSplitPlan MemoryPlan::getOpSplitPlan() {
+  Block *block = &op->getRegion(0).front();
+  const LivenessBlockInfo *lvb = liveness.getLiveness(block);
+
+  std::map<int, Operation *> opSize;
+  for (auto o : operations) {
+    if (o->hasTrait<OpTrait::IsTerminator>() ||
+        llvm::isa<TFL::QConstOp, TFL::ConstOp, arith::ConstantOp>(o)) {
+      continue;
+    }
+    int size = 0;
+    for (auto v : lvb->currentlyLiveValues(o)) {
+      if (!valueInfo[v].isConstant)
+        size += valueInfo[v].size;
+    }
+    opSize[size] = o;
+  }
+
+  // Print the first 5 pairs in reverse order using reverse iterators
+  std::size_t count = 0;
+  std::size_t limit = 5;
+  OpSplitPlan result;
+  result.opSplitStartOp = 0;
+  result.opSplitEndOp = 100000;
+  result.opSplitNumSplits = 2;
+
+  for (auto it = opSize.rbegin(); it != opSize.rend() && count < limit;
+       ++it, ++count) {
+    std::cout << "ID: " << it->first << ", Value: " << it->second << std::endl;
+
+    printf("\nMax op %d width = %d", operationIds[it->second], it->first);
+    it->second->dump();
+    it->second->getLoc().dump();
+    printf("\n\n");
+
+    auto currentOpId = operationIds[it->second];
+
+    if (currentOpId > result.opSplitStartOp) {
+      result.opSplitStartOp = currentOpId;
+    }
+    if (currentOpId < result.opSplitEndOp) {
+      result.opSplitEndOp = currentOpId;
+    }
+  }
+  return result;
 }
 
 int MemoryPlan::getOffset(Value v, int size,
@@ -279,7 +326,7 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
   for (auto i : allocatedValuesOrderedByID) {
     offsets.push_back(i.second);
     printf("\nValue %d, size %d, offset %d ", valueInfo[i.first].id,
-           valueInfo[i.first].size, i.second);
+     valueInfo[i.first].size, i.second);
   }
   printf("\n\n");
 

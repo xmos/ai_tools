@@ -13,11 +13,6 @@ pipeline {
             defaultValue: '15.2.1',
             description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
         )
-        booleanParam( // use to check results of rolling all conda deps forward
-            name: 'UPDATE_ALL',
-            defaultValue: false,
-            description: 'Update all conda packages before building'
-        )
     }
 
     options {

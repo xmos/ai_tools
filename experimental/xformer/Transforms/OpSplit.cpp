@@ -676,13 +676,13 @@ void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
 
-  std::vector<int> *startOp;
-  std::vector<int> *endOp;
-  std::vector<int> *numSplits;
+  std::vector<int> startOp;
+  std::vector<int> endOp;
+  std::vector<int> numSplits;
 
-  startOp = &opSplitStartOpOption;
-  endOp = &opSplitEndOpOption;
-  numSplits = &opSplitNumSplitsOption;
+  startOp = opSplitStartOpOption;
+  endOp = opSplitEndOpOption;
+  numSplits = opSplitNumSplitsOption;
 
   if (opSplitStartOpOption.empty()) {
     // Create an instance of the MemoryPlan class
@@ -692,17 +692,17 @@ void OpSplit::runOnOperation() {
     MemoryPlan::OpSplitPlan result = memory_plan_instance.getOpSplitPlan();
 
     // Add the values
-    startOp->push_back(result.opSplitStartOp);
-    endOp->push_back(result.opSplitEndOp);
-    numSplits->push_back(result.opSplitNumSplits);
+    startOp = result.opSplitStartOp;
+    endOp = result.opSplitEndOp;
+    numSplits = result.opSplitNumSplits;
   }
 
   OpBuilder builder(func);
-  auto startOpIt = startOp->begin();
-  auto endOpIt = endOp->begin();
-  auto numSplitsIt = numSplits->begin();
+  auto startOpIt = startOp.begin();
+  auto endOpIt = endOp.begin();
+  auto numSplitsIt = numSplits.begin();
 
-  while (numSplitsIt != numSplits->end()) {
+  while (numSplitsIt != numSplits.end()) {
 
     int k = 0;
     func.walk([&](Operation *op) {

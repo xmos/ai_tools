@@ -92,7 +92,7 @@ void MemoryPlan::build() {
 
   for (auto v : values) {
     printf("\nvalue %d size = %d start op = %d end op = %d", valueInfo[v].id,
-     valueInfo[v].size, valueInfo[v].firstUsed, valueInfo[v].lastUsed);
+           valueInfo[v].size, valueInfo[v].firstUsed, valueInfo[v].lastUsed);
   }
   printf("\n\n");
 }
@@ -144,32 +144,39 @@ MemoryPlan::OpSplitPlan MemoryPlan::getOpSplitPlan() {
     opSize[size] = o;
   }
 
-  // Print the first 5 pairs in reverse order using reverse iterators
-  std::size_t count = 0;
-  std::size_t limit = 5;
+  // Print ops with memory usage bigger than threshold
+  int memoryThreshold = 750000;
   OpSplitPlan result;
-  result.opSplitStartOp = 0;
-  result.opSplitEndOp = 100000;
-  result.opSplitNumSplits = 2;
+  result.opSplitStartOp = 0;    // small number for comparison
+  result.opSplitEndOp = 100000; // big number for comparison
 
-  for (auto it = opSize.rbegin(); it != opSize.rend() && count < limit;
-       ++it, ++count) {
+  double maxSize = -1;
+  double size = 0;
+  for (auto it = opSize.rbegin(); it != opSize.rend(); ++it) {
     std::cout << "ID: " << it->first << ", Value: " << it->second << std::endl;
+    size = it->first;
+    if (size > memoryThreshold) {
+      printf("\nMax op %d width = %d", operationIds[it->second], size);
+      it->second->dump();
+      it->second->getLoc().dump();
+      printf("\n\n");
 
-    printf("\nMax op %d width = %d", operationIds[it->second], it->first);
-    it->second->dump();
-    it->second->getLoc().dump();
-    printf("\n\n");
+      if (size > maxSize) {
+        maxSize = size;
+      }
 
-    auto currentOpId = operationIds[it->second];
+      auto currentOpId = operationIds[it->second];
 
-    if (currentOpId > result.opSplitStartOp) {
-      result.opSplitStartOp = currentOpId;
-    }
-    if (currentOpId < result.opSplitEndOp) {
-      result.opSplitEndOp = currentOpId;
+      if (currentOpId > result.opSplitStartOp) {
+        result.opSplitStartOp = currentOpId;
+      }
+      if (currentOpId < result.opSplitEndOp) {
+        result.opSplitEndOp = currentOpId;
+      }
     }
   }
+  result.opSplitNumSplits = std::ceil(maxSize / memoryThreshold);
+
   return result;
 }
 
@@ -326,7 +333,7 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
   for (auto i : allocatedValuesOrderedByID) {
     offsets.push_back(i.second);
     printf("\nValue %d, size %d, offset %d ", valueInfo[i.first].id,
-     valueInfo[i.first].size, i.second);
+           valueInfo[i.first].size, i.second);
   }
   printf("\n\n");
 

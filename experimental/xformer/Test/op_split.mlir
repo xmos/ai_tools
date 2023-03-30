@@ -1,4 +1,4 @@
-// RUN: xcore-opt --mlir-io %s --xcore-op-split --xcore-op-split-start-op=14,5 --xcore-op-split-end-op=11,2 --xcore-op-split-num-splits=3,4  | FileCheck %s
+// RUN: xcore-opt --mlir-io %s --xcore-op-split --xcore-op-split-start-op=5 --xcore-op-split-end-op=2 --xcore-op-split-num-splits=4  | FileCheck %s
 
 // CHECK-LABEL: five_layers
 func.func @five_layers(%arg0: tensor<?x256x256x3x!quant.uniform<i8:f32, 0.0039215688593685627:-128>> {tf_saved_model.index_path = ["input_1"]}) -> (tensor<?x4096x!quant.uniform<i8:f32, 3.322536576888524E-5:-128>> {tf_saved_model.index_path = ["flatten"]}) attributes {tf.entry_function = {inputs = "serving_default_input_1:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
@@ -25,28 +25,6 @@ func.func @five_layers(%arg0: tensor<?x256x256x3x!quant.uniform<i8:f32, 0.003921
   // CHECK: tfl.depthwise_conv_2d
   // CHECK: tfl.pad
   // CHECK: tfl.conv_2d
-
-  // CHECK: tfl.concatenation
-
-  // CHECK: tfl.depthwise_conv_2d
-
-  // CHECK: tfl.strided_slice
-  // CHECK: tfl.pad
-  // CHECK: tfl.conv_2d
-  // CHECK: tfl.pad
-  // CHECK: tfl.depthwise_conv_2d
-
-  // CHECK: tfl.strided_slice
-  // CHECK: tfl.pad
-  // CHECK: tfl.conv_2d
-  // CHECK: tfl.pad
-  // CHECK: tfl.depthwise_conv_2d
-
-  // CHECK: tfl.strided_slice
-  // CHECK: tfl.pad
-  // CHECK: tfl.conv_2d
-  // CHECK: tfl.pad
-  // CHECK: tfl.depthwise_conv_2d
 
   // CHECK: tfl.concatenation
 

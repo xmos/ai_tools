@@ -16,6 +16,7 @@ extern llvm::cl::opt<double> convQuantErrorThresholdOption;
 extern llvm::cl::opt<bool> convForceErrorCheckOption;
 extern llvm::cl::opt<unsigned> convMultiplierFactorOption;
 extern llvm::cl::opt<bool> opSplitTensorArenaOption;
+extern llvm::cl::opt<int32_t> opSplitTargetSizeOption;
 extern llvm::cl::opt<int32_t> opSplitStartOpOption;
 extern llvm::cl::opt<int32_t> opSplitEndOpOption;
 extern llvm::cl::opt<int32_t> opSplitNumSplitsOption;

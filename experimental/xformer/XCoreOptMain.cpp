@@ -79,20 +79,21 @@ cl::opt<bool> opSplitTensorArenaOption(
     cl::desc("Enable prototype op split to reduce tensor arena size."),
     cl::init(false));
 
-cl::opt<int32_t> opSplitStartOpOption(
-    "xcore-op-split-start-op",
-    cl::desc("Enable prototype op split to reduce tensor arena size."),
-    cl::CommaSeparated);
+cl::opt<int32_t>
+    opSplitTargetSizeOption("xcore-op-split-target-size",
+                            cl::desc("Op split target max tensor arena size."),
+                                cl::init(725000));
+cl::opt<int32_t>
+    opSplitStartOpOption("xcore-op-split-start-op",
+                         cl::desc("Manual override Op split, start op."));
 
-cl::opt<int32_t> opSplitEndOpOption(
-    "xcore-op-split-end-op",
-    cl::desc("Enable prototype op split to reduce tensor arena size."),
-    cl::CommaSeparated);
+cl::opt<int32_t>
+    opSplitEndOpOption("xcore-op-split-end-op",
+                       cl::desc("Manual override Op split, end op."));
 
 cl::opt<int32_t> opSplitNumSplitsOption(
     "xcore-op-split-num-splits",
-    cl::desc("Enable prototype op split to reduce tensor arena size."),
-    cl::CommaSeparated);
+    cl::desc("Manual override Op split, number of splits."));
 
 cl::opt<bool> allowInputModificationOption(
     "xcore-allow-input-modification",

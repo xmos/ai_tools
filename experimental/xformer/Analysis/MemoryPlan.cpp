@@ -145,7 +145,7 @@ MemoryPlan::OpSplitPlan MemoryPlan::getOpSplitPlan() {
   }
 
   // Print ops with memory usage bigger than threshold
-  int memoryThreshold = 500000;
+  int memoryThreshold = opSplitTargetSizeOption.getValue();
   OpSplitPlan result;
   result.opSplitStartOp = 0;     // small number for comparison
   result.opSplitEndOp = 9999999; // big number for comparison

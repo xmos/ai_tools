@@ -349,8 +349,6 @@ struct RaiseStridedSliceHorizontalPattern
       // Calculate new end index for slice after being raised above conv
       if (endIndex == outputHeight) {
         newEndIndex = inputHeight;
-        // output_length = input_length - dilated_filter_size + 1
-        // return (output_length + stride - 1) // stride
         lostFraction =
             (inputHeight - filterHeight + strideHeight) % strideHeight;
       } else {
@@ -676,20 +674,17 @@ void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
 
-  std::vector<int> startOp;
-  std::vector<int> endOp;
-  std::vector<int> numSplits;
+  int startOp = 0;
+  int endOp = 0;
+  int numSplits = 0;
 
-  startOp = opSplitStartOpOption;
-  endOp = opSplitEndOpOption;
-  numSplits = opSplitNumSplitsOption;
+  startOp = opSplitStartOpOption.getValue();
+  endOp = opSplitEndOpOption.getValue();
+  numSplits = opSplitNumSplitsOption.getValue();
 
-  if (opSplitStartOpOption.empty()) {
-    // Create an instance of the MemoryPlan class
-    MemoryPlan memory_plan_instance(func);
-
-    // Call the getOpSplitPlan() function
-    MemoryPlan::OpSplitPlan result = memory_plan_instance.getOpSplitPlan();
+  if (numSplits == 0) {
+    auto &m = getAnalysis<MemoryPlan>();
+    auto result = m.getOpSplitPlan();
 
     // Add the values
     startOp = result.opSplitStartOp;
@@ -698,27 +693,15 @@ void OpSplit::runOnOperation() {
   }
 
   OpBuilder builder(func);
-  auto startOpIt = startOp.begin();
-  auto endOpIt = endOp.begin();
-  auto numSplitsIt = numSplits.begin();
-
-  while (numSplitsIt != numSplits.end()) {
-
-    int k = 0;
-    func.walk([&](Operation *op) {
-      if (k == *startOpIt) {
-        op->setAttr(opSplitLabelNumSplits,
-                    builder.getI32IntegerAttr(*numSplitsIt));
-      } else if (k < *startOpIt && k >= *endOpIt) {
-        op->setAttr(opSplitLabel, builder.getUnitAttr());
-      }
-      k++;
-    });
-
-    ++startOpIt;
-    ++endOpIt;
-    ++numSplitsIt;
-  };
+  int k = 0;
+  func.walk([&](Operation *op) {
+    if (k == startOp) {
+      op->setAttr(opSplitLabelNumSplits, builder.getI32IntegerAttr(numSplits));
+    } else if (k < startOp && k >= endOp) {
+      op->setAttr(opSplitLabel, builder.getUnitAttr());
+    }
+    k++;
+  });
 
   RewritePatternSet patterns1(ctx);
 

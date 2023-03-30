@@ -45,9 +45,9 @@ public:
   int getMaxMemoryUsed();
 
   struct OpSplitPlan {
-    std::vector<int> opSplitStartOp;
-    std::vector<int> opSplitEndOp;
-    std::vector<int> opSplitNumSplits;
+    int opSplitStartOp;
+    int opSplitEndOp;
+    int opSplitNumSplits;
   };
 
   OpSplitPlan getOpSplitPlan();

@@ -145,11 +145,10 @@ MemoryPlan::OpSplitPlan MemoryPlan::getOpSplitPlan() {
   }
 
   // Print ops with memory usage bigger than threshold
-  int memoryThreshold = 750000;
+  int memoryThreshold = 500000;
   OpSplitPlan result;
-  result.opSplitStartOp.push_back(0);    // small number for comparison
-  result.opSplitEndOp.push_back(9999999); // big number for comparison
-  result.opSplitNumSplits.push_back(0);    // intialize to 0
+  result.opSplitStartOp = 0;     // small number for comparison
+  result.opSplitEndOp = 9999999; // big number for comparison
 
   double maxSize = -1;
   double size = 0;
@@ -168,15 +167,15 @@ MemoryPlan::OpSplitPlan MemoryPlan::getOpSplitPlan() {
 
       auto currentOpId = operationIds[it->second];
 
-      if (currentOpId > result.opSplitStartOp[0]) {
-        result.opSplitStartOp[0] = currentOpId;
+      if (currentOpId > result.opSplitStartOp) {
+        result.opSplitStartOp = currentOpId;
       }
-      if (currentOpId < result.opSplitEndOp[0]) {
-        result.opSplitEndOp[0] = currentOpId;
+      if (currentOpId < result.opSplitEndOp) {
+        result.opSplitEndOp = currentOpId;
       }
     }
   }
-  result.opSplitNumSplits[0] = std::ceil(maxSize / memoryThreshold);
+  result.opSplitNumSplits = std::ceil(maxSize / memoryThreshold);
 
   return result;
 }

@@ -34,7 +34,8 @@ struct ReplaceStridedSlicePattern
   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSliceOp,
                                 PatternRewriter &rewriter) const override {
 
-    auto inputType = stridedSliceOp.input().getType().cast<RankedTensorType>();
+    auto inputType =
+        stridedSliceOp.getInput().getType().cast<RankedTensorType>();
     auto inputElementType = inputType.getElementType();
 
     // Check for invalid types and return
@@ -47,7 +48,7 @@ struct ReplaceStridedSlicePattern
     }
 
     auto outputType =
-        stridedSliceOp.output().getType().cast<RankedTensorType>();
+        stridedSliceOp.getOutput().getType().cast<RankedTensorType>();
     auto outputElementType = outputType.getElementType();
 
     // Output type must be QI8
@@ -65,13 +66,13 @@ struct ReplaceStridedSlicePattern
 
     // Extract args from the op
     DenseElementsAttr beginAttr;
-    matchPattern(stridedSliceOp.begin(), m_Constant(&beginAttr));
+    matchPattern(stridedSliceOp.getBegin(), m_Constant(&beginAttr));
 
     DenseElementsAttr endAttr;
-    matchPattern(stridedSliceOp.end(), m_Constant(&endAttr));
+    matchPattern(stridedSliceOp.getEnd(), m_Constant(&endAttr));
 
     DenseElementsAttr stridesAttr;
-    matchPattern(stridedSliceOp.strides(), m_Constant(&stridesAttr));
+    matchPattern(stridedSliceOp.getStrides(), m_Constant(&stridesAttr));
 
     auto inputHeight = inputType.getDimSize(1);
     auto inputWidth = inputType.getDimSize(2);
@@ -100,9 +101,9 @@ struct ReplaceStridedSlicePattern
 
     auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceOp>(
         stridedSliceOp.getLoc(), stridedSliceOp.getType(),
-        stridedSliceOp.input(), rewriter.getI32IntegerAttr(beginX),
+        stridedSliceOp.getInput(), rewriter.getI32IntegerAttr(beginX),
         rewriter.getI32IntegerAttr(beginY), rewriter.getStringAttr(mfStr));
-    rewriter.replaceOp(stridedSliceOp, binaryObjectStridedSliceOp.output());
+    rewriter.replaceOp(stridedSliceOp, binaryObjectStridedSliceOp.getOutput());
 
     return success();
   }

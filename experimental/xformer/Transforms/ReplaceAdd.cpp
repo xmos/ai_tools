@@ -36,13 +36,13 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
 
     // Check for invalid types and return
     // Both input shapes must match
-    if (failed(
-            verifyCompatibleShapes(addOp.lhs().getType().cast<ShapedType>(),
-                                   addOp.rhs().getType().cast<ShapedType>()))) {
+    if (failed(verifyCompatibleShapes(
+            addOp.getLhs().getType().cast<ShapedType>(),
+            addOp.getRhs().getType().cast<ShapedType>()))) {
       return failure();
     }
 
-    auto lhsType = addOp.lhs().getType().cast<ShapedType>().getElementType();
+    auto lhsType = addOp.getLhs().getType().cast<ShapedType>().getElementType();
     // Lhs type must be QI8
     if (!(lhsType.isa<quant::QuantizedType>() &&
           lhsType.cast<quant::QuantizedType>().isSigned() &&
@@ -51,7 +51,7 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
       return failure();
     }
 
-    auto rhsType = addOp.rhs().getType().cast<ShapedType>().getElementType();
+    auto rhsType = addOp.getRhs().getType().cast<ShapedType>().getElementType();
     // Rhs type must be QI8
     if (!(rhsType.isa<quant::QuantizedType>() &&
           rhsType.cast<quant::QuantizedType>().isSigned() &&
@@ -61,7 +61,7 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
     }
 
     auto outputType =
-        addOp.output().getType().cast<ShapedType>().getElementType();
+        addOp.getOutput().getType().cast<ShapedType>().getElementType();
     // Output type must be QI8
     if (!(outputType.isa<quant::QuantizedType>() &&
           outputType.cast<quant::QuantizedType>().isSigned() &&
@@ -99,11 +99,11 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
                      pow(2, shift));
 
     auto xcAddOp = rewriter.create<AddOp>(
-        addOp.getLoc(), addOp.getType(), addOp.lhs(), addOp.rhs(),
-        rewriter.getStringAttr(addOp.fused_activation_function()),
+        addOp.getLoc(), addOp.getType(), addOp.getLhs(), addOp.getRhs(),
+        rewriter.getStringAttr(addOp.getFusedActivationFunction()),
         rewriter.getI32IntegerAttr(m1), rewriter.getI32IntegerAttr(m2),
         rewriter.getI32IntegerAttr(bias), rewriter.getI32IntegerAttr(shift));
-    rewriter.replaceOp(addOp, xcAddOp.output());
+    rewriter.replaceOp(addOp, xcAddOp.getOutput());
 
     return success();
   }

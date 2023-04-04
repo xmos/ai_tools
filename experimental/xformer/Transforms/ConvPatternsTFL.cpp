@@ -18,7 +18,7 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   // Retrieve remaining args
   // Get output zero point
   auto outputType =
-      conv2DOp.output().getType().template dyn_cast<RankedTensorType>();
+      conv2DOp.getOutput().getType().template dyn_cast<RankedTensorType>();
   auto outputQType =
       outputType.getElementType()
           .template dyn_cast<mlir::quant::UniformQuantizedType>();
@@ -27,7 +27,7 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
 
   // Get input zero point
   auto inputType =
-      conv2DOp.input().getType().template dyn_cast<RankedTensorType>();
+      conv2DOp.getInput().getType().template dyn_cast<RankedTensorType>();
   auto inputQType = inputType.getElementType()
                         .template dyn_cast<mlir::quant::UniformQuantizedType>();
   auto inputScale = inputQType.getScale();
@@ -35,8 +35,8 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
 
   // Get filter values
   auto filterQConstOp =
-      dyn_cast<TFL::QConstOp>(conv2DOp.filter().getDefiningOp());
-  auto filter = filterQConstOp.value().template cast<DenseElementsAttr>();
+      dyn_cast<TFL::QConstOp>(conv2DOp.getFilter().getDefiningOp());
+  auto filter = filterQConstOp.getValue().template cast<DenseElementsAttr>();
   auto filterVector =
       std::vector<int8_t>{filter.template getValues<int8_t>().begin(),
                           filter.template getValues<int8_t>().end()};
@@ -44,18 +44,18 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   // Get bias values
   // If no bias exists, create vector with zero values
   std::vector<int32_t> biasVector;
-  if (!conv2DOp.bias().getType().template isa<NoneType>()) {
+  if (!conv2DOp.getBias().getType().template isa<NoneType>()) {
     DenseElementsAttr biasesAttr;
-    if (conv2DOp.bias()
+    if (conv2DOp.getBias()
             .getType()
             .template cast<ShapedType>()
             .getElementType()
             .template isa<quant::QuantizedType>()) {
       auto biasQConstOp =
-          dyn_cast<TFL::QConstOp>(conv2DOp.bias().getDefiningOp());
-      biasesAttr = biasQConstOp.value().template cast<DenseElementsAttr>();
+          dyn_cast<TFL::QConstOp>(conv2DOp.getBias().getDefiningOp());
+      biasesAttr = biasQConstOp.getValue().template cast<DenseElementsAttr>();
     } else {
-      matchPattern(conv2DOp.bias(), m_Constant(&biasesAttr));
+      matchPattern(conv2DOp.getBias(), m_Constant(&biasesAttr));
     }
     biasVector =
         std::vector<int32_t>{biasesAttr.template getValues<int32_t>().begin(),
@@ -67,7 +67,7 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   // Calculate effectiveOutputScale
   std::vector<float> effectiveOutputScaleVector;
   auto filterQConstOpType =
-      filterQConstOp.qtype().template cast<RankedTensorType>();
+      filterQConstOp.getQtype().template cast<RankedTensorType>();
   bool isPerChannelQuantized = false;
   double filterScale;
   ArrayRef<double> filterScales;
@@ -90,7 +90,7 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   // https://www.tensorflow.org/lite/performance/quantization_spec
   int dim = static_cast<const ConcreteType *>(this)->getQuantizationIndex();
   auto filterType =
-      conv2DOp.filter().getType().template dyn_cast<RankedTensorType>();
+      conv2DOp.getFilter().getType().template dyn_cast<RankedTensorType>();
   auto numOutputChannels = filterType.getDimSize(dim);
   for (int i = 0; i < numOutputChannels; ++i) {
     auto scale = isPerChannelQuantized ? filterScales[i] : filterScale;
@@ -123,9 +123,9 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   int64_t newHeight, newWidth;
   int64_t padTop, padBottom, padLeft, padRight;
 
-  if (conv2DOp.padding() == "EXPLICIT") {
+  if (conv2DOp.getPadding() == "EXPLICIT") {
     DenseElementsAttr paddingAttr;
-    matchPattern(conv2DOp.padding_values(), m_Constant(&paddingAttr));
+    matchPattern(conv2DOp.getPaddingValues(), m_Constant(&paddingAttr));
     // The padding values for the PadOp are stored as a 4x2 tensor 0,0 and 0,1
     // is for the batch dimension and 3,0, and 3,1 for the channel/depth 1,0 and
     // 1,1 is top and bottom, and 2,0 and 2,1 is left and right which are the
@@ -135,19 +135,19 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
     padLeft = paddingAttr.template getValues<int32_t>()[{2, 0}];
     padRight = paddingAttr.template getValues<int32_t>()[{2, 1}];
   } else {
-    tensorflow::Padding opPadding = conv2DOp.padding() == "VALID"
+    tensorflow::Padding opPadding = conv2DOp.getPadding() == "VALID"
                                         ? tensorflow::Padding::VALID
                                         : tensorflow::Padding::SAME;
     if (tensorflow::GetWindowedOutputSizeVerboseV2(
-            args.inputHeight, args.filterHeight, conv2DOp.dilation_h_factor(),
-            conv2DOp.stride_h(), opPadding, &newHeight, &padTop,
-            &padBottom) != tensorflow::Status::OK()) {
+            args.inputHeight, args.filterHeight, conv2DOp.getDilationHFactor(),
+            conv2DOp.getStrideH(), opPadding, &newHeight, &padTop,
+            &padBottom) != tensorflow::OkStatus()) {
       return failure();
     }
     if (tensorflow::GetWindowedOutputSizeVerboseV2(
-            args.inputWidth, args.filterWidth, conv2DOp.dilation_w_factor(),
-            conv2DOp.stride_w(), opPadding, &newWidth, &padLeft,
-            &padRight) != tensorflow::Status::OK()) {
+            args.inputWidth, args.filterWidth, conv2DOp.getDilationWFactor(),
+            conv2DOp.getStrideW(), opPadding, &newWidth, &padLeft,
+            &padRight) != tensorflow::OkStatus()) {
       return failure();
     }
   }
@@ -166,8 +166,8 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
       nn::ImageGeometry(args.inputHeight, args.inputWidth, args.inputDepth);
   args.K = nn::WindowGeometry(
       args.filterHeight, args.filterWidth, args.filterDepth, -args.padding.top,
-      -args.padding.left, conv2DOp.stride_h(), conv2DOp.stride_w(), 1,
-      conv2DOp.dilation_h_factor(), conv2DOp.dilation_w_factor());
+      -args.padding.left, conv2DOp.getStrideH(), conv2DOp.getStrideW(), 1,
+      conv2DOp.getDilationHFactor(), conv2DOp.getDilationWFactor());
 
   args.outputZeroPoint = outputZeroPoint;
   args.inputZeroPoint = inputZeroPoint;

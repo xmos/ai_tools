@@ -10,6 +10,7 @@
 #include "lib_nn/api/version.h"
 #include "lib_tflite_micro/api/version.h"
 #include "lib_tflite_micro/api/xcore_shared_config.h"
+#include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
@@ -112,7 +113,8 @@ cl::opt<bool> overlapOption("xcore-overlap", cl::desc("Overlap buffers."),
 LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
                               const OwningOpRef<ModuleOp> &mod,
                               MLIRContext *context) {
-  PassManager pm(context, mlir::OpPassManager::Nesting::Implicit);
+  auto module = mod.get();
+  PassManager pm(module->getName(), mlir::OpPassManager::Nesting::Implicit);
   applyPassManagerCLOptions(pm);
 
   auto errorHandler = [&](const Twine &msg) {
@@ -218,7 +220,7 @@ int main(int argc, char **argv) {
   // Initialize dialects.
   MLIRContext context;
   context.loadDialect<func::FuncDialect>();
-  context.loadDialect<arith::ArithmeticDialect>();
+  context.loadDialect<arith::ArithDialect>();
   context.loadDialect<quant::QuantizationDialect>();
   context.loadDialect<TFL::TensorFlowLiteDialect>();
   context.loadDialect<xcore::XCoreDialect>();

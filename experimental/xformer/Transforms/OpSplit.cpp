@@ -344,7 +344,7 @@ struct RaiseStridedSliceHorizontalPattern
     }
 
     // Check if padding is same
-    if (convOriginal.padding() == "VALID") {
+    if (convOriginal.getPadding() == "VALID") {
       int32_t lostFraction;
 
       // Calculate new end index for slice after being raised above conv

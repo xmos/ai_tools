@@ -83,7 +83,7 @@ cl::opt<bool> opSplitTensorArenaOption(
 cl::opt<int32_t>
     opSplitTargetSizeOption("xcore-op-split-target-size",
                             cl::desc("Op split target max tensor arena size."),
-                                cl::init(725000));
+                            cl::init(725000));
 cl::opt<int32_t>
     opSplitStartOpOption("xcore-op-split-start-op",
                          cl::desc("Manual override Op split, start op."));

@@ -1,6 +1,7 @@
-// Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
+//  Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
+#include "Analysis/MemoryPlan.h"
 #include "Transforms/Options.h"
 
 #include "mlir/Pass/Pass.h"
@@ -343,8 +344,21 @@ struct RaiseStridedSliceHorizontalPattern
 
     // Check if padding is same
     if (convOriginal.padding() == "VALID") {
+      int32_t lostFraction;
+
       // Calculate new end index for slice after being raised above conv
-      newEndIndex = endIndex * strideHeight - strideHeight + filterHeight;
+      if (endIndex == outputHeight) {
+        newEndIndex = inputHeight;
+        lostFraction =
+            (inputHeight - filterHeight + strideHeight) % strideHeight;
+      } else {
+        newEndIndex = endIndex * strideHeight - strideHeight + filterHeight;
+        lostFraction = 0;
+      }
+
+      // Calculate new output height after raising slice above conv
+      newOutputHeight = stridedSliceOutputHeight * strideHeight - strideHeight +
+                        filterHeight - padTop - padBottom + lostFraction;
 
     } else if (convOriginal.padding() == "SAME") {
 
@@ -380,6 +394,9 @@ struct RaiseStridedSliceHorizontalPattern
         padTop = 0;
         padBottom = 0;
       }
+      // Calculate new output height after raising slice above conv
+      newOutputHeight = stridedSliceOutputHeight * strideHeight - strideHeight +
+                        filterHeight - padTop - padBottom;
     }
 
     // Set end tensor for slice to be above conv with new end index
@@ -388,10 +405,6 @@ struct RaiseStridedSliceHorizontalPattern
                           static_cast<int32_t>(inputChannels)};
     auto endConstantOp = rewriter.create<arith::ConstantOp>(
         stridedSlice.getLoc(), rewriter.getI32TensorAttr(endAttr));
-
-    // Calculate new output height after raising slice above conv
-    newOutputHeight = stridedSliceOutputHeight * strideHeight - strideHeight +
-                      filterHeight - padTop - padBottom;
 
     // Set begin tensor to zero for all dims except height
     // set height to new end index - new output height
@@ -617,6 +630,7 @@ struct RaiseStridedSliceHorizontalPadPattern
         stridedSlice.begin_mask(), stridedSlice.end_mask(),
         stridedSlice.ellipsis_mask(), stridedSlice.new_axis_mask(),
         stridedSlice.shrink_axis_mask());
+    stridedSliceReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     // Adjust shape for padding
     auto paddedHeight = newOutputHeight + padTop + padBottom;
@@ -660,34 +674,34 @@ void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
 
-  llvm::cl::list<int> &startOp = opSplitStartOpOption;
-  llvm::cl::list<int> &endOp = opSplitEndOpOption;
-  llvm::cl::list<int> &numSplits = opSplitNumSplitsOption;
+  int startOp = 0;
+  int endOp = 0;
+  int numSplits = 0;
+
+  startOp = opSplitStartOpOption.getValue();
+  endOp = opSplitEndOpOption.getValue();
+  numSplits = opSplitNumSplitsOption.getValue();
+
+  if (numSplits == 0) {
+    auto &m = getAnalysis<MemoryPlan>();
+    auto result = m.getOpSplitPlan();
+
+    // Add the values
+    startOp = result.opSplitStartOp;
+    endOp = result.opSplitEndOp;
+    numSplits = result.opSplitNumSplits;
+  }
 
   OpBuilder builder(func);
-  auto startOpIt = startOp.begin();
-  auto endOpIt = endOp.begin();
-  auto numSplitsIt = numSplits.begin();
-
-  while (numSplitsIt != numSplits.end()) {
-
-    int k = 0;
-    func.walk([&](Operation *op) {
-      if (!(isa<TFL::ConstOp>(op) || isa<TFL::QConstOp>(op))) {
-        if (k == *startOpIt) {
-          op->setAttr(opSplitLabelNumSplits,
-                      builder.getI32IntegerAttr(*numSplitsIt));
-        } else if (k < *startOpIt && k >= *endOpIt) {
-          op->setAttr(opSplitLabel, builder.getUnitAttr());
-        }
-        k++;
-      }
-    });
-
-    ++startOpIt;
-    ++endOpIt;
-    ++numSplitsIt;
-  };
+  int k = 0;
+  func.walk([&](Operation *op) {
+    if (k == startOp) {
+      op->setAttr(opSplitLabelNumSplits, builder.getI32IntegerAttr(numSplits));
+    } else if (k < startOp && k >= endOp) {
+      op->setAttr(opSplitLabel, builder.getUnitAttr());
+    }
+    k++;
+  });
 
   RewritePatternSet patterns1(ctx);
 

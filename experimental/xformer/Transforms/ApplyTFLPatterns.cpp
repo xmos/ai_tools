@@ -81,8 +81,9 @@ getConvPaddingValues(PatternRewriter &rewriter, T conv2DOp,
   RankedTensorType outputType = RankedTensorType::get(
       {batch, outputHeight, outputWidth, depth}, inputType.getElementType());
   auto outputTypeOp = rewriter.create<arith::ConstantOp>(
-      conv2DOp->getLoc(), outputType, rewriter.getUnitAttr());
-
+      conv2DOp->getLoc(), outputType,
+      DenseIntElementsAttr::get(
+          RankedTensorType::get({1}, rewriter.getI32Type()), {1}));
   return SmallVector<Value, 2>({paddingOp, outputTypeOp});
 }
 

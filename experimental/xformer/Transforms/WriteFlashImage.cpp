@@ -35,15 +35,16 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
 
   std::vector<char> getTensorData(LoadConstantOp loadOp) const {
     DenseElementsAttr attr;
-    if (loadOp.input()
+    if (loadOp.getInput()
             .getType()
             .cast<ShapedType>()
             .getElementType()
             .isa<quant::QuantizedType>()) {
-      auto qConstOp = dyn_cast<TFL::QConstOp>(loadOp.input().getDefiningOp());
-      attr = qConstOp.value().template cast<DenseElementsAttr>();
+      auto qConstOp =
+          dyn_cast<TFL::QConstOp>(loadOp.getInput().getDefiningOp());
+      attr = qConstOp.getValue().template cast<DenseElementsAttr>();
     } else {
-      matchPattern(loadOp.input(), m_Constant(&attr));
+      matchPattern(loadOp.getInput(), m_Constant(&attr));
     }
 
     std::vector<char> tensorData;
@@ -110,7 +111,7 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
       auto loadFlashOp = rewriter.create<LoadFlashOp>(
           loadOp.getLoc(), loadOp.getType(), address,
           rewriter.getArrayAttr(dataSizes));
-      rewriter.replaceOp(loadOp, loadFlashOp.output());
+      rewriter.replaceOp(loadOp, loadFlashOp.getOutput());
     }
 
     tensorsVec_->push_back(tensorData);

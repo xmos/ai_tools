@@ -35,7 +35,7 @@ struct ReplaceAvgPoolWithConv2DPattern
                                 PatternRewriter &rewriter) const override {
 
     auto inputElementalType =
-        avgPoolOp.input().getType().cast<ShapedType>().getElementType();
+        avgPoolOp.getInput().getType().cast<ShapedType>().getElementType();
 
     // Check for invalid types and return
     // Input type must be QI8
@@ -47,7 +47,7 @@ struct ReplaceAvgPoolWithConv2DPattern
     }
 
     auto outputElementalType =
-        avgPoolOp.output().getType().cast<ShapedType>().getElementType();
+        avgPoolOp.getOutput().getType().cast<ShapedType>().getElementType();
 
     // Output type must be QI8
     if (!(outputElementalType.isa<quant::QuantizedType>() &&
@@ -57,11 +57,12 @@ struct ReplaceAvgPoolWithConv2DPattern
       return failure();
     }
 
-    auto inputType = avgPoolOp.input().getType().dyn_cast<RankedTensorType>();
+    auto inputType =
+        avgPoolOp.getInput().getType().dyn_cast<RankedTensorType>();
     auto inputDepth = inputType.getDimSize(3);
 
-    auto filterHeight = avgPoolOp.filter_height();
-    auto filterWidth = avgPoolOp.filter_width();
+    auto filterHeight = avgPoolOp.getFilterHeight();
+    auto filterWidth = avgPoolOp.getFilterWidth();
 
     float scaleFactor = 1. / (filterHeight * filterWidth);
 
@@ -103,17 +104,17 @@ struct ReplaceAvgPoolWithConv2DPattern
         avgPoolOp->getLoc(), DenseIntElementsAttr::get(biasType, biasValues));
 
     auto conv2dOp = rewriter.create<TFL::DepthwiseConv2DOp>(
-        avgPoolOp.getLoc(), avgPoolOp.getType(), avgPoolOp.input(), filter,
+        avgPoolOp.getLoc(), avgPoolOp.getType(), avgPoolOp.getInput(), filter,
         bias, // TODO [asj]how do we drop the bias?
         /*dilation_h_factor=*/1,
         /*dilation_w_factor=*/1,
-        /*fused_activation_function=*/avgPoolOp.fused_activation_function(),
-        /*padding=*/avgPoolOp.padding(),
-        /*stride_h=*/avgPoolOp.stride_h(),
-        /*stride_w=*/avgPoolOp.stride_w(),
+        /*fused_activation_function=*/avgPoolOp.getFusedActivationFunction(),
+        /*padding=*/avgPoolOp.getPadding(),
+        /*stride_h=*/avgPoolOp.getStrideH(),
+        /*stride_w=*/avgPoolOp.getStrideW(),
         /*depth_multiplier=*/1);
 
-    rewriter.replaceOp(avgPoolOp, conv2dOp.output());
+    rewriter.replaceOp(avgPoolOp, conv2dOp.getOutput());
 
     return success();
   }

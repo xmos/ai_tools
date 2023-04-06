@@ -33,18 +33,18 @@ struct Pad3to4Conv2DPattern : public OpRewritePattern<TFL::Conv2DOp> {
     // Check for invalid types and return
     // These are the types applicable for lowering to an XC Conv2D
     // Input type must be QI8
-    if (!(conv2DOp.input()
+    if (!(conv2DOp.getInput()
               .getType()
               .template cast<ShapedType>()
               .getElementType()
               .template isa<quant::QuantizedType>() &&
-          conv2DOp.input()
+          conv2DOp.getInput()
               .getType()
               .template cast<ShapedType>()
               .getElementType()
               .template cast<quant::QuantizedType>()
               .isSigned() &&
-          conv2DOp.input()
+          conv2DOp.getInput()
                   .getType()
                   .template cast<ShapedType>()
                   .getElementType()
@@ -54,18 +54,18 @@ struct Pad3to4Conv2DPattern : public OpRewritePattern<TFL::Conv2DOp> {
     }
 
     // Filter type must be QI8
-    if (!(conv2DOp.filter()
+    if (!(conv2DOp.getFilter()
               .getType()
               .template cast<ShapedType>()
               .getElementType()
               .template isa<quant::QuantizedType>() &&
-          conv2DOp.filter()
+          conv2DOp.getFilter()
               .getType()
               .template cast<ShapedType>()
               .getElementType()
               .template cast<quant::QuantizedType>()
               .isSigned() &&
-          conv2DOp.filter()
+          conv2DOp.getFilter()
                   .getType()
                   .template cast<ShapedType>()
                   .getElementType()
@@ -77,14 +77,14 @@ struct Pad3to4Conv2DPattern : public OpRewritePattern<TFL::Conv2DOp> {
     // We don't bother padding if output depth is not a multiple of four as we
     // cannot optimize it with an XC Conv2D
     auto outputDepth =
-        conv2DOp.output().getType().cast<ShapedType>().getDimSize(3);
+        conv2DOp.getOutput().getType().cast<ShapedType>().getDimSize(3);
     if (outputDepth % 4 != 0) {
       return failure();
     }
 
     // Input depth must be three
     auto inputDepth =
-        conv2DOp.input().getType().cast<ShapedType>().getDimSize(3);
+        conv2DOp.getInput().getType().cast<ShapedType>().getDimSize(3);
     if (inputDepth != 3) {
       return failure();
     }
@@ -99,16 +99,17 @@ struct Pad3to4Conv2DPattern : public OpRewritePattern<TFL::Conv2DOp> {
         conv2DOp.getLoc(),
         DenseIntElementsAttr::get(paddingsType, paddingsValues));
     auto inputShape =
-        conv2DOp.input().getType().cast<RankedTensorType>().getShape();
+        conv2DOp.getInput().getType().cast<RankedTensorType>().getShape();
 
     // The pad output depth would increse from 3 to 4
     auto paddedInputResultType = RankedTensorType::get(
         {inputShape[0], inputShape[1], inputShape[2], inputShape[3] + 1},
-        conv2DOp.input().getType().cast<ShapedType>().getElementType());
+        conv2DOp.getInput().getType().cast<ShapedType>().getElementType());
 
     // Set the PadOp output as the Conv2D input
-    Value padOpOutput = rewriter.create<TFL::PadOp>(
-        conv2DOp.getLoc(), paddedInputResultType, conv2DOp.input(), paddings);
+    Value padOpOutput =
+        rewriter.create<TFL::PadOp>(conv2DOp.getLoc(), paddedInputResultType,
+                                    conv2DOp.getInput(), paddings);
     conv2DOp.setOperand(0, padOpOutput);
 
     // Pad the Conv2D filter
@@ -116,12 +117,12 @@ struct Pad3to4Conv2DPattern : public OpRewritePattern<TFL::Conv2DOp> {
     // as we use the padded filter values for the boggling calculations
     // for creating the XC Conv2D ops
     auto filterQConstOp =
-        dyn_cast<TFL::QConstOp>(conv2DOp.filter().getDefiningOp());
-    auto filter = filterQConstOp.value().cast<DenseElementsAttr>();
+        dyn_cast<TFL::QConstOp>(conv2DOp.getFilter().getDefiningOp());
+    auto filter = filterQConstOp.getValue().cast<DenseElementsAttr>();
     auto filterVector = std::vector<int8_t>{filter.getValues<int8_t>().begin(),
                                             filter.getValues<int8_t>().end()};
     auto filterShape =
-        conv2DOp.filter().getType().cast<RankedTensorType>().getShape();
+        conv2DOp.getFilter().getType().cast<RankedTensorType>().getShape();
     llvm::SmallVector<int8_t, 0> paddedFilterVector;
     paddedFilterVector.reserve(filterShape[0] * filterShape[1] *
                                filterShape[2] * (filterShape[3] + 1));
@@ -136,7 +137,7 @@ struct Pad3to4Conv2DPattern : public OpRewritePattern<TFL::Conv2DOp> {
 
     auto paddedFilterResultType = RankedTensorType::get(
         {filterShape[0], filterShape[1], filterShape[2], filterShape[3] + 1},
-        conv2DOp.filter().getType().cast<ShapedType>().getElementType());
+        conv2DOp.getFilter().getType().cast<ShapedType>().getElementType());
     RankedTensorType paddedFilterValueType = RankedTensorType::get(
         {filterShape[0], filterShape[1], filterShape[2], filterShape[3] + 1},
         rewriter.getIntegerType(8));

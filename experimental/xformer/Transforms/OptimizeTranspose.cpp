@@ -35,14 +35,14 @@ struct HoistTransposeWCHAbovePadPattern
 
     // Check for invalid types and return
     // Defining op must be pad
-    auto padOp = dyn_cast_or_null<TFL::PadOp>(op.input().getDefiningOp());
+    auto padOp = dyn_cast_or_null<TFL::PadOp>(op.getInput().getDefiningOp());
     if (!padOp) {
       return failure();
     }
 
     // Get transpose permutation
     DenseIntElementsAttr perm;
-    if (!matchPattern(op.perm(), m_Constant(&perm))) {
+    if (!matchPattern(op.getPerm(), m_Constant(&perm))) {
       return failure();
     }
 
@@ -56,7 +56,7 @@ struct HoistTransposeWCHAbovePadPattern
 
     // Get padding val
     DenseIntElementsAttr pad;
-    if (!matchPattern(padOp.padding(), m_Constant(&pad))) {
+    if (!matchPattern(padOp.getPadding(), m_Constant(&pad))) {
       return failure();
     }
 
@@ -70,13 +70,13 @@ struct HoistTransposeWCHAbovePadPattern
 
     // Create new TransposeOp
     auto padInputShape =
-        padOp.input().getType().cast<RankedTensorType>().getShape();
+        padOp.getInput().getType().cast<RankedTensorType>().getShape();
     auto tranposeResultType = RankedTensorType::get(
         {padInputShape[0], padInputShape[2], padInputShape[3],
          padInputShape[1]},
-        padOp.input().getType().cast<ShapedType>().getElementType());
+        padOp.getInput().getType().cast<ShapedType>().getElementType());
     auto newTranspose = rewriter.create<TFL::TransposeOp>(
-        padOp.getLoc(), tranposeResultType, padOp.input(), op.perm());
+        padOp.getLoc(), tranposeResultType, padOp.getInput(), op.getPerm());
 
     // Create new padding attr with spatial dimensions
     std::vector<int32_t> paddingValues{0, 0, 1, 1, 1, 1, 0, 0};
@@ -86,9 +86,9 @@ struct HoistTransposeWCHAbovePadPattern
         padOp->getLoc(), RankedTensorType::get({4, 2}, rewriter.getI32Type()),
         paddingAttr);
     auto newPad = rewriter.create<TFL::PadOp>(
-        padOp.getLoc(), op.output().getType(), newTranspose, paddingOp);
+        padOp.getLoc(), op.getOutput().getType(), newTranspose, paddingOp);
 
-    rewriter.replaceOp(op, newPad.output());
+    rewriter.replaceOp(op, newPad.getOutput());
     return success();
   }
 };
@@ -102,7 +102,7 @@ struct FoldCancellableTransposePattern
     // Check for invalid types and return
     // Defining op must be transpose
     auto transposeOp =
-        dyn_cast_or_null<TFL::TransposeOp>(op.input().getDefiningOp());
+        dyn_cast_or_null<TFL::TransposeOp>(op.getInput().getDefiningOp());
     if (!transposeOp) {
       return failure();
     }
@@ -110,8 +110,8 @@ struct FoldCancellableTransposePattern
     // Get transpose permutations
     DenseIntElementsAttr perm0;
     DenseIntElementsAttr perm1;
-    if (!matchPattern(op.perm(), m_Constant(&perm0)) ||
-        !matchPattern(transposeOp.perm(), m_Constant(&perm1))) {
+    if (!matchPattern(op.getPerm(), m_Constant(&perm0)) ||
+        !matchPattern(transposeOp.getPerm(), m_Constant(&perm1))) {
       return failure();
     }
 
@@ -120,7 +120,7 @@ struct FoldCancellableTransposePattern
       return failure();
     }
 
-    rewriter.replaceOp(op, transposeOp.input());
+    rewriter.replaceOp(op, transposeOp.getInput());
 
     return success();
   }
@@ -134,7 +134,7 @@ struct FoldTransposeWCHToInput : public OpRewritePattern<TFL::TransposeOp> {
     // Check for invalid types and return
     // Get transpose permutation
     DenseIntElementsAttr perm;
-    if (!matchPattern(op.perm(), m_Constant(&perm))) {
+    if (!matchPattern(op.getPerm(), m_Constant(&perm))) {
       return failure();
     }
 
@@ -148,7 +148,7 @@ struct FoldTransposeWCHToInput : public OpRewritePattern<TFL::TransposeOp> {
 
     // If input to the transpose is block arg, and block arg has only one use,
     // we can fold the transpose
-    if (auto blockArg = op.input().dyn_cast<BlockArgument>()) {
+    if (auto blockArg = op.getInput().dyn_cast<BlockArgument>()) {
       if (blockArg.hasOneUse()) {
         auto funcOp = cast<func::FuncOp>(blockArg.getOwner()->getParentOp());
 
@@ -157,16 +157,16 @@ struct FoldTransposeWCHToInput : public OpRewritePattern<TFL::TransposeOp> {
         FunctionType funcType = funcOp.getFunctionType();
         llvm::SmallVector<Type, 4> newInputTypes(funcType.getInputs().begin(),
                                                  funcType.getInputs().end());
-        newInputTypes[blockArg.getArgNumber()] = op.output().getType();
+        newInputTypes[blockArg.getArgNumber()] = op.getOutput().getType();
         auto newFuncType = FunctionType::get(
             rewriter.getContext(), newInputTypes, funcOp.getResultTypes());
         funcOp.setType(newFuncType);
 
         // Set block arg type to the transpose output type
-        blockArg.setType(op.output().getType());
+        blockArg.setType(op.getOutput().getType());
 
         // Remove transpose
-        rewriter.replaceOp(op, op.input());
+        rewriter.replaceOp(op, op.getInput());
       }
     }
 

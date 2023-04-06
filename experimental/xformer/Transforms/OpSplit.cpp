@@ -1,4 +1,4 @@
-//  Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
+// Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
 #include "Analysis/MemoryPlan.h"
@@ -47,7 +47,7 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
       return failure();
 
     // Check for invalid cases and return
-    auto outputElementalType = targetOp.output()
+    auto outputElementalType = targetOp.getOutput()
                                    .getType()
                                    .template cast<ShapedType>()
                                    .getElementType();
@@ -61,7 +61,7 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
     }
 
     // Data from target op needed later
-    auto targetOutput = targetOp.output();
+    auto targetOutput = targetOp.getOutput();
     auto outputType =
         targetOutput.getType().template dyn_cast<RankedTensorType>();
     int32_t outputHeight = outputType.getDimSize(1);
@@ -146,7 +146,7 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
 
     // Replace target op with
     // Cloned target op -> Strided Slices -> Concat
-    rewriter.replaceOp(targetOp, concatOp.output());
+    rewriter.replaceOp(targetOp, concatOp.getOutput());
 
     return success();
   }
@@ -163,16 +163,16 @@ struct RaiseStridedSliceHorizontalAddPattern
       return failure();
 
     // If strided slice does not have a defining op, return failure
-    if (!(stridedSlice.input().getDefiningOp())) {
+    if (!(stridedSlice.getInput().getDefiningOp())) {
       return failure();
     }
 
-    if (!isa<TFL::AddOp>(stridedSlice.input().getDefiningOp())) {
+    if (!isa<TFL::AddOp>(stridedSlice.getInput().getDefiningOp())) {
       return failure();
     }
 
     auto addOriginal =
-        llvm::cast<TFL::AddOp>(stridedSlice.input().getDefiningOp());
+        llvm::cast<TFL::AddOp>(stridedSlice.getInput().getDefiningOp());
 
     // Do not raise strided slice if op does not have op split label
     if (!(addOriginal->hasAttr(opSplitLabel)))
@@ -180,14 +180,14 @@ struct RaiseStridedSliceHorizontalAddPattern
 
     // Get data from add needed to raise strided slice
     auto addOriginalOutput =
-        addOriginal.output().getType().template cast<RankedTensorType>();
+        addOriginal.getOutput().getType().template cast<RankedTensorType>();
     auto outputHeight = addOriginalOutput.getDimSize(1);
     auto outputWidth = addOriginalOutput.getDimSize(2);
     auto outputChannels = addOriginalOutput.getDimSize(3);
 
     // get end index of strided slice
     DenseElementsAttr attr;
-    if (!matchPattern(stridedSlice.end(), m_Constant(&attr))) {
+    if (!matchPattern(stridedSlice.getEnd(), m_Constant(&attr))) {
       return failure();
     }
     auto endIndex = attr.getValues<int32_t>()[1];
@@ -195,7 +195,7 @@ struct RaiseStridedSliceHorizontalAddPattern
 
     // Get original slice's output dim sizes
     auto stridedSliceOutput =
-        stridedSlice.output().getType().cast<RankedTensorType>();
+        stridedSlice.getOutput().getType().cast<RankedTensorType>();
     auto stridedSliceOutputHeight = stridedSliceOutput.getDimSize(1);
     auto stridedSliceOutputWidth = stridedSliceOutput.getDimSize(2);
     auto stridedSliceOutputChannels = stridedSliceOutput.getDimSize(3);
@@ -217,11 +217,11 @@ struct RaiseStridedSliceHorizontalAddPattern
     // Create new strided slice for above add
     auto stridedSliceLHS =
         llvm::cast<TFL::StridedSliceOp>(rewriter.clone(*stridedSlice));
-    stridedSliceLHS.setOperand(0, addOriginal.lhs());
+    stridedSliceLHS.setOperand(0, addOriginal.getLhs());
     RankedTensorType stridedSliceLHSType = RankedTensorType::get(
         {1, stridedSliceOutputHeight, stridedSliceOutputWidth,
          stridedSliceOutputChannels},
-        addOriginal.lhs()
+        addOriginal.getLhs()
             .getType()
             .template cast<ShapedType>()
             .getElementType());
@@ -230,11 +230,11 @@ struct RaiseStridedSliceHorizontalAddPattern
     // Create new strided slice for above add
     auto stridedSliceRHS =
         llvm::cast<TFL::StridedSliceOp>(rewriter.clone(*stridedSlice));
-    stridedSliceRHS.setOperand(0, addOriginal.rhs());
+    stridedSliceRHS.setOperand(0, addOriginal.getRhs());
     RankedTensorType stridedSliceRHSType = RankedTensorType::get(
         {1, stridedSliceOutputHeight, stridedSliceOutputWidth,
          stridedSliceOutputChannels},
-        addOriginal.rhs()
+        addOriginal.getRhs()
             .getType()
             .template cast<ShapedType>()
             .getElementType());
@@ -244,7 +244,7 @@ struct RaiseStridedSliceHorizontalAddPattern
     RankedTensorType addReplacementType = RankedTensorType::get(
         {1, stridedSliceOutputHeight, stridedSliceOutputWidth,
          stridedSliceOutputChannels},
-        addOriginal.output()
+        addOriginal.getOutput()
             .getType()
             .template cast<ShapedType>()
             .getElementType());
@@ -253,7 +253,7 @@ struct RaiseStridedSliceHorizontalAddPattern
     addReplacement.setOperand(1, stridedSliceRHS);
 
     // replace strided slice with new strided slice -> new add
-    rewriter.replaceOp(stridedSlice, addReplacement.output());
+    rewriter.replaceOp(stridedSlice, addReplacement.getOutput());
 
     return success();
   }
@@ -271,51 +271,52 @@ struct RaiseStridedSliceHorizontalPattern
       return failure();
 
     // If strided slice does not have a defining op, return failure
-    if (!(stridedSlice.input().getDefiningOp())) {
+    if (!(stridedSlice.getInput().getDefiningOp())) {
       return failure();
     }
 
-    if (!isa<ConvOp>(stridedSlice.input().getDefiningOp())) {
+    if (!isa<ConvOp>(stridedSlice.getInput().getDefiningOp())) {
       return failure();
     }
 
     // Get data from conv needed to raise strided slice
     auto convOriginal =
-        llvm::cast<ConvOp>(stridedSlice.input().getDefiningOp());
+        llvm::cast<ConvOp>(stridedSlice.getInput().getDefiningOp());
 
     // Do not raise strided slice if op does not have op split label
     if (!(convOriginal->hasAttr(opSplitLabel)))
       return failure();
 
     auto convOriginalInput =
-        convOriginal.input().getType().template cast<RankedTensorType>();
+        convOriginal.getInput().getType().template cast<RankedTensorType>();
     auto inputHeight = convOriginalInput.getDimSize(1);
     auto inputWidth = convOriginalInput.getDimSize(2);
     auto inputChannels = convOriginalInput.getDimSize(3);
 
     auto convOriginalOutput =
-        convOriginal.output().getType().template cast<RankedTensorType>();
+        convOriginal.getOutput().getType().template cast<RankedTensorType>();
     auto outputHeight = convOriginalOutput.getDimSize(1);
     auto outputChannels = convOriginalOutput.getDimSize(3);
 
-    auto filterType =
-        convOriginal.filter().getType().template dyn_cast<RankedTensorType>();
+    auto filterType = convOriginal.getFilter()
+                          .getType()
+                          .template dyn_cast<RankedTensorType>();
     auto filterHeight = filterType.getDimSize(1);
     auto filterWidth = filterType.getDimSize(2);
 
-    auto strideHeight = convOriginal.stride_h();
-    auto strideWidth = convOriginal.stride_w();
+    auto strideHeight = convOriginal.getStrideH();
+    auto strideWidth = convOriginal.getStrideW();
 
     // get end index of strided slice
     DenseElementsAttr attr;
-    if (!matchPattern(stridedSlice.end(), m_Constant(&attr))) {
+    if (!matchPattern(stridedSlice.getEnd(), m_Constant(&attr))) {
       return failure();
     }
     auto endIndex = attr.getValues<int32_t>()[1];
 
     // Get original slice's output height
     auto stridedSliceOutput =
-        stridedSlice.output().getType().cast<RankedTensorType>();
+        stridedSlice.getOutput().getType().cast<RankedTensorType>();
     auto stridedSliceOutputHeight = stridedSliceOutput.getDimSize(1);
 
     int32_t newEndIndex;
@@ -326,24 +327,24 @@ struct RaiseStridedSliceHorizontalPattern
     int dilation_h_factor = 1;
     int dilation_w_factor = 1;
     int64_t newHeight, newWidth;
-    tensorflow::Padding opPadding = convOriginal.padding() == "VALID"
+    tensorflow::Padding opPadding = convOriginal.getPadding() == "VALID"
                                         ? tensorflow::Padding::VALID
                                         : tensorflow::Padding::SAME;
     // Get pad values for conv op
     if (tensorflow::GetWindowedOutputSizeVerboseV2(
             inputHeight, filterHeight, dilation_h_factor, strideHeight,
             opPadding, &newHeight, &padTop,
-            &padBottom) != tensorflow::Status::OK()) {
+            &padBottom) != tensorflow::OkStatus()) {
       return failure();
     }
     if (tensorflow::GetWindowedOutputSizeVerboseV2(
             inputWidth, filterWidth, dilation_w_factor, strideWidth, opPadding,
-            &newWidth, &padLeft, &padRight) != tensorflow::Status::OK()) {
+            &newWidth, &padLeft, &padRight) != tensorflow::OkStatus()) {
       return failure();
     }
 
     // Check if padding is same
-    if (convOriginal.padding() == "VALID") {
+    if (convOriginal.getPadding() == "VALID") {
       int32_t lostFraction;
 
       // Calculate new end index for slice after being raised above conv
@@ -360,10 +361,10 @@ struct RaiseStridedSliceHorizontalPattern
       newOutputHeight = stridedSliceOutputHeight * strideHeight - strideHeight +
                         filterHeight - padTop - padBottom + lostFraction;
 
-    } else if (convOriginal.padding() == "SAME") {
+    } else if (convOriginal.getPadding() == "SAME") {
 
       // Get begin index for slice
-      if (!matchPattern(stridedSlice.begin(), m_Constant(&attr))) {
+      if (!matchPattern(stridedSlice.getBegin(), m_Constant(&attr))) {
         return failure();
       }
       auto beginIndex = attr.getValues<int32_t>()[1];
@@ -417,18 +418,18 @@ struct RaiseStridedSliceHorizontalPattern
     // The new calculated output height is used for height
     RankedTensorType newStridedSliceType =
         RankedTensorType::get({1, newOutputHeight, inputWidth, inputChannels},
-                              convOriginal.input()
+                              convOriginal.getInput()
                                   .getType()
                                   .template cast<ShapedType>()
                                   .getElementType());
 
     // Create new strided slice for above conv
     auto stridedSliceReplacement = rewriter.create<TFL::StridedSliceOp>(
-        stridedSlice.getLoc(), newStridedSliceType, convOriginal.input(),
-        beginConstantOp, endConstantOp, stridedSlice.strides(),
-        stridedSlice.begin_mask(), stridedSlice.end_mask(),
-        stridedSlice.ellipsis_mask(), stridedSlice.new_axis_mask(),
-        stridedSlice.shrink_axis_mask());
+        stridedSlice.getLoc(), newStridedSliceType, convOriginal.getInput(),
+        beginConstantOp, endConstantOp, stridedSlice.getStrides(),
+        stridedSlice.getBeginMask(), stridedSlice.getEndMask(),
+        stridedSlice.getEllipsisMask(), stridedSlice.getNewAxisMask(),
+        stridedSlice.getShrinkAxisMask());
     stridedSliceReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     // Adjust shape for padding
@@ -438,7 +439,7 @@ struct RaiseStridedSliceHorizontalPattern
 
     // If padding is same, create pad op to extract padding
     TFL::PadOp padOp;
-    if (convOriginal.padding() == "SAME") {
+    if (convOriginal.getPadding() == "SAME") {
       std::vector<int32_t> paddingValues{0,
                                          0,
                                          static_cast<int>(padTop),
@@ -457,7 +458,7 @@ struct RaiseStridedSliceHorizontalPattern
 
       auto paddedResultType =
           RankedTensorType::get({1, paddedHeight, paddedWidth, inputChannels},
-                                convOriginal.input()
+                                convOriginal.getInput()
                                     .getType()
                                     .template cast<ShapedType>()
                                     .getElementType());
@@ -473,7 +474,7 @@ struct RaiseStridedSliceHorizontalPattern
         {1, (paddedHeight + strideHeight - filterHeight) / strideHeight,
          (paddedWidth + strideWidth - filterWidth) / strideWidth,
          outputChannels},
-        convOriginal.output()
+        convOriginal.getOutput()
             .getType()
             .template cast<ShapedType>()
             .getElementType());
@@ -481,11 +482,11 @@ struct RaiseStridedSliceHorizontalPattern
 
     // if valid padding no need for pad op, connect to strided slice
     // else connect to pad op
-    if (convOriginal.padding() == "VALID") {
+    if (convOriginal.getPadding() == "VALID") {
       // Connect new conv's input to new strided slice
       convReplacement.setOperand(0, stridedSliceReplacement);
 
-    } else if (convOriginal.padding() == "SAME") {
+    } else if (convOriginal.getPadding() == "SAME") {
       // Connect new conv's input to pad op
       convReplacement.setOperand(0, padOp);
 
@@ -496,7 +497,7 @@ struct RaiseStridedSliceHorizontalPattern
 
     // replace strided slice with new strided slice -> new conv
     // or new strided slice -> pad -> new conv
-    rewriter.replaceOp(stridedSlice, convReplacement.output());
+    rewriter.replaceOp(stridedSlice, convReplacement.getOutput());
 
     return success();
   }
@@ -513,16 +514,16 @@ struct RaiseStridedSliceHorizontalPadPattern
       return failure();
 
     // If strided slice does not have a defining op, return failure
-    if (!(stridedSlice.input().getDefiningOp())) {
+    if (!(stridedSlice.getInput().getDefiningOp())) {
       return failure();
     }
 
-    if (!isa<TFL::PadOp>(stridedSlice.input().getDefiningOp())) {
+    if (!isa<TFL::PadOp>(stridedSlice.getInput().getDefiningOp())) {
       return failure();
     }
 
     auto padOriginal =
-        llvm::cast<TFL::PadOp>(stridedSlice.input().getDefiningOp());
+        llvm::cast<TFL::PadOp>(stridedSlice.getInput().getDefiningOp());
 
     // Do not raise strided slice if op does not have op split label
     if (!(padOriginal->hasAttr(opSplitLabel)))
@@ -530,13 +531,13 @@ struct RaiseStridedSliceHorizontalPadPattern
 
     // Get data from pad needed to raise strided slice
     auto padOriginalInput =
-        padOriginal.input().getType().template cast<RankedTensorType>();
+        padOriginal.getInput().getType().template cast<RankedTensorType>();
     auto inputHeight = padOriginalInput.getDimSize(1);
     auto inputWidth = padOriginalInput.getDimSize(2);
     auto inputChannels = padOriginalInput.getDimSize(3);
 
     auto padOriginalOutput =
-        padOriginal.output().getType().template cast<RankedTensorType>();
+        padOriginal.getOutput().getType().template cast<RankedTensorType>();
     auto outputHeight = padOriginalOutput.getDimSize(1);
     auto outputWidth = padOriginalOutput.getDimSize(2);
     auto outputChannels = padOriginalOutput.getDimSize(3);
@@ -554,19 +555,19 @@ struct RaiseStridedSliceHorizontalPadPattern
 
     // Get original slice's output height
     auto stridedSliceOutput =
-        stridedSlice.output().getType().cast<RankedTensorType>();
+        stridedSlice.getOutput().getType().cast<RankedTensorType>();
     auto stridedSliceOutputHeight = stridedSliceOutput.getDimSize(1);
     auto stridedSliceOutputWidth = stridedSliceOutput.getDimSize(2);
 
     // get end index of strided slice
     DenseElementsAttr attr;
-    if (!matchPattern(stridedSlice.end(), m_Constant(&attr))) {
+    if (!matchPattern(stridedSlice.getEnd(), m_Constant(&attr))) {
       return failure();
     }
     auto endIndex = attr.getValues<int32_t>()[1];
 
     // Get begin index for slice
-    if (!matchPattern(stridedSlice.begin(), m_Constant(&attr))) {
+    if (!matchPattern(stridedSlice.getBegin(), m_Constant(&attr))) {
       return failure();
     }
     auto beginIndex = attr.getValues<int32_t>()[1];
@@ -618,18 +619,18 @@ struct RaiseStridedSliceHorizontalPadPattern
     // The new calculated output height is used for height
     RankedTensorType newStridedSliceType =
         RankedTensorType::get({1, newOutputHeight, inputWidth, inputChannels},
-                              padOriginal.input()
+                              padOriginal.getInput()
                                   .getType()
                                   .template cast<ShapedType>()
                                   .getElementType());
 
     // Create new strided slice for above pad
     auto stridedSliceReplacement = rewriter.create<TFL::StridedSliceOp>(
-        stridedSlice.getLoc(), newStridedSliceType, padOriginal.input(),
-        beginConstantOp, endConstantOp, stridedSlice.strides(),
-        stridedSlice.begin_mask(), stridedSlice.end_mask(),
-        stridedSlice.ellipsis_mask(), stridedSlice.new_axis_mask(),
-        stridedSlice.shrink_axis_mask());
+        stridedSlice.getLoc(), newStridedSliceType, padOriginal.getInput(),
+        beginConstantOp, endConstantOp, stridedSlice.getStrides(),
+        stridedSlice.getBeginMask(), stridedSlice.getEndMask(),
+        stridedSlice.getEllipsisMask(), stridedSlice.getNewAxisMask(),
+        stridedSlice.getShrinkAxisMask());
     stridedSliceReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     // Adjust shape for padding
@@ -654,7 +655,7 @@ struct RaiseStridedSliceHorizontalPadPattern
 
     auto paddedResultType =
         RankedTensorType::get({1, paddedHeight, paddedWidth, inputChannels},
-                              padOriginal.input()
+                              padOriginal.getInput()
                                   .getType()
                                   .template cast<ShapedType>()
                                   .getElementType());
@@ -664,7 +665,7 @@ struct RaiseStridedSliceHorizontalPadPattern
                                     stridedSliceReplacement, paddings);
 
     // replace strided slice with new strided slice -> new pad
-    rewriter.replaceOp(stridedSlice, padReplacement.output());
+    rewriter.replaceOp(stridedSlice, padReplacement.getOutput());
 
     return success();
   }

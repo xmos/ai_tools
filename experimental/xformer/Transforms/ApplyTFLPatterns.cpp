@@ -34,9 +34,9 @@ getConvPaddingValues(PatternRewriter &rewriter, T conv2DOp,
                      int64_t dilationHeight, int64_t dilationWidth,
                      int64_t strideHeight, int64_t strideWidth) {
   auto inputType =
-      conv2DOp.input().getType().template dyn_cast<RankedTensorType>();
+      conv2DOp.getInput().getType().template dyn_cast<RankedTensorType>();
   auto filterType =
-      conv2DOp.filter().getType().template dyn_cast<RankedTensorType>();
+      conv2DOp.getFilter().getType().template dyn_cast<RankedTensorType>();
   auto inputHeight = inputType.getDimSize(1);
   auto inputWidth = inputType.getDimSize(2);
   auto filterHeight = filterType.getDimSize(1);
@@ -48,13 +48,13 @@ getConvPaddingValues(PatternRewriter &rewriter, T conv2DOp,
   if (tensorflow::GetWindowedOutputSizeVerboseV2(
           inputHeight, filterHeight, dilationHeight, strideHeight,
           tensorflow::Padding::SAME, &newHeight, &padTop,
-          &padBottom) != tensorflow::Status::OK()) {
+          &padBottom) != tensorflow::OkStatus()) {
     conv2DOp->emitError("Could not obtain SAME padding values for Conv op!");
   }
   if (tensorflow::GetWindowedOutputSizeVerboseV2(
           inputWidth, filterWidth, dilationWidth, strideWidth,
           tensorflow::Padding::SAME, &newWidth, &padLeft,
-          &padRight) != tensorflow::Status::OK()) {
+          &padRight) != tensorflow::OkStatus()) {
     conv2DOp->emitError("Could not obtain SAME padding values for Conv op!");
   }
 
@@ -81,25 +81,27 @@ getConvPaddingValues(PatternRewriter &rewriter, T conv2DOp,
   RankedTensorType outputType = RankedTensorType::get(
       {batch, outputHeight, outputWidth, depth}, inputType.getElementType());
   auto outputTypeOp = rewriter.create<arith::ConstantOp>(
-      conv2DOp->getLoc(), outputType, rewriter.getUnitAttr());
-
+      conv2DOp->getLoc(), outputType,
+      DenseIntElementsAttr::get(
+          RankedTensorType::get({1}, rewriter.getI32Type()), {1}));
   return SmallVector<Value, 2>({paddingOp, outputTypeOp});
 }
 
 template <typename T>
 SmallVector<Value, 2> getConv2DPaddingValues(PatternRewriter &rewriter,
                                              T conv2DOp) {
-  return getConvPaddingValues<T>(
-      rewriter, conv2DOp, conv2DOp.dilation_h_factor(),
-      conv2DOp.dilation_w_factor(), conv2DOp.stride_h(), conv2DOp.stride_w());
+  return getConvPaddingValues<T>(rewriter, conv2DOp,
+                                 conv2DOp.getDilationHFactor(),
+                                 conv2DOp.getDilationWFactor(),
+                                 conv2DOp.getStrideH(), conv2DOp.getStrideW());
 }
 
 SmallVector<Value, 2> getBConv2DPaddingValues(PatternRewriter &rewriter,
                                               mlir::lq::Bconv2dOp conv2DOp) {
   return getConvPaddingValues<mlir::lq::Bconv2dOp>(
-      rewriter, conv2DOp, conv2DOp.dilation_height_factor(),
-      conv2DOp.dilation_width_factor(), conv2DOp.stride_height(),
-      conv2DOp.stride_width());
+      rewriter, conv2DOp, conv2DOp.getDilationHeightFactor(),
+      conv2DOp.getDilationWidthFactor(), conv2DOp.getStrideHeight(),
+      conv2DOp.getStrideWidth());
 }
 
 struct HoistQuantizeAboveConcatPattern
@@ -110,7 +112,7 @@ struct HoistQuantizeAboveConcatPattern
                                 PatternRewriter &rewriter) const override {
     // Parent op must be concat
     auto concatOp = dyn_cast_or_null<TFL::ConcatenationOp>(
-        quantizeOp.input().getDefiningOp());
+        quantizeOp.getInput().getDefiningOp());
     if (!concatOp) {
       return failure();
     }
@@ -119,7 +121,7 @@ struct HoistQuantizeAboveConcatPattern
     TFL::QuantizeOp newQuantizeOp;
     for (int i = 0; i < concatOp->getNumOperands(); ++i) {
       auto newQType = quant::CastQuantizedTypeAttrFromExpressedType(
-          rewriter, quantizeOp.qtypeAttr(),
+          rewriter, quantizeOp.getQtypeAttr(),
           quant::QuantizedType::castToExpressedType(
               concatOp.getOperand(i).getType()),
           -1);
@@ -133,14 +135,17 @@ struct HoistQuantizeAboveConcatPattern
     // quantized parameters.
     // All of them have the same quantization parameters
     RankedTensorType newOutputType = RankedTensorType::get(
-        concatOp.output().getType().cast<RankedTensorType>().getShape(),
-        newQuantizeOp.output().getType().cast<ShapedType>().getElementType());
+        concatOp.getOutput().getType().cast<RankedTensorType>().getShape(),
+        newQuantizeOp.getOutput()
+            .getType()
+            .cast<ShapedType>()
+            .getElementType());
 
     auto newConcatOp = rewriter.create<TFL::ConcatenationOp>(
-        concatOp.getLoc(), newOutputType, quantizeOps, concatOp.axis(),
-        concatOp.fused_activation_function());
+        concatOp.getLoc(), newOutputType, quantizeOps, concatOp.getAxis(),
+        concatOp.getFusedActivationFunction());
 
-    rewriter.replaceOp(quantizeOp, newConcatOp.output());
+    rewriter.replaceOp(quantizeOp, newConcatOp.getOutput());
 
     return success();
   }

@@ -14,7 +14,7 @@ ReplaceBConv2DPattern::checkIfValid(lq::Bconv2dOp conv2DOp) const {
 
   // Check for invalid types and return
   // Check filter is I32
-  if (!conv2DOp.filter()
+  if (!conv2DOp.getFilter()
            .getType()
            .template cast<ShapedType>()
            .getElementType()
@@ -24,24 +24,24 @@ ReplaceBConv2DPattern::checkIfValid(lq::Bconv2dOp conv2DOp) const {
   }
 
   // Check output is I32 or QI8
-  if (!(conv2DOp.output()
+  if (!(conv2DOp.getOutput()
             .getType()
             .template cast<ShapedType>()
             .getElementType()
             .template isa<quant::QuantizedType>() &&
-        conv2DOp.output()
+        conv2DOp.getOutput()
             .getType()
             .template cast<ShapedType>()
             .getElementType()
             .template cast<quant::QuantizedType>()
             .isSigned() &&
-        conv2DOp.output()
+        conv2DOp.getOutput()
                 .getType()
                 .template cast<ShapedType>()
                 .getElementType()
                 .template cast<quant::QuantizedType>()
                 .getStorageTypeIntegralWidth() == 8) &&
-      !(conv2DOp.output()
+      !(conv2DOp.getOutput()
             .getType()
             .template cast<ShapedType>()
             .getElementType()
@@ -52,34 +52,34 @@ ReplaceBConv2DPattern::checkIfValid(lq::Bconv2dOp conv2DOp) const {
   }
 
   // If we have QI8 output, check activation function is RELU
-  if (conv2DOp.output()
+  if (conv2DOp.getOutput()
           .getType()
           .template cast<ShapedType>()
           .getElementType()
           .template isa<quant::QuantizedType>() &&
-      !(conv2DOp.fused_activation_function() == "RELU")) {
+      !(conv2DOp.getFusedActivationFunction() == "RELU")) {
     conv2DOp.emitError("Activation function must be RELU for BConv2D int8!");
     return failure();
   }
 
   // Check padding is VALID
-  if (!(conv2DOp.padding() == "VALID")) {
+  if (!(conv2DOp.getPadding() == "VALID")) {
     conv2DOp.emitError("Only VALID padding is supported for BConv2D!");
     return failure();
   }
 
   // Check channels_in is a multiple of 32
-  if (!(conv2DOp.channels_in() % 32 == 0)) {
+  if (!(conv2DOp.getChannelsIn() % 32 == 0)) {
     conv2DOp.emitError(
         "Only channels_in of multiples of 32 is supported for BConv2D!");
     return failure();
   }
 
   auto outputType =
-      conv2DOp.output().getType().template dyn_cast<RankedTensorType>();
+      conv2DOp.getOutput().getType().template dyn_cast<RankedTensorType>();
   auto outputDepth = outputType.getDimSize(3);
   // If we have QI8 output, check output depth is a multiple of four
-  if (conv2DOp.output()
+  if (conv2DOp.getOutput()
           .getType()
           .template cast<ShapedType>()
           .getElementType()
@@ -98,7 +98,7 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
   // Retrieve remaining args
   // Find if binary output for the BConv2D
   bool binaryOutput = true;
-  if (conv2DOp.output()
+  if (conv2DOp.getOutput()
           .getType()
           .template cast<ShapedType>()
           .getElementType()
@@ -124,7 +124,7 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
 
   // Get filter values
   DenseElementsAttr filterAttr;
-  matchPattern(conv2DOp.filter(), m_Constant(&filterAttr));
+  matchPattern(conv2DOp.getFilter(), m_Constant(&filterAttr));
   auto filterVector = std::vector<int32_t>{filterAttr.value_begin<int32_t>(),
                                            filterAttr.value_end<int32_t>()};
 
@@ -134,19 +134,19 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
   if (binaryOutput) {
     // Get threshold values
     DenseElementsAttr thresholdAttr;
-    matchPattern(conv2DOp.output_threshold(), m_Constant(&thresholdAttr));
+    matchPattern(conv2DOp.getOutputThreshold(), m_Constant(&thresholdAttr));
     thresholdVector = std::vector<int32_t>{thresholdAttr.value_begin<int32_t>(),
                                            thresholdAttr.value_end<int32_t>()};
   } else {
     // Get bias values
     DenseElementsAttr biasAttr;
-    matchPattern(conv2DOp.post_activation_bias(), m_Constant(&biasAttr));
+    matchPattern(conv2DOp.getPostActivationBias(), m_Constant(&biasAttr));
     biasVector = std::vector<float>{biasAttr.value_begin<float>(),
                                     biasAttr.value_end<float>()};
 
     // Get multiplier values
     DenseElementsAttr multiplierAttr;
-    matchPattern(conv2DOp.post_activation_multiplier(),
+    matchPattern(conv2DOp.getPostActivationMultiplier(),
                  m_Constant(&multiplierAttr));
     multiplierVector = std::vector<float>{multiplierAttr.value_begin<float>(),
                                           multiplierAttr.value_end<float>()};
@@ -156,7 +156,7 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
     // Based on OneTimeSetup() in
     // https://github.com/larq/compute-engine/blob/main/larq_compute_engine/tflite/kernels/bconv2d.cc#L353
     auto outputType =
-        conv2DOp.output().getType().template dyn_cast<RankedTensorType>();
+        conv2DOp.getOutput().getType().template dyn_cast<RankedTensorType>();
     auto outputQType =
         outputType.getElementType()
             .template dyn_cast<mlir::quant::UniformQuantizedType>();
@@ -164,7 +164,7 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
     auto outputZeroPoint = outputQType.getZeroPoint();
 
     int32_t backtransformAdd =
-        args.filterHeight * args.filterWidth * conv2DOp.channels_in();
+        args.filterHeight * args.filterWidth * conv2DOp.getChannelsIn();
 
     for (int i = 0; i < args.outputDepth; ++i) {
       auto postMul = multiplierVector[i];
@@ -179,7 +179,7 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
     // Initialize min and max clamp values for RELU
     // Based on CalculateActivationRange() in
     // https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/kernel_util.h#L266
-    assert(conv2DOp.fused_activation_function() == "RELU" &&
+    assert(conv2DOp.getFusedActivationFunction() == "RELU" &&
            "Activation function should be RELU for the clamp value "
            "initialization!");
     int32_t nominalClampMin = 0;
@@ -200,8 +200,8 @@ LogicalResult ReplaceBConv2DPattern::getArgs(lq::Bconv2dOp conv2DOp,
       nn::ImageGeometry(args.inputHeight, args.inputWidth, args.inputDepth, 1);
   args.K = nn::WindowGeometry(
       args.filterHeight, args.filterWidth, args.filterDepth, 0, 0,
-      conv2DOp.stride_height(), conv2DOp.stride_width(), 1,
-      conv2DOp.dilation_height_factor(), conv2DOp.dilation_width_factor());
+      conv2DOp.getStrideHeight(), conv2DOp.getStrideWidth(), 1,
+      conv2DOp.getDilationHeightFactor(), conv2DOp.getDilationWidthFactor());
 
   // TODO, we are not padding at the moment, but the pad value might have to be
   // changed for BNNs

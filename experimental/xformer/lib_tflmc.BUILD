@@ -12,6 +12,7 @@ filegroup(
         "@tflite_micro//tensorflow/lite/core/api:op_resolver.cc",
         "@tflite_micro//tensorflow/lite/kernels:kernel_util.cc",
         "@tflite_micro//tensorflow/lite/kernels/internal:quantization_util.cc",
+        "@tflite_micro//tensorflow/lite/kernels/internal:portable_tensor_utils.cc",
         "@tflite_micro//tensorflow/lite/schema:schema_utils.cc",
         "@tflite_micro//tensorflow/lite/micro:micro_log.cc",
     ],

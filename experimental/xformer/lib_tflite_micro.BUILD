@@ -13,7 +13,6 @@ cc_library(
 filegroup(
     name = "XTFLIB_SOURCES",
     srcs = [
-        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_dispatcher.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_error_reporter.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_interpreter.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_profiler.cc",

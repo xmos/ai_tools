@@ -1,4 +1,4 @@
-// Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
+//  Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
 #include "Analysis/MemoryPlan.h"
@@ -672,8 +672,8 @@ struct RaiseStridedSliceHorizontalPadPattern
 };
 
 void OpSplit::runOnOperation() {
-  auto *ctx = &getContext();
-  func::FuncOp func = getOperation();
+  auto ctx = &getContext();
+  func::FuncOp func;
 
   int startOp = 0;
   int endOp = 0;
@@ -684,45 +684,221 @@ void OpSplit::runOnOperation() {
   numSplits = opSplitNumSplitsOption.getValue();
 
   if (numSplits == 0) {
-    auto &m = getAnalysis<MemoryPlan>();
-    auto result = m.getOpSplitPlan();
+    int memoryThreshold = opSplitTargetSizeOption.getValue();
 
-    // Add the values
-    startOp = result.opSplitStartOp;
-    endOp = result.opSplitEndOp;
-    numSplits = result.opSplitNumSplits;
-  }
+    func = getOperation();
+    ctx = &getContext();
+    // Initialize operation counter, tensor vectors, and size variables
+    int opNum = 0;
+    std::vector<mlir::Value> unconsumedTensors;
+    std::vector<mlir::Value> newUnconsumedTensors;
+    size_t opOperandsSize;
+    size_t inputSize;
+    size_t outputSize;
+    size_t residualSize;
 
-  OpBuilder builder(func);
-  int k = 0;
-  func.walk([&](Operation *op) {
-    if (k == startOp) {
-      op->setAttr(opSplitLabelNumSplits, builder.getI32IntegerAttr(numSplits));
-    } else if (k < startOp && k >= endOp) {
-      op->setAttr(opSplitLabel, builder.getUnitAttr());
+    std::map<int, std::vector<size_t>> opSize;
+    std::vector<size_t> sizeInfo;
+
+    // Keep a pointer to the previous operation
+    Operation *prevOp = nullptr;
+
+    // Walk through each operation in the function
+    func.walk([&](Operation *op) {
+      // Ignore constant and quantized constant operations
+      if (!(isa<TFL::ConstOp>(op) || isa<TFL::QConstOp>(op))) {
+
+        // Helper function to compute the size of a tensor
+        auto computeTensorSize = [](mlir::Type type) -> size_t {
+          mlir::TensorType tensorType = type.cast<mlir::TensorType>();
+          mlir::ArrayRef<int64_t> shape = tensorType.getShape();
+          size_t tensorSize = 1;
+
+          for (int64_t dim : shape) {
+            tensorSize *= dim;
+          }
+
+          return tensorSize;
+        };
+
+        // Clear the contents of the vector
+        newUnconsumedTensors.clear();
+        // Iterate over unconsumed tensors and remove those consumed by the
+        // current operation
+        for (const mlir::Value &tensor : unconsumedTensors) {
+          bool shouldRemove = false;
+          for (mlir::Value::use_iterator it = tensor.use_begin(),
+                                         e = tensor.use_end();
+               it != e; ++it) {
+            if ((*it).getOwner() == op) {
+              shouldRemove = true;
+              break;
+            }
+          }
+          if (!shouldRemove) {
+            newUnconsumedTensors.push_back(tensor);
+          }
+        }
+        // Update unconsumed tensors with the new vector
+        unconsumedTensors = newUnconsumedTensors;
+
+        residualSize = 0;
+        // Iterate over the unconsumed tensors and compute their sizes
+        for (mlir::Value tensor : unconsumedTensors) {
+          residualSize += computeTensorSize(tensor.getType());
+        }
+
+        opOperandsSize = 0;
+        inputSize = 0;
+        outputSize = 0;
+        // Iterate over the input operands and compute their sizes
+        for (mlir::Value input : op->getOperands()) {
+          if (!input.getType().isa<mlir::TensorType>()) {
+            continue;
+          }
+          if (input.getDefiningOp() &&
+              (isa<TFL::ConstOp>(input.getDefiningOp()) ||
+               isa<TFL::QConstOp>(input.getDefiningOp()))) {
+            continue;
+          }
+
+          inputSize += computeTensorSize(input.getType());
+          opOperandsSize += computeTensorSize(input.getType());
+
+          // If input has more than one use and was created by the previous
+          // operation, add it to unconsumed tensors
+          if ((std::distance(input.use_begin(), input.use_end()) > 1) &&
+              (input.getDefiningOp() == prevOp)) {
+            unconsumedTensors.push_back(input);
+          }
+        }
+
+        // Iterate over the output results and compute their sizes
+        for (mlir::Value output : op->getResults()) {
+          if (!output.getType().isa<mlir::TensorType>()) {
+            continue;
+          }
+          if (output.getDefiningOp() &&
+              (isa<TFL::ConstOp>(output.getDefiningOp()) ||
+               isa<TFL::QConstOp>(output.getDefiningOp()))) {
+            continue;
+          }
+          outputSize += computeTensorSize(output.getType());
+          opOperandsSize += computeTensorSize(output.getType());
+        }
+
+        sizeInfo = {opOperandsSize, inputSize, outputSize, residualSize};
+        opSize[opNum] = sizeInfo;
+
+        // Increment operation counter
+        opNum++;
+
+        // Update the previous operation pointer
+        prevOp = op;
+      }
+    });
+
+    double maxSize = -1;
+    double size = 0;
+
+    std::vector<int> aboveThreshold;
+    std::vector<int> belowThreshold;
+    bool crossedThreshold = false;
+
+    for (auto it = opSize.rbegin(); it != opSize.rend(); ++it) {
+      size = it->second[0];
+      auto opId = it->first;
+      if (size > memoryThreshold) {
+        if (!crossedThreshold) {
+          outputSize = it->second[2];
+          // if 2 * output size is greater than the threshold,
+          // concat will be greater than the threshold
+          // so add the next op
+          if (2 * outputSize > memoryThreshold) {
+            aboveThreshold.push_back(opId + 1);
+          } else {
+            aboveThreshold.push_back(opId);
+          }
+          crossedThreshold = true;
+        }
+      } else {
+        if (crossedThreshold) {
+          belowThreshold.push_back(opId);
+          crossedThreshold = false;
+        }
+      }
     }
-    k++;
-  });
 
-  RewritePatternSet patterns1(ctx);
+    // If the last operation was still above the threshold, add 0 to
+    // belowThreshold
+    if (crossedThreshold) {
+      belowThreshold.push_back(0);
+    }
 
-  patterns1.insert<OpSplitHorizontalPattern<TFL::Conv2DOp>>(ctx);
-  patterns1.insert<OpSplitHorizontalPattern<TFL::DepthwiseConv2DOp>>(ctx);
-  patterns1.insert<OpSplitHorizontalPattern<TFL::AddOp>>(ctx);
-  patterns1.insert<OpSplitHorizontalPattern<TFL::PadOp>>(ctx);
+    // remove operations if size goes below threshold for only one operation
+    for (size_t i = 0; i < aboveThreshold.size(); ++i) {
+      if (i > 0 && belowThreshold[i - 1] - aboveThreshold[i] <= 1) {
+        aboveThreshold.erase(aboveThreshold.begin() + i);
+        belowThreshold.erase(belowThreshold.begin() + i - 1);
+        // Decrement the indices to account for the removed elements
+        --i;
+      }
+    }
 
-  (void)applyPatternsAndFoldGreedily(func, std::move(patterns1));
+    OpBuilder builder(func);
+    for (int i = 0; i < aboveThreshold.size(); ++i) {
+      if (!aboveThreshold.empty()) {
+        startOp = aboveThreshold[i];
+      }
+      if (!belowThreshold.empty()) {
+        endOp = belowThreshold[i];
+      }
 
-  RewritePatternSet patterns2(ctx);
+      numSplits = 10;
 
-  patterns2.insert<RaiseStridedSliceHorizontalAddPattern>(ctx);
-  patterns2.insert<RaiseStridedSliceHorizontalPadPattern>(ctx);
-  patterns2.insert<RaiseStridedSliceHorizontalPattern<TFL::Conv2DOp>>(ctx);
-  patterns2.insert<RaiseStridedSliceHorizontalPattern<TFL::DepthwiseConv2DOp>>(
-      ctx);
+      int k = 0;
+      func.walk([&](Operation *op) {
+        if (!(isa<TFL::ConstOp>(op) || isa<TFL::QConstOp>(op))) {
+          if (k == startOp) {
+            // If op is strided slice, just raise it, do not split it
+            if (isa<TFL::StridedSliceOp>(op)) {
+              op->setAttr(opSplitLabel, builder.getUnitAttr());
+              auto stridedSliceOp = llvm::cast<TFL::StridedSliceOp>(op);
+              stridedSliceOp.getInput().getDefiningOp()->setAttr(
+                  opSplitLabel, builder.getUnitAttr());
+            } else { // add label to insert strided slice under op later
+              op->setAttr(opSplitLabelNumSplits,
+                          builder.getI32IntegerAttr(numSplits));
+            }
+          } else if (k < startOp && k >= endOp) {
+            op->setAttr(opSplitLabel, builder.getUnitAttr());
+          }
+          k++;
+        }
+      });
+    }
 
-  (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
-}
+    RewritePatternSet patterns1(ctx);
+
+    patterns1.insert<OpSplitHorizontalPattern<TFL::Conv2DOp>>(ctx);
+    patterns1.insert<OpSplitHorizontalPattern<TFL::DepthwiseConv2DOp>>(ctx);
+    patterns1.insert<OpSplitHorizontalPattern<TFL::AddOp>>(ctx);
+    patterns1.insert<OpSplitHorizontalPattern<TFL::PadOp>>(ctx);
+
+    (void)applyPatternsAndFoldGreedily(func, std::move(patterns1));
+
+    RewritePatternSet patterns2(ctx);
+
+    patterns2.insert<RaiseStridedSliceHorizontalAddPattern>(ctx);
+    patterns2.insert<RaiseStridedSliceHorizontalPadPattern>(ctx);
+    patterns2.insert<RaiseStridedSliceHorizontalPattern<TFL::Conv2DOp>>(ctx);
+    patterns2
+        .insert<RaiseStridedSliceHorizontalPattern<TFL::DepthwiseConv2DOp>>(
+            ctx);
+
+    (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
+  } // if numSplits
+} // void OpSplit::runOnOperation() {
 } // namespace
 
 // Creates an instance of the OpSplit pass.

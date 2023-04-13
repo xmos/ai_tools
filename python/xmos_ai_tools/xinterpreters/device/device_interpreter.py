@@ -342,6 +342,8 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
                 raise IOError()
 
     def _clear_error(self):
+        import usb
+        usb.util.dispose_resources(self._dev)
         self._dev.clear_halt(self._out_ep)
         self._dev.clear_halt(self._in_ep)
 
@@ -374,6 +376,7 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
                                         self._dev.detach_kernel_driver(intf.bInterfaceNumber)
                                         self._dev.set_configuration()
                                     except usb.core.USBError:
+                                        self._clear_error()
                                         print("USB error : Could not detach kernel driver from interface({0})".format(intf.bInterfaceNumber))
                                         raise IOError()
                 cfg = self._dev.get_active_configuration()

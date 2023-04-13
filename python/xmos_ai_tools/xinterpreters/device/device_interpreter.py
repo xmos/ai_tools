@@ -355,10 +355,28 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
 
             # set the active configuration. With no arguments, the first
             # configuration will be the active one
-            self._dev.set_configuration()
-
             # get an endpoint instance
-            cfg = self._dev.get_active_configuration()
+            try:
+                cfg = self._dev.get_active_configuration()
+            except usb.core.USBError:
+                cfg = None
+
+            # try to handle "resource busy" error by detaching kernel driver
+            if cfg is None:
+                try:
+                    self._dev.set_configuration()
+                except usb.core.USBError as e:
+                    if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_BUSY:
+                        for cfg in self._dev:
+                            for intf in cfg:
+                                if self._dev.is_kernel_driver_active(intf.bInterfaceNumber):
+                                    try:
+                                        self._dev.detach_kernel_driver(intf.bInterfaceNumber)
+                                        self._dev.set_configuration()
+                                    except usb.core.USBError:
+                                        print("USB error : Could not detach kernel driver from interface({0})".format(intf.bInterfaceNumber))
+                                        raise IOError()
+                cfg = self._dev.get_active_configuration()
 
             # print("found device: \n" + str(cfg))
             intf = cfg[(0, 0)]

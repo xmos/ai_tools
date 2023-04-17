@@ -4,6 +4,7 @@ torchvision==0.13.0
 onnx
 onnxruntime
 tensorflow
+tensorflow-datasets
 onnx2tf
 onnx-graphsurgeon
 sng4onnx

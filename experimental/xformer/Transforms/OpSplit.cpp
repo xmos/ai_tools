@@ -854,7 +854,7 @@ void OpSplit::runOnOperation() {
         endOp = belowThreshold[i];
       }
 
-      numSplits = 10;
+      numSplits = 8;
 
       int k = 0;
       func.walk([&](Operation *op) {

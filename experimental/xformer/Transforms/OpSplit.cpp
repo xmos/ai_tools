@@ -673,7 +673,7 @@ struct RaiseStridedSliceHorizontalPadPattern
 
 void OpSplit::runOnOperation() {
   auto ctx = &getContext();
-  func::FuncOp func;
+  func::FuncOp func = getOperation();
 
   int startOp = 0;
   int endOp = 0;
@@ -686,7 +686,6 @@ void OpSplit::runOnOperation() {
   if (numSplits == 0) {
     int memoryThreshold = opSplitTargetSizeOption.getValue();
 
-    func = getOperation();
     ctx = &getContext();
     // Initialize operation counter, tensor vectors, and size variables
     int opNum = 0;
@@ -878,26 +877,47 @@ void OpSplit::runOnOperation() {
       });
     }
 
-    RewritePatternSet patterns1(ctx);
-
-    patterns1.insert<OpSplitHorizontalPattern<TFL::Conv2DOp>>(ctx);
-    patterns1.insert<OpSplitHorizontalPattern<TFL::DepthwiseConv2DOp>>(ctx);
-    patterns1.insert<OpSplitHorizontalPattern<TFL::AddOp>>(ctx);
-    patterns1.insert<OpSplitHorizontalPattern<TFL::PadOp>>(ctx);
-
-    (void)applyPatternsAndFoldGreedily(func, std::move(patterns1));
-
-    RewritePatternSet patterns2(ctx);
-
-    patterns2.insert<RaiseStridedSliceHorizontalAddPattern>(ctx);
-    patterns2.insert<RaiseStridedSliceHorizontalPadPattern>(ctx);
-    patterns2.insert<RaiseStridedSliceHorizontalPattern<TFL::Conv2DOp>>(ctx);
-    patterns2
-        .insert<RaiseStridedSliceHorizontalPattern<TFL::DepthwiseConv2DOp>>(
-            ctx);
-
-    (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
   } // if numSplits
+  OpBuilder builder(func);
+  int k = 0;
+  func.walk([&](Operation *op) {
+    if (!(isa<TFL::ConstOp>(op) || isa<TFL::QConstOp>(op))) {
+      if (k == startOp) {
+        // If op is strided slice, just raise it, do not split it
+        if (isa<TFL::StridedSliceOp>(op)) {
+          op->setAttr(opSplitLabel, builder.getUnitAttr());
+          auto stridedSliceOp = llvm::cast<TFL::StridedSliceOp>(op);
+          stridedSliceOp.getInput().getDefiningOp()->setAttr(
+              opSplitLabel, builder.getUnitAttr());
+        } else { // add label to insert strided slice under op later
+          op->setAttr(opSplitLabelNumSplits,
+                      builder.getI32IntegerAttr(numSplits));
+        }
+      } else if (k < startOp && k >= endOp) {
+        op->setAttr(opSplitLabel, builder.getUnitAttr());
+      }
+      k++;
+    }
+  });
+
+  RewritePatternSet patterns1(ctx);
+
+  patterns1.insert<OpSplitHorizontalPattern<TFL::Conv2DOp>>(ctx);
+  patterns1.insert<OpSplitHorizontalPattern<TFL::DepthwiseConv2DOp>>(ctx);
+  patterns1.insert<OpSplitHorizontalPattern<TFL::AddOp>>(ctx);
+  patterns1.insert<OpSplitHorizontalPattern<TFL::PadOp>>(ctx);
+
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns1));
+
+  RewritePatternSet patterns2(ctx);
+
+  patterns2.insert<RaiseStridedSliceHorizontalAddPattern>(ctx);
+  patterns2.insert<RaiseStridedSliceHorizontalPadPattern>(ctx);
+  patterns2.insert<RaiseStridedSliceHorizontalPattern<TFL::Conv2DOp>>(ctx);
+  patterns2.insert<RaiseStridedSliceHorizontalPattern<TFL::DepthwiseConv2DOp>>(
+      ctx);
+
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
 } // void OpSplit::runOnOperation() {
 } // namespace
 

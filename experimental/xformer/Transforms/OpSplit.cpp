@@ -918,7 +918,7 @@ void OpSplit::runOnOperation() {
       ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
-} // void OpSplit::runOnOperation() {
+} // void OpSplit::runOnOperation() 
 } // namespace
 
 // Creates an instance of the OpSplit pass.

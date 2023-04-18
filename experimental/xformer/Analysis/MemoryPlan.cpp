@@ -126,60 +126,6 @@ int MemoryPlan::getMaxMemoryUsed() {
   return maxSize;
 }
 
-MemoryPlan::OpSplitPlan MemoryPlan::getOpSplitPlan() {
-  Block *block = &op->getRegion(0).front();
-  const LivenessBlockInfo *lvb = liveness.getLiveness(block);
-
-  std::map<int, Operation *> opSize;
-  for (auto o : operations) {
-    if (o->hasTrait<OpTrait::IsTerminator>() ||
-        llvm::isa<TFL::QConstOp, TFL::ConstOp, arith::ConstantOp>(o)) {
-      continue;
-    }
-    int size = 0;
-    for (auto v : lvb->currentlyLiveValues(o)) {
-      if (!valueInfo[v].isConstant)
-        size += valueInfo[v].size;
-    }
-    opSize[size] = o;
-  }
-
-  // Print ops with memory usage bigger than threshold
-  int memoryThreshold = opSplitTargetSizeOption.getValue();
-  OpSplitPlan result;
-  result.opSplitStartOp = 0;     // small number for comparison
-  result.opSplitEndOp = 9999999; // big number for comparison
-
-  double maxSize = -1;
-  double size = 0;
-  for (auto it = opSize.rbegin(); it != opSize.rend(); ++it) {
-    std::cout << "ID: " << it->first << ", Value: " << it->second << std::endl;
-    size = it->first;
-    if (size > memoryThreshold) {
-      printf("\nMax op %d width = %d", operationIds[it->second], size);
-      it->second->dump();
-      it->second->getLoc().dump();
-      printf("\n\n");
-
-      if (size > maxSize) {
-        maxSize = size;
-      }
-
-      auto currentOpId = operationIds[it->second];
-
-      if (currentOpId > result.opSplitStartOp) {
-        result.opSplitStartOp = currentOpId;
-      }
-      if (currentOpId < result.opSplitEndOp) {
-        result.opSplitEndOp = currentOpId;
-      }
-    }
-  }
-  result.opSplitNumSplits = std::ceil(maxSize / memoryThreshold);
-
-  return result;
-}
-
 int MemoryPlan::getOffset(Value v, int size,
                           ValuesOrderedByOffset &allocatedValues) {
   int offset = 0;

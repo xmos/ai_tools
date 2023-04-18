@@ -681,18 +681,19 @@ void OpSplit::runOnOperation() {
   if (numSplits.empty()) {
     int memoryThreshold = opSplitTargetSizeOption.getValue();
 
-    ctx = &getContext();
     // Initialize operation counter, tensor vectors, and size variables
     int opNum = 0;
+
     std::vector<mlir::Value> unconsumedTensors;
     std::vector<mlir::Value> newUnconsumedTensors;
+
+    std::map<int, std::vector<size_t>> opSize;
+    std::vector<size_t> sizeInfo;
+
     size_t opOperandsSize;
     size_t inputSize;
     size_t outputSize;
     size_t residualSize;
-
-    std::map<int, std::vector<size_t>> opSize;
-    std::vector<size_t> sizeInfo;
 
     // Keep a pointer to the previous operation
     Operation *prevOp = nullptr;
@@ -792,9 +793,7 @@ void OpSplit::runOnOperation() {
       }
     });
 
-    double maxSize = -1;
     double size = 0;
-
     std::vector<int> aboveThreshold;
     std::vector<int> belowThreshold;
     bool crossedThreshold = false;
@@ -842,16 +841,13 @@ void OpSplit::runOnOperation() {
     // Clear the llvm::cl::list<int> containers first
     startOps.clear();
     endOps.clear();
-
     // Copy the elements from the std::vector<int> containers
     for (int value : aboveThreshold) {
       startOps.push_back(value);
     }
-
     for (int value : belowThreshold) {
       endOps.push_back(value);
     }
-
     for (size_t i = 0; i < startOps.size(); ++i) {
       numSplits.push_back(8);
     }

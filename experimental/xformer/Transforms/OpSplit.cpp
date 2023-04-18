@@ -1,7 +1,6 @@
 //  Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include "Analysis/MemoryPlan.h"
 #include "Transforms/Options.h"
 
 #include "mlir/Pass/Pass.h"
@@ -672,18 +671,14 @@ struct RaiseStridedSliceHorizontalPadPattern
 };
 
 void OpSplit::runOnOperation() {
-  auto ctx = &getContext();
+  auto *ctx = &getContext();
   func::FuncOp func = getOperation();
 
-  int startOp = 0;
-  int endOp = 0;
-  int numSplits = 0;
+  llvm::cl::list<int> &startOps = opSplitStartOpOption;
+  llvm::cl::list<int> &endOps = opSplitEndOpOption;
+  llvm::cl::list<int> &numSplits = opSplitNumSplitsOption;
 
-  startOp = opSplitStartOpOption.getValue();
-  endOp = opSplitEndOpOption.getValue();
-  numSplits = opSplitNumSplitsOption.getValue();
-
-  if (numSplits == 0) {
+  if (numSplits.empty()) {
     int memoryThreshold = opSplitTargetSizeOption.getValue();
 
     ctx = &getContext();
@@ -844,61 +839,48 @@ void OpSplit::runOnOperation() {
       }
     }
 
-    OpBuilder builder(func);
-    for (int i = 0; i < aboveThreshold.size(); ++i) {
-      if (!aboveThreshold.empty()) {
-        startOp = aboveThreshold[i];
-      }
-      if (!belowThreshold.empty()) {
-        endOp = belowThreshold[i];
-      }
+    // Clear the llvm::cl::list<int> containers first
+    startOps.clear();
+    endOps.clear();
 
-      numSplits = 8;
+    // Copy the elements from the std::vector<int> containers
+    for (int value : aboveThreshold) {
+      startOps.push_back(value);
+    }
 
-      int k = 0;
-      func.walk([&](Operation *op) {
-        if (!(isa<TFL::ConstOp>(op) || isa<TFL::QConstOp>(op))) {
-          if (k == startOp) {
-            // If op is strided slice, just raise it, do not split it
-            if (isa<TFL::StridedSliceOp>(op)) {
-              op->setAttr(opSplitLabel, builder.getUnitAttr());
-              auto stridedSliceOp = llvm::cast<TFL::StridedSliceOp>(op);
-              stridedSliceOp.getInput().getDefiningOp()->setAttr(
-                  opSplitLabel, builder.getUnitAttr());
-            } else { // add label to insert strided slice under op later
-              op->setAttr(opSplitLabelNumSplits,
-                          builder.getI32IntegerAttr(numSplits));
-            }
-          } else if (k < startOp && k >= endOp) {
-            op->setAttr(opSplitLabel, builder.getUnitAttr());
-          }
-          k++;
-        }
-      });
+    for (int value : belowThreshold) {
+      endOps.push_back(value);
+    }
+
+    for (size_t i = 0; i < startOps.size(); ++i) {
+      numSplits.push_back(8);
     }
 
   } // if numSplits
+
   OpBuilder builder(func);
-  int k = 0;
-  func.walk([&](Operation *op) {
-    if (!(isa<TFL::ConstOp>(op) || isa<TFL::QConstOp>(op))) {
-      if (k == startOp) {
-        // If op is strided slice, just raise it, do not split it
-        if (isa<TFL::StridedSliceOp>(op)) {
+  for (int i = 0; i < startOps.size(); ++i) {
+    int k = 0;
+    func.walk([&](Operation *op) {
+      if (!(isa<TFL::ConstOp>(op) || isa<TFL::QConstOp>(op))) {
+        if (k == startOps[i]) {
+          // If op is strided slice, just raise it, do not split it
+          if (isa<TFL::StridedSliceOp>(op)) {
+            op->setAttr(opSplitLabel, builder.getUnitAttr());
+            auto stridedSliceOp = llvm::cast<TFL::StridedSliceOp>(op);
+            stridedSliceOp.getInput().getDefiningOp()->setAttr(
+                opSplitLabel, builder.getUnitAttr());
+          } else { // add label to insert strided slice under op later
+            op->setAttr(opSplitLabelNumSplits,
+                        builder.getI32IntegerAttr(numSplits[i]));
+          }
+        } else if (k < startOps[i] && k >= endOps[i]) {
           op->setAttr(opSplitLabel, builder.getUnitAttr());
-          auto stridedSliceOp = llvm::cast<TFL::StridedSliceOp>(op);
-          stridedSliceOp.getInput().getDefiningOp()->setAttr(
-              opSplitLabel, builder.getUnitAttr());
-        } else { // add label to insert strided slice under op later
-          op->setAttr(opSplitLabelNumSplits,
-                      builder.getI32IntegerAttr(numSplits));
         }
-      } else if (k < startOp && k >= endOp) {
-        op->setAttr(opSplitLabel, builder.getUnitAttr());
+        k++;
       }
-      k++;
-    }
-  });
+    });
+  }
 
   RewritePatternSet patterns1(ctx);
 
@@ -918,7 +900,7 @@ void OpSplit::runOnOperation() {
       ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
-} // void OpSplit::runOnOperation() 
+} // void OpSplit::runOnOperation()
 } // namespace
 
 // Creates an instance of the OpSplit pass.

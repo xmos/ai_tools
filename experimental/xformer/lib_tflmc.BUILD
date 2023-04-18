@@ -5,14 +5,16 @@ package(
 filegroup(
     name = "TFLITE_SOURCES",
     srcs = [
-        "@tflite_micro//tensorflow/lite/c:common.cc",
+        "@tflite_micro//tensorflow/lite/core/c:common.cc",
         "@tflite_micro//tensorflow/lite/core/api:error_reporter.cc",
         "@tflite_micro//tensorflow/lite/core/api:tensor_utils.cc",
         "@tflite_micro//tensorflow/lite/core/api:flatbuffer_conversions.cc",
         "@tflite_micro//tensorflow/lite/core/api:op_resolver.cc",
         "@tflite_micro//tensorflow/lite/kernels:kernel_util.cc",
         "@tflite_micro//tensorflow/lite/kernels/internal:quantization_util.cc",
+        "@tflite_micro//tensorflow/lite/kernels/internal:portable_tensor_utils.cc",
         "@tflite_micro//tensorflow/lite/schema:schema_utils.cc",
+        "@tflite_micro//tensorflow/lite/micro:micro_log.cc",
     ],
 )
 
@@ -20,6 +22,7 @@ filegroup(
     name = "TFLM_SOURCES",
     srcs = [
         "@tflite_micro//tensorflow/lite/micro:all_ops_resolver.cc",
+        "@tflite_micro//tensorflow/lite/micro:micro_op_resolver.cc",
         "@tflite_micro//tensorflow/lite/micro:micro_allocator.cc",
         "@tflite_micro//tensorflow/lite/micro:micro_allocation_info.cc",
         "@tflite_micro//tensorflow/lite/micro:micro_context.cc",
@@ -46,7 +49,8 @@ filegroup(
         # We need to add below files to kernel sources as they are used from the kernels
         # and we need the files to link successfully
         "@tflite_micro//tensorflow/lite/micro:flatbuffer_utils.cc",
-        "@tflite_micro//tensorflow/lite/micro:micro_error_reporter.cc",
+        "@tflite_micro//tensorflow/lite/micro/tflite_bridge:micro_error_reporter.cc",
+        "@tflite_micro//tensorflow/lite/micro/tflite_bridge:flatbuffer_conversions_bridge.cc",
         "@tflite_micro//tensorflow/lite/micro:micro_resource_variable.cc",
         "@tflite_micro//tensorflow/lite/micro:micro_string.cc",
         "@tflite_micro//tensorflow/lite/micro:micro_utils.cc",
@@ -123,6 +127,7 @@ filegroup(
         "@tflite_micro//tensorflow/lite/micro/kernels:resize_bilinear.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:resize_nearest_neighbor.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:round.cc",
+        "@tflite_micro//tensorflow/lite/micro/kernels:select.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:shape.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:softmax.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:softmax_common.cc",
@@ -130,6 +135,7 @@ filegroup(
         "@tflite_micro//tensorflow/lite/micro/kernels:space_to_depth.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:split.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:split_v.cc",
+        "@tflite_micro//tensorflow/lite/micro/kernels:squared_difference.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:squeeze.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:strided_slice.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:sub.cc",
@@ -142,6 +148,7 @@ filegroup(
         "@tflite_micro//tensorflow/lite/micro/kernels:unpack.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:micro_tensor_utils.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:lstm_eval.cc",
+        "@tflite_micro//tensorflow/lite/micro/kernels:lstm_eval_common.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:unidirectional_sequence_lstm.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:zeros_like.cc",
     ],
@@ -169,6 +176,9 @@ cc_library(
         "src/MemMap.h",
         "src/TypeToString.h",
         "src/xtflm_conf.h",
+        "@org_tensorflow//tensorflow/lite/kernels:padding.h",
+        "@org_tensorflow//tensorflow/lite/kernels/internal:reference/pooling.h",
+        "@org_tensorflow//tensorflow/lite/kernels/internal:reference/integer_ops/pooling.h",
     ],
     srcs = [
         "src/CodeWriter.cc",

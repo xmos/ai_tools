@@ -23,6 +23,8 @@ REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
 LIB_TFLM_DIR_PATH = (pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_tflite_micro")
+LIB_NN_INCLUDE_PATH = (pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_nn")
+LIB_TFLM_INCLUDE_PATH = LIB_TFLM_DIR_PATH
 TFLM_INCLUDE_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "tflite-micro")
 FLATBUFFERS_INCLUDE_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "flatbuffers", "include")
 TFLMC_DIR_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "tflite_micro_compiler")
@@ -65,10 +67,12 @@ def get_tflmc_model_exe(model, dirname):
     "-DTF_LITE_STATIC_MEMORY",
     "-DNO_INTERPRETER",
     "-std=c++14",
+    "-I" + str(LIB_TFLM_INCLUDE_PATH),
+    "-I" + str(LIB_NN_INCLUDE_PATH),
     "-I" + str(TFLM_INCLUDE_PATH),
     "-I" + str(FLATBUFFERS_INCLUDE_PATH),
     "-I" + dirname,
-    "-I" + os.getenv("CONDA_PREFIX") + "/include",
+    "-I" + os.getenv("VIRTUAL_ENV") + "/include",
     "-g",
     "-O0",
     "-lxtflitemicro",

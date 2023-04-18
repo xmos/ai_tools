@@ -18,7 +18,7 @@ git describe --tags
 
 cd third_party/lib_tflite_micro
 # Use gcc9 toolchain from the docker file and apply patch
-CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make build
+CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make patch
 # Use gcc9 toolchain from the docker file to build xinterpreters
 cd ../..
 CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make build

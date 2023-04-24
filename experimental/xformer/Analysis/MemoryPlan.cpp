@@ -22,7 +22,7 @@ void MemoryPlan::build() {
 
   auto funcOp = dyn_cast<func::FuncOp>(op);
 
-  auto getValueSize = [](Value v) {
+  auto getAlignedValueSize = [](Value v) {
     auto type = v.getType().dyn_cast<ShapedType>();
     size_t typeSizeInBytes;
     if (type.getElementType().isa<quant::QuantizedType>()) {
@@ -35,19 +35,21 @@ void MemoryPlan::build() {
 
     size_t k = typeSizeInBytes;
     llvm::ArrayRef<int64_t> shape_ref = type.getShape();
+    // Handle dynamic shapes
     for (auto &dim : shape_ref) {
-      k *= (dim == -1 ? 1 : dim);
+      k *= (dim < 0 ? 1 : dim);
     }
 
-    // Align size up to four bytes
-    k = ((k + 3) / 4) * 4;
+    // Align size up to double word = 8 bytes
+    k = ((k + 7) / 8) * 8;
 
     return k;
   };
 
   for (BlockArgument argument : funcOp.getArguments()) {
     valueInfo.insert(
-        {argument, {valueInfo.size(), getValueSize(argument), false, -1, -1}});
+        {argument,
+         {valueInfo.size(), getAlignedValueSize(argument), false, -1, -1}});
     values.push_back(argument);
   }
 
@@ -67,9 +69,9 @@ void MemoryPlan::build() {
     }
 
     for (Value result : op->getResults()) {
-      valueInfo.insert(
-          {result,
-           {valueInfo.size(), getValueSize(result), isConstantOp, -1, -1}});
+      valueInfo.insert({result,
+                        {valueInfo.size(), getAlignedValueSize(result),
+                         isConstantOp, -1, -1}});
       values.push_back(result);
     }
   });
@@ -97,7 +99,7 @@ void MemoryPlan::build() {
   printf("\n\n");
 }
 
-int MemoryPlan::getMaxMemoryUsed() {
+Operation* MemoryPlan::getOpWithMaxMemoryUsed() {
   Block *block = &op->getRegion(0).front();
   const LivenessBlockInfo *lvb = liveness.getLiveness(block);
 
@@ -123,7 +125,7 @@ int MemoryPlan::getMaxMemoryUsed() {
   maxOp->dump();
   maxOp->getLoc().dump();
   printf("\n\n");
-  return maxSize;
+  return maxOp;
 }
 
 MemoryPlan::OpSplitPlan MemoryPlan::getOpSplitPlan() {
@@ -220,6 +222,19 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
   // add only input values,
   // stitch up after allocation and fix input and output value offsets
   llvm::DenseMap<Value, std::pair<Value, int>> outInVals;
+
+  llvm::DenseMap<Value, std::pair<std::pair<Value, int>, std::pair<Value, int>>> outInInVals;
+
+  int maxOpId = 0;
+  auto maxOp = getOpWithMaxMemoryUsed();
+  // max op is pad or conv
+  // if pad, we choose the next one which should be conv
+  if(llvm::isa<Conv2DV2Op>(maxOp)){
+    maxOpId = operationIds[maxOp];
+  } else {
+    maxOpId = operationIds[maxOp] + 1;
+  }
+
   if (overlapOption) {
     for (auto o : operations) {
       if (llvm::isa<PadOp>(o)) {
@@ -233,19 +248,29 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
         }
       }
 
-      // if (llvm::isa<Conv2DV2Op>(o)) {
-      //   auto convOp = dyn_cast<Conv2DV2Op>(o);
-      //   if (symbolizeConv2DType(convOp.conv2d_kernel_type()) !=
-      //       Conv2DType::ValidIndirect) {
-      //     continue;
-      //   }
-      //   auto in = o->getOperand(0);
-      //   auto out = o->getResult(0);
-      //   int offset = 576;//valueInfo[out].size - valueInfo[in].size;
-      //   outInVals[out] = {in, offset};
-      //   valueInfo[in].size += offset;
-      //   valueInfo[in].lastUsed = valueInfo[out].lastUsed;
-      // }
+      if (llvm::isa<Conv2DV2Op>(o)) {
+        if(operationIds[o] == maxOpId) {
+          auto convOp = dyn_cast<Conv2DV2Op>(o);
+          // if (symbolizeConv2DType(convOp.conv2d_kernel_type()) !=
+          //     Conv2DType::ValidIndirect) {
+          //   continue;
+          // }
+          auto in = o->getOperand(0);
+          auto out = o->getResult(0);
+          int offset = 96;// pixel size
+
+          // since pad is input to this conv and already overlapped
+          if(outInVals.count(in)) {
+            // find the original input op
+            auto firstVal = outInVals[in].first;
+            auto firstOffset = outInVals[in].second;
+
+            outInInVals[out] = {{in, offset}, {firstVal, firstOffset}};
+            valueInfo[firstVal].size += offset;
+            valueInfo[firstVal].lastUsed = valueInfo[out].lastUsed;
+          }
+        }
+      }
     }
   }
 
@@ -272,7 +297,7 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
 
   // Insert values and their sizes into priority queue
   for (auto v : values) {
-    if (!outInVals.count(v) && !valueInfo[v].isConstant) {
+    if (!outInVals.count(v) && !outInInVals.count(v) && !valueInfo[v].isConstant) {
       queue.push({v, valueInfo[v].size});
     }
   }
@@ -296,6 +321,35 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
   printf("\n\n");
 
   // Patch up overlapped buffers
+  for (auto val : outInInVals) {
+    auto out = val.first;
+    auto inPair = val.second.first;
+    auto firstValPair = val.second.second;
+
+    auto in = inPair.first;
+    auto offset = inPair.second;
+    // We allocate here itself
+    if(outInVals.count(in)){
+        outInVals.erase(in);
+    }
+
+    auto firstVal = firstValPair.first;
+    auto firstOffset = firstValPair.second;
+
+    auto it = std::find_if(allocatedValues.begin(), allocatedValues.end(),
+                           [&](const QueueItem &p) { return p.first == firstVal; });
+
+    if (it != allocatedValues.end()) {
+      int currentOffset = it->second;
+      allocatedValues.erase(it);
+      allocatedValues.insert({firstVal, currentOffset + offset + firstOffset});
+      allocatedValues.insert({in, currentOffset + offset});
+      allocatedValues.insert({out, currentOffset});
+    } else {
+      assert(false);
+    }
+  }
+
   for (auto val : outInVals) {
     auto out = val.first;
     auto in = val.second.first;

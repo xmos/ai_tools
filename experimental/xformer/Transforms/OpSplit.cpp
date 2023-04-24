@@ -652,8 +652,7 @@ struct RaiseStridedSliceHorizontalPadPattern
                                        static_cast<int>(padLeft),
                                        static_cast<int>(padRight),
                                        padVal[{3, 0}],
-                                       padVal[{3, 1}]
-                                       };
+                                       padVal[{3, 1}]};
 
     RankedTensorType paddingsType =
         RankedTensorType::get({4, 2}, rewriter.getI32Type());

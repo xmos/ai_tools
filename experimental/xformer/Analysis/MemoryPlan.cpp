@@ -99,7 +99,7 @@ void MemoryPlan::build() {
   printf("\n\n");
 }
 
-Operation* MemoryPlan::getOpWithMaxMemoryUsed() {
+Operation *MemoryPlan::getOpWithMaxMemoryUsed() {
   Block *block = &op->getRegion(0).front();
   const LivenessBlockInfo *lvb = liveness.getLiveness(block);
 
@@ -223,13 +223,14 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
   // stitch up after allocation and fix input and output value offsets
   llvm::DenseMap<Value, std::pair<Value, int>> outInVals;
 
-  llvm::DenseMap<Value, std::pair<std::pair<Value, int>, std::pair<Value, int>>> outInInVals;
+  llvm::DenseMap<Value, std::pair<std::pair<Value, int>, std::pair<Value, int>>>
+      outInInVals;
 
   int maxOpId = 0;
   auto maxOp = getOpWithMaxMemoryUsed();
   // max op is pad or conv
   // if pad, we choose the next one which should be conv
-  if(llvm::isa<Conv2DV2Op>(maxOp)){
+  if (llvm::isa<Conv2DV2Op>(maxOp)) {
     maxOpId = operationIds[maxOp];
   } else {
     maxOpId = operationIds[maxOp] + 1;
@@ -248,29 +249,29 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
         }
       }
 
-      if (llvm::isa<Conv2DV2Op>(o)) {
-        if(operationIds[o] == maxOpId) {
-          auto convOp = dyn_cast<Conv2DV2Op>(o);
-          // if (symbolizeConv2DType(convOp.conv2d_kernel_type()) !=
-          //     Conv2DType::ValidIndirect) {
-          //   continue;
-          // }
-          auto in = o->getOperand(0);
-          auto out = o->getResult(0);
-          int offset = 96;// pixel size
+      // if (llvm::isa<Conv2DV2Op>(o)) {
+      //   if(operationIds[o] == maxOpId) {
+      //     auto convOp = dyn_cast<Conv2DV2Op>(o);
+      //     // if (symbolizeConv2DType(convOp.conv2d_kernel_type()) !=
+      //     //     Conv2DType::ValidIndirect) {
+      //     //   continue;
+      //     // }
+      //     auto in = o->getOperand(0);
+      //     auto out = o->getResult(0);
+      //     int offset = 96;// pixel size
 
-          // since pad is input to this conv and already overlapped
-          if(outInVals.count(in)) {
-            // find the original input op
-            auto firstVal = outInVals[in].first;
-            auto firstOffset = outInVals[in].second;
+      //     // since pad is input to this conv and already overlapped
+      //     if(outInVals.count(in)) {
+      //       // find the original input op
+      //       auto firstVal = outInVals[in].first;
+      //       auto firstOffset = outInVals[in].second;
 
-            outInInVals[out] = {{in, offset}, {firstVal, firstOffset}};
-            valueInfo[firstVal].size += offset;
-            valueInfo[firstVal].lastUsed = valueInfo[out].lastUsed;
-          }
-        }
-      }
+      //       outInInVals[out] = {{in, offset}, {firstVal, firstOffset}};
+      //       valueInfo[firstVal].size += offset;
+      //       valueInfo[firstVal].lastUsed = valueInfo[out].lastUsed;
+      //     }
+      //   }
+      // }
     }
   }
 
@@ -297,7 +298,8 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
 
   // Insert values and their sizes into priority queue
   for (auto v : values) {
-    if (!outInVals.count(v) && !outInInVals.count(v) && !valueInfo[v].isConstant) {
+    if (!outInVals.count(v) && !outInInVals.count(v) &&
+        !valueInfo[v].isConstant) {
       queue.push({v, valueInfo[v].size});
     }
   }
@@ -329,15 +331,16 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
     auto in = inPair.first;
     auto offset = inPair.second;
     // We allocate here itself
-    if(outInVals.count(in)){
-        outInVals.erase(in);
+    if (outInVals.count(in)) {
+      outInVals.erase(in);
     }
 
     auto firstVal = firstValPair.first;
     auto firstOffset = firstValPair.second;
 
-    auto it = std::find_if(allocatedValues.begin(), allocatedValues.end(),
-                           [&](const QueueItem &p) { return p.first == firstVal; });
+    auto it =
+        std::find_if(allocatedValues.begin(), allocatedValues.end(),
+                     [&](const QueueItem &p) { return p.first == firstVal; });
 
     if (it != allocatedValues.end()) {
       int currentOffset = it->second;

@@ -13,6 +13,11 @@ import tensorflow as tf
 import larq_compute_engine as lce
 from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter, xcore_tflm_usb_interpreter
 
+def checksum_calc(data):
+  res = np.uint8(0)
+  for i in range(0, len(data)):
+    res -= np.uint8(data[i])
+  return res
 
 XFORMER2_PATH = (pathlib.Path(__file__).resolve().parents[0] / "bazel-bin" /
                  "xcore-opt")
@@ -35,6 +40,13 @@ def get_xformed_model(model, args):
         #"--lce-translate-tfl",
         #"--xcore-replace-with-conv2dv2",
         #"--xcore-translate-to-customop"
+        # "--xcore-op-split-tensor-arena",
+        # "--xcore-op-split-start-op=18",
+        # "--xcore-op-split-end-op=10",
+        # "--xcore-op-split-num-splits=6",
+        # "--xcore-conv-err-threshold=0.6",
+        # "--xcore-offline-offsets=1",
+        # "--xcore-overlap=1"
         ]
         p = subprocess.run(cmd,
                            stdout=subprocess.PIPE,
@@ -72,8 +84,8 @@ def test_inference(args):
             model_content=model_content,
             experimental_op_resolver_type=tf.lite.experimental.
             OpResolverType.BUILTIN_REF, experimental_preserve_all_tensors=True)
-        # interpreter = tensorflow.lite.Interpreter(
-        #     model_content=model_content)
+        #interpreter = tf.lite.Interpreter(
+        #    model_content=model_content)
         interpreter.allocate_tensors()
         num_of_inputs = len(interpreter.get_input_details())
         input_tensor_type = []
@@ -178,8 +190,12 @@ def test_inference(args):
             try:
                 print("xformer output")
                 print(xformer_outputs[i])
+                print("checksum")
+                print(checksum_calc(xformer_outputs[i].flatten()))
                 print("compared output")
                 print(outputs[i])
+                print("checksum")
+                print(checksum_calc(outputs[i].flatten()))
                 #if quantized output, we dequantize it before comparing
                 if output_scales[i]:
                     outputs[i] = dequantize(

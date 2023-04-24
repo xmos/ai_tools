@@ -107,6 +107,10 @@ cl::opt<bool> convDebugOption("xcore-conv-debug",
 
 cl::opt<bool> overlapOption("xcore-overlap", cl::desc("Overlap buffers."),
                             cl::init(false));
+
+cl::opt<bool> offlineOffsetsOption("xcore-offline-offsets",
+                                   cl::desc("Offline offsets"),
+                                   cl::init(false));
 } // namespace xcore
 } // namespace mlir
 
@@ -198,8 +202,6 @@ int main(int argc, char **argv) {
   static cl::opt<bool> tflmcPrintEnabled(
       "xcore-tflmc-print", cl::desc("Print out memory allocation plan"),
       cl::init(false));
-  static cl::opt<bool> offlineOffsetsEnabled(
-      "xcore-offline-offsets", cl::desc("Offline offsets"), cl::init(false));
   static cl::opt<std::string> versionLibTfliteMicro(
       "xcore-compatible-with-lib-tflite-micro",
       cl::desc("Check if lib_tflite_micro version is compatible"), cl::init(""),
@@ -348,7 +350,7 @@ int main(int argc, char **argv) {
     // std::vector<int> offline_offsets = {
     //    73728, -1, -1, -1, -1, -1, -1, 0, 129024, 73728, 166272, 132096,
     //    73728, 153984, 132096, 73728, 132096, 73728, 0, 52224, 0};
-    if (offlineOffsetsEnabled) {
+    if (mlir::xcore::offlineOffsetsOption) {
       auto attr = module->getAttr("xc.offsets");
       auto offline_offsets = std::vector<int>{
           attr.cast<mlir::DenseIntElementsAttr>().getValues<int32_t>().begin(),

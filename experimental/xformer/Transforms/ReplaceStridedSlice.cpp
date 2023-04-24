@@ -60,7 +60,8 @@ struct ReplaceStridedSlicePattern
     }
 
     // Depth must be a multiple of four
-    if (inputType.getDimSize(3) % 4 != 0 || outputType.getDimSize(3) % 4 != 0) {
+    if (inputType.getRank() != 4 || outputType.getRank() != 4 ||
+        inputType.getDimSize(3) % 4 != 0 || outputType.getDimSize(3) % 4 != 0) {
       return failure();
     }
 

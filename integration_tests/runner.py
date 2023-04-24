@@ -196,24 +196,24 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             input_tensor_type.append(interpreter.get_input_details()[i]["dtype"])
             input_tensor_shape.append(interpreter.get_input_details()[i]["shape"])
 
+    LOGGER.info("Invoking xformer to get xformed model...")
+    if testing_detection_postprocess_option:
+        LOGGER.info("Detection postprocess special case - loading int8 model for xcore...")
+        with open(model_path.parent.joinpath("test_dtp.xc"), "rb") as fd:
+            model_content = fd.read()
+    xformed_model = get_xformed_model(model_content)
+
     if testing_on_tflmc_option:
         LOGGER.info("Creating tflmc model exe...")
         tflmc_temp_dirname = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
-        tflmc_model_exe = get_tflmc_model_exe(model_content, tflmc_temp_dirname.name)
-    else:    
-        LOGGER.info("Invoking xformer to get xformed model...")
-        if testing_detection_postprocess_option:
-            LOGGER.info("Detection postprocess special case - loading int8 model for xcore...")
-            with open(model_path.parent.joinpath("test_dtp.xc"), "rb") as fd:
-                model_content = fd.read()
-        xformed_model = get_xformed_model(model_content)
+        tflmc_model_exe = get_tflmc_model_exe(xformed_model, tflmc_temp_dirname.name)
+    else:
         LOGGER.info("Creating TFLM XCore interpreter...")
         if testing_device_option:
             ie = xcore_tflm_usb_interpreter()
         else:
             ie = xcore_tflm_host_interpreter()
         ie.set_model(model_content=xformed_model, secondary_memory=False)
-
 
     # Run tests
     num_of_fails = 0

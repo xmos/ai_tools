@@ -637,14 +637,22 @@ struct RaiseStridedSliceHorizontalPadPattern
     auto paddedHeight = newOutputHeight + padTop + padBottom;
     auto paddedWidth = inputWidth + padLeft + padRight;
 
+    DenseIntElementsAttr pad;
+    if (!matchPattern(padOriginal.getPadding(), m_Constant(&pad))) {
+      return failure();
+    }
+
+    // Keep padding values the same in the last dimension
+    auto padVal = pad.getValues<int32_t>();
+
     std::vector<int32_t> paddingValues{0,
                                        0,
                                        static_cast<int>(padTop),
                                        static_cast<int>(padBottom),
                                        static_cast<int>(padLeft),
                                        static_cast<int>(padRight),
-                                       0,
-                                       0};
+                                       padVal[{3, 0}],
+                                       padVal[{3, 1}]};
 
     RankedTensorType paddingsType =
         RankedTensorType::get({4, 2}, rewriter.getI32Type());
@@ -654,7 +662,7 @@ struct RaiseStridedSliceHorizontalPadPattern
         DenseIntElementsAttr::get(paddingsType, paddingValues));
 
     auto paddedResultType =
-        RankedTensorType::get({1, paddedHeight, paddedWidth, inputChannels},
+        RankedTensorType::get({1, paddedHeight, paddedWidth, outputChannels},
                               padOriginal.getInput()
                                   .getType()
                                   .template cast<ShapedType>()

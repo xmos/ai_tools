@@ -135,15 +135,17 @@ struct RewriteToCustomOp : public OpRewritePattern<XCoreOp> {
 void TranslateToCustomOp::runOnOperation() {
   auto *ctx = &getContext();
   RewritePatternSet patterns(ctx);
-
-  auto &m = getAnalysis<MemoryPlan>();
-  auto offsets = m.getAllocatedOffsets();
-
-  // Store as an attribute in the module
   func::FuncOp func = getOperation();
-  auto module = func->getParentOfType<ModuleOp>();
-  OpBuilder builder(func);
-  module->setAttr("xc.offsets", builder.getI32VectorAttr(offsets));
+
+  if (offlineOffsetsOption) {
+    auto &m = getAnalysis<MemoryPlan>();
+    auto offsets = m.getAllocatedOffsets();
+
+    // Store as an attribute in the module
+    auto module = func->getParentOfType<ModuleOp>();
+    OpBuilder builder(func);
+    module->setAttr("xc.offsets", builder.getI32VectorAttr(offsets));
+  }
 
   patterns.insert<RewriteToCustomOp<AddOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);

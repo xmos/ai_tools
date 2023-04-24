@@ -674,10 +674,9 @@ void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
 
-  llvm::cl::list<int> &startOps = opSplitBottomOpOption;
-  llvm::cl::list<int> &endOps = opSplitTopOpOption;
+  llvm::cl::list<int> &startOps = opSplitBottomOpsOption;
+  llvm::cl::list<int> &endOps = opSplitTopOpsOption;
   llvm::cl::list<int> &numSplits = opSplitNumSplitsOption;
-  int memoryThreshold = opSplitTargetSizeOption.getValue();
 
   // Check if the sizes of startOps, endOps, and numSplits are equal
   if (!(startOps.size() == endOps.size() &&
@@ -688,25 +687,8 @@ void OpSplit::runOnOperation() {
     return;
   }
 
-  // Check if memoryThreshold is not 0 and if startOps, endOps, and numSplits
-  // are not empty
-  if (memoryThreshold != 0 &&
-      !(startOps.empty() && endOps.empty() && numSplits.empty())) {
-    // If both conditions are true, emit an error message and signal pass
-    // failure
-    func.emitError(
-        "Error: target size option cannot be used with start, end, and "
-        "numSplits options");
-    signalPassFailure();
-    return;
-  }
-
-  // If memoryThreshold is 0, set it to a default value of 700000
-  if (memoryThreshold == 0) {
-    memoryThreshold = 700000;
-  }
-
   if (numSplits.empty()) {
+    int memoryThreshold = opSplitTargetSizeOption.getValue();
     // Initialize operation counter, tensor vectors, and size variables
     int opNum = 0;
 

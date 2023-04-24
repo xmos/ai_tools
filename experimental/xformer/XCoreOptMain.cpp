@@ -82,16 +82,18 @@ cl::opt<bool> opSplitTensorArenaOption(
 
 cl::opt<int32_t>
     opSplitTargetSizeOption("xcore-op-split-target-size",
-                            cl::desc("Op split target max tensor arena size."));
-cl::list<int32_t>
-    opSplitBottomOpOption("xcore-op-split-bottom-op",
-                         cl::desc("Manual override Op split, bottom op."),
-                         cl::CommaSeparated);
+                            cl::desc("Op split target max tensor arena size."),
+                            cl::init(700000));
 
 cl::list<int32_t>
-    opSplitTopOpOption("xcore-op-split-top-op",
-                       cl::desc("Manual override Op split, top op."),
-                       cl::CommaSeparated);
+    opSplitBottomOpsOption("xcore-op-split-bottom-op",
+                           cl::desc("Manual override Op split, bottom op."),
+                           cl::CommaSeparated);
+
+cl::list<int32_t>
+    opSplitTopOpsOption("xcore-op-split-top-op",
+                        cl::desc("Manual override Op split, top op."),
+                        cl::CommaSeparated);
 
 cl::list<int32_t> opSplitNumSplitsOption(
     "xcore-op-split-num-splits",
@@ -240,6 +242,15 @@ int main(int argc, char **argv) {
     return failedMessage(
         "Please specify the xcore-flash-image-file option when specifying the "
         "xcore-load-externally-if-larger option!");
+  }
+
+  if (mlir::xcore::opSplitTargetSizeOption.getNumOccurrences() > 0 &&
+      (!(mlir::xcore::opSplitBottomOpsOption.empty()) ||
+       !(mlir::xcore::opSplitTopOpsOption.empty()) ||
+       !(mlir::xcore::opSplitNumSplitsOption.empty()))) {
+    return failedMessage(
+        "target size option cannot be used with start, end, and "
+        "numSplits options");
   }
 
   if (mlir::xcore::threadCountOption < 1 ||

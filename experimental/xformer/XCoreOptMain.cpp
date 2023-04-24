@@ -84,13 +84,13 @@ cl::opt<int32_t>
     opSplitTargetSizeOption("xcore-op-split-target-size",
                             cl::desc("Op split target max tensor arena size."));
 cl::list<int32_t>
-    opSplitStartOpOption("xcore-op-split-start-op",
-                         cl::desc("Manual override Op split, start op."),
+    opSplitBottomOpOption("xcore-op-split-bottom-op",
+                         cl::desc("Manual override Op split, bottom op."),
                          cl::CommaSeparated);
 
 cl::list<int32_t>
-    opSplitEndOpOption("xcore-op-split-end-op",
-                       cl::desc("Manual override Op split, end op."),
+    opSplitTopOpOption("xcore-op-split-top-op",
+                       cl::desc("Manual override Op split, top op."),
                        cl::CommaSeparated);
 
 cl::list<int32_t> opSplitNumSplitsOption(

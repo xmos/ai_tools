@@ -674,8 +674,8 @@ void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
 
-  llvm::cl::list<int> &startOps = opSplitStartOpOption;
-  llvm::cl::list<int> &endOps = opSplitEndOpOption;
+  llvm::cl::list<int> &startOps = opSplitBottomOpOption;
+  llvm::cl::list<int> &endOps = opSplitTopOpOption;
   llvm::cl::list<int> &numSplits = opSplitNumSplitsOption;
   int memoryThreshold = opSplitTargetSizeOption.getValue();
 

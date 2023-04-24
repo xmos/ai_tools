@@ -682,7 +682,7 @@ void OpSplit::runOnOperation() {
   if (!(startOps.size() == endOps.size() &&
         endOps.size() == numSplits.size())) {
     // If they are not, emit an error message and signal pass failure
-    func.emitError("Error: start, end, and numSplits must be the same size");
+    func.emitError("start, end, and numSplits must be the same size");
     signalPassFailure();
     return;
   }

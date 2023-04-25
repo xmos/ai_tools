@@ -23,6 +23,7 @@ extern llvm::cl::opt<int32_t> opSplitNumSplitsOption;
 extern llvm::cl::opt<bool> allowInputModificationOption;
 extern llvm::cl::opt<bool> convDebugOption;
 extern llvm::cl::opt<bool> overlapOption;
+extern llvm::cl::opt<bool> offlineOffsetsOption;
 } // namespace xcore
 } // namespace mlir
 

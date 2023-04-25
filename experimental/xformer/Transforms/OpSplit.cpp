@@ -706,7 +706,7 @@ void OpSplit::runOnOperation() {
     std::map<int, std::vector<size_t>> opSize;
     std::vector<size_t> sizeInfo;
 
-    size_t opOperandsSize;
+    size_t currentTensorArenaSize;
     size_t inputSize;
     size_t outputSize;
     size_t residualSize;
@@ -753,15 +753,16 @@ void OpSplit::runOnOperation() {
         // Update unconsumed tensors with the new vector
         unconsumedTensors = newUnconsumedTensors;
 
+        currentTensorArenaSize = 0;
+
         residualSize = 0;
         // Iterate over the unconsumed tensors and compute their sizes
         for (mlir::Value tensor : unconsumedTensors) {
           residualSize += computeTensorSize(tensor.getType());
+          currentTensorArenaSize += computeTensorSize(tensor.getType());
         }
 
-        opOperandsSize = 0;
         inputSize = 0;
-        outputSize = 0;
         // Iterate over the input operands and compute their sizes
         for (mlir::Value input : op->getOperands()) {
           if (!input.getType().isa<mlir::TensorType>()) {
@@ -774,16 +775,17 @@ void OpSplit::runOnOperation() {
           }
 
           inputSize += computeTensorSize(input.getType());
-          opOperandsSize += computeTensorSize(input.getType());
+          currentTensorArenaSize += computeTensorSize(input.getType());
 
-          // If input has more than one use and was created by the previous
-          // operation, add it to unconsumed tensors
+          // If input tensor has more than one use and was created by the
+          // previous operation, add it to unconsumed tensors
           if ((std::distance(input.use_begin(), input.use_end()) > 1) &&
               (input.getDefiningOp() == prevOp)) {
             unconsumedTensors.push_back(input);
           }
         }
 
+        outputSize = 0;
         // Iterate over the output results and compute their sizes
         for (mlir::Value output : op->getResults()) {
           if (!output.getType().isa<mlir::TensorType>()) {
@@ -795,10 +797,11 @@ void OpSplit::runOnOperation() {
             continue;
           }
           outputSize += computeTensorSize(output.getType());
-          opOperandsSize += computeTensorSize(output.getType());
+          currentTensorArenaSize += computeTensorSize(output.getType());
         }
 
-        sizeInfo = {opOperandsSize, inputSize, outputSize, residualSize};
+        sizeInfo = {currentTensorArenaSize, inputSize, outputSize,
+                    residualSize};
         opSize[opNum] = sizeInfo;
 
         // Increment operation counter

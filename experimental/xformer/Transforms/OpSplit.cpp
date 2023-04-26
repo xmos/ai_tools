@@ -841,13 +841,13 @@ void OpSplit::runOnOperation() {
       }
     }
 
-    // If the last operation was still above the threshold, add 0 to
+    // If the first operation was above the threshold, add it, 0, to
     // belowThreshold
     if (crossedThreshold) {
       belowThreshold.push_back(0);
     }
 
-    // remove operations if size goes below threshold for only one operation
+    // adjust threshold trackers iff size goes below threshold for only one operation
     for (size_t i = 0; i < aboveThreshold.size(); ++i) {
       if (i > 0 && belowThreshold[i - 1] - aboveThreshold[i] <= 1) {
         aboveThreshold.erase(aboveThreshold.begin() + i);

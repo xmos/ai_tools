@@ -65,6 +65,13 @@ struct ReplaceStridedSlicePattern
       return failure();
     }
 
+    // Width must be a multiple of four
+    // Input and output tensors must have the same width.
+    if (inputType.getDimSize(2) % 4 != 0 ||
+        outputType.getDimSize(2) != inputType.getDimSize(2)) {
+      return failure();
+    }
+
     // TODO: We don't support masks yet
     if (stridedSliceOp.getBeginMask() != 0 ||
         stridedSliceOp.getEndMask() != 0 ||

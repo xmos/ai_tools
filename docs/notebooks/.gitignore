@@ -1,0 +1,8 @@
+saved_model
+
+# pytorch_to_tflite notebooks
+pytorch_to_tflite/mobilenet/dog.jpg
+pytorch_to_tflite/mobilenet/mobilenet_v2.tf
+pytorch_to_tflite/mobilenet/mobilenet_v2.tflite
+pytorch_to_tflite/mobilenet/mobilenet_v2_float.tflite
+pytorch_to_tflite/mobilenet/mobilenet_v2.onnx

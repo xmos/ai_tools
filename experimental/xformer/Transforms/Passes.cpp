@@ -21,6 +21,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createPad3to4Conv2DPass());
+  pm.addPass(createOptimizeConv2DPass());
   pm.addPass(createApplyTFLPatternsPass());
   if (opSplitTensorArenaOption) {
     pm.addPass(createOpSplitPass());

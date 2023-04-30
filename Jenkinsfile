@@ -27,7 +27,7 @@ pipeline {
     stages {
         stage("Build") {
             agent {
-                label "ubuntu18"
+                label "linux && 64 && !noAVX2"
             }
             stages {
                 stage("Setup") {
@@ -97,7 +97,7 @@ pipeline {
                         }
                         stage("Hardware Test") {
                             agent {
-                                label "xcore.ai-explorer && !macos"
+                                label "xcore.ai-explorer && lpddr && !macos"
                             }
                             stages {
                                 stage("Setup") {

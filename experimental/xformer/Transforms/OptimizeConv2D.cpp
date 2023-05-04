@@ -7,7 +7,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
-#include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops_layout_helper.h"
 
 namespace mlir {
 namespace xcore {
@@ -173,12 +172,7 @@ void OptimizeConv2D::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
   RewritePatternSet patterns(ctx);
-
-  // Channelwise split conv and add concat
   patterns.insert<ChannelwiseSplitPattern>(ctx);
-
-  // Pad conv so that output depth is 4 and add strided slice
-
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace

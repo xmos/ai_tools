@@ -6,6 +6,7 @@ pipeline {
     agent none
     environment {
         BAZEL_CACHE_URL = 'http://srv-bri-bld-cache:8080'
+        REBOOT_XTAG = '1'
     }
     parameters { // Available to modify on the job page within Jenkins if starting a build
         string( // use to try different tools versions
@@ -27,7 +28,7 @@ pipeline {
     stages {
         stage("Build") {
             agent {
-                label "ubuntu18"
+                label "linux && 64 && !noAVX2"
             }
             stages {
                 stage("Setup") {
@@ -97,7 +98,7 @@ pipeline {
                         }
                         stage("Hardware Test") {
                             agent {
-                                label "xcore.ai-explorer && !macos"
+                                label "xcore.ai-explorer && lpddr && !macos"
                             }
                             stages {
                                 stage("Setup") {

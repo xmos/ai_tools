@@ -682,9 +682,9 @@ void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
 
-  llvm::cl::list<int> &startOps = opSplitBottomOpsOption;
-  llvm::cl::list<int> &endOps = opSplitTopOpsOption;
-  llvm::cl::list<int> &numSplits = opSplitNumSplitsOption;
+  auto &startOps = opSplitBottomOpsOption;
+  auto &endOps = opSplitTopOpsOption;
+  auto &numSplits = opSplitNumSplitsOption;
 
   // Check if the sizes of startOps, endOps, and numSplits are equal
   if (!(startOps.size() == endOps.size() &&
@@ -847,7 +847,8 @@ void OpSplit::runOnOperation() {
       belowThreshold.push_back(0);
     }
 
-    // adjust threshold trackers if size goes below threshold for only one operation
+    // adjust threshold trackers if size goes below threshold for only one
+    // operation
     for (size_t i = 0; i < aboveThreshold.size(); ++i) {
       if (i > 0 && belowThreshold[i - 1] - aboveThreshold[i] <= 1) {
         aboveThreshold.erase(aboveThreshold.begin() + i);

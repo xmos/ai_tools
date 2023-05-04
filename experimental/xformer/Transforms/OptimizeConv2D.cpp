@@ -31,96 +31,113 @@ struct ChannelwiseSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
 
   LogicalResult matchAndRewrite(TFL::Conv2DOp op,
                                 PatternRewriter &rewriter) const override {
+    // Lamdba to split filter or bias based on whether it is per channelwise
+    // quantization If per channelwise quantization, we have to split the
+    // quantization params
+    auto getSplitResultType = [](int splitSize, int elems,
+                                 std::initializer_list<int64_t> &shape,
+                                 TFL::QConstOp op, ShapedType opType) {
+      Type splitResultType =
+          RankedTensorType::get(shape, opType.getElementType());
 
-    // Check for invalid types and return
-    // Defining op must be pad
-    // auto padOp = dyn_cast_or_null<TFL::PadOp>(op.getInput().getDefiningOp());
-    // if (!padOp) {
-    //   return failure();
-    // }
+      auto opQType = op.getQtype().template cast<RankedTensorType>();
 
-    // // Get transpose permutation
-    // DenseIntElementsAttr perm;
-    // if (!matchPattern(op.getPerm(), m_Constant(&perm))) {
-    //   return failure();
-    // }
+      if (auto qType =
+              opQType.getElementType()
+                  .dyn_cast<mlir::quant::UniformQuantizedPerAxisType>()) {
+        auto scaleVector =
+            std::vector<double>{qType.getScales().begin() + elems,
+                                qType.getScales().begin() + elems + splitSize};
 
-    // // Confirm transpose permutation is 0,2,3,1 i.e., NWCH
-    // // Remnants of Pytorch to TFlite conversion
-    // auto permVal = perm.getValues<int32_t>();
-    // if (perm.size() != 4 || permVal[0] != 0 || permVal[1] != 2 ||
-    //     permVal[2] != 3 || permVal[3] != 1) {
-    //   return failure();
-    // }
+        auto zeroPointVector = std::vector<int64_t>{
+            qType.getZeroPoints().begin() + elems,
+            qType.getZeroPoints().begin() + elems + splitSize};
 
-    // // Get padding val
-    // DenseIntElementsAttr pad;
-    // if (!matchPattern(padOp.getPadding(), m_Constant(&pad))) {
-    //   return failure();
-    // }
+        auto newQType = quant::UniformQuantizedPerAxisType::getChecked(
+            op.getLoc(), qType.getFlags(), qType.getStorageType(),
+            qType.getExpressedType(), scaleVector, zeroPointVector,
+            qType.getQuantizedDimension(), qType.getStorageTypeMin(),
+            qType.getStorageTypeMax());
 
-    // // Confirm padding is only in last two dimensions
-    // auto padVal = pad.getValues<int32_t>();
-    // if (padVal[{0, 0}] != 0 || padVal[{0, 1}] != 0 || padVal[{1, 0}] != 0 ||
-    //     padVal[{1, 1}] != 0 || padVal[{2, 0}] != 1 || padVal[{2, 1}] != 1 ||
-    //     padVal[{3, 0}] != 1 || padVal[{3, 1}] != 1) {
-    //   return failure();
-    // }
+        splitResultType = newQType.castFromExpressedType(
+            quant::AnyQuantizedType::castToExpressedType(splitResultType));
+      }
+      return splitResultType;
+    };
 
-    int numSplits = 4;
-
-    // Create new Conv2D ops
-    // Expand filter to 4 dims
     auto filterQConstOp =
         dyn_cast<TFL::QConstOp>(op.getFilter().getDefiningOp());
     auto filterType = op.getFilter().getType().cast<ShapedType>();
-
     auto filter = filterQConstOp.getValue().cast<DenseElementsAttr>();
     auto filterSize = filter.size();
 
-    if (filterSize < 300000) {
+    // We want to try to keep the split filtersize less than specified size
+    int numSplits = ceil(filterSize / convChannelwiseSplitSizeOption);
+    // Only try to split if at least two splits are possible
+    if (numSplits < 2) {
       return failure();
     }
-    auto numSplitFilterElements = filterSize / numSplits;
+    // Let's split the filter batch size as that's the same as bias size and
+    // output channel size
+    auto filterBatchSize = filterType.getShape()[0];
+    // We want splits to be multiples of four, so we divide here and multiply
+    // after calculating the split sizes
+    int tmp = filterBatchSize / 4;
+    int d = tmp / numSplits;
+    int r = tmp % numSplits;
+    llvm::SmallVector<int> splitSizes;
+    // If not an even split, we distribute the remainder to the first few splits
+    for (int i = 0; i < numSplits; ++i) {
+      if (r > 0) {
+        splitSizes.push_back((d + 1) * 4);
+        r -= 1;
+      } else {
+        splitSizes.push_back(d * 4);
+      }
+    }
 
     auto biasQConstOp = dyn_cast<TFL::QConstOp>(op.getBias().getDefiningOp());
     auto biasType = op.getBias().getType().cast<ShapedType>();
     auto bias = biasQConstOp.getValue().cast<DenseElementsAttr>();
-    auto biasSize = bias.size();
-    auto numSplitBiasElements = biasSize / numSplits;
 
-
-    // TODO, have to split the filter and bias qtype scales
-
+    assert(bias.size() == filterBatchSize);
+    assert(op.getOutput().getType().cast<ShapedType>().getShape()[3] ==
+           filterBatchSize);
 
     SmallVector<Value> conv2DOps;
-    for (int i = 0; i < numSplits; ++i) {
-
+    int elems = 0;
+    for (int i = 0; i < splitSizes.size(); ++i) {
+      // Create split filter
       auto splitFilterShape = {
-          filterType.getShape()[0] / numSplits, filterType.getShape()[1],
+          static_cast<int64_t>(splitSizes[i]), filterType.getShape()[1],
           filterType.getShape()[2], filterType.getShape()[3]};
-      auto splitFilterResultType =
-          RankedTensorType::get(splitFilterShape, filterType.getElementType());
+      auto splitFilterResultType = getSplitResultType(
+          splitSizes[i], elems, splitFilterShape, filterQConstOp, filterType);
       auto splitFilterValueType =
           RankedTensorType::get(splitFilterShape, rewriter.getIntegerType(8));
+      auto filterSizeExcludingBatch = filterType.getShape()[1] *
+                                      filterType.getShape()[2] *
+                                      filterType.getShape()[3];
       auto filterVector = std::vector<int8_t>{
-          filter.getValues<int8_t>().begin() + (i * numSplitFilterElements),
+          filter.getValues<int8_t>().begin() + elems * filterSizeExcludingBatch,
           filter.getValues<int8_t>().begin() +
-              (((i + 1) * numSplitFilterElements))};
+              ((elems + splitSizes[i]) * filterSizeExcludingBatch)};
+
       auto splitFilterQConstOp = rewriter.create<TFL::QConstOp>(
           op.getLoc(), mlir::TypeAttr::get(splitFilterResultType),
           mlir::DenseElementsAttr::get(splitFilterValueType,
                                        llvm::ArrayRef(filterVector)));
 
-      auto splitBiasShape = {biasType.getShape()[0] / numSplits};
-      auto splitBiasResultType =
-          RankedTensorType::get(splitBiasShape, biasType.getElementType());
+      // Create split bias
+      auto splitBiasShape = {static_cast<int64_t>(splitSizes[i])};
+      auto splitBiasResultType = getSplitResultType(
+          splitSizes[i], elems, splitBiasShape, biasQConstOp, biasType);
       auto splitBiasValueType =
           RankedTensorType::get(splitBiasShape, rewriter.getIntegerType(32));
       auto biasVector = std::vector<int32_t>{
-          bias.getValues<int32_t>().begin() + (i * numSplitBiasElements),
-          bias.getValues<int32_t>().begin() +
-              (((i + 1) * numSplitBiasElements))};
+          bias.getValues<int32_t>().begin() + elems,
+          bias.getValues<int32_t>().begin() + elems + splitSizes[i]};
+
       auto splitBiasQConstOp = rewriter.create<TFL::QConstOp>(
           op.getLoc(), mlir::TypeAttr::get(splitBiasResultType),
           mlir::DenseElementsAttr::get(splitBiasValueType,
@@ -130,7 +147,7 @@ struct ChannelwiseSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
       auto outputType = op.getOutput().getType().cast<ShapedType>();
       auto splitResultType = RankedTensorType::get(
           {outputType.getShape()[0], outputType.getShape()[1],
-           outputType.getShape()[2], outputType.getShape()[3] / numSplits},
+           outputType.getShape()[2], splitSizes[i]},
           outputType.getElementType());
 
       auto newConv2DOp = rewriter.create<TFL::Conv2DOp>(
@@ -139,8 +156,11 @@ struct ChannelwiseSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
           1);
 
       conv2DOps.push_back(newConv2DOp.getResult());
+
+      elems += splitSizes[i];
     }
 
+    // Add concatenation op with axis 3, the channel dimension
     auto newConcatOp = rewriter.create<TFL::ConcatenationOp>(
         op.getLoc(), op.getOutput().getType(), conv2DOps, 3, "NONE");
 

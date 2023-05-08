@@ -76,8 +76,8 @@ struct ReplaceFCWithConv2DPattern
     auto inputType = fcOp.getInput().getType().cast<ShapedType>();
     assert(inputType.getRank() == 2 &&
            "FullyConnected input should have a rank of 2!");
-    auto expandedInputShapeVector = {inputType.getShape()[0], 1LL, 1LL,
-                                     inputType.getShape()[1]};
+    std::vector<int64_t> expandedInputShapeVector = {
+        inputType.getShape()[0], 1LL, 1LL, inputType.getShape()[1]};
     auto expandedInputResultType = RankedTensorType::get(
         expandedInputShapeVector, inputType.getElementType());
 
@@ -121,8 +121,8 @@ struct ReplaceFCWithConv2DPattern
     // Add a ReshapeOp after Conv2D for squeezing output back to 2 dims
     auto newConv2DOutputType =
         newConv2DOp.getOutput().getType().cast<ShapedType>();
-    auto squeezedOutputShapeVector = {newConv2DOutputType.getShape()[0],
-                                      newConv2DOutputType.getShape()[3]};
+    std::vector<int64_t> squeezedOutputShapeVector = {
+        newConv2DOutputType.getShape()[0], newConv2DOutputType.getShape()[3]};
     auto squeezedOutputResultType = RankedTensorType::get(
         squeezedOutputShapeVector, newConv2DOutputType.getElementType());
 

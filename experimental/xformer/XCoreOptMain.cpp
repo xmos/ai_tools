@@ -112,6 +112,10 @@ cl::opt<bool> convDebugOption("xcore-conv-debug",
 cl::opt<bool> overlapOption("xcore-overlap", cl::desc("Overlap buffers."),
                             cl::init(true));
 
+cl::opt<bool> overlapConvOption("xcore-overlap-conv",
+                                cl::desc("Overlap conv also."),
+                                cl::init(false));
+
 cl::opt<bool> offlineOffsetsOption("xcore-offline-offsets",
                                    cl::desc("Offline offsets"),
                                    cl::init(false));
@@ -396,16 +400,19 @@ int main(int argc, char **argv) {
                                             offline_offsets.size() * 4);
 
       auto k = (int32_t *)offlineOffsetsData.data();
-      printf("\n");
+#define DEBUG_TYPE "xcore-memory-plan"
+      LLVM_DEBUG(llvm::dbgs() << "\n\n");
       for (int i = 0; i < offline_offsets.size(); i++) {
-        printf("%d, ", k[i]);
+        LLVM_DEBUG(llvm::dbgs() << k[i] << ", ");
       }
-      printf("\n");
+      LLVM_DEBUG(llvm::dbgs() << "\n\n");
 
       auto offlineOffsetsMetadata =
           std::make_pair(kOfflineMemAllocMetadata, offlineOffsetsData);
 
-      printf("\n\nOFFLINE OFFSETS ENABLED!\n\n");
+      LLVM_DEBUG(llvm::dbgs() << "\n\nOFFLINE OFFSETS ENABLED!\n\n");
+#undef DEBUG_TYPE
+
       metadata.insert(offlineOffsetsMetadata);
     }
     metadata.insert(xcoreConfigMetadata);

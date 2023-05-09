@@ -16,14 +16,16 @@ extern llvm::cl::opt<double> convQuantErrorThresholdOption;
 extern llvm::cl::opt<bool> convForceErrorCheckOption;
 extern llvm::cl::opt<unsigned> convMultiplierFactorOption;
 extern llvm::cl::opt<bool> opSplitTensorArenaOption;
-extern llvm::cl::opt<int32_t> opSplitTargetSizeOption;
-extern llvm::cl::list<int32_t> opSplitBottomOpsOption;
-extern llvm::cl::list<int32_t> opSplitTopOpsOption;
-extern llvm::cl::list<int32_t> opSplitNumSplitsOption;
+extern llvm::cl::opt<unsigned> opSplitTargetSizeOption;
+extern llvm::cl::list<unsigned> opSplitBottomOpsOption;
+extern llvm::cl::list<unsigned> opSplitTopOpsOption;
+extern llvm::cl::list<unsigned> opSplitNumSplitsOption;
 extern llvm::cl::opt<bool> allowInputModificationOption;
 extern llvm::cl::opt<bool> convDebugOption;
 extern llvm::cl::opt<bool> overlapOption;
+extern llvm::cl::opt<bool> overlapConvOption;
 extern llvm::cl::opt<bool> offlineOffsetsOption;
+extern llvm::cl::opt<unsigned> convChannelwiseSplitSizeOption;
 } // namespace xcore
 } // namespace mlir
 

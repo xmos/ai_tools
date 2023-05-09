@@ -65,6 +65,15 @@ struct ReplaceStridedSlicePattern
       return failure();
     }
 
+    // TODO: We don't support masks yet
+    if (stridedSliceOp.getBeginMask() != 0 ||
+        stridedSliceOp.getEndMask() != 0 ||
+        stridedSliceOp.getEllipsisMask() != 0 ||
+        stridedSliceOp.getNewAxisMask() != 0 ||
+        stridedSliceOp.getShrinkAxisMask() != 0) {
+      return failure();
+    }
+
     // Extract args from the op
     DenseElementsAttr beginAttr;
     matchPattern(stridedSliceOp.getBegin(), m_Constant(&beginAttr));

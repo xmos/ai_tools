@@ -80,26 +80,25 @@ cl::opt<bool> opSplitTensorArenaOption(
     cl::desc("Enable prototype op split to reduce tensor arena size."),
     cl::init(false));
 
-cl::opt<int32_t>
+cl::opt<unsigned>
     opSplitTargetSizeOption("xcore-op-split-target-size",
                             cl::desc("Op split target max tensor arena size."),
                             cl::init(700000));
 
-cl::list<int32_t>
+cl::list<unsigned>
     opSplitBottomOpsOption("xcore-op-split-bottom-op",
                            cl::desc("Manual override Op split, bottom op."),
                            cl::CommaSeparated);
 
-cl::list<int32_t>
+cl::list<unsigned>
     opSplitTopOpsOption("xcore-op-split-top-op",
                         cl::desc("Manual override Op split, top op."),
                         cl::CommaSeparated);
 
-cl::list<int32_t> opSplitNumSplitsOption(
+cl::list<unsigned> opSplitNumSplitsOption(
     "xcore-op-split-num-splits",
     cl::desc("Manual override Op split, number of splits."),
     cl::CommaSeparated);
-;
 
 cl::opt<bool> allowInputModificationOption(
     "xcore-allow-input-modification",
@@ -111,11 +110,22 @@ cl::opt<bool> convDebugOption("xcore-conv-debug",
                               cl::init(false));
 
 cl::opt<bool> overlapOption("xcore-overlap", cl::desc("Overlap buffers."),
-                            cl::init(false));
+                            cl::init(true));
+
+cl::opt<bool> overlapConvOption("xcore-overlap-conv",
+                                cl::desc("Overlap conv also."),
+                                cl::init(false));
 
 cl::opt<bool> offlineOffsetsOption("xcore-offline-offsets",
                                    cl::desc("Offline offsets"),
                                    cl::init(false));
+
+cl::opt<unsigned> convChannelwiseSplitSizeOption(
+    "xcore-conv-channelwise-split-size",
+    cl::desc(
+        "Specify channelwise split size for convolutions (default = 100000)."),
+    cl::init(100000));
+
 } // namespace xcore
 } // namespace mlir
 
@@ -390,16 +400,19 @@ int main(int argc, char **argv) {
                                             offline_offsets.size() * 4);
 
       auto k = (int32_t *)offlineOffsetsData.data();
-      printf("\n");
+#define DEBUG_TYPE "xcore-memory-plan"
+      LLVM_DEBUG(llvm::dbgs() << "\n\n");
       for (int i = 0; i < offline_offsets.size(); i++) {
-        printf("%d, ", k[i]);
+        LLVM_DEBUG(llvm::dbgs() << k[i] << ", ");
       }
-      printf("\n");
+      LLVM_DEBUG(llvm::dbgs() << "\n\n");
 
       auto offlineOffsetsMetadata =
           std::make_pair(kOfflineMemAllocMetadata, offlineOffsetsData);
 
-      printf("\n\nOFFLINE OFFSETS ENABLED!\n\n");
+      LLVM_DEBUG(llvm::dbgs() << "\n\nOFFLINE OFFSETS ENABLED!\n\n");
+#undef DEBUG_TYPE
+
       metadata.insert(offlineOffsetsMetadata);
     }
     metadata.insert(xcoreConfigMetadata);

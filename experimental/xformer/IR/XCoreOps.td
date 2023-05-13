@@ -74,6 +74,12 @@ def XC_Conv2D_Channelwise : I32EnumAttrCase<"Channelwise", 1>;
 def XC_Conv2D_OTAttr : I32EnumAttr<"OtType", "output transform type enum",
                                    [XC_Conv2D_Group, XC_Conv2D_Channelwise]>;
 
+
+def XC_StridedSlice_PixelCpy : I32EnumAttrCase<"PixelCpy", 0>;
+def XC_StridedSlice_SliceCpy : I32EnumAttrCase<"SliceCpy", 1>;
+def XC_StridedSlice_MemcpyTypeAttr : I32EnumAttr<"StridedSliceMemcpyType", "memcpy type enum",
+                                   [XC_StridedSlice_PixelCpy, XC_StridedSlice_SliceCpy]>;
+
 def XC_StridedSliceOp : XC_Op<"strided_slice", [Pure]> {
   let summary = "Strided Slice op";
 
@@ -84,7 +90,8 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [Pure]> {
 
     I32Attr:$begin_x,
     I32Attr:$begin_y,
-    StrAttr:$memcpy_fn_param
+    StrAttr:$memcpy_fn_param,
+    I32Attr:$memcpy_type
   );
 
   let results = (outs TensorOf<[QI8]> : $output);

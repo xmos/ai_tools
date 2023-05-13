@@ -35,6 +35,7 @@ std::vector<uint8_t> StridedSliceOp::buildCustomOptions() {
   fbb.Int("begin_x", (int32_t)getBeginX());
   fbb.Int("begin_y", (int32_t)getBeginY());
   fbb.String("mp", getMemcpyFnParam().str());
+  fbb.Int("type", (int32_t)getMemcpyType());
 
   fbb.EndMap(rootMap);
   fbb.Finish();

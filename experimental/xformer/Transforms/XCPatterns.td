@@ -58,20 +58,20 @@ def Front : NativeCodeCall<"$0.front()", 1>;
 // zero.
 def IsSecondInputSplatAndEqualToZero
     : Constraint<
-          CPred<"dyn_cast<TFL::ConstOp>($0.back().getDefiningOp()) && "
-                "dyn_cast<TFL::ConstOp>($0.back().getDefiningOp()).getValue()."
+          CPred<"dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()) && "
+                "dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()).getValue()."
                 "cast<DenseElementsAttr>().isSplat() && "
-                "dyn_cast<TFL::ConstOp>($0.back().getDefiningOp()).getValue()."
+                "dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()).getValue()."
                 "cast<DenseElementsAttr>().getSplatValue<int8_t>() == 0">>;
 def AreChannels3And4
     : Constraint<
           CPred<"$0.front().getType().cast<ShapedType>().getDimSize(3) == 3 && "
-                "$0.back().getType().cast<ShapedType>().getDimSize(3) == 4">>;
+                "$1.getType().cast<ShapedType>().getDimSize(3) == 4">>;
 def : Pat<(TFL_ConcatenationOp
            : $output $varg, $axis, $faf),
           (XC_Pad3To4Op(Front $varg), ConstantAttr<I32Attr, "0">), [
             (HasExactValues<2> $varg), (IsSecondInputSplatAndEqualToZero $varg),
-            (AreChannels3And4 $varg)
+            (AreChannels3And4 $varg, $output)
           ]>;
 
 // Fuse XC_Conv2D(Reshape()) -> XC_Conv2D()

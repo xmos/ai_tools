@@ -59,9 +59,8 @@ struct ReplaceStridedSlicePattern
       return failure();
     }
 
-    // Depth must be a multiple of four
-    if (inputType.getRank() != 4 || outputType.getRank() != 4 ||
-        inputType.getDimSize(3) % 4 != 0 || outputType.getDimSize(3) % 4 != 0) {
+    // Check if both input and output tensors have a rank of 4
+    if (inputType.getRank() != 4 || outputType.getRank() != 4) {
       return failure();
     }
 
@@ -71,6 +70,24 @@ struct ReplaceStridedSlicePattern
         stridedSliceOp.getEllipsisMask() != 0 ||
         stridedSliceOp.getNewAxisMask() != 0 ||
         stridedSliceOp.getShrinkAxisMask() != 0) {
+      return failure();
+    }
+
+    StridedSliceMemcpyType memcpyType;
+    if (inputType.getDimSize(2) % 4 == 0 &&
+        outputType.getDimSize(2) == inputType.getDimSize(2)) {
+      // If depth * output width is a multiple of four and the x,y location of
+      // the starting pixel is word-aligned, we can do a slice copy instead.
+      // That is ((y * input depth + x) * depth) is a multiple of four.
+      // We use a simple memcpy to do the copy in the runtime.
+      // Input and output tensors must have the same width.
+      memcpyType = StridedSliceMemcpyType::SliceCpy;
+    } else if (inputType.getDimSize(3) % 4 == 0 &&
+               outputType.getDimSize(3) % 4 == 0) {
+      // If not a slice copy, then if both depths are multiples of four, we can
+      // do pixel by pixel copy.
+      memcpyType = StridedSliceMemcpyType::PixelCpy;
+    } else {
       return failure();
     }
 
@@ -112,7 +129,8 @@ struct ReplaceStridedSlicePattern
     auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceOp>(
         stridedSliceOp.getLoc(), stridedSliceOp.getType(),
         stridedSliceOp.getInput(), rewriter.getI32IntegerAttr(beginX),
-        rewriter.getI32IntegerAttr(beginY), rewriter.getStringAttr(mfStr));
+        rewriter.getI32IntegerAttr(beginY), rewriter.getStringAttr(mfStr),
+        rewriter.getI32IntegerAttr((int32_t)memcpyType));
     rewriter.replaceOp(stridedSliceOp, binaryObjectStridedSliceOp.getOutput());
 
     return success();

@@ -37,7 +37,11 @@ xf.convert("example_int8_model.tflite", "xcore_optimised_int8_flash_model.tflite
 
 To use combine these files created by the code above into a .out file use the generate_flash() function
 ```python
-xf.generate_flash("xcore_optimised_int8_flash_model.tflite",  "xcore_params.params", "xcore_flash_binary.out")
+xf.generate_flash(
+    output_file="xcore_flash_binary.out",
+    model_files=["model.tflite", "model2.tflite"],
+    param_files=["1.params", "2.params"]
+)
 ```
 
 ### xinterpreters

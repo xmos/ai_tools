@@ -48,6 +48,32 @@ def:
           ]>;
 }
 
+// Lower special Concatenation op PyTorch remnant to XC_Pad3to4
+// If the second input of concatenation is with a constant of all values zero,
+// and input has channels 3 and output has channels 4
+class HasExactValues<int n>
+    : Constraint<CPred<"$0.size() == " #n>, "has exactly " #n #" values">;
+def Front : NativeCodeCall<"$0.front()", 1>;
+// Checks if second input is integer constant and its splat value is equal to
+// zero.
+def IsSecondInputSplatAndEqualToZero
+    : Constraint<
+          CPred<"dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()) && "
+                "dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()).getValue()."
+                "cast<DenseElementsAttr>().isSplat() && "
+                "dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()).getValue()."
+                "cast<DenseElementsAttr>().getSplatValue<int8_t>() == 0">>;
+def AreChannels3And4
+    : Constraint<
+          CPred<"$0.front().getType().cast<ShapedType>().getDimSize(3) == 3 && "
+                "$1.getType().cast<ShapedType>().getDimSize(3) == 4">>;
+def : Pat<(TFL_ConcatenationOp
+           : $output $varg, $axis, $faf),
+          (XC_Pad3To4Op(Front $varg), ConstantAttr<I32Attr, "0">), [
+            (HasExactValues<2> $varg), (IsSecondInputSplatAndEqualToZero $varg),
+            (AreChannels3And4 $varg, $output)
+          ]>;
+
 // Fuse XC_Conv2D(Reshape()) -> XC_Conv2D()
 def : Pat<(XC_Conv2DV2Op
            : $cout(TFL_ReshapeOp

@@ -95,11 +95,15 @@ struct ChannelwiseSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
       }
     }
 
-    auto biasQConstOp = dyn_cast<TFL::QConstOp>(op.getBias().getDefiningOp());
-    auto biasType = op.getBias().getType().cast<ShapedType>();
-    auto bias = biasQConstOp.getValue().cast<DenseElementsAttr>();
+    bool biasPresent = true;
+    if (!op.getBias().getType().isa<NoneType>()) {
+      auto biasQConstOp = dyn_cast<TFL::QConstOp>(op.getBias().getDefiningOp());
+      auto bias = biasQConstOp.getValue().cast<DenseElementsAttr>();
+      assert(bias.size() == filterBatchSize);
+    } else {
+      biasPresent = false;
+    }
 
-    assert(bias.size() == filterBatchSize);
     assert(op.getOutput().getType().cast<ShapedType>().getShape()[3] ==
            filterBatchSize);
 
@@ -127,20 +131,30 @@ struct ChannelwiseSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
           mlir::DenseElementsAttr::get(splitFilterValueType,
                                        llvm::ArrayRef(filterVector)));
 
-      // Create split bias
-      auto splitBiasShape = {static_cast<int64_t>(splitSizes[i])};
-      auto splitBiasResultType = getSplitResultType(
-          splitSizes[i], elems, splitBiasShape, biasQConstOp, biasType);
-      auto splitBiasValueType =
-          RankedTensorType::get(splitBiasShape, rewriter.getIntegerType(32));
-      auto biasVector = std::vector<int32_t>{
-          bias.getValues<int32_t>().begin() + elems,
-          bias.getValues<int32_t>().begin() + elems + splitSizes[i]};
+      Value splitBiasQConstOpOrNone;
+      if (biasPresent) {
+        // Create split bias
+        auto biasQConstOp =
+            dyn_cast<TFL::QConstOp>(op.getBias().getDefiningOp());
+        auto biasType = op.getBias().getType().cast<ShapedType>();
+        auto bias = biasQConstOp.getValue().cast<DenseElementsAttr>();
 
-      auto splitBiasQConstOp = rewriter.create<TFL::QConstOp>(
-          op.getLoc(), mlir::TypeAttr::get(splitBiasResultType),
-          mlir::DenseElementsAttr::get(splitBiasValueType,
-                                       llvm::ArrayRef(biasVector)));
+        auto splitBiasShape = {static_cast<int64_t>(splitSizes[i])};
+        auto splitBiasResultType = getSplitResultType(
+            splitSizes[i], elems, splitBiasShape, biasQConstOp, biasType);
+        auto splitBiasValueType =
+            RankedTensorType::get(splitBiasShape, rewriter.getIntegerType(32));
+        auto biasVector = std::vector<int32_t>{
+            bias.getValues<int32_t>().begin() + elems,
+            bias.getValues<int32_t>().begin() + elems + splitSizes[i]};
+
+        splitBiasQConstOpOrNone = rewriter.create<TFL::QConstOp>(
+            op.getLoc(), mlir::TypeAttr::get(splitBiasResultType),
+            mlir::DenseElementsAttr::get(splitBiasValueType,
+                                         llvm::ArrayRef(biasVector)));
+      } else {
+        splitBiasQConstOpOrNone = op.getBias();
+      }
 
       // Add split Conv2Ds
       auto outputType = op.getOutput().getType().cast<ShapedType>();
@@ -151,8 +165,8 @@ struct ChannelwiseSplitPattern : public OpRewritePattern<TFL::Conv2DOp> {
 
       auto newConv2DOp = rewriter.create<TFL::Conv2DOp>(
           op.getLoc(), splitResultType, op.getInput(), splitFilterQConstOp,
-          splitBiasQConstOp, 1, 1, op.getFusedActivationFunction(), "VALID", 1,
-          1);
+          splitBiasQConstOpOrNone, 1, 1, op.getFusedActivationFunction(),
+          "VALID", 1, 1);
 
       conv2DOps.push_back(newConv2DOp.getResult());
 

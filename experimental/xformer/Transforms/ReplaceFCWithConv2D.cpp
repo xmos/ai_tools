@@ -68,23 +68,22 @@ struct ReplaceFCWithConv2DPattern
       return failure();
     }
 
-    if (fcOp.getKeepNumDims() != false) {
-      return failure();
-    }
-
     // Add a ReshapeOp before Conv2D for expanding input to 4 dims
     auto inputType = fcOp.getInput().getType().cast<ShapedType>();
-    assert(inputType.getRank() == 2 &&
-           "FullyConnected input should have a rank of 2!");
+    int spatialInDim = inputType.getRank() - 2;
+    int channelInDim = inputType.getRank() - 1;
+
     std::vector<int64_t> expandedInputShapeVector = {
-        inputType.getShape()[0], 1LL, 1LL, inputType.getShape()[1]};
+        inputType.getShape()[spatialInDim], 1LL, 1LL,
+        inputType.getShape()[channelInDim]};
     auto expandedInputResultType = RankedTensorType::get(
         expandedInputShapeVector, inputType.getElementType());
 
     std::vector<int32_t> expandedReshapeConstantVector = {
-        static_cast<int>(inputType.isDynamicDim(0) ? 1
-                                                   : inputType.getDimSize(0)),
-        1, 1, static_cast<int>(inputType.getDimSize(1))};
+        static_cast<int>(inputType.isDynamicDim(spatialInDim)
+                             ? 1
+                             : inputType.getDimSize(spatialInDim)),
+        1, 1, static_cast<int>(inputType.getDimSize(channelInDim))};
     RankedTensorType expandedShapeType =
         RankedTensorType::get({4}, rewriter.getI32Type());
     auto expandedShapeConstantOp = rewriter.create<arith::ConstantOp>(
@@ -109,8 +108,11 @@ struct ReplaceFCWithConv2DPattern
 
     // Add a Conv2D to replace the FC
     auto result0Type = fcOp.getResult(0).getType().cast<ShapedType>();
-    std::vector<int64_t> expandedResultVector = {result0Type.getShape()[0], 1,
-                                                 1, result0Type.getShape()[1]};
+    int spatialOutDim = result0Type.getRank() - 2;
+    int channelOutDim = result0Type.getRank() - 1;
+    std::vector<int64_t> expandedResultVector = {
+        result0Type.getShape()[spatialOutDim], 1, 1,
+        result0Type.getShape()[channelOutDim]};
     auto expandedResultType = RankedTensorType::get(
         expandedResultVector, result0Type.getElementType());
     auto newConv2DOp = rewriter.create<TFL::Conv2DOp>(
@@ -118,20 +120,36 @@ struct ReplaceFCWithConv2DPattern
         expandedFilterQConstOp, fcOp.getBias(), 1, 1,
         fcOp.getFusedActivationFunction(), "VALID", 1, 1);
 
-    // Add a ReshapeOp after Conv2D for squeezing output back to 2 dims
+    // Add a ReshapeOp after Conv2D for squeezing output back to 2 or 3 dims
     auto newConv2DOutputType =
         newConv2DOp.getOutput().getType().cast<ShapedType>();
-    std::vector<int64_t> squeezedOutputShapeVector = {
-        newConv2DOutputType.getShape()[0], newConv2DOutputType.getShape()[3]};
+    std::vector<int64_t> squeezedOutputShapeVector;
+    std::vector<int32_t> squeezedReshapeConstantVector;
+    RankedTensorType squeezedShapeType;
+    // If three output dimensions for the fully connected
+    if (result0Type.getRank() == 3) {
+      squeezedOutputShapeVector = {1, newConv2DOutputType.getShape()[0],
+                                   newConv2DOutputType.getShape()[3]};
+      squeezedReshapeConstantVector = {
+          1,
+          static_cast<int>(newConv2DOutputType.isDynamicDim(0)
+                               ? 1
+                               : newConv2DOutputType.getDimSize(0)),
+          static_cast<int>(newConv2DOutputType.getDimSize(3))};
+      squeezedShapeType = RankedTensorType::get({3}, rewriter.getI32Type());
+    } else {
+      squeezedOutputShapeVector = {newConv2DOutputType.getShape()[0],
+                                   newConv2DOutputType.getShape()[3]};
+      squeezedReshapeConstantVector = {
+          static_cast<int>(newConv2DOutputType.isDynamicDim(0)
+                               ? 1
+                               : newConv2DOutputType.getDimSize(0)),
+          static_cast<int>(newConv2DOutputType.getDimSize(3))};
+      squeezedShapeType = RankedTensorType::get({2}, rewriter.getI32Type());
+    }
+
     auto squeezedOutputResultType = RankedTensorType::get(
         squeezedOutputShapeVector, newConv2DOutputType.getElementType());
-
-    std::vector<int32_t> squeezedReshapeConstantVector = {
-        static_cast<int>(newConv2DOutputType.isDynamicDim(0)
-                             ? 1
-                             : newConv2DOutputType.getDimSize(0)),
-        static_cast<int>(newConv2DOutputType.getDimSize(3))};
-    auto squeezedShapeType = RankedTensorType::get({2}, rewriter.getI32Type());
     auto squeezedShapeConstantOp = rewriter.create<arith::ConstantOp>(
         fcOp.getLoc(), squeezedShapeType,
         DenseIntElementsAttr::get(squeezedShapeType,

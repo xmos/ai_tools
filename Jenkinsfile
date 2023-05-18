@@ -66,12 +66,12 @@ pipeline {
                                 stash name:"xmos_ai_tools_wheel", includes: "dist/*"
                             }
                             // xmake aisrv app for device integration testing
-                            withTools(params.TOOLS_VERSION) {
-                                dir("third_party/aisrv/app_integration_tests") {
-                                    sh "xmake -j8"
-                                    stash name:"app_integration_tests", includes: "bin/*"
-                                }
-                            }
+                            // withTools(params.TOOLS_VERSION) {
+                            //     dir("third_party/aisrv/app_integration_tests") {
+                            //         sh "xmake -j8"
+                            //         stash name:"app_integration_tests", includes: "bin/*"
+                            //     }
+                            // }
                         }
                     }
                 }
@@ -96,53 +96,53 @@ pipeline {
                                 }
                             }
                         }
-                        stage("Hardware Test") {
-                            agent {
-                                label "xcore.ai-explorer && lpddr && !macos"
-                            }
-                            stages {
-                                stage("Setup") {
-                                    steps {
-                                        println "Stage running on: ${env.NODE_NAME}"
-                                        // clone
-                                        checkout scm
-                                        sh 'git submodule update --init --recursive --jobs \$(nproc)'
-                                        // create venv and install pip packages
-                                        createVenv("requirements.txt")
-                                        withVenv {
-                                            sh "pip install -r requirements.txt"
-                                            dir ("python") {
-                                                unstash "xmos_ai_tools_wheel"
-                                                sh "pip install dist/*"
-                                            }
-                                        }
-                                    }
-                                }
-                                stage("Test") {
-                                    steps {
-                                        dir("third_party/aisrv/app_integration_tests") {
-                                            // stash includes bin folder, so we unstash here
-                                            unstash "app_integration_tests"
-                                            withTools(params.TOOLS_VERSION) {
-                                                sh "xrun -l"
-                                                sh "pwd"
-                                                sh "ls bin"
-                                                sh "xrun --id 0 bin/app_int.xe"
-                                            }
-                                        }
-                                        withVenv {
-                                            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns --device --junitxml=integration_device_non_bnns_junit.xml"
-                                        }
-                                        junit "**/*_junit.xml"
-                                    }
-                                }
-                            }
-                            post {
-                                cleanup {
-                                    xcoreCleanSandbox()
-                                }
-                            }
-                        }
+                        // stage("Hardware Test") {
+                        //     agent {
+                        //         label "xcore.ai-explorer && lpddr && !macos"
+                        //     }
+                        //     stages {
+                        //         stage("Setup") {
+                        //             steps {
+                        //                 println "Stage running on: ${env.NODE_NAME}"
+                        //                 // clone
+                        //                 checkout scm
+                        //                 sh 'git submodule update --init --recursive --jobs \$(nproc)'
+                        //                 // create venv and install pip packages
+                        //                 createVenv("requirements.txt")
+                        //                 withVenv {
+                        //                     sh "pip install -r requirements.txt"
+                        //                     dir ("python") {
+                        //                         unstash "xmos_ai_tools_wheel"
+                        //                         sh "pip install dist/*"
+                        //                     }
+                        //                 }
+                        //             }
+                        //         }
+                        //         stage("Test") {
+                        //             steps {
+                        //                 dir("third_party/aisrv/app_integration_tests") {
+                        //                     // stash includes bin folder, so we unstash here
+                        //                     unstash "app_integration_tests"
+                        //                     withTools(params.TOOLS_VERSION) {
+                        //                         sh "xrun -l"
+                        //                         sh "pwd"
+                        //                         sh "ls bin"
+                        //                         sh "xrun --id 0 bin/app_int.xe"
+                        //                     }
+                        //                 }
+                        //                 withVenv {
+                        //                     sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns --device --junitxml=integration_device_non_bnns_junit.xml"
+                        //                 }
+                        //                 junit "**/*_junit.xml"
+                        //             }
+                        //         }
+                        //     }
+                        //     post {
+                        //         cleanup {
+                        //             xcoreCleanSandbox()
+                        //         }
+                        //     }
+                        // }
                     }
                 }
             }

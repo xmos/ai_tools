@@ -31,7 +31,6 @@ Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf
               (HasMultipleOfNBytesPerPixel<4> $output),
               (HasEqualChannels $input, $f),
               (IsConstOp $f),
-              (IsConstOp $b)
               ]>;
 
 // TFL_DepthwiseConv2D() -> XC_FakeDepthwiseConv2D()
@@ -41,5 +40,4 @@ Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, 
               (HasMultipleOfNBytesPerPixel<4> $input),
               (HasMultipleOfNBytesPerPixel<4> $output),
               (IsConstOp $f),
-              (IsConstOp $b)
               ]>;

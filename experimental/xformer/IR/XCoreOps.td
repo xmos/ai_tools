@@ -149,7 +149,7 @@ def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [Pure]> {
   let arguments = (ins
     TensorOf<[QI8]>:$input,
     TensorOf<[QI8]>:$filter,
-    TensorOf<[I32,QI32]>:$bias,
+    AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$bias,
     I32Attr:$dilation_h_factor,
     I32Attr:$dilation_w_factor,
     StrAttr:$fused_activation_function,
@@ -171,7 +171,7 @@ def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [Pure]> {
   let arguments = (ins
     TensorOf<[QI8]>:$input,
     TensorOf<[QI8]>:$filter,
-    TensorOf<[I32,QI32]>:$bias,
+    AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$bias,
     I32Attr:$dilation_h_factor,
     I32Attr:$dilation_w_factor,
     StrAttr:$fused_activation_function,

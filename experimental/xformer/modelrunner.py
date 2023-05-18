@@ -41,12 +41,12 @@ def get_xformed_model(model, args):
         #"--xcore-replace-with-conv2dv2",
         #"--xcore-translate-to-customop"
         # "--xcore-op-split-tensor-arena",
-        # "--xcore-op-split-start-op=18",
-        # "--xcore-op-split-end-op=10",
-        # "--xcore-op-split-num-splits=6",
-        # "--xcore-conv-err-threshold=0.6",
-        # "--xcore-offline-offsets=1",
-        # "--xcore-overlap=1"
+        # "--xcore-op-split-bottom-op=16,24",
+        # "--xcore-op-split-top-op=6,18",
+        # "--xcore-op-split-num-splits=8,6",
+        # "--xcore-conv-err-threshold=3.6",
+        #"--xcore-offline-offsets=1",
+        #"--xcore-overlap=1"
         ]
         p = subprocess.run(cmd,
                            stdout=subprocess.PIPE,
@@ -136,9 +136,20 @@ def test_inference(args):
             input_tensor = np.expand_dims(test_images[test], axis=0)
         else:
             print("Creating random input...")
+            k = []
+            n = -128
+            for j in range(0,np.prod(input_tensor_shape[i])):
+                if (n == 128):
+                    n = -128
+                k.append(n)
+                n = n + 1
+
+            print(k)
             for i in range(num_of_inputs):
                 input_tensor.append(np.array(256 * np.random.random_sample(input_tensor_shape[i]) - 127, dtype=input_tensor_type[i]))
-                #input_tensor.append(np.array(10 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
+                #input_tensor.append(np.array(100 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
+                #input_tensor.append(np.reshape(np.asarray(k, dtype=input_tensor_type[i]), input_tensor_shape[i]))
+
 
 
         if args.bnn:

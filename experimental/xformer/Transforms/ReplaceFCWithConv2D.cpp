@@ -72,10 +72,12 @@ struct ReplaceFCWithConv2DPattern
       return failure();
     }
 
-    // Add a ReshapeOp before Conv2D for expanding input to 4 dims
     auto inputType = fcOp.getInput().getType().cast<ShapedType>();
-    assert(inputType.getRank() == 2 &&
-           "FullyConnected input should have a rank of 2!");
+    if (inputType.getRank() != 2) {
+      return failure();
+    }
+
+    // Add a ReshapeOp before Conv2D for expanding input to 4 dims
     std::vector<int64_t> expandedInputShapeVector = {
         inputType.getShape()[0], 1LL, 1LL, inputType.getShape()[1]};
     auto expandedInputResultType = RankedTensorType::get(

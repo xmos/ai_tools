@@ -206,7 +206,6 @@ cc_library(
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:QuantOps",
         "@lib_nn//:nn_lib",
-        "@org_tensorflow//tensorflow/core/framework:kernel_shape_util",
     ],
 ) 
 

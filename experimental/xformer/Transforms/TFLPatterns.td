@@ -65,6 +65,24 @@ def : Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]
                          : $ret__0 $output),
                         (returnType $ret__1)), $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw, $dm)>;
 
+// PyTorch remnant opt
+// Relu(Minimum(x, 127)) -> Relu(x)
+// We can ignore minimum of (x,127) as it doesn't do anything
+class IsSplatAndEqualTo<int n>
+    : Constraint<
+          CPred<"dyn_cast<TFL::QConstOp>($0.getDefiningOp()) && "
+                "dyn_cast<TFL::QConstOp>($0.getDefiningOp()).getValue()."
+                "cast<DenseElementsAttr>().isSplat() && "
+                "dyn_cast<TFL::QConstOp>($0.getDefiningOp()).getValue()."
+                "cast<DenseElementsAttr>().getSplatValue<int8_t>() == " #n>>;
+def : Pat<(TFL_ReluOp(TFL_MinimumOp $lhs, $rhs)), (TFL_ReluOp $lhs),
+          [(IsSplatAndEqualTo<127> $rhs)]>;
+
+// Merge Relu with Conv
+def : Pat<(TFL_ReluOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $p,
+                      $sh, $sw)),
+          (TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_Relu, $p, $sh, $sw)>;
+
 def Pad3to4OutputType
     : NativeCodeCall<
           "RankedTensorType::get({$0.getType().cast<ShapedType>().getDimSize(0)"

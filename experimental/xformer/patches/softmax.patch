@@ -1,0 +1,18 @@
+diff --git tensorflow/lite/kernels/internal/quantization_util.cc tensorflow/lite/kernels/internal/quantization_util.cc
+index 62045d67a30..4b8cfbafe35 100644
+--- tensorflow/lite/kernels/internal/quantization_util.cc
++++ tensorflow/lite/kernels/internal/quantization_util.cc
+@@ -314,8 +314,13 @@ void PreprocessSoftmaxScaling(double beta, double input_scale,
+                        max_real_multiplier);
+ #endif  // TFLITE_EMULATE_FLOAT
+ 
++if(input_beta_real_multiplier > 1.) {
+   QuantizeMultiplierGreaterThanOne(input_beta_real_multiplier,
+                                    quantized_multiplier, left_shift);
++} else {
++  QuantizeMultiplierSmallerThanOneExp(input_beta_real_multiplier,
++                                   quantized_multiplier, left_shift);
++}
+ }
+ 
+ void PreprocessLogSoftmaxScalingExp(double beta, double input_scale,

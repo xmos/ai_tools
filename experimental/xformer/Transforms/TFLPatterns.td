@@ -109,7 +109,35 @@ def HasSpatialAxisForMean
           "&&"
           "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[1] == 2)">>;
 
-// Check mean axis is spatial
+class HasRank<int n>
+    : Constraint<CPred<"$0.getType().cast<ShapedType>().getRank() == " #n>>;
+
+def getExpandedShape
+    : NativeCodeCall<"RankedTensorType::get({1, 1, "
+                     "$0.getType().cast<ShapedType>().getDimSize(0), "
+                     "$0.getType().cast<ShapedType>().getDimSize(1)}, "
+                     "$0.getType().cast<ShapedType>().getElementType())">;
+
+def getExpandedShapeAttr
+    : NativeCodeCall<"DenseIntElementsAttr::get(RankedTensorType::get({2}, "
+                     "rewriter.getI32Type()), "
+                     "{$0.getType().cast<ShapedType>().getDimSize(0), "
+                     "static_cast<int32_t>($0.getType().cast<ShapedType>()."
+                     "getDimSize(1))})">;
+
+// If MeanOp with spatial axis and rank 2 output, expand output to rank 4, which
+// we later lower to AveragePool2D
+def : Pat<(TFL_MeanOp
+           : $output $input,
+             (TFL_ConstOp
+              : $axis_op $axis),
+             $kd),
+          (TFL_ReshapeOp(TFL_MeanOp $input, $axis_op, $kd,
+                         (returnType(getExpandedShape $output))),
+           (TFL_ConstOp(getExpandedShapeAttr $output))),
+          [(HasSpatialAxisForMean $axis), (HasRank<2> $output)]>;
+
+// Lower MeanOp with spatial axis to AveragePool2D
 def : Pat<(TFL_MeanOp
            : $output $input, (TFL_ConstOp $axis), $kd),
           (TFL_QuantizeOp(
@@ -119,7 +147,7 @@ def : Pat<(TFL_MeanOp
                TFL_AF_None,
                (returnType(getTypeOf1WithQParamsOf0 $input, $output))),
            (getTypeAttrOf1WithQParamsOf0 $output, $output)),
-          [(HasSpatialAxisForMean $axis)]>;
+          [(HasSpatialAxisForMean $axis), (HasRank<4> $output)]>;
 
 // def CreateBias
 //     : NativeCodeCall<

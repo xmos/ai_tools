@@ -83,6 +83,56 @@ def : Pat<(TFL_ReluOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $p,
                       $sh, $sw)),
           (TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_Relu, $p, $sh, $sw)>;
 
+// Get the dimension size as integer attr.
+class GetDimAsI32<int n>
+    : NativeCodeCall<
+          "$_builder.getIntegerAttr($_builder.getIntegerType(32), "
+          "$0.getType().cast<RankedTensorType>().getDimSize(" #n #"))">;
+
+def getTypeOf1WithQParamsOf0
+    : NativeCodeCall<
+          "dyn_cast<mlir::quant::UniformQuantizedType>($0.getType().cast<"
+          "ShapedType>().getElementType()).castFromExpressedType(mlir::quant::"
+          "UniformQuantizedType::castToExpressedType($1.getType()))">;
+
+def getTypeAttrOf1WithQParamsOf0
+    : NativeCodeCall<
+          "mlir::TypeAttr::get(dyn_cast<mlir::quant::UniformQuantizedType>($0."
+          "getType().cast<ShapedType>().getElementType())."
+          "castFromExpressedType(mlir::quant::UniformQuantizedType::"
+          "castToExpressedType($1.getType())))">;
+
+// Check mean axis is spatial
+def : Pat<(TFL_MeanOp
+           : $output $input, $axis, $kd),
+          (TFL_QuantizeOp(
+               TFL_AveragePool2DOp $input, (GetDimAsI32<1> $input),
+               (GetDimAsI32<2> $input), TFL_PAD_Valid,
+               ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">,
+               TFL_AF_None,
+               (returnType(getTypeOf1WithQParamsOf0 $input, $output))),
+           (getTypeAttrOf1WithQParamsOf0 $output, $output))>;
+
+// def CreateBias
+//     : NativeCodeCall<
+//           "DenseIntElementsAttr::get(RankedTensorType::get({$0.getType().cast<"
+//           "ShapedType>().getDimSize(3)}, rewriter.getI32Type()), "
+//           "std::vector<int32_t>($0.getType().cast<ShapedType>().getDimSize(3),
+//           " "0))">;
+
+// def HasRank4
+//     : Constraint<
+//           CPred<"$0.getType().cast<ShapedType>().getRank() == 4">>;
+
+// def : Pat<(TFL_MulOp
+//            : $output $in1, (TFL_ReshapeOp $in2, $shape), $faf),
+//           (TFL_DepthwiseConv2DOp $in1, $in2, (TFL_ConstOp (CreateBias
+//           $output)),
+//            ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">,
+//            TFL_AF_None, TFL_PAD_Valid, ConstantAttr<I32Attr, "1">,
+//            ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">),[(HasRank4
+//            $output)]>;
+
 def Pad3to4OutputType
     : NativeCodeCall<
           "RankedTensorType::get({$0.getType().cast<ShapedType>().getDimSize(0)"

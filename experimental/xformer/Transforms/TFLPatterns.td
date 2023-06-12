@@ -102,16 +102,24 @@ def getTypeAttrOf1WithQParamsOf0
           "castFromExpressedType(mlir::quant::UniformQuantizedType::"
           "castToExpressedType($1.getType())))">;
 
+def HasSpatialAxisForMean
+    : Constraint<CPred<
+          "$0.cast<DenseIntElementsAttr>().getNumElements() == 2 && "
+          "($0.cast<DenseIntElementsAttr>().getValues<int32_t>()[0] == 1 "
+          "&&"
+          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[1] == 2)">>;
+
 // Check mean axis is spatial
 def : Pat<(TFL_MeanOp
-           : $output $input, $axis, $kd),
+           : $output $input, (TFL_ConstOp $axis), $kd),
           (TFL_QuantizeOp(
                TFL_AveragePool2DOp $input, (GetDimAsI32<1> $input),
                (GetDimAsI32<2> $input), TFL_PAD_Valid,
                ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">,
                TFL_AF_None,
                (returnType(getTypeOf1WithQParamsOf0 $input, $output))),
-           (getTypeAttrOf1WithQParamsOf0 $output, $output))>;
+           (getTypeAttrOf1WithQParamsOf0 $output, $output)),
+          [(HasSpatialAxisForMean $axis)]>;
 
 // def CreateBias
 //     : NativeCodeCall<

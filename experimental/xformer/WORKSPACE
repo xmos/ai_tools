@@ -35,6 +35,7 @@ http_archive(
     patch_tool = "patch",
     patches = [
           "//patches:flatbuffer_export.patch",
+          "//patches:softmax.patch",
     ],
     sha256 = "af0584df1a4e28763c32c218b39f8c4f3784fabb6a8859b00c02d743864dc191",
     strip_prefix = "tensorflow-2.12.0",

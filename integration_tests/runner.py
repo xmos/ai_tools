@@ -237,7 +237,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         else:
             LOGGER.info("Creating random input...")
             for i in range(num_of_inputs):
-                input_tensor.append(np.array(256 * np.random.random_sample(input_tensor_shape[i]) - 127, dtype=input_tensor_type[i]))
+                input_tensor.append(np.array(255 * np.random.random_sample(input_tensor_shape[i]) - 128, dtype=input_tensor_type[i]))
                 #input_tensor.append(np.array(100 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
 
         if testing_binary_models_option:

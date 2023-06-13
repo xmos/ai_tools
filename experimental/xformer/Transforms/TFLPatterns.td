@@ -65,6 +65,117 @@ def : Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]
                          : $ret__0 $output),
                         (returnType $ret__1)), $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw, $dm)>;
 
+// PyTorch remnant opt
+// Relu(Minimum(x, 127)) -> Relu(x)
+// We can ignore minimum of (x,127) as it doesn't do anything
+class IsSplatAndEqualTo<int n>
+    : Constraint<
+          CPred<"dyn_cast<TFL::QConstOp>($0.getDefiningOp()) && "
+                "dyn_cast<TFL::QConstOp>($0.getDefiningOp()).getValue()."
+                "cast<DenseElementsAttr>().isSplat() && "
+                "dyn_cast<TFL::QConstOp>($0.getDefiningOp()).getValue()."
+                "cast<DenseElementsAttr>().getSplatValue<int8_t>() == " #n>>;
+def : Pat<(TFL_ReluOp(TFL_MinimumOp $lhs, $rhs)), (TFL_ReluOp $lhs),
+          [(IsSplatAndEqualTo<127> $rhs)]>;
+
+// Merge Relu with Conv
+def : Pat<(TFL_ReluOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $p,
+                      $sh, $sw)),
+          (TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_Relu, $p, $sh, $sw)>;
+
+// Get the dimension size as integer attr.
+class GetDimAsI32<int n>
+    : NativeCodeCall<
+          "$_builder.getIntegerAttr($_builder.getIntegerType(32), "
+          "$0.getType().cast<RankedTensorType>().getDimSize(" #n #"))">;
+
+def getTypeOf1WithQParamsOf0
+    : NativeCodeCall<
+          "dyn_cast<mlir::quant::UniformQuantizedType>($0.getType().cast<"
+          "ShapedType>().getElementType()).castFromExpressedType(mlir::quant::"
+          "UniformQuantizedType::castToExpressedType($1.getType()))">;
+
+def getTypeAttrOf1WithQParamsOf0
+    : NativeCodeCall<
+          "mlir::TypeAttr::get(dyn_cast<mlir::quant::UniformQuantizedType>($0."
+          "getType().cast<ShapedType>().getElementType())."
+          "castFromExpressedType(mlir::quant::UniformQuantizedType::"
+          "castToExpressedType($1.getType())))">;
+
+def HasSpatialAxisForMean
+    : Constraint<CPred<
+          "$0.cast<DenseIntElementsAttr>().getNumElements() == 2 && "
+          "($0.cast<DenseIntElementsAttr>().getValues<int32_t>()[0] == 1 "
+          "&&"
+          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[1] == 2)">>;
+
+class HasRank<int n>
+    : Constraint<CPred<"$0.getType().cast<ShapedType>().getRank() == " #n>>;
+
+def getExpandedShape
+    : NativeCodeCall<"RankedTensorType::get({1, 1, "
+                     "$0.getType().cast<ShapedType>().isDynamicDim(0)?1:$0."
+                     "getType().cast<ShapedType>().getDimSize(0),"
+                     "$0.getType().cast<ShapedType>().getDimSize(1)}, "
+                     "$0.getType().cast<ShapedType>().getElementType())">;
+
+def getExpandedShapeAttr
+    : NativeCodeCall<
+          "DenseIntElementsAttr::get(RankedTensorType::get({2}, "
+          "rewriter.getI32Type()), "
+          "{static_cast<int32_t>($0.getType().cast<ShapedType>().isDynamicDim("
+          "0)?1: $0.getType().cast<ShapedType>().getDimSize(0)), "
+          "static_cast<int32_t>($0.getType().cast<ShapedType>()."
+          "getDimSize(1))})">;
+
+// If MeanOp with spatial axis and rank 2 output, expand output to rank 4, which
+// we later lower to AveragePool2D
+def : Pat<(TFL_MeanOp
+           : $output $input,
+             (TFL_ConstOp
+              : $axis_op $axis),
+             $kd),
+          (TFL_ReshapeOp(TFL_MeanOp $input, $axis_op, $kd,
+                         (returnType(getExpandedShape $output))),
+           (TFL_ConstOp(getExpandedShapeAttr $output))),
+          [(HasSpatialAxisForMean $axis), (HasRank<2> $output)]>;
+
+// Lower MeanOp with spatial axis to AveragePool2D
+def : Pat<(TFL_MeanOp
+           : $output $input, (TFL_ConstOp $axis), $kd),
+          (TFL_QuantizeOp(
+               TFL_AveragePool2DOp $input, (GetDimAsI32<1> $input),
+               (GetDimAsI32<2> $input), TFL_PAD_Valid,
+               ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">,
+               TFL_AF_None,
+               (returnType(getTypeOf1WithQParamsOf0 $input, $output))),
+           (getTypeAttrOf1WithQParamsOf0 $output, $output)),
+          [(HasSpatialAxisForMean $axis), (HasRank<4> $output)]>;
+
+// class IsNotUsedBy<string op>
+//     : Constraint<CPred<
+//           "!$0.hasOneUse() || !llvm::isa<" #op #">(*$0.getUsers().begin())">>;
+
+// def CreateBias
+//     : NativeCodeCall<
+//           "DenseIntElementsAttr::get(RankedTensorType::get({$0.getType().cast<"
+//           "ShapedType>().getDimSize(3)}, rewriter.getI32Type()), "
+//           "std::vector<int32_t>($0.getType().cast<ShapedType>().getDimSize(3),
+//           " "0))">;
+
+// def HasRank4
+//     : Constraint<
+//           CPred<"$0.getType().cast<ShapedType>().getRank() == 4">>;
+
+// def : Pat<(TFL_MulOp
+//            : $output $in1, (TFL_ReshapeOp $in2, $shape), $faf),
+//           (TFL_DepthwiseConv2DOp $in1, $in2, (TFL_ConstOp (CreateBias
+//           $output)),
+//            ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">,
+//            TFL_AF_None, TFL_PAD_Valid, ConstantAttr<I32Attr, "1">,
+//            ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">),[(HasRank4
+//            $output)]>;
+
 def Pad3to4OutputType
     : NativeCodeCall<
           "RankedTensorType::get({$0.getType().cast<ShapedType>().getDimSize(0)"

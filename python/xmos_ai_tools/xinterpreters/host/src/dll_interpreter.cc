@@ -79,6 +79,8 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
   resolver->AddDepthwiseConv2D();
   resolver->AddDetectionPostprocess();
   resolver->AddTransposeConv();
+  resolver->AddSum();
+  resolver->AddAveragePool2D();
   tflite::ops::micro::xcore::RegisterXCOps(resolver);
   add_lib_vision_ops(resolver);
 

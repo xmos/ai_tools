@@ -80,12 +80,12 @@ def test_inference(args):
 
     else:
         print("Creating TFLite interpreter...")
+        # interpreter = tf.lite.Interpreter(
+        #     model_content=model_content,
+        #     experimental_op_resolver_type=tf.lite.experimental.
+        #     OpResolverType.BUILTIN_REF, experimental_preserve_all_tensors=True)
         interpreter = tf.lite.Interpreter(
-            model_content=model_content,
-            experimental_op_resolver_type=tf.lite.experimental.
-            OpResolverType.BUILTIN_REF, experimental_preserve_all_tensors=True)
-        #interpreter = tf.lite.Interpreter(
-        #    model_content=model_content)
+           model_content=model_content)
         interpreter.allocate_tensors()
         num_of_inputs = len(interpreter.get_input_details())
         input_tensor_type = []
@@ -144,11 +144,11 @@ def test_inference(args):
                 k.append(n)
                 n = n + 1
 
-            print(k)
+            #print(k)
             for i in range(num_of_inputs):
-                input_tensor.append(np.array(256 * np.random.random_sample(input_tensor_shape[i]) - 127, dtype=input_tensor_type[i]))
-                #input_tensor.append(np.array(100 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
-                #input_tensor.append(np.reshape(np.asarray(k, dtype=input_tensor_type[i]), input_tensor_shape[i]))
+                #input_tensor.append(np.array(255 * np.random.random_sample(input_tensor_shape[i]) - 128, dtype=input_tensor_type[i]))
+                #input_tensor.append(np.array(1 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
+                input_tensor.append(np.reshape(np.asarray(k, dtype=input_tensor_type[i]), input_tensor_shape[i]))
 
 
 

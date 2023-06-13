@@ -10,14 +10,14 @@ func.func @valid_fc(%arg0: tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932
 
   // CHECK: tfl.reshape
   // CHECK-SAME: ?x32
-  // CHECK-SAME: ?x1x1x32
+  // CHECK-SAME: 1x1x1x32
 
   // CHECK: tfl.conv_2d
-  // CHECK-SAME: ?x1x1x32
+  // CHECK-SAME: 1x1x1x32
   // CHECK-SAME: 32x1x1x32
 
   // CHECK: tfl.reshape
-  // CHECK-SAME: ?x1x1x32
+  // CHECK-SAME: 1x1x1x32
   // CHECK-SAME: ?x32
   %4 = "tfl.fully_connected"(%1, %2, %3) {fused_activation_function = "NONE", keep_num_dims = false, weights_format = "DEFAULT"} : (tensor<?x32x!quant.uniform<i8:f32, 0.0078160231932997704>>, tensor<32x32x!quant.uniform<i8<-127:127>:f32, 0.0078694447875022888>>, tensor<32x!quant.uniform<i32:f32, 6.1507766076829284E-5>>) -> tensor<?x32x!quant.uniform<i8:f32, 0.037329975515604019:-13>>
   return %4 : tensor<?x32x!quant.uniform<i8:f32, 0.037329975515604019:-13>>

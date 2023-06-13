@@ -114,16 +114,19 @@ class HasRank<int n>
 
 def getExpandedShape
     : NativeCodeCall<"RankedTensorType::get({1, 1, "
-                     "$0.getType().cast<ShapedType>().getDimSize(0), "
+                     "$0.getType().cast<ShapedType>().isDynamicDim(0)?1:$0."
+                     "getType().cast<ShapedType>().getDimSize(0),"
                      "$0.getType().cast<ShapedType>().getDimSize(1)}, "
                      "$0.getType().cast<ShapedType>().getElementType())">;
 
 def getExpandedShapeAttr
-    : NativeCodeCall<"DenseIntElementsAttr::get(RankedTensorType::get({2}, "
-                     "rewriter.getI32Type()), "
-                     "{$0.getType().cast<ShapedType>().getDimSize(0), "
-                     "static_cast<int32_t>($0.getType().cast<ShapedType>()."
-                     "getDimSize(1))})">;
+    : NativeCodeCall<
+          "DenseIntElementsAttr::get(RankedTensorType::get({2}, "
+          "rewriter.getI32Type()), "
+          "{static_cast<int32_t>($0.getType().cast<ShapedType>().isDynamicDim("
+          "0)?1: $0.getType().cast<ShapedType>().getDimSize(0)), "
+          "static_cast<int32_t>($0.getType().cast<ShapedType>()."
+          "getDimSize(1))})">;
 
 // If MeanOp with spatial axis and rank 2 output, expand output to rank 4, which
 // we later lower to AveragePool2D
@@ -148,6 +151,10 @@ def : Pat<(TFL_MeanOp
                (returnType(getTypeOf1WithQParamsOf0 $input, $output))),
            (getTypeAttrOf1WithQParamsOf0 $output, $output)),
           [(HasSpatialAxisForMean $axis), (HasRank<4> $output)]>;
+
+// class IsNotUsedBy<string op>
+//     : Constraint<CPred<
+//           "!$0.hasOneUse() || !llvm::isa<" #op #">(*$0.getUsers().begin())">>;
 
 // def CreateBias
 //     : NativeCodeCall<

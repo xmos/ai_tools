@@ -74,7 +74,10 @@ struct ReplaceFCWithConv2DPattern
     int channelInDim = inputType.getRank() - 1;
 
     std::vector<int64_t> expandedInputShapeVector = {
-        1LL, 1LL, inputType.getShape()[spatialInDim],
+        1LL, 1LL,
+        inputType.isDynamicDim(spatialInDim)
+            ? 1
+            : inputType.getShape()[spatialInDim],
         inputType.getShape()[channelInDim]};
     auto expandedInputResultType = RankedTensorType::get(
         expandedInputShapeVector, inputType.getElementType());
@@ -112,7 +115,10 @@ struct ReplaceFCWithConv2DPattern
     int spatialOutDim = result0Type.getRank() - 2;
     int channelOutDim = result0Type.getRank() - 1;
     std::vector<int64_t> expandedResultVector = {
-        1, 1, result0Type.getShape()[spatialOutDim],
+        1, 1,
+        result0Type.isDynamicDim(spatialOutDim)
+            ? 1
+            : result0Type.getShape()[spatialOutDim],
         result0Type.getShape()[channelOutDim]};
     auto expandedResultType = RankedTensorType::get(
         expandedResultVector, result0Type.getElementType());
@@ -129,8 +135,8 @@ struct ReplaceFCWithConv2DPattern
     RankedTensorType squeezedShapeType;
     // If three output dimensions for the fully connected
     if (result0Type.getRank() == 3) {
-      squeezedOutputShapeVector = {1, newConv2DOutputType.getShape()[2],
-                                   newConv2DOutputType.getShape()[3]};
+      squeezedOutputShapeVector = {1, result0Type.getShape()[spatialOutDim],
+                                   result0Type.getShape()[channelOutDim]};
       squeezedReshapeConstantVector = {
           1,
           static_cast<int>(newConv2DOutputType.isDynamicDim(2)
@@ -139,8 +145,8 @@ struct ReplaceFCWithConv2DPattern
           static_cast<int>(newConv2DOutputType.getDimSize(3))};
       squeezedShapeType = RankedTensorType::get({3}, rewriter.getI32Type());
     } else {
-      squeezedOutputShapeVector = {newConv2DOutputType.getShape()[2],
-                                   newConv2DOutputType.getShape()[3]};
+      squeezedOutputShapeVector = {result0Type.getShape()[spatialOutDim],
+                                   result0Type.getShape()[channelOutDim]};
       squeezedReshapeConstantVector = {
           static_cast<int>(newConv2DOutputType.isDynamicDim(2)
                                ? 1

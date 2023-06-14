@@ -116,6 +116,22 @@ def XC_AddOp : XC_Op<"add", [Pure]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_MulOp : XC_Op<"mul", [Pure]> {
+  let summary = "Mul op";
+
+  let description = [{Mul op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input1,
+    TensorOf<[QI8]>:$input2,
+
+    I32Attr:$B,
+    I32Attr:$S
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
   let summary = "Conv2D V2 op";
 

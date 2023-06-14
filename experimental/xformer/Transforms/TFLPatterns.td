@@ -154,7 +154,8 @@ def : Pat<(TFL_MeanOp
 
 // class IsNotUsedBy<string op>
 //     : Constraint<CPred<
-//           "!$0.hasOneUse() || !llvm::isa<" #op #">(*$0.getUsers().begin())">>;
+//           "!$0.hasOneUse() || !llvm::isa<" #op
+//           #">(*$0.getUsers().begin())">>;
 
 // def CreateBias
 //     : NativeCodeCall<

@@ -30,6 +30,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   }
   // XC passes
   pm.addPass(createReplaceAddPass());
+  pm.addPass(createReplaceMulPass());
   pm.addPass(createReplaceStridedSlicePass());
   pm.addPass(createReplaceConv2DPass());
   pm.addPass(createApplyXCPatternsPass());

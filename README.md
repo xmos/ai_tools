@@ -59,9 +59,9 @@ After following the above instructions, to build xformer, please follow the buil
 Documentation
 -------------
 
-* [How to use the graph transformer] (https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/flow.rst)
-* [Transformation options] (https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/options.rst)
-* [Usage from Python] (https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/python.rst)
-* [Transforming Pytorch models] (https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/pytorch.rst)
-* [Introduction and background] (https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/xcore-ai-coding.rst)
-* [FAQ] (https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/faq.rst)
+* [How to use the graph transformer](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/flow.rst)
+* [Transformation options](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/options.rst)
+* [Usage from Python](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/python.rst)
+* [Transforming Pytorch models](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/pytorch.rst)
+* [Introduction and background](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/xcore-ai-coding.rst)
+* [FAQ](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/faq.rst)

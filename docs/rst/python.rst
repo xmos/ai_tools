@@ -22,20 +22,41 @@ of options and their value.
 The possible options are described below in the command line interface section. If the default operation is intended this third argument can be "None".
 
 .. code-block:: Python
-  
+
   xf.convert("source model path", "converted model path", params=None)
 
-The xformer module contains two more useful methods, "xformer.printf_help()" which will
-print information of usage of xformer.convert, and "xformer.generate_flash" useful when
-writing models to flash.
 
-If a model is split into a tflite model for flash, and a .params file using
-the xformer option "xcore-flash-image-file", the generate_flash method can
-be used to combine these files into a binary to be stored in flash on an
-xcore.
+To see all available configuration options.
 
 .. code-block:: Python
-  xf.generate_flash("xcore_optimized_int8_flash_model.tflite",  "xcore_params.params", "xcore_flash_binary.out")
+
+  from xmos_ai_tools import xformer as xf
+  xf.print_help()
+
+This will print all options available to pass to xformer. To see hidden options, run ``print_help(show_hidden=True)``.
+
+To create a parameters file and a tflite model suitable for loading to flash, use the "xcore-flash-image-file" option.
+
+.. code-block:: Python
+
+  xf.convert("example_int8_model.tflite", "xcore_optimised_int8_flash_model.tflite", {
+      "xcore-flash-image-file ": "./xcore_params.params",
+  })
+
+To combine these files created by the code above into a flash image .out file, use the generate_flash() function
+
+.. code-block:: Python
+
+  from xmos_ai_tools import xformer as xf
+  xf.generate_flash(
+      output_file="xcore_flash_binary.out",
+      model_files=["model.tflite", "model2.tflite"],
+      param_files=["1.params", "2.params"]
+  )
+
+The flash image .out file can be flashed on XCORE.AI using ``xflash``::
+
+  xflash --data xcore_flash_binary.out --target XCORE-AI-EXPLORER
 
 
 The python interface also contains a host-side interpreter for tflite

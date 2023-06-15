@@ -49,14 +49,20 @@ Transformation options in a command-line environment
 ----------------------------------------------------
 
 Upon installing the "xmos-ai-tools" from PyPi, the program ``xcore-opt`` is
-available on the command-line. It is called with at least one argument (the
-input model), and all options are specified with a ``--`` ahead of it, eg::
+available on the command-line. It is called with at least two arguments (the
+input model and the output model), and all other configuration options are specified with a ``--`` ahead of it, eg::
 
-  xcore-opt example_int8_model.tflite --xcore-thread-count 4 --xcore-reduce-memory
+  xcore-opt example_int8_model.tflite -o output_model.tflite --xcore-thread-count 4 --xcore-reduce-memory
 
 
 Options
 -------
+
+
+``-o <filename.tflite>``
+++++++++++++++++++++++++++++++++++++++
+
+Name of the file where to place the optimized TFLITE model
 
 ``xcore-thread-count N``
 ++++++++++++++++++++++++
@@ -100,13 +106,6 @@ fall back on a less optimal convolution that produces a better result.
 
 You can adjust this parameter to get a different trade-off between
 execution speed and accuracy of the result.
-
-
-Hmmmmmm - CL and Python are different?
-++++++++++++++++++++++++++++++++++++++
-
-* ``-o filename.tflite``        Name of the file where to place the optimized
-                          TFLITE flatbuffer
 
 
 Advanced options

@@ -8,6 +8,7 @@ import numpy as np
 import pathlib
 import argparse
 import cv2
+from itertools import chain
 
 import tensorflow as tf
 import larq_compute_engine as lce
@@ -207,6 +208,9 @@ def test_inference(args):
                 print(outputs[i])
                 print("checksum")
                 print(checksum_calc(outputs[i].flatten()))
+
+                errors = np.array(list(chain(*[np.array(a-b).reshape(-1) for a, b in zip(outputs, xformer_outputs)]))).reshape(-1)
+                print(np.sum(errors))
                 #if quantized output, we dequantize it before comparing
                 if output_scales[i]:
                     outputs[i] = dequantize(

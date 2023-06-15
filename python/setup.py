@@ -19,7 +19,7 @@ XCOREOPT_BINARY: Union[pathlib.Path, str] = pathlib.Path.joinpath(
 XCOREOPT_BINARY = str(XCOREOPT_BINARY) + exe_suffix
 
 # Get the long description from the README file
-LONG_README = (here / "README.md").read_text(encoding="utf-8")
+LONG_README = (here.parent / "README.md").read_text(encoding="utf-8")
 
 # xtflm_interpreter path and libs from lib_tflite_micro
 XTFLM_INTERPRETER_LIBS = [

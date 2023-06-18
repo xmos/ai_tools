@@ -43,22 +43,6 @@ To create a parameters file and a tflite model suitable for loading to flash, us
       "xcore-flash-image-file ": "./xcore_params.params",
   })
 
-To combine these files created by the code above into a flash image .out file, use the generate_flash() function
-
-.. code-block:: Python
-
-  from xmos_ai_tools import xformer as xf
-  xf.generate_flash(
-      output_file="xcore_flash_binary.out",
-      model_files=["model.tflite", "model2.tflite"],
-      param_files=["1.params", "2.params"]
-  )
-
-The flash image .out file can be flashed on XCORE.AI using ``xflash``::
-
-  xflash --data xcore_flash_binary.out --target XCORE-AI-EXPLORER
-
-
 The python interface also contains a host-side interpreter for tflite
 model. This interpreter can be imported from xmos_ai_tools
 as follows:

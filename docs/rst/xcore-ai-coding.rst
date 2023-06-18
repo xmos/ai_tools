@@ -121,9 +121,13 @@ number of different operators that are used, whether compilation is used
 (less memory) or a full interpreter (more memory), and whether code other
 than AI code is present.
 
-We support all virtually operators and types that are in TensorFlow Lite
+We support most operators and types that are in TensorFlow Lite
 for Micro; but only a subset of those operators have been optimized to run
-on the device. Convolutional networks with int8 datatypes typically run at
+on the device. The list of operators supported are TensorFlow Lite for 
+Microcontrollers operations listed in 
+https://github.com/tensorflow/tflite-micro/blob/f474248365ad48654ba8a27ac5bf49a6afbb80e7/tensorflow/lite/micro/all_ops_resolver.cc, except the following operations:
+- ``assign_variable``, ``call once``, ``if``, ``read variable``, ``var_handle``, ``while``.
+Convolutional networks with int8 datatypes typically run at
 high speed. It is fine for some operations to execute as float32. As long
 as the very large convolutions use int8 encodings the model is typically
 executed efficiently. We do support dense layers, but the nature of dense
@@ -297,7 +301,7 @@ situations where they can not be optimized. In particular:
 * For a first image convolution that typically has three channels (YUV,
   RGB), the graph transformer will insert a fast pad from three to four.
 
-* For a convolution, execution is fast where the bias term of is reasonably
+* For a convolution, execution is fast when the bias term is reasonably
   close to zero.
 
 Worked example

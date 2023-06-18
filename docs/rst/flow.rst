@@ -46,7 +46,8 @@ For each application program
    * ``model.tflite.cpp`` - optimized C++ model file
    * ``model.tflite.h`` - C++ header file which provides API
 
-  To create a parameters file and a tflite model suitable for loading to flash, use the "xcore-flash-image-file" option::
+  To create a parameters file and a tflite model suitable for loading to flash, use the "xcore-flash-image-file" option.
+  ``model1.tflite`` and ``model2.tflite`` are example models to demonstrate the API::
 
    xcore-opt source_model.tflite -o model1.tflite --xcore-flash-image-file 1.params
 
@@ -60,7 +61,7 @@ For each application program
     from xmos_ai_tools import xformer as xf
     xf.generate_flash(
         output_file="xcore_flash_binary.out",
-        model_files=["model.tflite", "model2.tflite"],
+        model_files=["model1.tflite", "model2.tflite"],
         param_files=["1.params", "2.params"]
     )
 
@@ -125,13 +126,13 @@ required modules.
 
 Simply copy the ``model.tflite.cpp`` and ``model.tflite.h`` file to the source
 directory of your application, and you can now, from C++ call the following
-functions [[This needs to be doxygened for consistency]]:
+functions:
 
 * ``model_init(void *flash_data)`` This takes a single parameter, which is a channel end to
   the flash server
 
 * ``model_input_ptr(int index)`` This returns a pointer to the data where
-  the input tensor is stored; index shoudl be set to zero unless there are
+  the input tensor is stored; index should be set to zero unless there are
   multiple inputs.
 
 * ``model_invoke()`` This runs an inference

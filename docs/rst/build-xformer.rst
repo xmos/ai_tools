@@ -8,7 +8,7 @@ Building xmos-ai-tools
     make submodule_update
 
 
-* Install at least version 15 of the XMOS tools from your preferred location and activate it by sourcing ``SetEnv`` in the installation root.
+* Install version 15 or later of the XMOS tools from your preferred location and activate it by sourcing ``SetEnv`` in the installation root.
 
 
 * `CMake 3.14 <https://cmake.org/download/>`_ or newer is required for building libraries and test firmware.

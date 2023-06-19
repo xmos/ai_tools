@@ -26,7 +26,7 @@ Perform the following steps once:
 
 * ``pip3 install xmos-ai-tools --upgrade``; use a virtual-environment of your choice.
 
-  Use ``pip install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest development version.
+  Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest development version.
 
 ```python
 from xmos_ai_tools import xformer as xf
@@ -66,8 +66,8 @@ xf.convert("example_int8_model.tflite", "xcore_optimised_int8_flash_model.tflite
 from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
 
 ie = xcore_tflm_host_interpreter()
-ie.set_model(model_path=xcore_model, params_path=xcore_params)
-ie.set_tensor(ie.get_input_details()[0]['index'], value=input)
+ie.set_model(model_path='path_to_xcore_model', params_path='path_to_xcore_params')
+ie.set_tensor(ie.get_input_details()[0]['index'], value='input_data')
 ie.invoke()
 
 xformer_outputs = []

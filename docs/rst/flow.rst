@@ -70,16 +70,17 @@ For each application program
     xflash --data xcore_flash_binary.out --target XCORE-AI-EXPLORER
 
 
-* Create a src directory with the following main.c file inside it::
+* Create a src directory with the following main.cpp file inside it::
 
-    #include <model.tflite.h>
+    #include <stdio.h>
+    #include "model.tflite.h"
 
     int main(void) {
-      model_init(null);
-      int8_t *inputs = model_input_ptr(0);
+      model_init(NULL);
+      int8_t *inputs = (int8_t *)model_input_ptr(0);
       // copy data to inputs
       model_invoke();
-      int8_t *outputs = model_output_ptr(0);
+      int8_t *outputs = (int8_t *)model_output_ptr(0);
       // print outputs.
     }
 

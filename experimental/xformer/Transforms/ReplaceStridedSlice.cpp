@@ -74,21 +74,28 @@ struct ReplaceStridedSlicePattern
     }
 
     StridedSliceMemcpyType memcpyType;
-    if (inputType.getDimSize(2) % 4 == 0 &&
-        outputType.getDimSize(2) == inputType.getDimSize(2)) {
-      // If depth * output width is a multiple of four and the x,y location of
-      // the starting pixel is word-aligned, we can do a slice copy instead.
-      // That is ((y * input depth + x) * depth) is a multiple of four.
-      // We use a simple memcpy to do the copy in the runtime.
-      // Input and output tensors must have the same width.
+    if (inputType.getDimSize(2) == outputType.getDimSize(2) &&
+        inputType.getDimSize(3) == outputType.getDimSize(3)) {
+      // Single CPU memcpy
       memcpyType = StridedSliceMemcpyType::SliceCpy;
+      // } else if (inputType.getDimSize(2) % 4 == 0 &&
+      //            outputType.getDimSize(2) == inputType.getDimSize(2)) {
+      //   // If depth * output width is a multiple of four and the x,y location
+      //   of
+      //   // the starting pixel is word-aligned, we can do a slice copy
+      //   instead.
+      //   // That is ((y * input depth + x) * depth) is a multiple of four.
+      //   // We use a simple memcpy to do the copy in the runtime.
+      //   // Input and output tensors must have the same width.
+      //   memcpyType = StridedSliceMemcpyType::VpuCpy;
     } else if (inputType.getDimSize(3) % 4 == 0 &&
                outputType.getDimSize(3) % 4 == 0) {
       // If not a slice copy, then if both depths are multiples of four, we can
-      // do pixel by pixel copy.
-      memcpyType = StridedSliceMemcpyType::PixelCpy;
+      // do pixel by pixel VPU copy.
+      memcpyType = StridedSliceMemcpyType::VpuCpy;
     } else {
-      return failure();
+      // Pixel by pixel CPU memcpy, when depth not a multiple of four
+      memcpyType = StridedSliceMemcpyType::MemCpy;
     }
 
     // Extract args from the op

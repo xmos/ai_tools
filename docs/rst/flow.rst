@@ -91,16 +91,16 @@ For each application program
 
     TARGET=XCORE-AI-EXPLORER
     APP_NAME=app.xe
-    XCC_FLAGS=-fxscope= -report \
+    SHARED_FLAGS=-fxscope= -report \
           -Os -mcmodel=large -Wno-xcore-fptrgroup \
-          -g \
           -DTF_LITE_STATIC_MEMORY \
           -DXCORE \
           -lquadflash \
           -DTF_LITE_STRIP_ERROR_STRINGS \
           -DNO_INTERPRETER \
           -DTFLMC_XCORE_PROFILE
-
+    XCC_CPP_FLAGS=$(SHARED_FLAGS) -std=c++14 
+    XCC_FLAGS=$(SHARED_FLAGS)
     USED_MODULES = lib_tflite_micro
     XMOS_MAKE_PATH ?= ../..
     include $(XMOS_MAKE_PATH)/xcommon/module_xcommon/build/Makefile.common

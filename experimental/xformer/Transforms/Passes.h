@@ -26,7 +26,6 @@ std::unique_ptr<OperationPass<func::FuncOp>> createOptimizeTransposePass();
 std::unique_ptr<OperationPass<func::FuncOp>>
 createReplaceAvgPoolWithConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceFCWithConv2DPass();
-std::unique_ptr<OperationPass<func::FuncOp>> createPad3to4Conv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createOptimizeConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createOpSplitPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createApplyTFLPatternsPass();

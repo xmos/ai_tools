@@ -32,6 +32,7 @@ def XCoreDialect : Dialect {
   }];
 
   let cppNamespace = "::mlir::xcore";
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 //===----------------------------------------------------------------------===//
@@ -73,7 +74,13 @@ def XC_Conv2D_Channelwise : I32EnumAttrCase<"Channelwise", 1>;
 def XC_Conv2D_OTAttr : I32EnumAttr<"OtType", "output transform type enum",
                                    [XC_Conv2D_Group, XC_Conv2D_Channelwise]>;
 
-def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
+
+def XC_StridedSlice_PixelCpy : I32EnumAttrCase<"PixelCpy", 0>;
+def XC_StridedSlice_SliceCpy : I32EnumAttrCase<"SliceCpy", 1>;
+def XC_StridedSlice_MemcpyTypeAttr : I32EnumAttr<"StridedSliceMemcpyType", "memcpy type enum",
+                                   [XC_StridedSlice_PixelCpy, XC_StridedSlice_SliceCpy]>;
+
+def XC_StridedSliceOp : XC_Op<"strided_slice", [Pure]> {
   let summary = "Strided Slice op";
 
   let description = [{Strided Slice op.}];
@@ -83,13 +90,14 @@ def XC_StridedSliceOp : XC_Op<"strided_slice", [NoSideEffect]> {
 
     I32Attr:$begin_x,
     I32Attr:$begin_y,
-    StrAttr:$memcpy_fn_param
+    StrAttr:$memcpy_fn_param,
+    I32Attr:$memcpy_type
   );
 
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-def XC_AddOp : XC_Op<"add", [NoSideEffect]> {
+def XC_AddOp : XC_Op<"add", [Pure]> {
   let summary = "Add op";
 
   let description = [{Add op.}];
@@ -108,7 +116,23 @@ def XC_AddOp : XC_Op<"add", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
+def XC_MulOp : XC_Op<"mul", [Pure]> {
+  let summary = "Mul op";
+
+  let description = [{Mul op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input1,
+    TensorOf<[QI8]>:$input2,
+
+    I32Attr:$B,
+    I32Attr:$S
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
   let summary = "Conv2D V2 op";
 
   let description = [{Conv2D V2 op.}];
@@ -133,7 +157,7 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8, I32]> : $output);
 }
 
-def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [NoSideEffect]> {
+def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [Pure]> {
   let summary = "Fake Conv2D op";
 
   let description = [{Fake Conv2D op.}];
@@ -141,7 +165,7 @@ def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [NoSideEffect]> {
   let arguments = (ins
     TensorOf<[QI8]>:$input,
     TensorOf<[QI8]>:$filter,
-    TensorOf<[I32,QI32]>:$bias,
+    AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$bias,
     I32Attr:$dilation_h_factor,
     I32Attr:$dilation_w_factor,
     StrAttr:$fused_activation_function,
@@ -155,7 +179,7 @@ def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [NoSideEffect]> {
+def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [Pure]> {
   let summary = "Fake Depthwise Conv2D op";
 
   let description = [{Fake Depthwise Conv2D op.}];
@@ -163,7 +187,7 @@ def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [NoSideEffect]> {
   let arguments = (ins
     TensorOf<[QI8]>:$input,
     TensorOf<[QI8]>:$filter,
-    TensorOf<[I32,QI32]>:$bias,
+    AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$bias,
     I32Attr:$dilation_h_factor,
     I32Attr:$dilation_w_factor,
     StrAttr:$fused_activation_function,
@@ -178,7 +202,7 @@ def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-def XC_LookupOp : XC_Op<"lookup", [NoSideEffect]> {
+def XC_LookupOp : XC_Op<"lookup", [Pure]> {
   let summary = "Lookup table op";
 
   let description = [{Lookup table op.}];
@@ -188,7 +212,7 @@ def XC_LookupOp : XC_Op<"lookup", [NoSideEffect]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
+def XC_PadOp : XC_Op<"pad", [Pure]> {
   let summary = "Pad op";
 
   let description = [{Pad op.}];
@@ -204,7 +228,7 @@ def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
   let hasFolder = 1;
 }
 
-def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [NoSideEffect]> {
+def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [Pure]> {
   let summary = "Pad 3 to 4 op";
 
   let description = [{Pad 3 to 4 op.}];
@@ -218,7 +242,7 @@ def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [NoSideEffect]> {
 }
 
 def XC_LoadConstantOp
-    : XC_Op<"ld_constant", [NoSideEffect, SameOperandsAndResultType]> {
+    : XC_Op<"ld_constant", [Pure, SameOperandsAndResultType]> {
   let summary = "Load constant op";
 
   let description = [{Load constant op.}];
@@ -228,7 +252,7 @@ def XC_LoadConstantOp
   let results = (outs AnyTensor : $output);
 }
 
-def XC_LoadFlashOp : XC_Op<"ld_flash", [NoSideEffect]> {
+def XC_LoadFlashOp : XC_Op<"ld_flash", [Pure]> {
   let summary = "Load from flash op";
 
   let description = [{Load from flash op.}];
@@ -238,7 +262,7 @@ def XC_LoadFlashOp : XC_Op<"ld_flash", [NoSideEffect]> {
   let results = (outs Variadic<AnyTensor> : $output);
 }
 
-def XC_Bsign8Op : XC_Op<"bsign_8", [NoSideEffect]> {
+def XC_Bsign8Op : XC_Op<"bsign_8", [Pure]> {
   let summary = "Binary sign op";
 
   let description = [{Binary sign op.}];

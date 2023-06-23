@@ -33,11 +33,11 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   ArgsType args;
   args.convOp = conv2DOp.getOperation();
   auto inputType =
-      conv2DOp.input().getType().template dyn_cast<RankedTensorType>();
+      conv2DOp.getInput().getType().template dyn_cast<RankedTensorType>();
   auto outputType =
-      conv2DOp.output().getType().template dyn_cast<RankedTensorType>();
+      conv2DOp.getOutput().getType().template dyn_cast<RankedTensorType>();
   auto filterType =
-      conv2DOp.filter().getType().template dyn_cast<RankedTensorType>();
+      conv2DOp.getFilter().getType().template dyn_cast<RankedTensorType>();
   args.inputHeight = inputType.getDimSize(1);
   args.inputWidth = inputType.getDimSize(2);
   args.inputDepth = inputType.getDimSize(3);
@@ -125,7 +125,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
 
   // Create the Conv2DV2 Op with the params and kernel type
   auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
-      conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(),
+      conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.getInput(),
       weightsConstantOp, mulsBiasesOrThresholdsConstantOp,
       rewriter.getStringAttr(kernelTypeEnumParam),
       rewriter.getStringAttr(memcpyFnParam),
@@ -135,7 +135,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
       rewriter.getI32IntegerAttr(scratchByteParam),
       rewriter.getI32IntegerAttr(actualThreadCount),
       getStringArrayAttr(abstractKernelParams));
-  rewriter.replaceOp(conv2DOp, newConv2DV2Op.output());
+  rewriter.replaceOp(conv2DOp, newConv2DV2Op.getOutput());
 
   return success();
 }
@@ -195,7 +195,7 @@ void ReplaceConv2D::runOnOperation() {
   // TODO: When we multithread other ops, this can be moved into its own pass
   int requiredThreadCount = 1;
   func.walk([&](Conv2DV2Op op) {
-    int threadCount = op.thread_count();
+    int threadCount = op.getThreadCount();
     if (threadCount > requiredThreadCount) {
       requiredThreadCount = threadCount;
     }

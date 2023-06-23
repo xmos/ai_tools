@@ -1,6 +1,6 @@
 BYTES_FOR_MAGIC_PATTERN = 32
-BYTES_FOR_HEADER = 4
-BYTES_PER_ENGINE_BLOCK = 16
+BYTES_FOR_VERSION = 4
+BYTES_PER_ENGINE_HEADER = 16
 VERSION_MAJOR = 1
 VERSION_MINOR = 2
 
@@ -89,7 +89,7 @@ class FlashBuilder:
         The whole thing should be written as is to flash
         """
         headers = [None] * self.engines
-        start = BYTES_FOR_MAGIC_PATTERN + BYTES_FOR_HEADER + BYTES_PER_ENGINE_BLOCK * self.engines
+        start = BYTES_FOR_MAGIC_PATTERN + BYTES_FOR_VERSION + BYTES_PER_ENGINE_HEADER * self.engines
         for i in range(self.engines):
             headers[i] = FlashBuilder.Header(
                 len(self.models[i]),
@@ -147,10 +147,11 @@ class FlashBuilder:
             output_fd.write(swapped_output)
 
 
-def generate_flash(model_file, params_file, output_file):
-    fb = FlashBuilder()
-    fb.add_model(0, filename=model_file)
-    fb.add_params(0, filename=params_file)
+def generate_flash(*, output_file, model_files, param_files):
+    assert(len(model_files)==len(param_files)), "The number of provided model files must match the number of param files!"
+    num_of_engines = len(model_files)
+    fb = FlashBuilder(engines=num_of_engines)
+    for i in range(num_of_engines):
+        fb.add_model(i, filename=model_files[i])
+        fb.add_params(i, filename=param_files[i])
     fb.flash_file(output_file)
-
-

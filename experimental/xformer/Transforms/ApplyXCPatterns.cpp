@@ -31,7 +31,7 @@ struct ApplyXCPatterns
 
 StringAttr getPaddingPlan(PatternRewriter &rewriter, TFL::PadOp padOp) {
   DenseIntElementsAttr paddingAttr;
-  if (!matchPattern(padOp.padding(), m_Constant(&paddingAttr))) {
+  if (!matchPattern(padOp.getPadding(), m_Constant(&paddingAttr))) {
     padOp.emitError("Could not obtain padding values.");
   }
   // Struct designated initializers not supported on Windows yet for C++17
@@ -43,7 +43,7 @@ StringAttr getPaddingPlan(PatternRewriter &rewriter, TFL::PadOp padOp) {
       /*.right = */ paddingAttr.getValues<int32_t>()[{2, 1}],
   };
   auto inputType =
-      padOp.input().getType().template dyn_cast<RankedTensorType>();
+      padOp.getInput().getType().template dyn_cast<RankedTensorType>();
   nn_image_params_t imageParams = {
       /*.height = */ static_cast<uint32_t>(inputType.getDimSize(1)),
       /*.width = */ static_cast<uint32_t>(inputType.getDimSize(2)),
@@ -130,6 +130,10 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
   } else if (isa<TFL::LogisticOp>(op)) {
     std::for_each(dequantizedVector.begin(), dequantizedVector.end(),
                   [](double &x) { x = 1.0 / (1.0 + exp(-x)); });
+  } else if (isa<TFL::HardSwishOp>(op)) {
+    std::for_each(
+        dequantizedVector.begin(), dequantizedVector.end(),
+        [](double &x) { x = x * std::min(std::max(x + 3, 0.0), 6.0) / 6; });
   } else {
     llvm_unreachable("Unsupported op!");
   }

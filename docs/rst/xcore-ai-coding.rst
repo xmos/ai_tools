@@ -121,9 +121,13 @@ number of different operators that are used, whether compilation is used
 (less memory) or a full interpreter (more memory), and whether code other
 than AI code is present.
 
-We support all virtually operators and types that are in TensorFlow Lite
+We support most operators and types that are in TensorFlow Lite
 for Micro; but only a subset of those operators have been optimized to run
-on the device. Convolutional networks with int8 datatypes typically run at
+on the device. The list of operators supported are TensorFlow Lite for 
+Microcontrollers operations listed in 
+https://github.com/tensorflow/tflite-micro/blob/f474248365ad48654ba8a27ac5bf49a6afbb80e7/tensorflow/lite/micro/all_ops_resolver.cc, except the following operations:
+- ``assign_variable``, ``call once``, ``if``, ``read variable``, ``var_handle``, ``while``.
+Convolutional networks with int8 datatypes typically run at
 high speed. It is fine for some operations to execute as float32. As long
 as the very large convolutions use int8 encodings the model is typically
 executed efficiently. We do support dense layers, but the nature of dense
@@ -197,8 +201,8 @@ processors. Examples of splits are:
 
 * A model may be split into a left and a right half, where each half
   occupies a processor. This means that each processor only stores part
-  of the tensor arena
-
+  of the tensor arena. The current version of xcore-opt has no automated
+  support for this.
 
 How to prepare a network for XCORE.AI
 -------------------------------------
@@ -208,7 +212,8 @@ network on an XCORE.AI chip is as follows:
 
   #. You train your network as normal, using for example Keras.
 
-  #. You quantize your network to ``int8`` and convert it to TensorFlow Lite.
+  #. You quantize your network to ``int8`` and convert it to TensorFlow
+     Lite. You can keep the occasional float operation in the network.
 
   #. You optimize your network for XCORE.AI
 
@@ -245,29 +250,60 @@ Several components are being used in this process:
   * An *xcore.ai run time*. 
 
 The xcore transformer, compiler, and run-time support can all be installed
-with a single pip command: ``pip install xmos-ai-tools``. They can be used
+with a single pip command: . They can be used
 through a python interface or from the command line as required.
 
+
 Operators
---------------------
+---------
 
-Supported operators
-++++++++++++++++++++++++++++
-
-The following tensorflow-lite operators are supported on xmos interpreters.
+Virtually all tensorflow-lite-for-micro operators are supported
+with the exception of Variables, While, and If. Only very few operators
+have been optimised to run efficiently on XCORE; those that typically
+account for 99% of the execution time. 
 
 Optimized operators
-++++++++++++++++++++++++++++
++++++++++++++++++++
 
-The following operators can be optimized by the xcore optimizer into an equivalent faster or more memory efficient operator.
+The following operators can be optimized by the xcore optimizer into an
+equivalent faster or more memory efficient operator:
+
+* Conv2D
+
+* Conv2DDepthwise
+
+* AvgPool2D
+
+* Add
+
+* Concatenate
+
+* Pad
+
+* StridedSlice
+
+* Tanh, Sigmoid, Hardswish, Relu
+
+We are always interested to know of operators that take on a large
+proportion of your model.
 
 Constraints on operators
-++++++++++++++++++++++++++++
+++++++++++++++++++++++++
 
-Some xcore optimizable operators have constraints on them which dictate situations where they can not be optimized.
+Some xcore optimizable operators have constraints on them which dictate
+situations where they can not be optimized. In particular:
 
-|appendix|
-  
+* Make sure that each convolution outputs a multiple of FOUR channels.
+
+* For optimal speed, the number of input channels should be a multiple of
+  16, otherwise 4.
+
+* For a first image convolution that typically has three channels (YUV,
+  RGB), the graph transformer will insert a fast pad from three to four.
+
+* For a convolution, execution is fast when the bias term is reasonably
+  close to zero.
+
 Worked example
 --------------
 
@@ -276,177 +312,4 @@ Github contains two python notebooks that show the whole process:
 <https://github.com/xmos/ai_tools/blob/develop/docs/keras_to_xcore.ipynb>
 and
 <https://github.com/xmos/ai_tools/blob/develop/docs/optimise_for_xcore.ipynb>.
-
-Xcore optimizer options
------------------------
-
-Python interface
-++++++++++++++++
-
-The Python interface "xmos-ai-tools" available through PyPi contains the xcore 
-optimiser (xformer) for optimising suitable tflite models. This module can be imported
-using:
-
-.. code-block:: Python
-
-  from xmos_ai_tools import xformer
-
-The main method in xformer is convert, which requires an path to an input model,
-an output path, and a list of parameters. The list of parameters should be a dictionary
-of options and their value. 
-
-.. code-block:: Python
-
-  xf.convert("example_int8_model.tflite", "xcore_optimized_int8_model.tflite", 
-    {"mlir-disable-threading": None, "xcore-reduce-memory": None,}
-  )
-
-The possible options are described below in the command line interface section. If the default operation is intended this third argument can be "None".
-
-.. code-block:: Python
-  
-  xf.convert("source model path", "converted model path", params=None)
-
-The xformer module contains two more useful methods, "xformer.printf_help()" which will
-print information of usage of xformer.convert, and "xformer.generate_flash" useful when
-writing models to flash.
-
-If a model is split into a tflite model for flash, and a .params file using the xformer option "xcore-flash-image-file", the generate_flash method can be used to combine these files into a binary to be stored in flash on an xcore.
-
-.. code-block:: Python
-  xf.generate_flash("xcore_optimized_int8_flash_model.tflite",  "xcore_params.params", "xcore_flash_binary.out")
-
-
-The python interface also contains two interpreters for tflite models. The first is a
-host interpreter which supports running optimized operators on the host. The second allows
-communication with an xcore running an inference engine. These two interpreters can be imported from xmos_ai_tools as follows:
-
-.. code-block:: Python
-
-  from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
-  from xmos_ai_tools.xinterpreters import xcore_tflm_usb_interpreter
-
-Both interpreters have the same interface, which follows the interface of the tensorflow lite interpreter. To run inference on a model the interpreters can be used as such:
-
-.. code-block:: Python
-
-  ie = xcore_tflm_host_interpreter()
-  ie.set_model(model_path = xcore_model)
-  ie.set_input_tensor(data = input)
-  ie.invoke()
-
-  xformer_outputs = []
-  for i in range(num_of_outputs):
-      xformer_outputs.append(ie.get_output_tensor(output_index = i))
-
-
-Command line interface
-++++++++++++++++++++++
-
-The xcore-opt program has the following options (in addition to a filename
-argument that specifies the input flatbuffer):
-
-[[[HIDE SOME OF THESE]]]
-
-* ``filename.tflite``         input tflite file
-  
-* ``--xcore-thread-count N``    Number of threads to translate for
-                          Defaults to 1
-
-* ``--xcore-flash-image-file filename``
-                          File to place the learned parameters in. By
-                          default learned parameters are kept with the
-                          model, requiring more RAM for the model, but
-                          faster execution
-
-* ``--xcore-load-externally-if-larger N``
-                          Sets a threshold under which to not place learned
-                          parameters in flash. The default is set to 96.
-                          This option requires * ``--xcore-flash-image-file``
-                          
-* ``--xcore-reduce-memory true|false``
-                          Try to reduce memory usage by possibly increasing
-                          execution time. Default is true
-
-* ``--xcore-conv-err-threshold N``
-                          When optimising convolutions errors are
-                          introduced. These errors are typically small and
-                          happen infrequently. The default threshold is
-                          0.25, meaning that the largest error that is
-                          acceptable is two bits below the decimal comma
-                          (in integer arithmetic). If an error higher than
-                          this occurs, the compiler will fall back on a
-                          less optimal convolution that produces a better
-                          result.
-
-* ``--xcore-force-conv-err-full-check``
-                          By default a the above option calculates an
-                          upper-bound for the error. Setting this option
-                          calculates the precise maximum error at the cost
-                          of extra compile-time.
-
-* ``--xcore-conv-multiplier-factor N``
-                          There are networks where large errors in a layer
-                          can be fixed by changing the quantization. THis
-                          option limits outliers in the multipliers of a
-                          convolution to a factor of N larger than the
-                          minimum. THe default for N is 0x7fffffff (ie, no
-                          limit).
-
-* ``-o filename.tflite``        Name of the file where to place the optimized
-                          TFLITE flatbuffer
-
-* ``--xcore-dont-minify``       Normally the TFLITE model is minified, by
-                          reducing string lengths, using this option
-                          enables you to keep the old strings
-
-Using the run-time support
---------------------------
-
-There is two ways to run code. Compiled to C++, or an interpreted TFLITE
-file. The latter requires more memory as code is required to parse the
-TFLITE file; both require the TensorflowLite for Micro run time support.
-The Interpreted model allows easy upgrades as the model can be replaced
-without recompilation - providing no extra operators are required.
-Compilation is (far) more efficient in terms of memory used
-
-In both cases you need to, in the SDK obtain the ``lib_tflite_micro``
-module <https://github.com/xmos/lib_tflite_micro>, which will pull in all
-other required modules.
-
-Interpretation: inference_engine_t
-++++++++++++++++++++++++++++++++++
-
-Typical use requires a single C++ file that declares the
-
-.. doxygentype:: inference_engine_t
-                 
-.. doxygenfunction:: inference_engine_initialize
-.. doxygenfunction:: inference_engine_unload_model 
-.. doxygenfunction:: inference_engine_load_model 
-.. doxygenfunction:: interp_invoke_par_5
-.. doxygenfunction:: interp_invoke_par_4
-.. doxygenfunction:: interp_invoke_par_3
-.. doxygenfunction:: interp_invoke_par_2
-.. doxygenfunction:: interp_invoke
-                     
-Compiled code
-+++++++++++++
-
-Simply copy the ``<model>.cpp`` and ``<model>.h`` file to the source
-directory of your application, and you can now, from C++ call the following
-functions [[This needs to be doxygened for consistency]]:
-
-* ``<model>_init(void *flash_data)`` This takes a single parameter, which is a channel end to
-  the flash server
-
-* ``<model>_input_ptr(int index)`` This returns a pointer to the data where
-  the input tensor is stored; index shoudl be set to zero unless there are
-  multiple inputs.
-
-* ``<model>_invoke()`` This runs an inference
-
-* ``<model>_output_ptr(int index)`` Analogous to the output pointer. Note
-  that the input may have been overwritten.
-  
 

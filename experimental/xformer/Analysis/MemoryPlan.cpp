@@ -7,6 +7,8 @@
 
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
+#define DEBUG_TYPE "xcore-memory-plan"
+
 namespace mlir {
 namespace xcore {
 
@@ -22,7 +24,7 @@ void MemoryPlan::build() {
 
   auto funcOp = dyn_cast<func::FuncOp>(op);
 
-  auto getValueSize = [](Value v) {
+  auto getAlignedValueSize = [](Value v) {
     auto type = v.getType().dyn_cast<ShapedType>();
     size_t typeSizeInBytes;
     if (type.getElementType().isa<quant::QuantizedType>()) {
@@ -35,19 +37,21 @@ void MemoryPlan::build() {
 
     size_t k = typeSizeInBytes;
     llvm::ArrayRef<int64_t> shape_ref = type.getShape();
+    // Handle dynamic shapes
     for (auto &dim : shape_ref) {
-      k *= (dim == -1 ? 1 : dim);
+      k *= (ShapedType::isDynamic(dim) ? 1 : dim);
     }
 
-    // Align size up to four bytes
-    k = ((k + 3) / 4) * 4;
+    // Align size up to double word = 8 bytes
+    k = ((k + 7) / 8) * 8;
 
     return k;
   };
 
   for (BlockArgument argument : funcOp.getArguments()) {
     valueInfo.insert(
-        {argument, {valueInfo.size(), getValueSize(argument), false, -1, -1}});
+        {argument,
+         {valueInfo.size(), getAlignedValueSize(argument), false, -1, -1}});
     values.push_back(argument);
   }
 
@@ -67,9 +71,12 @@ void MemoryPlan::build() {
     }
 
     for (Value result : op->getResults()) {
-      valueInfo.insert(
-          {result,
-           {valueInfo.size(), getValueSize(result), isConstantOp, -1, -1}});
+      if (result.getType().isa<NoneType>()) {
+        continue;
+      }
+      valueInfo.insert({result,
+                        {valueInfo.size(), getAlignedValueSize(result),
+                         isConstantOp, -1, -1}});
       values.push_back(result);
     }
   });
@@ -88,16 +95,17 @@ void MemoryPlan::build() {
     valueInfo[v].lastUsed = operationIds[lvb->getEndOperation(v, startOp)];
   }
 
-  printf("\n\n");
-
+  LLVM_DEBUG(llvm::dbgs() << "\n\n");
   for (auto v : values) {
-    printf("\nvalue %d size = %d start op = %d end op = %d", valueInfo[v].id,
-           valueInfo[v].size, valueInfo[v].firstUsed, valueInfo[v].lastUsed);
+    LLVM_DEBUG(llvm::dbgs() << "\nvalue " << valueInfo[v].id
+                            << " size = " << valueInfo[v].size
+                            << " start op = " << valueInfo[v].firstUsed
+                            << " end op = " << valueInfo[v].lastUsed);
   }
-  printf("\n\n");
+  LLVM_DEBUG(llvm::dbgs() << "\n\n");
 }
 
-int MemoryPlan::getMaxMemoryUsed() {
+Operation *MemoryPlan::getOpWithMaxMemoryUsed() {
   Block *block = &op->getRegion(0).front();
   const LivenessBlockInfo *lvb = liveness.getLiveness(block);
 
@@ -117,13 +125,13 @@ int MemoryPlan::getMaxMemoryUsed() {
       maxSize = size;
       maxOp = o;
     }
-    printf("\nop %d width = %d", operationIds[o], size);
+    LLVM_DEBUG(llvm::dbgs()
+               << "\nop " << operationIds[o] << " width = " << size);
   }
-  printf("\nMax op %d width = %d", operationIds[maxOp], maxSize);
-  maxOp->dump();
-  maxOp->getLoc().dump();
-  printf("\n\n");
-  return maxSize;
+  LLVM_DEBUG(llvm::dbgs() << "\nMax op " << operationIds[maxOp]
+                          << " width = " << maxSize);
+  LLVM_DEBUG(llvm::dbgs() << "\n\n");
+  return maxOp;
 }
 
 int MemoryPlan::getOffset(Value v, int size,
@@ -161,11 +169,27 @@ int MemoryPlan::getOffset(Value v, int size,
 std::vector<int> MemoryPlan::getAllocatedOffsets() {
   std::vector<int> offsets;
 
-  // Find linked values,
-  // increase input value size
-  // add only input values,
-  // stitch up after allocation and fix input and output value offsets
+  // Overlap buffers
   llvm::DenseMap<Value, std::pair<Value, int>> outInVals;
+  // outInInVals are only used when overlapping conv and pad together
+  llvm::DenseMap<Value, std::pair<std::pair<Value, int>, std::pair<Value, int>>>
+      outInInVals;
+
+  int maxOpId = -1;
+  if (overlapConvOption) {
+    // TODO: Try overlap conv
+    // Need to revert conv to run single-threaded which is not implemented yet
+    auto maxOp = getOpWithMaxMemoryUsed();
+    // max op is usually pad or conv
+    // if max op is pad, we choose the next one which should be conv
+    if (llvm::isa<Conv2DV2Op>(maxOp)) {
+      maxOpId = operationIds[maxOp];
+    } else if (llvm::isa<PadOp>(maxOp) &&
+               llvm::isa<Conv2DV2Op>(operations[operationIds[maxOp] + 1])) {
+      maxOpId = operationIds[maxOp] + 1;
+    }
+  }
+
   if (overlapOption) {
     for (auto o : operations) {
       if (llvm::isa<PadOp>(o)) {
@@ -179,30 +203,30 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
         }
       }
 
-      // if (llvm::isa<Conv2DV2Op>(o)) {
-      //   auto convOp = dyn_cast<Conv2DV2Op>(o);
-      //   if (symbolizeConv2DType(convOp.conv2d_kernel_type()) !=
-      //       Conv2DType::ValidIndirect) {
-      //     continue;
-      //   }
-      //   auto in = o->getOperand(0);
-      //   auto out = o->getResult(0);
-      //   int offset = 576;//valueInfo[out].size - valueInfo[in].size;
-      //   outInVals[out] = {in, offset};
-      //   valueInfo[in].size += offset;
-      //   valueInfo[in].lastUsed = valueInfo[out].lastUsed;
-      // }
+      if (llvm::isa<Conv2DV2Op>(o)) {
+        if (operationIds[o] == maxOpId) {
+          auto convOp = dyn_cast<Conv2DV2Op>(o);
+          auto in = o->getOperand(0);
+          auto out = o->getResult(0);
+          int offset = out.getType().dyn_cast<RankedTensorType>().getDimSize(
+              3); // pixel size
+
+          // since pad is input to this conv and already overlapped
+          if (outInVals.count(in)) {
+            // find the original input op
+            auto firstVal = outInVals[in].first;
+            auto firstOffset = outInVals[in].second;
+
+            offset += valueInfo[out].size - valueInfo[firstVal].size;
+
+            outInInVals[out] = {{in, offset}, {firstVal, firstOffset}};
+            valueInfo[firstVal].size += offset;
+            valueInfo[firstVal].lastUsed = valueInfo[out].lastUsed;
+          }
+        }
+      }
     }
   }
-
-  // Fix up consecutive overlapping allocations
-  // for (auto val : inputOutputPair) {
-  //   Value currentInput = val.first;
-  //   while(inputOutputPair.count(currentInput)) {
-  //     currentInput = inputOutputPair[currentInput];
-  //   }
-  //   inputOutputPair[val.first] = inputOutputPair[currentInput];
-  // }
 
   // The comparator keeps the buffers ordered by id if their sizes are the same
   auto DecreasingSizesComparator = [&](QueueItem &lhs, QueueItem &rhs) {
@@ -218,7 +242,8 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
 
   // Insert values and their sizes into priority queue
   for (auto v : values) {
-    if (!outInVals.count(v) && !valueInfo[v].isConstant) {
+    if (!outInVals.count(v) && !outInInVals.count(v) &&
+        !valueInfo[v].isConstant) {
       queue.push({v, valueInfo[v].size});
     }
   }
@@ -228,20 +253,47 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
   queue.pop();
   allocatedValues.insert({v, 0});
 
-  printf("\nSorted buffers : ");
   while (!queue.empty()) {
     auto v = queue.top().first;
     auto size = queue.top().second;
-    printf("%d ", size);
     queue.pop();
 
     // check with allocatedValues list
     int newOffset = getOffset(v, size, allocatedValues);
     allocatedValues.insert({v, newOffset});
   }
-  printf("\n\n");
 
   // Patch up overlapped buffers
+  for (auto val : outInInVals) {
+    auto out = val.first;
+    auto inPair = val.second.first;
+    auto firstValPair = val.second.second;
+
+    auto in = inPair.first;
+    auto offset = inPair.second;
+    // We allocate here itself
+    if (outInVals.count(in)) {
+      outInVals.erase(in);
+    }
+
+    auto firstVal = firstValPair.first;
+    auto firstOffset = firstValPair.second;
+
+    auto it =
+        std::find_if(allocatedValues.begin(), allocatedValues.end(),
+                     [&](const QueueItem &p) { return p.first == firstVal; });
+
+    if (it != allocatedValues.end()) {
+      int currentOffset = it->second;
+      allocatedValues.erase(it);
+      allocatedValues.insert({firstVal, currentOffset + offset + firstOffset});
+      allocatedValues.insert({in, currentOffset + offset});
+      allocatedValues.insert({out, currentOffset});
+    } else {
+      assert(false);
+    }
+  }
+
   for (auto val : outInVals) {
     auto out = val.first;
     auto in = val.second.first;
@@ -275,13 +327,14 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
     allocatedValuesOrderedByID.insert(i);
   }
 
-  printf("\nAllocated offsets : ");
+  LLVM_DEBUG(llvm::dbgs() << "\nAllocated offsets : ");
   for (auto i : allocatedValuesOrderedByID) {
     offsets.push_back(i.second);
-    printf("\nValue %d, size %d, offset %d ", valueInfo[i.first].id,
-           valueInfo[i.first].size, i.second);
+    LLVM_DEBUG(llvm::dbgs()
+               << "\nValue " << valueInfo[i.first].id << ", size "
+               << valueInfo[i.first].size << ", offset " << i.second);
   }
-  printf("\n\n");
+  LLVM_DEBUG(llvm::dbgs() << "\n\n");
 
   return offsets;
 }

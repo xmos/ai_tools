@@ -42,7 +42,7 @@ public:
   //  - This continues until all buffers are placed, and the offsets stored.
   std::vector<int> getAllocatedOffsets();
 
-  int getMaxMemoryUsed();
+  Operation *getOpWithMaxMemoryUsed();
 
   // OpSplitPlan getOpSplitPlan();
 

@@ -35,15 +35,16 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
 
   std::vector<char> getTensorData(LoadConstantOp loadOp) const {
     DenseElementsAttr attr;
-    if (loadOp.input()
+    if (loadOp.getInput()
             .getType()
             .cast<ShapedType>()
             .getElementType()
             .isa<quant::QuantizedType>()) {
-      auto qConstOp = dyn_cast<TFL::QConstOp>(loadOp.input().getDefiningOp());
-      attr = qConstOp.value().template cast<DenseElementsAttr>();
+      auto qConstOp =
+          dyn_cast<TFL::QConstOp>(loadOp.getInput().getDefiningOp());
+      attr = qConstOp.getValue().template cast<DenseElementsAttr>();
     } else {
-      matchPattern(loadOp.input(), m_Constant(&attr));
+      matchPattern(loadOp.getInput(), m_Constant(&attr));
     }
 
     std::vector<char> tensorData;
@@ -65,18 +66,9 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
       address += t.size();
     }
 
-    // Constants are usually allocated in the beginning of the function.
-    // Lowering them to load from flash op leads to loading constants from flash
-    // occurring in the beginning of graph execution before other ops are
-    // executed, thereby needing a much larger tensor arena.
-    // We move the op to right before the user op (user op would be conv or
-    // lookup op etc, any op that is using the constant).
-    // This is so that when we lower to flatbuffer the loadOp will be located
-    // in the graph close to the user op.
     if (loadOp.getResult().hasOneUse()) {
       auto use = loadOp->use_begin();
       Operation *ownerOp = use->getOwner();
-      loadOp->moveBefore(ownerOp);
 
       SmallVector<Type> outputTypes;
       SmallVector<int> opNums;
@@ -110,7 +102,7 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
       auto loadFlashOp = rewriter.create<LoadFlashOp>(
           loadOp.getLoc(), loadOp.getType(), address,
           rewriter.getArrayAttr(dataSizes));
-      rewriter.replaceOp(loadOp, loadFlashOp.output());
+      rewriter.replaceOp(loadOp, loadFlashOp.getOutput());
     }
 
     tensorsVec_->push_back(tensorData);
@@ -120,6 +112,27 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
 
 private:
   std::vector<std::vector<char>> *tensorsVec_;
+};
+
+struct MoveLoadOpPattern : public OpRewritePattern<LoadFlashOp> {
+  MoveLoadOpPattern(MLIRContext *context)
+      : OpRewritePattern<LoadFlashOp>(context) {}
+
+  LogicalResult matchAndRewrite(LoadFlashOp loadFlashOp,
+                                PatternRewriter &rewriter) const override {
+    // Constants are usually allocated in the beginning of the function.
+    // Lowering them to load from flash op leads to loading constants from flash
+    // occurring in the beginning of graph execution before other ops are
+    // executed, thereby needing a much larger tensor arena.
+    // We move the op to right before the user op (user op would be conv or
+    // lookup op etc, any op that is using the constant).
+    // This is so that when we lower to flatbuffer the loadOp will be located
+    // in the graph close to the user op.
+    Operation *ownerOp =
+        loadFlashOp->getResult(0).getUses().begin()->getOwner();
+    loadFlashOp->moveBefore(ownerOp);
+    return success();
+  }
 };
 
 void WriteFlashImage::runOnOperation() {
@@ -137,6 +150,7 @@ void WriteFlashImage::runOnOperation() {
   std::vector<std::vector<char>> tensorsVec;
   RewritePatternSet patterns(ctx);
   patterns.insert<WriteFlashImagePattern>(&tensorsVec, ctx);
+  patterns.insert<MoveLoadOpPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 
   // Write tensor data to flash image file

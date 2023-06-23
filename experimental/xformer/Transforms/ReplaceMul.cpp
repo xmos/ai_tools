@@ -13,36 +13,35 @@ namespace mlir {
 namespace xcore {
 
 namespace {
-// Replace TFL Add with Add for XCore.
-struct ReplaceAdd
-    : public PassWrapper<ReplaceAdd, OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReplaceAdd)
+// Replace TFL Mul with Mul for XCore.
+struct ReplaceMul
+    : public PassWrapper<ReplaceMul, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReplaceMul)
 
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
-  StringRef getArgument() const final { return "xcore-replace-add"; }
+  StringRef getArgument() const final { return "xcore-replace-mul"; }
   StringRef getDescription() const final {
-    return "Replace TFL Add with Add for XCore.";
+    return "Replace TFL Mul with Mul for XCore.";
   }
   void runOnOperation() override;
 };
 
-struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
-  using OpRewritePattern<TFL::AddOp>::OpRewritePattern;
+struct ReplaceMulPattern : public OpRewritePattern<TFL::MulOp> {
+  using OpRewritePattern<TFL::MulOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(TFL::AddOp addOp,
+  LogicalResult matchAndRewrite(TFL::MulOp mulOp,
                                 PatternRewriter &rewriter) const override {
 
     // Check for invalid types and return
-    // Both input shapes must match
-    if (failed(verifyCompatibleShapes(
-            addOp.getLhs().getType().cast<ShapedType>(),
-            addOp.getRhs().getType().cast<ShapedType>()))) {
+    // We only currently handle muls with a single element as RHS and a tensor
+    // as LHS
+    if (mulOp.getRhs().getType().cast<ShapedType>().getRank() != 1) {
       return failure();
     }
 
-    auto lhsType = addOp.getLhs().getType().cast<ShapedType>().getElementType();
+    auto lhsType = mulOp.getLhs().getType().cast<ShapedType>().getElementType();
     // Lhs type must be QI8
     if (!(lhsType.isa<quant::QuantizedType>() &&
           lhsType.cast<quant::QuantizedType>().isSigned() &&
@@ -51,7 +50,7 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
       return failure();
     }
 
-    auto rhsType = addOp.getRhs().getType().cast<ShapedType>().getElementType();
+    auto rhsType = mulOp.getRhs().getType().cast<ShapedType>().getElementType();
     // Rhs type must be QI8
     if (!(rhsType.isa<quant::QuantizedType>() &&
           rhsType.cast<quant::QuantizedType>().isSigned() &&
@@ -61,7 +60,7 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
     }
 
     auto outputType =
-        addOp.getOutput().getType().cast<ShapedType>().getElementType();
+        mulOp.getOutput().getType().cast<ShapedType>().getElementType();
     // Output type must be QI8
     if (!(outputType.isa<quant::QuantizedType>() &&
           outputType.cast<quant::QuantizedType>().isSigned() &&
@@ -82,48 +81,41 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
     auto outputScale = outputQType.getScale();
     auto outputZeroPoint = outputQType.getZeroPoint();
 
-    double lhsRatio = lhsScale / outputScale;
-    double rhsRatio = rhsScale / outputScale;
+    // x2 = ((S * (-b1 * x0 + -b0 * x1 +  x0 * x1) + (1<<13) >> 14) + B ) +
+    // (1<<5) >> 6
+    // B =  (b0 * b1 * S + b2)
 
-    // We find the max in case there is a large difference
-    // between lhs and rhs scales.
-    double maxR = std::max(lhsRatio, rhsRatio);
-    // We want the max shift to be 14 bits
-    int shift = int(floor(log2(pow(2, 14) / maxR)));
+    double scaleRatio = lhsScale * rhsScale / outputScale;
+    int S = round(scaleRatio * pow(2, 14 + 6));
 
-    // Multipliers are converted to fixed-point
-    int m1 = round(lhsRatio * pow(2, shift));
-    int m2 = round(rhsRatio * pow(2, shift));
-    int bias = round((outputZeroPoint - (lhsZeroPoint * lhsRatio) -
-                      (rhsZeroPoint * rhsRatio)) *
-                     pow(2, shift));
+    double biasTerm =
+        lhsZeroPoint * rhsZeroPoint * scaleRatio + outputZeroPoint;
+    int B = round(biasTerm * pow(2, 6));
 
-    auto xcAddOp = rewriter.create<AddOp>(
-        addOp.getLoc(), addOp.getType(), addOp.getLhs(), addOp.getRhs(),
-        rewriter.getStringAttr(addOp.getFusedActivationFunction()),
-        rewriter.getI32IntegerAttr(m1), rewriter.getI32IntegerAttr(m2),
-        rewriter.getI32IntegerAttr(bias), rewriter.getI32IntegerAttr(shift));
-    rewriter.replaceOp(addOp, xcAddOp.getOutput());
+    auto xcMulOp = rewriter.create<MulOp>(
+        mulOp.getLoc(), mulOp.getType(), mulOp.getLhs(), mulOp.getRhs(),
+        rewriter.getI32IntegerAttr(B), rewriter.getI32IntegerAttr(S));
+    rewriter.replaceOp(mulOp, xcMulOp.getOutput());
 
     return success();
   }
 };
 
-void ReplaceAdd::runOnOperation() {
+void ReplaceMul::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
   RewritePatternSet patterns(ctx);
-  patterns.insert<ReplaceAddPattern>(ctx);
+  patterns.insert<ReplaceMulPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
-// Creates an instance of the ReplaceAdd pass.
-std::unique_ptr<OperationPass<func::FuncOp>> createReplaceAddPass() {
-  return std::make_unique<ReplaceAdd>();
+// Creates an instance of the ReplaceMul pass.
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMulPass() {
+  return std::make_unique<ReplaceMul>();
 }
 
-static PassRegistration<ReplaceAdd> pass;
+static PassRegistration<ReplaceMul> pass;
 
 } // namespace xcore
 } // namespace mlir

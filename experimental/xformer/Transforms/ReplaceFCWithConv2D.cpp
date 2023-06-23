@@ -33,7 +33,7 @@ struct ReplaceFCWithConv2DPattern
     // Check for invalid types and return
     // Input type must be QI8
     auto fcInputElementType =
-        fcOp.input().getType().cast<ShapedType>().getElementType();
+        fcOp.getInput().getType().cast<ShapedType>().getElementType();
     if (!(fcInputElementType.isa<quant::QuantizedType>() &&
           fcInputElementType.cast<quant::QuantizedType>().isSigned() &&
           fcInputElementType.cast<quant::QuantizedType>()
@@ -43,7 +43,7 @@ struct ReplaceFCWithConv2DPattern
 
     // Filter type must be
     auto fcFilterElementType =
-        fcOp.filter().getType().cast<ShapedType>().getElementType();
+        fcOp.getFilter().getType().cast<ShapedType>().getElementType();
     if (!(fcFilterElementType.isa<quant::QuantizedType>() &&
           fcFilterElementType.cast<quant::QuantizedType>().isSigned() &&
           fcFilterElementType.cast<quant::QuantizedType>()
@@ -52,9 +52,9 @@ struct ReplaceFCWithConv2DPattern
     }
 
     // If bias exists, it must be QI32
-    if (!fcOp.bias().getType().isa<NoneType>()) {
+    if (!fcOp.getBias().getType().isa<NoneType>()) {
       auto fcBiasElementType =
-          fcOp.bias().getType().cast<ShapedType>().getElementType();
+          fcOp.getBias().getType().cast<ShapedType>().getElementType();
 
       if (!(fcBiasElementType.isa<quant::QuantizedType>() &&
             fcBiasElementType.cast<quant::QuantizedType>().isSigned() &&
@@ -64,36 +64,45 @@ struct ReplaceFCWithConv2DPattern
       }
     }
 
-    if (fcOp.weights_format() != "DEFAULT") {
-      return failure();
-    }
-
-    if (fcOp.keep_num_dims() != false) {
+    if (fcOp.getWeightsFormat() != "DEFAULT") {
       return failure();
     }
 
     // Add a ReshapeOp before Conv2D for expanding input to 4 dims
-    auto inputType = fcOp.input().getType().cast<ShapedType>();
-    assert(inputType.getRank() == 2 &&
-           "FullyConnected input should have a rank of 2!");
-    std::vector<int64_t> expandedShapeVector = {inputType.getShape()[0], 1, 1,
-                                                inputType.getShape()[1]};
-    auto expandedInputResultType =
-        RankedTensorType::get(expandedShapeVector, inputType.getElementType());
+    auto inputType = fcOp.getInput().getType().cast<ShapedType>();
+    int spatialInDim = inputType.getRank() - 2;
+    int channelInDim = inputType.getRank() - 1;
+
+    std::vector<int64_t> expandedInputShapeVector = {
+        1LL, 1LL,
+        inputType.isDynamicDim(spatialInDim)
+            ? 1
+            : inputType.getShape()[spatialInDim],
+        inputType.getShape()[channelInDim]};
+    auto expandedInputResultType = RankedTensorType::get(
+        expandedInputShapeVector, inputType.getElementType());
+
+    std::vector<int32_t> expandedReshapeConstantVector = {
+        1, 1,
+        static_cast<int>(inputType.isDynamicDim(spatialInDim)
+                             ? 1
+                             : inputType.getDimSize(spatialInDim)),
+        static_cast<int>(inputType.getDimSize(channelInDim))};
+    RankedTensorType expandedShapeType =
+        RankedTensorType::get({4}, rewriter.getI32Type());
     auto expandedShapeConstantOp = rewriter.create<arith::ConstantOp>(
-        fcOp.getLoc(),
-        DenseElementsAttr::get(
-            RankedTensorType::get({4}, rewriter.getIntegerType(64)),
-            llvm::makeArrayRef(expandedShapeVector)));
-    auto reshapeInputOp =
-        rewriter.create<TFL::ReshapeOp>(fcOp.getLoc(), expandedInputResultType,
-                                        fcOp.input(), expandedShapeConstantOp);
+        fcOp.getLoc(), expandedShapeType,
+        DenseIntElementsAttr::get(expandedShapeType,
+                                  expandedReshapeConstantVector));
+    auto reshapeInputOp = rewriter.create<TFL::ReshapeOp>(
+        fcOp.getLoc(), expandedInputResultType, fcOp.getInput(),
+        expandedShapeConstantOp);
 
     // Expand filter to 4 dims
     auto filterQConstOp =
-        dyn_cast<TFL::QConstOp>(fcOp.filter().getDefiningOp());
-    auto filter = filterQConstOp.value().cast<DenseElementsAttr>();
-    auto filterType = fcOp.filter().getType().cast<ShapedType>();
+        dyn_cast<TFL::QConstOp>(fcOp.getFilter().getDefiningOp());
+    auto filter = filterQConstOp.getValue().cast<DenseElementsAttr>();
+    auto filterType = fcOp.getFilter().getType().cast<ShapedType>();
     std::vector<int64_t> expandedFilterVector = {filterType.getShape()[0], 1, 1,
                                                  filterType.getShape()[1]};
     auto expandedFilterType = RankedTensorType::get(
@@ -103,33 +112,61 @@ struct ReplaceFCWithConv2DPattern
 
     // Add a Conv2D to replace the FC
     auto result0Type = fcOp.getResult(0).getType().cast<ShapedType>();
-    std::vector<int64_t> expandedResultVector = {result0Type.getShape()[0], 1,
-                                                 1, result0Type.getShape()[1]};
+    int spatialOutDim = result0Type.getRank() - 2;
+    int channelOutDim = result0Type.getRank() - 1;
+    std::vector<int64_t> expandedResultVector = {
+        1, 1,
+        result0Type.isDynamicDim(spatialOutDim)
+            ? 1
+            : result0Type.getShape()[spatialOutDim],
+        result0Type.getShape()[channelOutDim]};
     auto expandedResultType = RankedTensorType::get(
         expandedResultVector, result0Type.getElementType());
     auto newConv2DOp = rewriter.create<TFL::Conv2DOp>(
         fcOp.getLoc(), expandedResultType, reshapeInputOp,
-        expandedFilterQConstOp, fcOp.bias(), 1, 1,
-        fcOp.fused_activation_function(), "VALID", 1, 1);
+        expandedFilterQConstOp, fcOp.getBias(), 1, 1,
+        fcOp.getFusedActivationFunction(), "VALID", 1, 1);
 
-    // Add a ReshapeOp after Conv2D for squeezing output back to 2 dims
+    // Add a ReshapeOp after Conv2D for squeezing output back to 2 or 3 dims
     auto newConv2DOutputType =
-        newConv2DOp.output().getType().cast<ShapedType>();
-    std::vector<int64_t> squeezedShapeVector = {
-        newConv2DOutputType.getShape()[0], newConv2DOutputType.getShape()[3]};
+        newConv2DOp.getOutput().getType().cast<ShapedType>();
+    std::vector<int64_t> squeezedOutputShapeVector;
+    std::vector<int32_t> squeezedReshapeConstantVector;
+    RankedTensorType squeezedShapeType;
+    // If three output dimensions for the fully connected
+    if (result0Type.getRank() == 3) {
+      squeezedOutputShapeVector = {1, result0Type.getShape()[spatialOutDim],
+                                   result0Type.getShape()[channelOutDim]};
+      squeezedReshapeConstantVector = {
+          1,
+          static_cast<int>(newConv2DOutputType.isDynamicDim(2)
+                               ? 1
+                               : newConv2DOutputType.getDimSize(2)),
+          static_cast<int>(newConv2DOutputType.getDimSize(3))};
+      squeezedShapeType = RankedTensorType::get({3}, rewriter.getI32Type());
+    } else {
+      squeezedOutputShapeVector = {result0Type.getShape()[spatialOutDim],
+                                   result0Type.getShape()[channelOutDim]};
+      squeezedReshapeConstantVector = {
+          static_cast<int>(newConv2DOutputType.isDynamicDim(2)
+                               ? 1
+                               : newConv2DOutputType.getDimSize(2)),
+          static_cast<int>(newConv2DOutputType.getDimSize(3))};
+      squeezedShapeType = RankedTensorType::get({2}, rewriter.getI32Type());
+    }
+
     auto squeezedOutputResultType = RankedTensorType::get(
-        squeezedShapeVector, newConv2DOutputType.getElementType());
+        squeezedOutputShapeVector, newConv2DOutputType.getElementType());
     auto squeezedShapeConstantOp = rewriter.create<arith::ConstantOp>(
-        fcOp.getLoc(),
-        DenseElementsAttr::get(
-            RankedTensorType::get({2}, rewriter.getIntegerType(64)),
-            llvm::makeArrayRef(squeezedShapeVector)));
+        fcOp.getLoc(), squeezedShapeType,
+        DenseIntElementsAttr::get(squeezedShapeType,
+                                  squeezedReshapeConstantVector));
     auto reshapeOutputOp = rewriter.create<TFL::ReshapeOp>(
-        fcOp.getLoc(), squeezedOutputResultType, newConv2DOp.output(),
+        fcOp.getLoc(), squeezedOutputResultType, newConv2DOp.getOutput(),
         squeezedShapeConstantOp);
 
     // Replace the FC with the new ops
-    rewriter.replaceOp(fcOp, reshapeOutputOp.output());
+    rewriter.replaceOp(fcOp, reshapeOutputOp.getOutput());
 
     return success();
   }

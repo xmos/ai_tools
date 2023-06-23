@@ -10,7 +10,7 @@ import pathlib
 #         yield [image]
 
 rep_ds = tf.data.Dataset.list_files("train_samples/*.jpg")
-HEIGHT, WIDTH = 224, 224
+HEIGHT, WIDTH = 160, 160
 
 def representative_dataset_gen():
    for image_path in rep_ds:
@@ -21,7 +21,8 @@ def representative_dataset_gen():
        resized_img = resized_img[tf.newaxis, :]
        yield [resized_img]
 
-model = tf.keras.applications.mobilenet.MobileNet(alpha=0.25)
+model = tf.keras.applications.mobilenet_v2.MobileNetV2(input_shape=(HEIGHT, WIDTH, 3), alpha=1.0, include_top=False)
+#model = tf.keras.applications.MobileNetV3Small(input_shape=(HEIGHT, WIDTH, 3), alpha=1.0, minimalistic=True, include_top=True)
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
 
 

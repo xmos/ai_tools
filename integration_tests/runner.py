@@ -23,6 +23,8 @@ REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
 LIB_TFLM_DIR_PATH = (pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_tflite_micro")
+LIB_NN_INCLUDE_PATH = (pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_nn")
+LIB_TFLM_INCLUDE_PATH = LIB_TFLM_DIR_PATH
 TFLM_INCLUDE_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "tflite-micro")
 FLATBUFFERS_INCLUDE_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "flatbuffers", "include")
 TFLMC_DIR_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "tflite_micro_compiler")
@@ -65,10 +67,12 @@ def get_tflmc_model_exe(model, dirname):
     "-DTF_LITE_STATIC_MEMORY",
     "-DNO_INTERPRETER",
     "-std=c++14",
+    "-I" + str(LIB_TFLM_INCLUDE_PATH),
+    "-I" + str(LIB_NN_INCLUDE_PATH),
     "-I" + str(TFLM_INCLUDE_PATH),
     "-I" + str(FLATBUFFERS_INCLUDE_PATH),
     "-I" + dirname,
-    "-I" + os.getenv("CONDA_PREFIX") + "/include",
+    "-I" + os.getenv("VIRTUAL_ENV") + "/include",
     "-g",
     "-O0",
     "-lxtflitemicro",
@@ -192,24 +196,24 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             input_tensor_type.append(interpreter.get_input_details()[i]["dtype"])
             input_tensor_shape.append(interpreter.get_input_details()[i]["shape"])
 
+    LOGGER.info("Invoking xformer to get xformed model...")
+    if testing_detection_postprocess_option:
+        LOGGER.info("Detection postprocess special case - loading int8 model for xcore...")
+        with open(model_path.parent.joinpath("test_dtp.xc"), "rb") as fd:
+            model_content = fd.read()
+    xformed_model = get_xformed_model(model_content)
+
     if testing_on_tflmc_option:
         LOGGER.info("Creating tflmc model exe...")
         tflmc_temp_dirname = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
-        tflmc_model_exe = get_tflmc_model_exe(model_content, tflmc_temp_dirname.name)
-    else:    
-        LOGGER.info("Invoking xformer to get xformed model...")
-        if testing_detection_postprocess_option:
-            LOGGER.info("Detection postprocess special case - loading int8 model for xcore...")
-            with open(model_path.parent.joinpath("test_dtp.xc"), "rb") as fd:
-                model_content = fd.read()
-        xformed_model = get_xformed_model(model_content)
+        tflmc_model_exe = get_tflmc_model_exe(xformed_model, tflmc_temp_dirname.name)
+    else:
         LOGGER.info("Creating TFLM XCore interpreter...")
         if testing_device_option:
             ie = xcore_tflm_usb_interpreter()
         else:
             ie = xcore_tflm_host_interpreter()
-        ie.set_model(model_content=xformed_model, secondary_memory=True)
-
+        ie.set_model(model_content=xformed_model, secondary_memory=False)
 
     # Run tests
     num_of_fails = 0
@@ -233,7 +237,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         else:
             LOGGER.info("Creating random input...")
             for i in range(num_of_inputs):
-                input_tensor.append(np.array(256 * np.random.random_sample(input_tensor_shape[i]) - 127, dtype=input_tensor_type[i]))
+                input_tensor.append(np.array(255 * np.random.random_sample(input_tensor_shape[i]) - 128, dtype=input_tensor_type[i]))
                 #input_tensor.append(np.array(100 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
 
         if testing_binary_models_option:

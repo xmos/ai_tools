@@ -2,7 +2,7 @@
 // XMOS Public License: Version 1
 
 // This is the optimization pattern definition file for XCore.
-include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
+include "mlir/Dialect/Arith/IR/ArithOps.td"
 include "mlir/Dialect/Func/IR/FuncOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
@@ -15,7 +15,7 @@ def getLookupTable
     : NativeCodeCall<"getLookupTable($_builder, $0.getDefiningOp())">;
 
 foreach activationOp =
-    [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp] in {
+    [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp, TFL_HardSwishOp] in {
 def:
   Pat<(activationOp
             : $output TensorOf<[QI8]>:$input),
@@ -47,6 +47,32 @@ def:
             (HasOnlyPadding3To4ForChannel $padding_attr),
           ]>;
 }
+
+// Lower special Concatenation op PyTorch remnant to XC_Pad3to4
+// If the second input of concatenation is with a constant of all values zero,
+// and input has channels 3 and output has channels 4
+class HasExactValues<int n>
+    : Constraint<CPred<"$0.size() == " #n>, "has exactly " #n #" values">;
+def Front : NativeCodeCall<"$0.front()", 1>;
+// Checks if second input is integer constant and its splat value is equal to
+// zero.
+def IsSecondInputSplatAndEqualToZero
+    : Constraint<
+          CPred<"dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()) && "
+                "dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()).getValue()."
+                "cast<DenseElementsAttr>().isSplat() && "
+                "dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()).getValue()."
+                "cast<DenseElementsAttr>().getSplatValue<int8_t>() == 0">>;
+def AreChannels3And4
+    : Constraint<
+          CPred<"$0.front().getType().cast<ShapedType>().getDimSize(3) == 3 && "
+                "$1.getType().cast<ShapedType>().getDimSize(3) == 4">>;
+def : Pat<(TFL_ConcatenationOp
+           : $output $varg, $axis, $faf),
+          (XC_Pad3To4Op(Front $varg), ConstantAttr<I32Attr, "0">), [
+            (HasExactValues<2> $varg), (IsSecondInputSplatAndEqualToZero $varg),
+            (AreChannels3And4 $varg, $output)
+          ]>;
 
 // Fuse XC_Conv2D(Reshape()) -> XC_Conv2D()
 def : Pat<(XC_Conv2DV2Op

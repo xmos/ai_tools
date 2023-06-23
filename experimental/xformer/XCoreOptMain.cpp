@@ -10,6 +10,7 @@
 #include "lib_nn/api/version.h"
 #include "lib_tflite_micro/api/version.h"
 #include "lib_tflite_micro/api/xcore_shared_config.h"
+#include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
@@ -79,19 +80,24 @@ cl::opt<bool> opSplitTensorArenaOption(
     cl::desc("Enable prototype op split to reduce tensor arena size."),
     cl::init(false));
 
-cl::list<int32_t> opSplitStartOpOption(
-    "xcore-op-split-start-op",
-    cl::desc("Enable prototype op split to reduce tensor arena size."),
-    cl::CommaSeparated);
+cl::opt<unsigned>
+    opSplitTargetSizeOption("xcore-op-split-target-size",
+                            cl::desc("Op split target max tensor arena size."),
+                            cl::init(700000));
 
-cl::list<int32_t> opSplitEndOpOption(
-    "xcore-op-split-end-op",
-    cl::desc("Enable prototype op split to reduce tensor arena size."),
-    cl::CommaSeparated);
+cl::list<unsigned>
+    opSplitBottomOpsOption("xcore-op-split-bottom-op",
+                           cl::desc("Manual override Op split, bottom op."),
+                           cl::CommaSeparated);
 
-cl::list<int32_t> opSplitNumSplitsOption(
+cl::list<unsigned>
+    opSplitTopOpsOption("xcore-op-split-top-op",
+                        cl::desc("Manual override Op split, top op."),
+                        cl::CommaSeparated);
+
+cl::list<unsigned> opSplitNumSplitsOption(
     "xcore-op-split-num-splits",
-    cl::desc("Enable prototype op split to reduce tensor arena size."),
+    cl::desc("Manual override Op split, number of splits."),
     cl::CommaSeparated);
 
 cl::opt<bool> allowInputModificationOption(
@@ -104,14 +110,30 @@ cl::opt<bool> convDebugOption("xcore-conv-debug",
                               cl::init(false));
 
 cl::opt<bool> overlapOption("xcore-overlap", cl::desc("Overlap buffers."),
-                            cl::init(false));
+                            cl::init(true));
+
+cl::opt<bool> overlapConvOption("xcore-overlap-conv",
+                                cl::desc("Overlap conv also."),
+                                cl::init(false));
+
+cl::opt<bool> offlineOffsetsOption("xcore-offline-offsets",
+                                   cl::desc("Offline offsets"),
+                                   cl::init(false));
+
+cl::opt<unsigned> convChannelwiseSplitSizeOption(
+    "xcore-conv-channelwise-split-size",
+    cl::desc(
+        "Specify channelwise split size for convolutions (default = 100000)."),
+    cl::init(100000));
+
 } // namespace xcore
 } // namespace mlir
 
 LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
                               const OwningOpRef<ModuleOp> &mod,
                               MLIRContext *context) {
-  PassManager pm(context, mlir::OpPassManager::Nesting::Implicit);
+  auto module = mod.get();
+  PassManager pm(module->getName(), mlir::OpPassManager::Nesting::Implicit);
   applyPassManagerCLOptions(pm);
 
   auto errorHandler = [&](const Twine &msg) {
@@ -195,8 +217,6 @@ int main(int argc, char **argv) {
   static cl::opt<bool> tflmcPrintEnabled(
       "xcore-tflmc-print", cl::desc("Print out memory allocation plan"),
       cl::init(false));
-  static cl::opt<bool> offlineOffsetsEnabled(
-      "xcore-offline-offsets", cl::desc("Offline offsets"), cl::init(false));
   static cl::opt<std::string> versionLibTfliteMicro(
       "xcore-compatible-with-lib-tflite-micro",
       cl::desc("Check if lib_tflite_micro version is compatible"), cl::init(""),
@@ -217,7 +237,7 @@ int main(int argc, char **argv) {
   // Initialize dialects.
   MLIRContext context;
   context.loadDialect<func::FuncDialect>();
-  context.loadDialect<arith::ArithmeticDialect>();
+  context.loadDialect<arith::ArithDialect>();
   context.loadDialect<quant::QuantizationDialect>();
   context.loadDialect<TFL::TensorFlowLiteDialect>();
   context.loadDialect<xcore::XCoreDialect>();
@@ -234,6 +254,15 @@ int main(int argc, char **argv) {
     return failedMessage(
         "Please specify the xcore-flash-image-file option when specifying the "
         "xcore-load-externally-if-larger option!");
+  }
+
+  if (mlir::xcore::opSplitTargetSizeOption.getNumOccurrences() > 0 &&
+      (!(mlir::xcore::opSplitBottomOpsOption.empty()) ||
+       !(mlir::xcore::opSplitTopOpsOption.empty()) ||
+       !(mlir::xcore::opSplitNumSplitsOption.empty()))) {
+    return failedMessage(
+        "target size option cannot be used with start, end, and "
+        "numSplits options");
   }
 
   if (mlir::xcore::threadCountOption < 1 ||
@@ -345,7 +374,7 @@ int main(int argc, char **argv) {
     // std::vector<int> offline_offsets = {
     //    73728, -1, -1, -1, -1, -1, -1, 0, 129024, 73728, 166272, 132096,
     //    73728, 153984, 132096, 73728, 132096, 73728, 0, 52224, 0};
-    if (offlineOffsetsEnabled) {
+    if (mlir::xcore::offlineOffsetsOption) {
       auto attr = module->getAttr("xc.offsets");
       auto offline_offsets = std::vector<int>{
           attr.cast<mlir::DenseIntElementsAttr>().getValues<int32_t>().begin(),
@@ -371,16 +400,19 @@ int main(int argc, char **argv) {
                                             offline_offsets.size() * 4);
 
       auto k = (int32_t *)offlineOffsetsData.data();
-      printf("\n");
+#define DEBUG_TYPE "xcore-memory-plan"
+      LLVM_DEBUG(llvm::dbgs() << "\n\n");
       for (int i = 0; i < offline_offsets.size(); i++) {
-        printf("%d, ", k[i]);
+        LLVM_DEBUG(llvm::dbgs() << k[i] << ", ");
       }
-      printf("\n");
+      LLVM_DEBUG(llvm::dbgs() << "\n\n");
 
       auto offlineOffsetsMetadata =
           std::make_pair(kOfflineMemAllocMetadata, offlineOffsetsData);
 
-      printf("\n\nOFFLINE OFFSETS ENABLED!\n\n");
+      LLVM_DEBUG(llvm::dbgs() << "\n\nOFFLINE OFFSETS ENABLED!\n\n");
+#undef DEBUG_TYPE
+
       metadata.insert(offlineOffsetsMetadata);
     }
     metadata.insert(xcoreConfigMetadata);

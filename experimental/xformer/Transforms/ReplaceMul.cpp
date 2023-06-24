@@ -35,9 +35,11 @@ struct ReplaceMulPattern : public OpRewritePattern<TFL::MulOp> {
                                 PatternRewriter &rewriter) const override {
 
     // Check for invalid types and return
-    // We only currently handle muls with a single element as RHS and a tensor
-    // as LHS
-    if (mulOp.getRhs().getType().cast<ShapedType>().getRank() != 1) {
+    // We only currently handle muls with a single element or 1x..xN as RHS and
+    // a tensor as LHS
+    auto shapeRHS = mulOp.getRhs().getType().cast<ShapedType>();
+    if (shapeRHS.getNumElements() !=
+        shapeRHS.getDimSize(shapeRHS.getRank() - 1)) {
       return failure();
     }
 

@@ -177,25 +177,29 @@ def : Pat<(TFL_MeanOp
 //            ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">),[(HasRank4
 //            $output)]>;
 
-def Pad3to4OutputType
+def PadChannelOutputType
     : NativeCodeCall<
           "RankedTensorType::get({$0.getType().cast<ShapedType>().getDimSize(0)"
           ", $0.getType().cast<ShapedType>().getDimSize(1), "
-          "$0.getType().cast<ShapedType>().getDimSize(2), 4}, "
+          "$0.getType().cast<ShapedType>().getDimSize(2), "
+          "$1.getType().cast<ShapedType>().getDimSize(3)}, "
           "$0.getType().cast<ShapedType>().getElementType())">;
 
-// Pad3to4(Pad3to3) to Pad4to4(Pad3to4)
+// PadChannel(PadSpatial) to PadSpatial(PadChannel)
 foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
 def:
-  Pat<(TFL_PadOp(TFL_PadOp $input, $padding3to3),
-       (constOp
-        : $padding3to4_op $padding3to4_attr)),
-      (TFL_PadOp(TFL_PadOp $input, $padding3to4_op,
-                 (returnType(Pad3to4OutputType $input))),
-       $padding3to3),
+  Pat<(TFL_PadOp
+       : $output(TFL_PadOp $input,
+                 (constOp
+                  : $padding_spatial_op $padding_spatial_attr)),
+         (constOp
+          : $padding_channel_op $padding_channel_attr)),
+      (TFL_PadOp(TFL_PadOp $input, $padding_channel_op,
+                 (returnType(PadChannelOutputType $input, $output))),
+       $padding_spatial_op),
       [
-        (HasMultipleOfNBytesPerPixel<3> $input),
-        (HasOnlyPadding3To4ForChannel $padding3to4_attr),
+        (HasOnlySpatialPadding $padding_spatial_attr),
+        (HasOnlyChannelPadding $padding_channel_attr),
       ]>;
 }
 

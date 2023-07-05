@@ -63,7 +63,8 @@ def Front : NativeCodeCall<"$0.front()", 1>;
 // zero.
 def IsSecondInputSplatAndEqualToZero
     : Constraint<
-          CPred<"dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()) && "
+          CPred<"$0.back().getDefiningOp() && "
+                "dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()) && "
                 "dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()).getValue()."
                 "cast<DenseElementsAttr>().isSplat() && "
                 "dyn_cast<TFL::QConstOp>($0.back().getDefiningOp()).getValue()."

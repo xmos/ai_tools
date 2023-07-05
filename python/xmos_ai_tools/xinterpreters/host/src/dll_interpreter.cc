@@ -81,6 +81,10 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
   resolver->AddTransposeConv();
   resolver->AddSum();
   resolver->AddAveragePool2D();
+  resolver->AddUnidirectionalSequenceLSTM();
+  resolver->AddIf();
+  resolver->AddWhile();
+  resolver->AddCallOnce();
   tflite::ops::micro::xcore::RegisterXCOps(resolver);
   add_lib_vision_ops(resolver);
 

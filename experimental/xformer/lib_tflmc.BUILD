@@ -151,6 +151,9 @@ filegroup(
         "@tflite_micro//tensorflow/lite/micro/kernels:lstm_eval_common.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:unidirectional_sequence_lstm.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:zeros_like.cc",
+        "@tflite_micro//tensorflow/lite/micro/kernels:if.cc",
+        "@tflite_micro//tensorflow/lite/micro/kernels:while.cc",
+        "@tflite_micro//tensorflow/lite/micro/kernels:call_once.cc",
     ],
 )
 
@@ -160,10 +163,7 @@ filegroup(
         # We dont support these kernels yet for compiled models
         # They link with micro_graph from within the kernels
         "@tflite_micro//tensorflow/lite/micro/kernels:var_handle.cc",
-        "@tflite_micro//tensorflow/lite/micro/kernels:while.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:read_variable.cc",
-        "@tflite_micro//tensorflow/lite/micro/kernels:if.cc",
-        "@tflite_micro//tensorflow/lite/micro/kernels:call_once.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:assign_variable.cc",
     ],
 )

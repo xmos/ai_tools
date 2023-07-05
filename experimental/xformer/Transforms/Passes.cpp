@@ -18,15 +18,15 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
   // TFL passes
   pm.addPass(createOptimizeTransposePass());
+  if (opSplitTensorArenaOption) {
+    pm.addPass(createOpSplitPass());
+  }
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
   pm.addPass(createApplyTFLPatternsPass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createOptimizeConv2DPass());
   pm.addPass(createApplyTFLPatternsPass());
-  if (opSplitTensorArenaOption) {
-    pm.addPass(createOpSplitPass());
-  }
   // XC passes
   pm.addPass(createReplaceAddPass());
   pm.addPass(createReplaceMulPass());

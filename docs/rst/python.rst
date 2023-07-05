@@ -15,28 +15,33 @@ of options and their value.
 
 .. code-block:: Python
 
-  xf.convert("example_int8_model.tflite", "xcore_optimized_int8_model.tflite", 
-    {"mlir-disable-threading": None, "xcore-reduce-memory": None,}
-  )
+  xf.convert("example_int8_model.tflite", "xcore_optimised_int8_model.tflite", {
+      "xcore-thread-count": "5",
+  })
 
 The possible options are described below in the command line interface section. If the default operation is intended this third argument can be "None".
 
 .. code-block:: Python
-  
+
   xf.convert("source model path", "converted model path", params=None)
 
-The xformer module contains two more useful methods, "xformer.printf_help()" which will
-print information of usage of xformer.convert, and "xformer.generate_flash" useful when
-writing models to flash.
 
-If a model is split into a tflite model for flash, and a .params file using
-the xformer option "xcore-flash-image-file", the generate_flash method can
-be used to combine these files into a binary to be stored in flash on an
-xcore.
+To see all available configuration options.
 
 .. code-block:: Python
-  xf.generate_flash("xcore_optimized_int8_flash_model.tflite",  "xcore_params.params", "xcore_flash_binary.out")
 
+  from xmos_ai_tools import xformer as xf
+  xf.print_help()
+
+This will print all options available to pass to xformer. To see hidden options, run ``print_help(show_hidden=True)``.
+
+To create a parameters file and a tflite model suitable for loading to flash, use the "xcore-flash-image-file" option.
+
+.. code-block:: Python
+
+  xf.convert("example_int8_model.tflite", "xcore_optimised_int8_flash_model.tflite", {
+      "xcore-flash-image-file": "./xcore_params.params",
+  })
 
 The python interface also contains a host-side interpreter for tflite
 model. This interpreter can be imported from xmos_ai_tools
@@ -52,10 +57,10 @@ run inference on a model the interpreters can be used as such:
 .. code-block:: Python
 
   ie = xcore_tflm_host_interpreter()
-  ie.set_model(model_path = xcore_model)
-  ie.set_input_tensor(data = input)
+  ie.set_model(model_path='path_to_xcore_model', params_path='path_to_xcore_params')
+  ie.set_tensor(ie.get_input_details()[0]['index'], value='input_data')
   ie.invoke()
 
   xformer_outputs = []
   for i in range(num_of_outputs):
-      xformer_outputs.append(ie.get_output_tensor(output_index = i))
+      xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]['index']))

@@ -2,7 +2,7 @@ Graph transformation options
 ============================
 
 The graph transformer can be controlled through options. For example, one
-cans use options to set the level of parallelism to use or to specify the
+can use options to set the level of parallelism to use or to specify the
 name of the output file.
 
 The method of providing options depends on how the graph transformer is
@@ -49,19 +49,25 @@ Transformation options in a command-line environment
 ----------------------------------------------------
 
 Upon installing the "xmos-ai-tools" from PyPi, the program ``xcore-opt`` is
-available on the command-line. It is called with at least one argument (the
-input model), and all options are specified with a ``--`` ahead of it, eg::
+available on the command-line. It is called with at least two arguments (the
+input model and the output model), and all other configuration options are specified with a ``--`` ahead of it, eg::
 
-  xcore-opt example_int8_model.tflite --xcore-thread-count 4 --xcore-reduce-memory
+  xcore-opt example_int8_model.tflite -o output_model.tflite --xcore-thread-count 4 --xcore-reduce-memory
 
 
 Options
 -------
 
+
+``-o <filename.tflite>``
+++++++++++++++++++++++++++++++++++++++
+
+Name of the file where to place the optimized TFLITE model
+
 ``xcore-thread-count N``
 ++++++++++++++++++++++++
 
-Number of threads to translate for. Defaults to 1.
+Number of threads to translate for (max=5). Defaults to 1.
 
 
 ``xcore-flash-image-file filename``
@@ -78,7 +84,8 @@ be slower but allows large numbers of learned parameters to be used.
 +++++++++++++++++++++++++++++++++++++
 
 Sets a threshold under which to not place learned parameters in flash. The
-default is set to 96. This option is only meaningful if
+default is set to 96 bytes. If less than 96 bytes, the overhead of lowering to flash is 
+more than the benefit gained. This option is only meaningful if
 ``xcore-flash-image-file`` has been used. You can experiment with this
 parameter to get a different trade-off between speed and memory requirements.
                           
@@ -100,13 +107,6 @@ fall back on a less optimal convolution that produces a better result.
 
 You can adjust this parameter to get a different trade-off between
 execution speed and accuracy of the result.
-
-
-Hmmmmmm - CL and Python are different?
-++++++++++++++++++++++++++++++++++++++
-
-* ``-o filename.tflite``        Name of the file where to place the optimized
-                          TFLITE flatbuffer
 
 
 Advanced options

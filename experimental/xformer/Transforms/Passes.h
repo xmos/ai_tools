@@ -26,11 +26,11 @@ std::unique_ptr<OperationPass<func::FuncOp>> createOptimizeTransposePass();
 std::unique_ptr<OperationPass<func::FuncOp>>
 createReplaceAvgPoolWithConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceFCWithConv2DPass();
-std::unique_ptr<OperationPass<func::FuncOp>> createPad3to4Conv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createOptimizeConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createOpSplitPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createApplyTFLPatternsPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceAddPass();
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMulPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceStridedSlicePass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createApplyXCPatternsPass();

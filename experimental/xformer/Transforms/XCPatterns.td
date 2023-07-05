@@ -15,7 +15,7 @@ def getLookupTable
     : NativeCodeCall<"getLookupTable($_builder, $0.getDefiningOp())">;
 
 foreach activationOp =
-    [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp] in {
+    [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp, TFL_HardSwishOp] in {
 def:
   Pat<(activationOp
             : $output TensorOf<[QI8]>:$input),
@@ -29,13 +29,17 @@ def getPaddingPlan
     : NativeCodeCall<
           "getPaddingPlan($_builder, $0.getDefiningOp<TFL::PadOp>())">;
 
+def Has3To4Channel
+    : Constraint<CPred<"$0.getType().cast<ShapedType>().getDimSize(3) == 3 && "
+                       "$1.getType().cast<ShapedType>().getDimSize(3) == 4">>;
+
 foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
 def:
   Pat<(TFL_PadOp
            : $output TensorOf<[QI8]>:$input, (constOp
                               : $padding_op $padding_attr)),
           (XC_PadOp $input, (getPaddingPlan $output), (getPadValue $input)), [
-            (HasNoPaddingForBatchAndChannel $padding_attr),
+            (HasOnlySpatialPadding $padding_attr),
             (HasMultipleOfNBytesPerPixel<4> $input)
           ]>;
 
@@ -44,7 +48,8 @@ def:
            : $output TensorOf<[QI8]>:$input, (constOp
                               : $padding_op $padding_attr)),
           (XC_Pad3To4Op $input, (getPadValue $input)), [
-            (HasOnlyPadding3To4ForChannel $padding_attr),
+            (HasOnlyChannelPadding $padding_attr),
+            (Has3To4Channel $input, $output),
           ]>;
 }
 

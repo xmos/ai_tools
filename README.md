@@ -1,67 +1,76 @@
-AI/ML tools repository
-======================
-
-Installation
-------------
-`xmos-ai-tools` is available on [PyPi](https://pypi.org/project/xmos-ai-tools/).
-It includes:
-- the MLIR-based XCore optimizer(xformer) to optimize Tensorflow Lite models for XCore
-- the XCore tflm interpreter to run the transformed models on host
-- the XCore tflm interpreter to run the transformed models on an xcore device connected over usb (this requires an aisrv app server running on the xcore device)
-
-It can be installed with the following command:
-```shell
-pip install xmos-ai-tools
-```
-If you want to install the latest development version, use:
-```shell
-pip install xmos-ai-tools --pre
-```
-
-Installing `xmos-ai-tools` will make the `xcore-opt` binary available in your shell to use directly, or you can use the Python interface as detailed [here](https://pypi.org/project/xmos-ai-tools/).
-
-Building xmos-ai-tools
-----------------------
-Some dependent libraries are included as git submodules.
-These can be obtained by cloning this repository with the following commands:
-```shell
-git clone git@github.com:xmos/ai_tools.git
-cd ai_tools
-make submodule_update
-```
-
-Install at least version 15 of the XMOS tools from your preferred location and activate it by sourcing `SetEnv` in the installation root.
-
-[CMake 3.14](https://cmake.org/download/) or newer is required for building libraries and test firmware.
-To set up and activate the environment, simply run:
-```shell
-python -m venv ./venv
-. ./venv/bin/activate
-```
-
-Install the necessary python packages using `pip` (inside the venv):
-```shell
-pip install -r "./requirements.txt"
-```
-
-Apply our patch for tflite-micro, run:
-```shell
-(cd third_party/lib_tflite_micro && make patch)
-```
-
-Build the XCore host tflm interpreter libraries with default settings (see the [`Makefile`](Makefile) for more), run:
-```shell
-make build
-```
-
-After following the above instructions, to build xformer, please follow the build instructions [here](https://github.com/xmos/ai_tools/tree/develop/experimental/xformer#readme).
-
 Documentation
 -------------
 
-* [How to use the graph transformer](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/flow.rst)
-* [Transformation options](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/options.rst)
-* [Usage from Python](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/python.rst)
-* [Transforming Pytorch models](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/pytorch.rst)
-* [Introduction and background](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/xcore-ai-coding.rst)
-* [FAQ](https://github.com/xmos/ai_tools/blob/e5f6f46f78c10a4444aeb5e44e992a8fde5bb260/docs/rst/faq.rst)
+## Index
+- [How to use the graph transformer to run a sample model app on XCORE.AI](https://github.com/xmos/ai_tools/blob/develop/docs/rst/flow.rst)
+- [Usage from Python to run a sample model on host](https://github.com/xmos/ai_tools/blob/develop/docs/rst/python.rst)
+- [Graph transformer command-line options](https://github.com/xmos/ai_tools/blob/develop/docs/rst/options.rst)
+- [Transforming Pytorch models](https://github.com/xmos/ai_tools/blob/develop/docs/rst/pytorch.rst)
+- [FAQ](https://github.com/xmos/ai_tools/blob/develop/docs/rst/faq.rst)
+- [Changelog](https://github.com/xmos/ai_tools/blob/develop/docs/rst/changelog.rst)
+- Advanced topics
+	- [Detailed background to deploying on the edge using XCORE.AI](https://github.com/xmos/ai_tools/blob/develop/docs/rst/xcore-ai-coding.rst)
+	- [Building the graph transformer and xmos-ai-tools package](https://github.com/xmos/ai_tools/blob/develop/docs/rst/build-xformer.rst)
+
+
+## Quick intro to xmos-ai-tools
+
+``xmos-ai-tools`` is available on [PyPI](https://pypi.org/project/xmos-ai-tools/).
+It includes:
+
+* the MLIR-based XCore optimizer(xformer) to optimize Tensorflow Lite models for XCore
+* the XCore tflm interpreter to run the transformed models on host
+
+
+Perform the following steps once:
+
+* ``pip3 install xmos-ai-tools --upgrade``; use a virtual-environment of your choice.
+
+  Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest development version.
+
+```python
+from xmos_ai_tools import xformer as xf
+
+xf.convert("source model path", "converted model path", params=None)
+```
+where `params` is a dictionary of compiler flags and parameters and their values.
+
+For example:
+```python
+from xmos_ai_tools import xformer as xf
+
+xf.convert("example_int8_model.tflite", "xcore_optimised_int8_model.tflite", {
+    "xcore-thread-count": "5",
+})
+```
+
+To see all available parameters, call
+```python
+from xmos_ai_tools import xformer as xf
+
+xf.print_help()
+```
+This will print all options available to pass to xformer. To see hidden options, run `print_help(show_hidden=True)`
+
+To create a parameters file and a tflite model suitable for loading to flash, use the "xcore-flash-image-file" option.
+```python
+xf.convert("example_int8_model.tflite", "xcore_optimised_int8_flash_model.tflite", {
+    "xcore-flash-image-file ": "./xcore_params.params",
+})
+```
+
+
+### Run model on host interpreter
+
+```python
+from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
+
+ie = xcore_tflm_host_interpreter()
+ie.set_model(model_path='path_to_xcore_model', params_path='path_to_xcore_params')
+ie.set_tensor(ie.get_input_details()[0]['index'], value='input_data')
+ie.invoke()
+
+xformer_outputs = []
+for i in range(num_of_outputs):
+    xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]['index']))
+```

@@ -71,6 +71,9 @@ void MemoryPlan::build() {
     }
 
     for (Value result : op->getResults()) {
+      if (result.getType().isa<NoneType>()) {
+        continue;
+      }
       valueInfo.insert({result,
                         {valueInfo.size(), getAlignedValueSize(result),
                          isConstantOp, -1, -1}});

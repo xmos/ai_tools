@@ -250,6 +250,10 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             output_scales = interpreter.output_scales
             output_zero_points = interpreter.output_zero_points
         else:
+            # Resets variable tensors in the model.
+            # This should be called after invoking a model with stateful ops such as LSTM.
+            interpreter.reset_all_variables()
+
             for i in range(num_of_inputs):
                 interpreter.set_tensor(interpreter.get_input_details()[i]["index"], input_tensor[i])
             LOGGER.info("Invoking TFLite interpreter...")
@@ -272,6 +276,10 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             LOGGER.info("Invoking tflmc...")
             xformer_outputs = get_tflmc_outputs(tflmc_model_exe, input_tensor, outputs)
         else:
+            # Resets variable tensors in the model.
+            # This should be called after invoking a model with stateful ops such as LSTM.
+            ie.reset()
+
             LOGGER.info("Invoking XCORE interpreter...")
             for i in range(num_of_inputs):
                 ie.set_tensor(i, input_tensor[i])

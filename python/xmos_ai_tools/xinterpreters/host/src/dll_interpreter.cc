@@ -153,6 +153,8 @@ DLLEXPORT int get_output_tensor(inference_engine *ie, size_t tensor_index, void 
 
 DLLEXPORT int invoke(inference_engine *ie) { return interp_invoke_par_5(ie); }
 
+DLLEXPORT int reset(inference_engine *ie) { return interp_reset(ie); }
+
 //Unused
 // DLLEXPORT size_t get_tensor_details_buffer_sizes(inference_engine *ie,
 //                                        size_t tensor_index, size_t *dims,

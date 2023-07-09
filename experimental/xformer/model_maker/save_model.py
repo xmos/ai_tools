@@ -21,8 +21,8 @@ def representative_dataset_gen():
        resized_img = resized_img[tf.newaxis, :]
        yield [resized_img]
 
-model = tf.keras.applications.mobilenet_v2.MobileNetV2(input_shape=(HEIGHT, WIDTH, 3), alpha=1.0, include_top=False)
-#model = tf.keras.applications.MobileNetV3Small(input_shape=(HEIGHT, WIDTH, 3), alpha=1.0, minimalistic=True, include_top=True)
+#model = tf.keras.applications.mobilenet_v2.MobileNetV2(input_shape=(HEIGHT, WIDTH, 3), alpha=1.0, include_top=True)
+model = tf.keras.applications.MobileNetV3Small(input_shape=(HEIGHT, WIDTH, 3), alpha=1.0, minimalistic=True) #, include_top=True)
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
 
 

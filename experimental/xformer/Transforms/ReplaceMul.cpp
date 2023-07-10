@@ -8,6 +8,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+#include "tensorflow/compiler/mlir/lite/utils/validators.h"
 
 namespace mlir {
 namespace xcore {
@@ -35,11 +36,19 @@ struct ReplaceMulPattern : public OpRewritePattern<TFL::MulOp> {
                                 PatternRewriter &rewriter) const override {
 
     // Check for invalid types and return
-    // We only currently handle muls with a single element or 1x..xN as RHS and
-    // a tensor as LHS
-    auto shapeRHS = mulOp.getRhs().getType().cast<ShapedType>();
-    if (shapeRHS.getNumElements() !=
-        shapeRHS.getDimSize(shapeRHS.getRank() - 1)) {
+    // We only currently handle muls same as LHS or 1x..xN as RHS
+    // We do not handle cases where broadcast is required
+    if (mulOp.getLhs().getType().hasStaticShape() &&
+        mulOp.getRhs().getType().hasStaticShape() &&
+        mulOp.getRhs().getType().getNumElements() >
+            mulOp.getLhs().getType().getNumElements()) {
+      return failure();
+    }
+    if (failed(verifyCompatibleShape(mulOp.getLhs().getType().getShape(),
+                                     mulOp.getRhs().getType().getShape())) &&
+        mulOp.getRhs().getType().isa<RankedTensorType>() &&
+        !TFL::IsDimensionsDegenerateExceptLastOne(
+            mulOp.getRhs().getType().getShape())) {
       return failure();
     }
 

@@ -91,6 +91,9 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
             ctypes.c_int,
         ]
 
+        lib.reset.restype = ctypes.c_int
+        lib.reset.argtypes = [ctypes.c_void_p]
+
         lib.invoke.restype = ctypes.c_int
         lib.invoke.argtypes = [ctypes.c_void_p]
 
@@ -203,6 +206,11 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         l = len(tensor.tobytes())
         self._check_status(lib.get_input_tensor(self.obj, input_index, data_ptr, l))
         return tensor
+
+    def reset(self, model_index: int = 0) -> None:
+        """! Resets the model.
+        """
+        self._check_status(lib.reset(self.obj))
 
     def invoke(self, model_index: int = 0) -> None:
         """! Invoke the model and starting inference of the current

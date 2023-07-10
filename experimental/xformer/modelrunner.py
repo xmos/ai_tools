@@ -137,16 +137,16 @@ def test_inference(args):
             input_tensor = np.expand_dims(test_images[test], axis=0)
         else:
             print("Creating random input...")
-            k = []
-            n = -128
-            for j in range(0,np.prod(input_tensor_shape[i])):
-                if (n == 128):
-                    n = -128
-                k.append(n)
-                n = n + 1
-
             #print(k)
+            #k = np.load("1.npy")
             for i in range(num_of_inputs):
+                k = []
+                n = -128
+                for j in range(0, np.prod(input_tensor_shape[i])):
+                    if (n >= 128):
+                        n = -128
+                    k.append(n)
+                    n = n + 3
                 #input_tensor.append(np.array(255 * np.random.random_sample(input_tensor_shape[i]) - 128, dtype=input_tensor_type[i]))
                 #input_tensor.append(np.array(1 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
                 input_tensor.append(np.reshape(np.asarray(k, dtype=input_tensor_type[i]), input_tensor_shape[i]))

@@ -1,0 +1,44 @@
+name: xmos-ai-tools-build-xcore-archive
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Provide a valid branch or commit hash"
+        required: true
+
+# Save the tag version in an environment variable
+# The pretend version is used for the wheel as the
+# tag version might be a branch name or commit hash
+env:
+  TAG_VERSION: ${{ github.event.inputs.version }}
+  
+jobs:
+    manylinux-release-wheel:
+    name: Build and test release wheels for manylinux2014
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          ref: ${{ env.TAG_VERSION }}
+      - name: Build setup
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
+          make patch
+
+          wget https://www.xmos.ai/download/Tools-15---Linux-64(15_2_1)
+          tar xvf Tools-15---Linux-64_15_2_1.tgz
+          (cd XMOS/XTC/15.2.1 && source ./SetEnv)
+
+          mkdir -p build
+          cd build
+          cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+          make create_zip -j4
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: xcore-archive
+          path: $GITHUB_WORKSPACE/third_party/lib_tflite_micro/build/release_archive.zip

@@ -17,6 +17,10 @@ jobs:
     manylinux-release-wheel:
     name: Build release archive
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+      fail-fast: false
     steps:
       - uses: actions/checkout@v2
         with:

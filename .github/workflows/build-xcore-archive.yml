@@ -29,8 +29,12 @@ jobs:
             cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
             make patch
 
-            wget https://www.xmos.ai/download/Tools-15---Linux-64(15_2_1)
-            tar xvf Tools-15---Linux-64_15_2_1.tgz
+            curl 'https://www.xmos.ai/download/Tools-15---Linux-64(15_2_1)' \
+              -H 'Connection: keep-alive' \
+              -H 'Cookie: PHPSESSID=mp1gbv1s9tt5o10m5pgk1asl79; cookie_notice_accepted=true; wordpress_test_cookie=WP%20Cookie%20check; wordpress_logged_in_56a7451f4ba11fdb12be260915ffc9e6=deepak2427%40gmail.com%7C1689283519%7Ch9vkAQozkSkhFK1vx8xdZEYFTjanV7TsKrG6wGQbBtT%7C5ccd8dc2dd274c8a965a90317f65ff4c49221f35300abec57b103727dcf0ee28; cognidox_agreement=23' \
+              -H 'Referer: https://www.xmos.ai/download/Tools-15---Linux-64(15_2_1)' \
+              --compressed --output tools.tgz
+            tar xvf tools.tgz
             (cd XMOS/XTC/15.2.1 && source ./SetEnv)
 
             mkdir -p build

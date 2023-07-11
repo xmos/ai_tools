@@ -15,34 +15,30 @@ env:
   
 jobs:
     manylinux-release-wheel:
-    name: Build release archive
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8]
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-          fetch-depth: 0
-          ref: ${{ env.TAG_VERSION }}
-      - name: Build setup
-        shell: bash
-        run: |
-          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
-          make patch
+      name: Build release archive
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+          with:
+            submodules: recursive
+            fetch-depth: 0
+            ref: ${{ env.TAG_VERSION }}
+        - name: Build setup
+          shell: bash
+          run: |
+            cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
+            make patch
 
-          wget https://www.xmos.ai/download/Tools-15---Linux-64(15_2_1)
-          tar xvf Tools-15---Linux-64_15_2_1.tgz
-          (cd XMOS/XTC/15.2.1 && source ./SetEnv)
+            wget https://www.xmos.ai/download/Tools-15---Linux-64(15_2_1)
+            tar xvf Tools-15---Linux-64_15_2_1.tgz
+            (cd XMOS/XTC/15.2.1 && source ./SetEnv)
 
-          mkdir -p build
-          cd build
-          cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
-          make create_zip -j4
+            mkdir -p build
+            cd build
+            cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+            make create_zip -j4
 
-      - uses: actions/upload-artifact@v2
-        with:
-          name: xcore-archive
-          path: $GITHUB_WORKSPACE/third_party/lib_tflite_micro/build/release_archive.zip
+        - uses: actions/upload-artifact@v2
+          with:
+            name: xcore-archive
+            path: $GITHUB_WORKSPACE/third_party/lib_tflite_micro/build/release_archive.zip

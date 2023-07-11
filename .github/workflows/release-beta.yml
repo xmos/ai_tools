@@ -10,9 +10,45 @@ env:
   BAZEL_CACHE_URL: https://storage.googleapis.com/bazel_remote_cache_0/gh_actions
 
 jobs:
+  build-release-archive:
+    name: Build release archive
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          ref: ${{ env.TAG_VERSION }}
+      - name: Build setup
+        shell: bash
+        run: |
+          sudo apt-get -y -qq install libncurses5
+
+          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
+          make patch
+
+          wget -nv --header 'Cookie: PHPSESSID=mp1gbv1s9tt5o10m5pgk1asl79; cookie_notice_accepted=true; wordpress_test_cookie=WP%20Cookie%20check; wordpress_logged_in_56a7451f4ba11fdb12be260915ffc9e6=deepak2427%40gmail.com%7C1689283519%7Ch9vkAQozkSkhFK1vx8xdZEYFTjanV7TsKrG6wGQbBtT%7C5ccd8dc2dd274c8a965a90317f65ff4c49221f35300abec57b103727dcf0ee28; cognidox_agreement=23' https://www.xmos.ai/download/Tools-15---Linux-64\(15_2_1\).tgz -O tools.tgz
+          tar xf tools.tgz
+          cd XMOS/XTC/15.2.1
+          source ./SetEnv
+
+          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
+          mkdir -p build
+          cd build
+          cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+          make create_zip -j4
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: xcore-archive
+          path: third_party/lib_tflite_micro/build/*.zip
+
+
+
   macos-release-wheel:
     if: github.event.pull_request.merged == true
     name: Build release wheels for macOS
+    needs: [build-release-archive]
     runs-on: macos-latest
     strategy:
       matrix:
@@ -30,6 +66,16 @@ jobs:
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
+      - uses: actions/download-artifact@v2
+        with:
+          name: xcore-archive
+          path: python/xmos_ai_tools/xinterpreters/device
+      - name: Prepare release archive
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/device
+          unzip release_archive.zip
+          rm release_archive.zip
       - name: Build macOS wheels
         shell: bash
         run: |
@@ -63,6 +109,7 @@ jobs:
   macos-arm-release-wheel:
     if: github.event.pull_request.merged == true
     name: Build release wheels for macOS arm64
+    needs: [build-release-archive]
     runs-on: macos-11
     strategy:
       matrix:
@@ -80,6 +127,16 @@ jobs:
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
+      - uses: actions/download-artifact@v2
+        with:
+          name: xcore-archive
+          path: python/xmos_ai_tools/xinterpreters/device
+      - name: Prepare release archive
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/device
+          unzip release_archive.zip
+          rm release_archive.zip
       - name: Build macOS arm wheels
         env:
           CMAKE_ENABLE_DARWIN_TARGET_ARM64: 1
@@ -115,6 +172,7 @@ jobs:
   manylinux-release-wheel:
     if: github.event.pull_request.merged == true
     name: Build release wheels for manylinux2014
+    needs: [build-release-archive]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -132,6 +190,16 @@ jobs:
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
+      - uses: actions/download-artifact@v2
+        with:
+          name: xcore-archive
+          path: python/xmos_ai_tools/xinterpreters/device
+      - name: Prepare release archive
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/device
+          unzip release_archive.zip
+          rm release_archive.zip
       - name: Build manylinux2014 wheels
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
@@ -169,6 +237,7 @@ jobs:
   windows-release-wheel:
     if: github.event.pull_request.merged == true
     name: Build release wheels for windows
+    needs: [build-release-archive]
     runs-on: windows-2019
     strategy:
       matrix:
@@ -195,6 +264,16 @@ jobs:
         shell: pwsh
         run: |
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
+      - uses: actions/download-artifact@v2
+        with:
+          name: xcore-archive
+          path: python/xmos_ai_tools/xinterpreters/device
+      - name: Prepare release archive
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/device
+          7z x release_archive.zip
+          del release_archive.zip
       - name: Build xcore-opt and xtflm-interpreter
         shell: cmd
         run: |

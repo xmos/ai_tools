@@ -15,7 +15,7 @@ env:
   
 jobs:
     manylinux-release-wheel:
-    name: Build and test release wheels for manylinux2014
+    name: Build release archive
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

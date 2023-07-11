@@ -6,9 +6,10 @@
 import platform
 from typing import Union
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 from setuptools.command.install import install
 import pathlib
+import os
 
 # Find path to xcore-opt binary
 here = pathlib.Path(__file__).parent.resolve()
@@ -64,6 +65,15 @@ class install_plat_lib(install):
         self.install_lib = self.install_platlib
 
 
+# add device lib and headers as package data
+device_files = {root.replace(os.sep, '.'):
+                  ['*.h','*.a']
+                  for root, dirnames, filenames in os.walk('xmos_ai_tools/xinterpreters/device')
+                  if 'build' not in root}
+
+package_files = {"xmos_ai_tools.xinterpreters.host": XTFLM_INTERPRETER_LIBS}
+package_files.update(device_files)
+
 setup(
     name="xmos_ai_tools",
     use_scm_version={
@@ -98,9 +108,9 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires=">=3.7",
-    packages=find_packages(),
+    packages=find_namespace_packages(),
     install_requires=REQUIRED_PACKAGES,
-    package_data={"xmos_ai_tools.xinterpreters.host": XTFLM_INTERPRETER_LIBS},
+    package_data=package_files,
     data_files=[
         ("Scripts" if platform.system() == "Windows" else "bin", [XCOREOPT_BINARY])
     ],

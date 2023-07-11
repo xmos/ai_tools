@@ -54,6 +54,8 @@ target_sources(xtflm_python
   PRIVATE ${ALL_SOURCES}
 )
 
+list(APPEND ALL_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/src")
+
 target_include_directories(xtflm_python
   PRIVATE ${ALL_INCLUDES}
 )

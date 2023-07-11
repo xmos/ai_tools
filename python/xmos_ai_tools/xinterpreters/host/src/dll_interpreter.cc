@@ -2,7 +2,7 @@
 // XMOS Public License: Version 1
 //#include "tensorflow/lite/micro/all_ops_resolver.h"
 
-#include "lib_tflite_micro/api/inference_engine.h"
+#include "inference_engine.h"
 #include <cstdio>
 //#include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
 //#include "tensorflow/lite/micro/recording_micro_allocator.

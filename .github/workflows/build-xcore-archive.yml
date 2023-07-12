@@ -12,37 +12,39 @@ on:
 # tag version might be a branch name or commit hash
 env:
   TAG_VERSION: ${{ github.event.inputs.version }}
+  TOOLS_VERSION: 15.2.1
+  TOOLS_LINK: https://www.xmos.ai/download/Tools-15---Linux-64(15_2_1).tgz
   
 jobs:
-    manylinux-release-wheel:
-      name: Build release archive
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v2
-          with:
-            submodules: recursive
-            fetch-depth: 0
-            ref: ${{ env.TAG_VERSION }}
-        - name: Build setup
-          shell: bash
-          run: |
-            sudo apt-get -y -qq install libncurses5
+  build-release-archive:
+    name: Build release archive
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          ref: ${{ env.TAG_VERSION }}
+      - name: Build setup
+        shell: bash
+        run: |
+          sudo apt-get -y -qq install libncurses5
 
-            cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
-            make patch
+          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
+          make patch
 
-            wget -nv --header 'Cookie: PHPSESSID=mp1gbv1s9tt5o10m5pgk1asl79; cookie_notice_accepted=true; wordpress_test_cookie=WP%20Cookie%20check; wordpress_logged_in_56a7451f4ba11fdb12be260915ffc9e6=deepak2427%40gmail.com%7C1689283519%7Ch9vkAQozkSkhFK1vx8xdZEYFTjanV7TsKrG6wGQbBtT%7C5ccd8dc2dd274c8a965a90317f65ff4c49221f35300abec57b103727dcf0ee28; cognidox_agreement=23' https://www.xmos.ai/download/Tools-15---Linux-64\(15_2_1\).tgz -O tools.tgz
-            tar xf tools.tgz
-            cd XMOS/XTC/15.2.1
-            source ./SetEnv
+          wget -nv ${{ env.TOOLS_LINK }}?key=${{ secrets.TOOLS_KEY }} -O tools.tgz
+          tar xf tools.tgz
+          cd XMOS/XTC/${{ env.TOOLS_VERSION }}
+          source ./SetEnv
 
-            cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
-            mkdir -p build
-            cd build
-            cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
-            make create_zip -j4
+          cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
+          mkdir -p build
+          cd build
+          cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+          make create_zip -j4
 
-        - uses: actions/upload-artifact@v2
-          with:
-            name: xcore-archive
-            path: third_party/lib_tflite_micro/build/*.zip
+      - uses: actions/upload-artifact@v2
+        with:
+          name: xcore-archive
+          path: third_party/lib_tflite_micro/build/*.zip

@@ -29,7 +29,7 @@ jobs:
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
           make patch
 
-          wget -nv ${{ env.TOOLS_LINK }}?key=${{ secrets.TOOLS_KEY }} -O tools.tgz
+          wget -nv "${{ env.TOOLS_LINK }}?key=${{ secrets.TOOLS_KEY }}" -O tools.tgz
           tar xf tools.tgz
           cd XMOS/XTC/${{ env.TOOLS_VERSION }}
           source ./SetEnv

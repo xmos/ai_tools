@@ -67,10 +67,11 @@ class install_plat_lib(install):
 
 # add device lib and headers as package data
 device_files = {root.replace(os.sep, '.'):
-                  ['*.h','*.a']
-                  for root, dirnames, filenames in os.walk('xmos_ai_tools/xinterpreters/device')
-                  if 'build' not in root}
+                  ['*.h', '*.a', '*.make', '*.cmake']
+                  for root, d, f in os.walk(os.path.join("xmos_ai_tools", "xinterpreters", "device"))
+                }
 
+# add host interpreter lib
 package_files = {"xmos_ai_tools.xinterpreters.host": XTFLM_INTERPRETER_LIBS}
 package_files.update(device_files)
 

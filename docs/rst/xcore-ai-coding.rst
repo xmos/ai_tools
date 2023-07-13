@@ -304,12 +304,3 @@ situations where they can not be optimized. In particular:
 * For a convolution, execution is fast when the bias term is reasonably
   close to zero.
 
-Worked example
---------------
-
-Github contains two python notebooks that show the whole process:
-
-<../notebooks/keras_to_xcore.ipynb>
-and
-<../notebooks/optimise_for_xcore.ipynb>.
-

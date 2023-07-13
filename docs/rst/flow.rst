@@ -10,25 +10,41 @@ It includes:
 Initial steps
 -------------
 
-Perform the following steps once:
+Perform the following steps once
 
-* ``pip3 install xmos-ai-tools --upgrade``; use a virtual-environment of your choice. 
-  
+* Install xmos-ai-tools::
+
+    # Create a virtual environment with
+    python3 -m venv <name_of_virtualenv>
+
+    # Activate the virtual environment
+    # On Windows, run:
+    <name_of_virtualenv>\Scripts\activate.bat
+    # On Linux and MacOS, run:
+    source <name_of_virtualenv>/bin/activate
+
+    # Install xmos-ai-tools from PyPI
+    pip3 install xmos-ai-tools --upgrade
+
   Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest development version.
 
-  Installing ``xmos-ai-tools`` will make the xcore-opt binary available in your shell to use directly, or you can use the Python interface as detailed `here <https://github.com/xmos/ai_tools/blob/develop/docs/rst/python.rst>`_.
+  Installing ``xmos-ai-tools`` will make the xcore-opt binary available in your shell to use directly, or you can use the Python interface as detailed `here <develop/docs/rst/python.rst>`_.
 
-* Obtain the tool-chain from http://www.xmos.ai/tools and install it
-  according to the platform instructions.
+* Obtain the tool-chain from http://www.xmos.ai/tools and install it according to the platform instructions.
+
+* Setup ``XMOS_AITOOLSLIB_PATH`` environment variable. This is used to identify the installed location of xmos-ai-tools library and headers.
+
+  On Windows, run the following command::
+
+    FOR /F "delims=" %i IN ('python -c "import xmos_ai_tools.xinterpreters.device as device_lib; import os; print(os.path.dirname(device_lib.__file__))"') DO set XMOS_AITOOLSLIB_PATH=%i
+
+  On MacOS and Linux, run the following command::
+
+    export XMOS_AITOOLSLIB_PATH=$(python -c "import xmos_ai_tools.xinterpreters.device as device_lib; import os; print(os.path.dirname(device_lib.__file__))")
+
 
 * Create a sandbox (working directory)
 
-* In this sandbox, unpack lib_tflite_micro with ``git clone https://github.com/xmos/lib_tflite_micro``
-
-  Inside ``lib_tflite_micro``, execute::
-
-   git submodule update --init --recursive
-   make patch
 
 For each application program
 ----------------------------

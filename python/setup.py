@@ -10,6 +10,7 @@ from setuptools import setup, find_namespace_packages
 from setuptools.command.install import install
 import pathlib
 import os
+import subprocess
 
 # Find path to xcore-opt binary
 here = pathlib.Path(__file__).parent.resolve()
@@ -20,7 +21,11 @@ XCOREOPT_BINARY: Union[pathlib.Path, str] = pathlib.Path.joinpath(
 XCOREOPT_BINARY = str(XCOREOPT_BINARY) + exe_suffix
 
 # Get the long description from the README file
-LONG_README = (here.parent / "README.md").read_text(encoding="utf-8")
+LONG_README = (here / "README.md").read_text(encoding="utf-8")
+# Fix link in Readme to current commit hash
+def get_git_revision_hash() -> str:
+    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+LONG_README = LONG_README.replace("!!COMMIT_HASH!!", get_git_revision_hash())
 
 # xtflm_interpreter path and libs from lib_tflite_micro
 XTFLM_INTERPRETER_LIBS = [

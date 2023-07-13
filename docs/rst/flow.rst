@@ -16,7 +16,7 @@ Perform the following steps once:
   
   Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest development version.
 
-  Installing ``xmos-ai-tools`` will make the xcore-opt binary available in your shell to use directly, or you can use the Python interface as detailed `here <https://github.com/xmos/ai_tools/blob/develop/docs/rst/python.rst>`_.
+  Installing ``xmos-ai-tools`` will make the xcore-opt binary available in your shell to use directly, or you can use the Python interface as detailed `here <develop/docs/rst/python.rst>`_.
 
 * Obtain the tool-chain from http://www.xmos.ai/tools and install it
   according to the platform instructions.

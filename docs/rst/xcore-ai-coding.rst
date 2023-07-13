@@ -309,7 +309,7 @@ Worked example
 
 Github contains two python notebooks that show the whole process:
 
-<https://github.com/xmos/ai_tools/blob/develop/docs/keras_to_xcore.ipynb>
+<docs/keras_to_xcore.ipynb>
 and
-<https://github.com/xmos/ai_tools/blob/develop/docs/optimise_for_xcore.ipynb>.
+<docs/optimise_for_xcore.ipynb>.
 

@@ -2,7 +2,7 @@ Documentation
 -------------
 
 ## Index
-- [How to use the graph transformer to run a sample model app on XCORE.AI](https://github.com/xmos/ai_tools/blob/develop/docs/rst/flow.rst)
+- [How to use the graph transformer to run a sample model app on XCORE.AI](docs/rst/flow.rst)
 - [Usage from Python to run a sample model on host](https://github.com/xmos/ai_tools/blob/develop/docs/rst/python.rst)
 - [Graph transformer command-line options](https://github.com/xmos/ai_tools/blob/develop/docs/rst/options.rst)
 - [Transforming Pytorch models](https://github.com/xmos/ai_tools/blob/develop/docs/rst/pytorch.rst)

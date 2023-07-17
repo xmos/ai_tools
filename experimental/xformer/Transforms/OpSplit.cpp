@@ -717,7 +717,9 @@ void OpSplit::runOnOperation() {
     // Walk through each operation in the function
     func.walk([&](Operation *op) {
       // Ignore constant and quantized constant operations
-      if (!(isa<TFL::ConstOp>(op) || isa<TFL::QConstOp>(op))) {
+      if (!op->hasTrait<OpTrait::IsTerminator>() &&
+          !llvm::isa<TFL::NoValueOp, TFL::QConstOp, TFL::ConstOp,
+                     arith::ConstantOp>(op)) {
 
         // Helper function to compute the size of a tensor
         auto computeTensorSize = [](mlir::Type type) -> size_t {
@@ -769,8 +771,9 @@ void OpSplit::runOnOperation() {
             continue;
           }
           if (input.getDefiningOp() &&
-              (isa<TFL::ConstOp>(input.getDefiningOp()) ||
-               isa<TFL::QConstOp>(input.getDefiningOp()))) {
+              (input.getDefiningOp()->hasTrait<OpTrait::IsTerminator>() ||
+               llvm::isa<TFL::NoValueOp, TFL::QConstOp, TFL::ConstOp,
+                         arith::ConstantOp>(input.getDefiningOp()))) {
             continue;
           }
 
@@ -792,8 +795,9 @@ void OpSplit::runOnOperation() {
             continue;
           }
           if (output.getDefiningOp() &&
-              (isa<TFL::ConstOp>(output.getDefiningOp()) ||
-               isa<TFL::QConstOp>(output.getDefiningOp()))) {
+              (output.getDefiningOp()->hasTrait<OpTrait::IsTerminator>() ||
+               llvm::isa<TFL::NoValueOp, TFL::QConstOp, TFL::ConstOp,
+                         arith::ConstantOp>(output.getDefiningOp()))) {
             continue;
           }
           outputSize += computeTensorSize(output.getType());
@@ -878,7 +882,9 @@ void OpSplit::runOnOperation() {
   for (int i = 0; i < startOps.size(); ++i) {
     int k = 0;
     func.walk([&](Operation *op) {
-      if (!(isa<TFL::ConstOp>(op) || isa<TFL::QConstOp>(op))) {
+      if (!op->hasTrait<OpTrait::IsTerminator>() &&
+          !llvm::isa<TFL::NoValueOp, TFL::QConstOp, TFL::ConstOp,
+                     arith::ConstantOp>(op)) {
         if (k == startOps[i]) {
           // If op is strided slice, just raise it, do not split it
           if (isa<TFL::StridedSliceOp>(op)) {

@@ -31,6 +31,40 @@ struct ChannelwiseSplitConv2DOutputPattern
 
   LogicalResult matchAndRewrite(TFL::Conv2DOp op,
                                 PatternRewriter &rewriter) const override {
+    // Check for invalid types and return
+    // Input type must be QI8
+    auto inputElementType =
+        op.getInput().getType().cast<ShapedType>().getElementType();
+    if (!(inputElementType.isa<quant::QuantizedType>() &&
+          inputElementType.cast<quant::QuantizedType>().isSigned() &&
+          inputElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    // Filter type must be
+    auto filterElementType =
+        op.getFilter().getType().cast<ShapedType>().getElementType();
+    if (!(filterElementType.isa<quant::QuantizedType>() &&
+          filterElementType.cast<quant::QuantizedType>().isSigned() &&
+          filterElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    // If bias exists, it must be QI32
+    if (!op.getBias().getType().isa<NoneType>()) {
+      auto biasElementType =
+          op.getBias().getType().cast<ShapedType>().getElementType();
+
+      if (!(biasElementType.isa<quant::QuantizedType>() &&
+            biasElementType.cast<quant::QuantizedType>().isSigned() &&
+            biasElementType.cast<quant::QuantizedType>()
+                    .getStorageTypeIntegralWidth() == 32)) {
+        return failure();
+      }
+    }
+
     // Lamdba to split filter or bias based on whether it is per channelwise
     // quantization.
     // If per channelwise quantization, we have to split the
@@ -411,6 +445,39 @@ struct PadTo4Conv2DInputPattern : public OpRewritePattern<TFL::Conv2DOp> {
   LogicalResult matchAndRewrite(TFL::Conv2DOp conv2DOp,
                                 PatternRewriter &rewriter) const override {
     // Check for invalid types and return
+    // Input type must be QI8
+    auto inputElementType =
+        conv2DOp.getInput().getType().cast<ShapedType>().getElementType();
+    if (!(inputElementType.isa<quant::QuantizedType>() &&
+          inputElementType.cast<quant::QuantizedType>().isSigned() &&
+          inputElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    // Filter type must be
+    auto filterElementType =
+        conv2DOp.getFilter().getType().cast<ShapedType>().getElementType();
+    if (!(filterElementType.isa<quant::QuantizedType>() &&
+          filterElementType.cast<quant::QuantizedType>().isSigned() &&
+          filterElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    // If bias exists, it must be QI32
+    if (!conv2DOp.getBias().getType().isa<NoneType>()) {
+      auto biasElementType =
+          conv2DOp.getBias().getType().cast<ShapedType>().getElementType();
+
+      if (!(biasElementType.isa<quant::QuantizedType>() &&
+            biasElementType.cast<quant::QuantizedType>().isSigned() &&
+            biasElementType.cast<quant::QuantizedType>()
+                    .getStorageTypeIntegralWidth() == 32)) {
+        return failure();
+      }
+    }
+
     // Align depth up to multiple of four
     auto inputDepth =
         conv2DOp.getInput().getType().cast<ShapedType>().getDimSize(3);
@@ -443,6 +510,39 @@ struct PadTo4Conv2DOutputPattern : public OpRewritePattern<TFL::Conv2DOp> {
   LogicalResult matchAndRewrite(TFL::Conv2DOp conv2DOp,
                                 PatternRewriter &rewriter) const override {
     // Check for invalid types and return
+    // Input type must be QI8
+    auto inputElementType =
+        conv2DOp.getInput().getType().cast<ShapedType>().getElementType();
+    if (!(inputElementType.isa<quant::QuantizedType>() &&
+          inputElementType.cast<quant::QuantizedType>().isSigned() &&
+          inputElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    // Filter type must be
+    auto filterElementType =
+        conv2DOp.getFilter().getType().cast<ShapedType>().getElementType();
+    if (!(filterElementType.isa<quant::QuantizedType>() &&
+          filterElementType.cast<quant::QuantizedType>().isSigned() &&
+          filterElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    // If bias exists, it must be QI32
+    if (!conv2DOp.getBias().getType().isa<NoneType>()) {
+      auto biasElementType =
+          conv2DOp.getBias().getType().cast<ShapedType>().getElementType();
+
+      if (!(biasElementType.isa<quant::QuantizedType>() &&
+            biasElementType.cast<quant::QuantizedType>().isSigned() &&
+            biasElementType.cast<quant::QuantizedType>()
+                    .getStorageTypeIntegralWidth() == 32)) {
+        return failure();
+      }
+    }
+
     // Align depth up to multiple of four
     auto outputShape = conv2DOp.getOutput()
                            .getType()
@@ -484,6 +584,39 @@ struct PadTo4DepthwiseConv2DPattern
   LogicalResult matchAndRewrite(TFL::DepthwiseConv2DOp dConv2DOp,
                                 PatternRewriter &rewriter) const override {
     // Check for invalid types and return
+    // Input type must be QI8
+    auto inputElementType =
+        dConv2DOp.getInput().getType().cast<ShapedType>().getElementType();
+    if (!(inputElementType.isa<quant::QuantizedType>() &&
+          inputElementType.cast<quant::QuantizedType>().isSigned() &&
+          inputElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    // Filter type must be
+    auto filterElementType =
+        dConv2DOp.getFilter().getType().cast<ShapedType>().getElementType();
+    if (!(filterElementType.isa<quant::QuantizedType>() &&
+          filterElementType.cast<quant::QuantizedType>().isSigned() &&
+          filterElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    // If bias exists, it must be QI32
+    if (!dConv2DOp.getBias().getType().isa<NoneType>()) {
+      auto biasElementType =
+          dConv2DOp.getBias().getType().cast<ShapedType>().getElementType();
+
+      if (!(biasElementType.isa<quant::QuantizedType>() &&
+            biasElementType.cast<quant::QuantizedType>().isSigned() &&
+            biasElementType.cast<quant::QuantizedType>()
+                    .getStorageTypeIntegralWidth() == 32)) {
+        return failure();
+      }
+    }
+
     // Align depth up to multiple of four
     auto inputDepth =
         dConv2DOp.getInput().getType().cast<ShapedType>().getDimSize(3);

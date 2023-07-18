@@ -1,4 +1,7 @@
 Converting models from Pytorch
 ==============================
 
-* `A Notebook example for converting PyTorch to Tensorflow Lite <https://github.com/xmos/ai_tools/blob/develop/docs/notebooks/pytorch_to_tflite/pytorch_to_tflite.ipynb>`_
+* Notebook examples for converting MobilenetV2 from PyTorch to Tensorflow Lite 
+
+  * `PyTorch to ONNX to TensorFlow Lite (Recommended Approach) <../notebooks/pytorch_to_tflite/mobilenet/pytorch_to_tflite.ipynb>`_
+  * `PyTorch to Keras to TensorFlow Lite <../notebooks/pytorch_to_tflite/mobilenet/pytorch2keras.ipynb>`_

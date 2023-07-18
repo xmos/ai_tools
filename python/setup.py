@@ -6,9 +6,11 @@
 import platform
 from typing import Union
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 from setuptools.command.install import install
 import pathlib
+import os
+import subprocess
 
 # Find path to xcore-opt binary
 here = pathlib.Path(__file__).parent.resolve()
@@ -19,7 +21,11 @@ XCOREOPT_BINARY: Union[pathlib.Path, str] = pathlib.Path.joinpath(
 XCOREOPT_BINARY = str(XCOREOPT_BINARY) + exe_suffix
 
 # Get the long description from the README file
-LONG_README = (here.parent / "README.md").read_text(encoding="utf-8")
+LONG_README = (here / "README.md").read_text(encoding="utf-8")
+# Fix link in Readme to current commit hash
+def get_git_revision_hash() -> str:
+    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+LONG_README = LONG_README.replace("!!COMMIT_HASH!!", get_git_revision_hash())
 
 # xtflm_interpreter path and libs from lib_tflite_micro
 XTFLM_INTERPRETER_LIBS = [
@@ -64,6 +70,16 @@ class install_plat_lib(install):
         self.install_lib = self.install_platlib
 
 
+# add device lib and headers as package data
+device_files = {root.replace(os.sep, '.'):
+                  ['*.h', '*.a', '*.make', '*.cmake']
+                  for root, d, f in os.walk(os.path.join("xmos_ai_tools", "xinterpreters", "device"))
+                }
+
+# add host interpreter lib
+package_files = {"xmos_ai_tools.xinterpreters.host": XTFLM_INTERPRETER_LIBS}
+package_files.update(device_files)
+
 setup(
     name="xmos_ai_tools",
     use_scm_version={
@@ -98,9 +114,9 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires=">=3.7",
-    packages=find_packages(),
+    packages=find_namespace_packages(),
     install_requires=REQUIRED_PACKAGES,
-    package_data={"xmos_ai_tools.xinterpreters.host": XTFLM_INTERPRETER_LIBS},
+    package_data=package_files,
     data_files=[
         ("Scripts" if platform.system() == "Windows" else "bin", [XCOREOPT_BINARY])
     ],

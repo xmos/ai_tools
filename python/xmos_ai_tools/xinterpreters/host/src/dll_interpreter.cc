@@ -2,7 +2,7 @@
 // XMOS Public License: Version 1
 //#include "tensorflow/lite/micro/all_ops_resolver.h"
 
-#include "lib_tflite_micro/api/inference_engine.h"
+#include "inference_engine.h"
 #include <cstdio>
 //#include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
 //#include "tensorflow/lite/micro/recording_micro_allocator.
@@ -81,6 +81,10 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
   resolver->AddTransposeConv();
   resolver->AddSum();
   resolver->AddAveragePool2D();
+  resolver->AddUnidirectionalSequenceLSTM();
+  resolver->AddIf();
+  resolver->AddWhile();
+  resolver->AddCallOnce();
   tflite::ops::micro::xcore::RegisterXCOps(resolver);
   add_lib_vision_ops(resolver);
 
@@ -148,6 +152,8 @@ DLLEXPORT int get_output_tensor(inference_engine *ie, size_t tensor_index, void 
 }
 
 DLLEXPORT int invoke(inference_engine *ie) { return interp_invoke_par_5(ie); }
+
+DLLEXPORT int reset(inference_engine *ie) { return interp_reset(ie); }
 
 //Unused
 // DLLEXPORT size_t get_tensor_details_buffer_sizes(inference_engine *ie,

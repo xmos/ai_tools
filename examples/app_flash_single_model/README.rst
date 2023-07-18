@@ -1,5 +1,5 @@
-Example without flash
-=====================
+Example with flash
+==================
 
 Please consult XXX on how to install the tools
 

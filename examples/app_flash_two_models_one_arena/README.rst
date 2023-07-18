@@ -1,7 +1,9 @@
-Example without flash
-=====================
+Example with two models sharing scratch memory
+==============================================
 
 Please consult XXX on how to install the tools
+
+This is an example with two networks, but these two share a scratch memory.
 
 The differences with the two_arena example are minimal:
 
@@ -41,16 +43,5 @@ This should again print::
   No human (9%)
   Human (98%)
 
-The difference with the version in ``../app_no_flash`` is that we have sent
-the learned parameters into flash memory; this has significantly reduced
-the size of the model. We can see this by looking at the size of the files::
-
-  % ls -l model.*
-  -rw-r--r--  1 henk  staff  224576 18 Jul 11:07 model.params
-  -rw-r--r--  1 henk  staff   20032 18 Jul 11:07 model.tflite
-
-The model.params file needs to be made into a flash image, which is what
-the python command does. Finally, before we execute it, we must program the
-flash with the learned parameters, which is what ``xflash`` is for.
 
 

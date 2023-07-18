@@ -3,7 +3,7 @@ APP_NAME =
 
 APP_FLAGS  = -report \
 -O3 -mcmodel=large -fxscope -Wno-xcore-fptrgroup \
--DTFLMC_PRINT_INPUT_TENSORS \
+-DSHARED_TENSOR_ARENA \
 -g \
 -lquadflash
 

@@ -3,7 +3,7 @@ Documentation
 
 ## Index
 - [Run models on XCORE.AI](docs/rst/flow.rst)
-- [Run models via Python on host](#Using-xmos-ai-tools-from-Python)
+- [Run models via Python on host](#using-xmos-ai-tools-from-python)
 - [Examples](examples/README.rst)
 - [Graph transformer command-line options](docs/rst/options.rst)
 - [Transforming Pytorch models](docs/rst/pytorch.rst)
@@ -40,6 +40,7 @@ pip3 install xmos-ai-tools --upgrade
 ```
 Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest development version.
 
+<a name="using-xmos-ai-tools-from-python"></a>
 ## Using xmos-ai-tools from Python
 
 ```python

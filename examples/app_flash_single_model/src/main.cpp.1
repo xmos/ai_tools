@@ -40,7 +40,6 @@ void nn_thread(chanend_t x) {
     chan_out_word(x, FLASH_SERVER_QUIT);
 }
 
-#if 1
 #define NNETWORKS 1
 
 int main(void) {
@@ -55,4 +54,3 @@ int main(void) {
         PJOB(nn_thread,  (c_flash.end_b))
         );
 }
-#endif

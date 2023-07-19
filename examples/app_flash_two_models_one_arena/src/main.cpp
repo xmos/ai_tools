@@ -37,8 +37,9 @@ void nn_thread(chanend_t flash1, chanend_t flash2) {
     model1_invoke();
     printf("%s (%d%%)\n", outputs1[0] > outputs1[1] ? "No human" : "Human", (outputs1[1]+128)*100/255);
 
-    // Note - you must initialise the model before INVOKE
-    // When using a shared tensor arena
+    // Note - when using a shared tensor arena,
+    // you must initialise the model before INVOKE
+    // when switching from one model to the other.
     model2_init((void *)flash2);
     int8_t *inputs2 = (int8_t *)model2_input_ptr(0);
     int8_t *outputs2 = (int8_t *)model2_output_ptr(0);

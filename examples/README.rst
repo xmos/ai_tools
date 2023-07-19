@@ -4,10 +4,10 @@ These are 5 example models; in order of complexity
   fastest but most pressure on internal memory.
 
 * ``app_flash_single_model`` a single model, with learned parameters in
-  flash memory. This removes a lot of pressure on internal memory
+  flash memory. This removes a lot of pressure on internal memory.
 
 * ``app_flash_two_models`` two models, with learned parameters in flash memory.
 
 * ``app_flash_two_models_one_arena`` two models, with learned parameters in
-  flash memory. The models share a single arena (scratch memory).
+  flash memory. The models share a single tensor arena (scratch memory).
 

@@ -1,7 +1,7 @@
 Example with two models and learned parameters in flash
 ====================================================
 
-Please consult `here <../docs/rst/flow.rst>`_ on how to install the tools.
+Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 
 This example adds a second model. With a second model, we need to make sure
 that we give each model a separate prefix, and we need to merge the two

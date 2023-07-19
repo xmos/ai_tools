@@ -1,7 +1,7 @@
 Example with flash
 ==================
 
-Please consult `here <../docs/rst/flow.rst>`_ on how to install the tools.
+Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 
 In order to compile and run this example follow these steps::
 

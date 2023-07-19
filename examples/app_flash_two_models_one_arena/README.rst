@@ -1,7 +1,7 @@
 Example with two models sharing scratch memory
 ==============================================
 
-Please consult `here <../docs/rst/flow.rst>`_ on how to install the tools.
+Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 
 This is an example with two networks, but these two share a scratch memory.
 

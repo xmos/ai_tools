@@ -20,13 +20,14 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createOptimizeTransposePass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
+  if (opSplitTensorArenaOption) {
+    pm.addPass(createOpSplitPass());
+  }
   pm.addPass(createApplyTFLPatternsPass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createOptimizeConv2DPass());
   pm.addPass(createApplyTFLPatternsPass());
-  if (opSplitTensorArenaOption) {
-    pm.addPass(createOpSplitPass());
-  }
+
   // XC passes
   pm.addPass(createReplaceAddPass());
   pm.addPass(createReplaceMulPass());

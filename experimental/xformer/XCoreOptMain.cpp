@@ -30,20 +30,25 @@ using namespace mlir;
 namespace mlir {
 namespace xcore {
 
+// Mark all our options with this category, everything else (except for -version
+// and -help) will be hidden.
+static cl::OptionCategory XformerCategory("Xformer options");
+
 cl::opt<unsigned> threadCountOption("xcore-thread-count",
-                                    cl::desc("Thread count"), cl::init(1));
+                                    cl::desc("Thread count"), cl::init(1),
+                                    cl::cat(XformerCategory));
 
 cl::opt<std::string> flashImageFilenameOption(
     "xcore-flash-image-file",
     cl::desc("The file to write the xcore flash image."),
-    cl::value_desc("filename"), cl::init(""));
+    cl::value_desc("filename"), cl::init(""), cl::cat(XformerCategory));
 
 cl::opt<unsigned> loadExternallyIfLargerOption(
     "xcore-load-externally-if-larger",
     cl::desc("Load constants externally if larger than given limit in bytes "
              "(default = 96 bytes). Cannot be specified when "
              "xcore-flash-image-file is not provided."),
-    cl::init(96));
+    cl::init(96), cl::cat(XformerCategory), cl::Hidden);
 
 // This option is to provide an error threshold.
 // The maximum average error between the reference and quantised
@@ -58,13 +63,13 @@ cl::opt<double> convQuantErrorThresholdOption(
     cl::desc("Defaults to TFL Conv ops if channel quantization error is more "
              "than the provided threshold "
              "(default = 0.25)."),
-    cl::init(0.25));
+    cl::init(0.25), cl::cat(XformerCategory));
 
 cl::opt<bool> convForceErrorCheckOption(
     "xcore-force-conv-err-full-check",
     cl::desc("Enable higher precision(more time-consuming) check for "
              "calculating channel quantization error."),
-    cl::init(false));
+    cl::init(false), cl::cat(XformerCategory), cl::Hidden);
 
 cl::opt<unsigned> convMultiplierFactorOption(
     "xcore-conv-multiplier-factor",
@@ -73,65 +78,66 @@ cl::opt<unsigned> convMultiplierFactorOption(
              "the multipliers to be clamped to a specified multiple of the "
              "minimum multiplier."
              "(default = UINT32_MAX)."),
-    cl::init(UINT32_MAX));
+    cl::init(UINT32_MAX), cl::cat(XformerCategory), cl::Hidden);
 
 cl::opt<bool> opSplitTensorArenaOption(
     "xcore-op-split-tensor-arena",
     cl::desc("Enable prototype op split to reduce tensor arena size."),
-    cl::init(false));
+    cl::init(false), cl::cat(XformerCategory));
 
 cl::opt<unsigned>
     opSplitTargetSizeOption("xcore-op-split-target-size",
                             cl::desc("Op split target max tensor arena size."),
-                            cl::init(700000));
+                            cl::init(700000), cl::cat(XformerCategory));
 
 cl::list<unsigned>
     opSplitBottomOpsOption("xcore-op-split-bottom-op",
                            cl::desc("Manual override Op split, bottom op."),
-                           cl::CommaSeparated);
+                           cl::CommaSeparated, cl::cat(XformerCategory));
 
 cl::list<unsigned>
     opSplitTopOpsOption("xcore-op-split-top-op",
                         cl::desc("Manual override Op split, top op."),
-                        cl::CommaSeparated);
+                        cl::CommaSeparated, cl::cat(XformerCategory));
 
 cl::list<unsigned> opSplitNumSplitsOption(
     "xcore-op-split-num-splits",
-    cl::desc("Manual override Op split, number of splits."),
-    cl::CommaSeparated);
+    cl::desc("Manual override Op split, number of splits."), cl::CommaSeparated,
+    cl::cat(XformerCategory));
 
 cl::opt<bool> allowInputModificationOption(
     "xcore-allow-input-modification",
     cl::desc("Allow the compiler to modify input tensor for optimizations."),
-    cl::init(false));
+    cl::init(false), cl::cat(XformerCategory), cl::Hidden);
 
 cl::opt<bool> convDebugOption("xcore-conv-debug",
                               cl::desc("Enable conv debug prints."),
-                              cl::init(false));
+                              cl::init(false), cl::cat(XformerCategory),
+                              cl::Hidden);
 
 cl::opt<bool> overlapOption("xcore-overlap", cl::desc("Overlap buffers."),
-                            cl::init(true));
+                            cl::init(true), cl::cat(XformerCategory));
 
 cl::opt<bool> overlapConvOption("xcore-overlap-conv",
-                                cl::desc("Overlap conv also."),
-                                cl::init(false));
+                                cl::desc("Overlap conv also."), cl::init(false),
+                                cl::cat(XformerCategory), cl::Hidden);
 
 cl::opt<bool> offlineOffsetsOption("xcore-offline-offsets",
-                                   cl::desc("Offline offsets"),
-                                   cl::init(false));
+                                   cl::desc("Offline offsets"), cl::init(false),
+                                   cl::cat(XformerCategory));
 
 cl::opt<unsigned> convChannelwiseSplitSizeOption(
     "xcore-conv-channelwise-split-size",
     cl::desc(
         "Specify channelwise split size for convolutions (default = 100000)."),
-    cl::init(100000));
+    cl::init(100000), cl::cat(XformerCategory), cl::Hidden);
 
 } // namespace xcore
 } // namespace mlir
 
-LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
-                              const OwningOpRef<ModuleOp> &mod,
-                              MLIRContext *context) {
+static LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
+                                     const OwningOpRef<ModuleOp> &mod,
+                                     MLIRContext *context) {
   auto module = mod.get();
   PassManager pm(module->getName(), mlir::OpPassManager::Nesting::Implicit);
   applyPassManagerCLOptions(pm);
@@ -158,9 +164,10 @@ LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
   return success();
 }
 
-LogicalResult isCompatibleVersion(cl::opt<std::string> &version,
-                                  int32_t majorVersion, int32_t minorVersion,
-                                  int32_t patchVersion) {
+static LogicalResult isCompatibleVersion(cl::opt<std::string> &version,
+                                         int32_t majorVersion,
+                                         int32_t minorVersion,
+                                         int32_t patchVersion) {
   if (!version.empty()) {
     SmallVector<StringRef> partsStr;
     llvm::SplitString(version, partsStr, ".");
@@ -188,15 +195,25 @@ LogicalResult isCompatibleVersion(cl::opt<std::string> &version,
   return success();
 }
 
+static void PrintVersion(raw_ostream &OS) {
+  OS << xformer::majorVersion << "." << xformer::minorVersion << "."
+     << xformer::patchVersion << '\n';
+}
+
 int main(int argc, char **argv) {
   llvm::InitLLVM y(argc, argv);
+
+  // Override the default '-h' and use the default PrintHelpMessage()
+  static llvm::cl::opt<bool> help("h", llvm::cl::desc("Alias for -help"),
+                                  llvm::cl::Hidden);
 
   static cl::opt<std::string> inputFilename(cl::Positional,
                                             cl::desc("<TFLite FlatBuffer>"));
   static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
                                              cl::value_desc("filename"));
   static cl::opt<bool> mlirIOEnabled(
-      "mlir-io", cl::desc("Enable MLIR input and output"), cl::init(false));
+      "mlir-io", cl::desc("Enable MLIR input and output"), cl::init(false),
+      cl::cat(mlir::xcore::XformerCategory), cl::Hidden);
   static cl::opt<bool> verifyDiagnosticsEnabled(
       "verify-diagnostics",
       cl::desc("Check that emitted diagnostics match "
@@ -204,35 +221,40 @@ int main(int argc, char **argv) {
       cl::init(false));
   static cl::opt<bool> dontMinifyEnabled(
       "xcore-dont-minify",
-      cl::desc("Do not strip debug info and minify the model"),
-      cl::init(false));
+      cl::desc("Do not strip debug info and minify the model"), cl::init(false),
+      cl::cat(mlir::xcore::XformerCategory), cl::Hidden);
   static cl::opt<std::string> tflmcPrefixOption(
       "xcore-naming-prefix",
       cl::desc("Specify naming prefix(also \"--xp\") for compiled model"
                "(default = \"model_\")."),
-      cl::init("model_"));
+      cl::init("model_"), cl::cat(mlir::xcore::XformerCategory));
   static cl::alias aliasTflmcPrefixOption(
       "xp", cl::desc("Alias for --xcore-naming-prefix"),
-      cl::aliasopt(tflmcPrefixOption));
+      cl::aliasopt(tflmcPrefixOption), cl::cat(mlir::xcore::XformerCategory));
   static cl::opt<bool> tflmcPrintEnabled(
       "xcore-tflmc-print", cl::desc("Print out memory allocation plan"),
-      cl::init(false));
+      cl::init(false), cl::cat(mlir::xcore::XformerCategory));
   static cl::opt<std::string> versionLibTfliteMicro(
       "xcore-compatible-with-lib-tflite-micro",
       cl::desc("Check if lib_tflite_micro version is compatible"), cl::init(""),
-      cl::Hidden);
+      cl::cat(mlir::xcore::XformerCategory), cl::Hidden);
   static cl::opt<std::string> versionLibNN(
       "xcore-compatible-with-lib-nn",
       cl::desc("Check if lib_nn version is compatible"), cl::init(""),
-      cl::Hidden);
+      cl::cat(mlir::xcore::XformerCategory), cl::Hidden);
 
   // Register any command line options.
-  registerAsmPrinterCLOptions();
-  registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
+  cl::SetVersionPrinter(PrintVersion);
+  cl::HideUnrelatedOptions(mlir::xcore::XformerCategory);
+  cl::ParseCommandLineOptions(argc, argv);
+  if (help) {
+    llvm::cl::PrintHelpMessage();
+    return 0;
+  }
+
   xcore::registerXCorePassPipeline();
   PassPipelineCLParser passPipeline("", "Compiler passes to run");
-  cl::ParseCommandLineOptions(argc, argv);
 
   // Initialize dialects.
   MLIRContext context;

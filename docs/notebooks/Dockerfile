@@ -1,4 +1,4 @@
-FROM jupyter/base-notebook:2023-01-30
+FROM --platform=linux/amd64 jupyter/base-notebook:2023-01-30
 
 RUN pip install --upgrade pip
 

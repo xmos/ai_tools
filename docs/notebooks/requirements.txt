@@ -1,0 +1,8 @@
+jupyterlab
+torch
+torchvision
+onnx
+onnxruntime
+tensorflow
+onnx2tf
+sng4onnx

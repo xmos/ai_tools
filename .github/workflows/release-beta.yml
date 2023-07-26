@@ -82,7 +82,7 @@ jobs:
         shell: bash
         run: |
           python --version
-          python -m pip install delocate wheel setuptools setuptools-scm numpy six --no-cache-dir
+          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
           make patch
@@ -100,9 +100,6 @@ jobs:
           
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat macosx_10_14_x86_64
-          for f in dist/*.whl; do
-            delocate-wheel -w wheelhouse $f
-          done
           
       - uses: actions/upload-artifact@v3
         with:
@@ -148,7 +145,7 @@ jobs:
         shell: bash
         run: |
           python --version
-          python -m pip install delocate wheel setuptools setuptools-scm numpy six --no-cache-dir
+          python -m pip install wheel setuptools setuptools-scm numpy six --no-cache-dir
           
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
           make patch
@@ -166,9 +163,6 @@ jobs:
           
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat-name macosx_11_0_arm64
-          for f in dist/*.whl; do
-            delocate-wheel -w wheelhouse $f
-          done
           
       - uses: actions/upload-artifact@v3
         with:

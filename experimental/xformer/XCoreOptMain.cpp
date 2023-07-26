@@ -245,6 +245,8 @@ int main(int argc, char **argv) {
 
   // Register any command line options.
   registerPassManagerCLOptions();
+  xcore::registerXCorePassPipeline();
+  PassPipelineCLParser passPipeline("", "Compiler passes to run");
   cl::SetVersionPrinter(PrintVersion);
   cl::HideUnrelatedOptions(mlir::xcore::XformerCategory);
   cl::ParseCommandLineOptions(argc, argv);
@@ -252,9 +254,6 @@ int main(int argc, char **argv) {
     llvm::cl::PrintHelpMessage();
     return 0;
   }
-
-  xcore::registerXCorePassPipeline();
-  PassPipelineCLParser passPipeline("", "Compiler passes to run");
 
   // Initialize dialects.
   MLIRContext context;

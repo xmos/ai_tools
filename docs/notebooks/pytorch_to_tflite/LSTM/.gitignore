@@ -1,7 +1,7 @@
 # Ignore files created by notebook script
 *.onnx
 *.tflite
-param_replacement
+param_replacement.json
 handwriting.tf
 mnist
 mnist.tf

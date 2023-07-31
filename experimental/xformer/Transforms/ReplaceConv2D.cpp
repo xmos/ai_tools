@@ -192,16 +192,15 @@ void ReplaceConv2D::runOnOperation() {
   // thread count
   // This is stored as an attribute in the module and pushed as metadata into
   // the flatbuffer
-  // TODO: When we multithread other ops, this can be moved into its own pass
-  int requiredThreadCount = 1;
+  unsigned int requiredThreadCount = 1;
+  auto module = func->getParentOfType<ModuleOp>();
+  if (auto attr = module->getAttr(xcRequiredThreadCountAttrName)) {
+    requiredThreadCount = attr.cast<mlir::IntegerAttr>().getInt();
+  }
   func.walk([&](Conv2DV2Op op) {
-    int threadCount = op.getThreadCount();
-    if (threadCount > requiredThreadCount) {
-      requiredThreadCount = threadCount;
-    }
+    requiredThreadCount = std::max(requiredThreadCount, op.getThreadCount());
   });
   // Store as an attribute in the module
-  auto module = func->getParentOfType<ModuleOp>();
   OpBuilder builder(func);
   module->setAttr(xcRequiredThreadCountAttrName,
                   builder.getI32IntegerAttr(requiredThreadCount));

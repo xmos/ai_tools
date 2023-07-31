@@ -207,7 +207,14 @@ def XC_LookupOp : XC_Op<"lookup", [Pure]> {
 
   let description = [{Lookup table op.}];
 
-  let arguments = (ins TensorOf<[QI8]> : $input, TensorOf<[I8]> : $lut);
+  let arguments = (ins
+    TensorOf<[QI8]> : $input,
+    TensorOf<[I8]> : $lut
+
+    // I32Attr:$thread_count,
+    // I32ArrayAttr:$start,
+    // I32ArrayAttr:$count
+  );
 
   let results = (outs TensorOf<[QI8]> : $output);
 }

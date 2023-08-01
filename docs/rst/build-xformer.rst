@@ -11,7 +11,7 @@ Building xmos-ai-tools
 * Install version 15 or later of the XMOS tools from your preferred location and activate it by sourcing ``SetEnv`` in the installation root.
 
 
-* `CMake 3.14 <https://cmake.org/download/>`_ or newer is required for building libraries and test firmware.
+* `CMake 3.23 <https://cmake.org/download/>`_ or newer is required for building libraries and test firmware.
 
 * To set up and activate the environment, simply run::
     python -m venv ./venv

@@ -19,8 +19,4 @@ RUN pip install --no-cache-dir onnx-graphsurgeon  && \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}"
 
-# copy kaggle api credentials
-# install all python dependencies
-COPY --chown=${NB_UID}:${NB_GID} --chmod=600 ./kaggle.json /home/${NB_USER}/.kaggle/kaggle.json
-
 ENV JUPYTER_ENABLE_LAB=yes

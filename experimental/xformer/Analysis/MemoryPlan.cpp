@@ -4,6 +4,7 @@
 #include "Analysis/MemoryPlan.h"
 #include "IR/XCoreOps.h"
 #include "Transforms/Options.h"
+#include "Utils/Util.h"
 
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
@@ -26,25 +27,9 @@ void MemoryPlan::build() {
 
   auto getAlignedValueSize = [](Value v) {
     auto type = v.getType().dyn_cast<ShapedType>();
-    size_t typeSizeInBytes;
-    if (type.getElementType().isa<quant::QuantizedType>()) {
-      // we only support QI8
-      typeSizeInBytes = 1;
-    } else {
-      typeSizeInBytes =
-          type.getElementType().getIntOrFloatBitWidth() / CHAR_BIT;
-    }
-
-    size_t k = typeSizeInBytes;
-    llvm::ArrayRef<int64_t> shape_ref = type.getShape();
-    // Handle dynamic shapes
-    for (auto &dim : shape_ref) {
-      k *= (ShapedType::isDynamic(dim) ? 1 : dim);
-    }
-
+    size_t k = static_cast<size_t>(utils::getShapedTypeSize(type));
     // Align size up to double word = 8 bytes
-    k = ((k + 7) / 8) * 8;
-
+    k = ((k + 15) / 16) * 16;
     return k;
   };
 
@@ -66,7 +51,8 @@ void MemoryPlan::build() {
     bool isConstantOp = false;
     // TODO(renjieliu): Find a generic way to deal with const ops.
     if (op->hasTrait<OpTrait::IsTerminator>() ||
-        llvm::isa<TFL::QConstOp, TFL::ConstOp, arith::ConstantOp>(op)) {
+        llvm::isa<TFL::NoValueOp, TFL::QConstOp, TFL::ConstOp,
+                  arith::ConstantOp>(op)) {
       isConstantOp = true;
     }
 
@@ -113,7 +99,8 @@ Operation *MemoryPlan::getOpWithMaxMemoryUsed() {
   Operation *maxOp;
   for (auto o : operations) {
     if (o->hasTrait<OpTrait::IsTerminator>() ||
-        llvm::isa<TFL::QConstOp, TFL::ConstOp, arith::ConstantOp>(o)) {
+        llvm::isa<TFL::NoValueOp, TFL::QConstOp, TFL::ConstOp,
+                  arith::ConstantOp>(o)) {
       continue;
     }
     int size = 0;

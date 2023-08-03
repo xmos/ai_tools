@@ -14,17 +14,18 @@ Building xmos-ai-tools
 * `CMake 3.23 <https://cmake.org/download/>`_ or newer is required for building libraries and test firmware.
 
 * To set up and activate the environment, simply run::
+
     python -m venv ./venv
     . ./venv/bin/activate 
 
 
 * Install the necessary python packages using ``pip``  inside the venv::
-    pip install -r ./requirements.txt
+    ``pip install -r ./requirements.txt``
 
 * Apply our patch for tflite-micro, run::
-    (cd third_party/lib_tflite_micro && make patch)
+    ``cd third_party/lib_tflite_micro && make patch``
 
 * Build the XCore host tflm interpreter libraries with default settings, run::
-    make build
+    ``make build``
 
-After following the above instructions, to build xformer, please follow the build instructions `here <../../experimental/xformer#readme>`_.
+After following the above instructions, to build xformer, please follow the build instructions `here <../../experimental/xformer#readme>`_. Upon building xformer, you may install ``xmos-ai-tools`` via ``cd python && pip install .``

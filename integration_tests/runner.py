@@ -114,7 +114,7 @@ def get_xformed_model(model: bytes, temp_dirname) -> bytes:
     output_file = pathlib.Path(temp_dirname) / "model.tflite"
 
     xformer.convert(input_file, output_file, {
-    "xcore-thread-count": 1,
+    "xcore-thread-count": 5,
 })
 
     # read output model content

@@ -12,6 +12,8 @@ namespace utils {
 
 int getShapedTypeSize(ShapedType t);
 
+LogicalResult hasSameShape(ShapedType type1, ShapedType type2);
+
 } // namespace utils
 } // namespace xcore
 } // namespace mlir

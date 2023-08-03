@@ -40,21 +40,13 @@ struct ReplaceMulPattern : public OpRewritePattern<TFL::MulOp> {
     // We don't currently handle the unusual case where both input shapes have
     // to be broadcasted. Either both input shapes must match the output or one
     // of the inputs has to be broadcasted.
-    if (utils::getShapedTypeSize(mulOp.getLhs().getType().cast<ShapedType>()) <
-        utils::getShapedTypeSize(mulOp.getRhs().getType().cast<ShapedType>())) {
-      // Confirm that RHS == Output shape
-      if (failed(verifyCompatibleShapes(
-              mulOp.getRhs().getType().cast<ShapedType>(),
-              mulOp.getOutput().getType().cast<ShapedType>()))) {
-        return failure();
-      }
-    } else {
-      // Confirm that LHS == Output shape
-      if (failed(verifyCompatibleShapes(
-              mulOp.getLhs().getType().cast<ShapedType>(),
-              mulOp.getOutput().getType().cast<ShapedType>()))) {
-        return failure();
-      }
+    if (failed(utils::hasSameShape(
+            mulOp.getRhs().getType().cast<ShapedType>(),
+            mulOp.getOutput().getType().cast<ShapedType>())) &&
+        failed(utils::hasSameShape(
+            mulOp.getLhs().getType().cast<ShapedType>(),
+            mulOp.getOutput().getType().cast<ShapedType>()))) {
+      return failure();
     }
 
     auto lhsType = mulOp.getLhs().getType().cast<ShapedType>().getElementType();

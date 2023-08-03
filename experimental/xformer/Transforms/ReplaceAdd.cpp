@@ -39,21 +39,14 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
     // We don't currently handle the unusual case where both input shapes have
     // to be broadcasted. Either both input shapes must match the output or one
     // of the inputs has to be broadcasted.
-    if (utils::getShapedTypeSize(addOp.getLhs().getType().cast<ShapedType>()) <
-        utils::getShapedTypeSize(addOp.getRhs().getType().cast<ShapedType>())) {
-      // Confirm that RHS == Output shape
-      if (failed(verifyCompatibleShapes(
-              addOp.getRhs().getType().cast<ShapedType>(),
-              addOp.getOutput().getType().cast<ShapedType>()))) {
-        return failure();
-      }
-    } else {
-      // Confirm that LHS == Output shape
-      if (failed(verifyCompatibleShapes(
-              addOp.getLhs().getType().cast<ShapedType>(),
-              addOp.getOutput().getType().cast<ShapedType>()))) {
-        return failure();
-      }
+    // Confirm that RHS == Output shape or LHS == Output shape
+    if (failed(utils::hasSameShape(
+            addOp.getRhs().getType().cast<ShapedType>(),
+            addOp.getOutput().getType().cast<ShapedType>())) &&
+        failed(utils::hasSameShape(
+            addOp.getLhs().getType().cast<ShapedType>(),
+            addOp.getOutput().getType().cast<ShapedType>()))) {
+      return failure();
     }
 
     auto lhsType = addOp.getLhs().getType().cast<ShapedType>().getElementType();

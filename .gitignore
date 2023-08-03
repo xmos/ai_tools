@@ -29,7 +29,6 @@ _build
 /bazel_pip
 compile_commands.json
 .cache
-experimental/xformer/model_maker/*.tflite
 
 # Test cruft
 **/.pytest_cache/*
@@ -55,6 +54,7 @@ experimental/xformer/model_maker/*.tflite
 *.h5
 *.html
 *training_history.png
+experimental/xformer/model_maker/*.tflite
 
 # Others
 *.npz

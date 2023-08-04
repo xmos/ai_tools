@@ -195,6 +195,7 @@ cc_library(
     deps = [
         "@lib_nn//:nn_lib",
         "@lib_tflite_micro//:shared_headers",
+        "@llvm-project//llvm:Support"
     ],
     local_defines = [
         "__xtflm_conf_h_exists__",

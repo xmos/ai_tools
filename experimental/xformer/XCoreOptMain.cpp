@@ -287,9 +287,8 @@ int main(int argc, char **argv) {
   }
 
   if (mlir::xcore::threadCountOption < 1 ||
-      mlir::xcore::threadCountOption > 8) {
-    return failedMessage(
-        "Please specify a thread count between one and eight!");
+      mlir::xcore::threadCountOption > 5) {
+    return failedMessage("Please specify a thread count between one and five!");
   }
 
   if (failed(isCompatibleVersion(

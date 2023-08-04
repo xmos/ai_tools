@@ -86,24 +86,32 @@ std::vector<uint8_t> Pad3To4Op::buildCustomOptions() {
 std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
-
-  fbb.Int("kt", (int32_t)(symbolizeConv2DType(getConv2dKernelType()).value()));
+  // TODO: Create a flatbuffer schema for xc ops.
+  // The flexbuffer data for xc conv2d has been carefully arranged so
+  // that each param is aligned to four bytes.
+  // DO NOT CHANGE THE NAMES OR ORDER OF PARAMS HERE.
+  // This is so that we can directly access them without creating
+  // persistent buffers.
+  // The alignment is why we are adding a dummy "00" to the end of
+  // abstract kernel params. This is necessary when we have multiple
+  // threads.
   fbb.String("mp", getMemcpyFnParam().str());
-  fbb.String("aggp", getAggregateFnParam().str());
-  fbb.String("otp", getOutputTransformFnParam().str());
-  fbb.Int("ott", (int32_t)(symbolizeOtType(getOutputTransformType()).value()));
-  fbb.Int("scratch", (int32_t)getScratchBytes());
-
+  fbb.String("a", getAggregateFnParam().str());
+  fbb.String("o", getOutputTransformFnParam().str());
   int threadCount = (int)getThreadCount();
-  auto akpVec = fbb.StartVector("akp");
+  auto akpVec = fbb.StartVector("p");
   for (int i = 0; i < threadCount; ++i) {
     fbb.String(getAbstractKernelParams()
                    .cast<ArrayAttr>()[i]
                    .cast<StringAttr>()
                    .getValue()
-                   .str());
+                   .str() +
+               "00");
   }
   fbb.EndVector(akpVec, false, false);
+  fbb.Int("s", (int32_t)getScratchBytes());
+  fbb.Int("k", (int32_t)(symbolizeConv2DType(getConv2dKernelType()).value()));
+  fbb.Int("t", (int32_t)(symbolizeOtType(getOutputTransformType()).value()));
 
   fbb.EndMap(rootMap);
   fbb.Finish();

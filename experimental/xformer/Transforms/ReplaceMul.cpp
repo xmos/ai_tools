@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "IR/XCoreOps.h"
+#include "Utils/Util.h"
 
 #include "lib_nn/api/MemCpyFn.hpp"
 #include "mlir/IR/TypeUtilities.h"
@@ -36,19 +37,15 @@ struct ReplaceMulPattern : public OpRewritePattern<TFL::MulOp> {
                                 PatternRewriter &rewriter) const override {
 
     // Check for invalid types and return
-    // We only currently handle muls same as LHS or 1x..xN as RHS
-    // We do not handle cases where broadcast is required
-    if (mulOp.getLhs().getType().hasStaticShape() &&
-        mulOp.getRhs().getType().hasStaticShape() &&
-        mulOp.getRhs().getType().getNumElements() >
-            mulOp.getLhs().getType().getNumElements()) {
-      return failure();
-    }
-    if (failed(verifyCompatibleShape(mulOp.getLhs().getType().getShape(),
-                                     mulOp.getRhs().getType().getShape())) &&
-        mulOp.getRhs().getType().isa<RankedTensorType>() &&
-        !TFL::IsDimensionsDegenerateExceptLastOne(
-            mulOp.getRhs().getType().getShape())) {
+    // We don't currently handle the unusual case where both input shapes have
+    // to be broadcasted. Either both input shapes must match the output or one
+    // of the inputs has to be broadcasted.
+    if (failed(utils::hasSameShape(
+            mulOp.getRhs().getType().cast<ShapedType>(),
+            mulOp.getOutput().getType().cast<ShapedType>())) &&
+        failed(utils::hasSameShape(
+            mulOp.getLhs().getType().cast<ShapedType>(),
+            mulOp.getOutput().getType().cast<ShapedType>()))) {
       return failure();
     }
 

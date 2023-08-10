@@ -1,0 +1,10 @@
+# datasets
+val2017.zip
+annotations_trainval2017.zip
+coco
+
+# generated files
+yolov8n.pt
+yolo.onnx
+yolo_saved_model
+yolo.tflite

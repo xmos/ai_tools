@@ -6,5 +6,6 @@ coco
 # generated files
 yolov8n.pt
 yolo.onnx
+yolov8_v2.onnx
 yolo_saved_model
 yolo.tflite

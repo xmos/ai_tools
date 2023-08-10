@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "IR/XCoreOps.h"
+#include "Utils/Util.h"
 
 #include "lib_nn/api/MemCpyFn.hpp"
 #include "mlir/IR/TypeUtilities.h"
@@ -35,10 +36,16 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
                                 PatternRewriter &rewriter) const override {
 
     // Check for invalid types and return
-    // Both input shapes must match
-    if (failed(verifyCompatibleShapes(
+    // We don't currently handle the unusual case where both input shapes have
+    // to be broadcasted. Either both input shapes must match the output or one
+    // of the inputs has to be broadcasted.
+    // Confirm that RHS == Output shape or LHS == Output shape
+    if (failed(utils::hasSameShape(
+            addOp.getRhs().getType().cast<ShapedType>(),
+            addOp.getOutput().getType().cast<ShapedType>())) &&
+        failed(utils::hasSameShape(
             addOp.getLhs().getType().cast<ShapedType>(),
-            addOp.getRhs().getType().cast<ShapedType>()))) {
+            addOp.getOutput().getType().cast<ShapedType>()))) {
       return failure();
     }
 

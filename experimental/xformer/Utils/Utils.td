@@ -18,7 +18,8 @@ def HasOnlyChannelPadding
           "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{1, 0}] == 0 &&"
           "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{1, 1}] == 0 &&"
           "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{2, 0}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{2, 1}] == 0)">>;
+          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{2, 1}] == "
+          "0)">>;
 
 // Only spatial padding
 def HasOnlySpatialPadding
@@ -28,4 +29,5 @@ def HasOnlySpatialPadding
           "&&"
           "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{0, 1}] == 0 &&"
           "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 0}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 1}] == 0)">>;
+          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 1}] == "
+          "0)">>;

@@ -27,6 +27,8 @@ _build
 /.tf_configure.bazelrc
 /bazel-*
 /bazel_pip
+compile_commands.json
+.cache
 
 # Test cruft
 **/.pytest_cache/*
@@ -52,6 +54,7 @@ _build
 *.h5
 *.html
 *training_history.png
+experimental/xformer/model_maker/*.tflite
 
 # Others
 *.npz

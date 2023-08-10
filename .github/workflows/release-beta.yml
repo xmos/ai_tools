@@ -104,7 +104,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}-wheels
-          path: python/wheelhouse
+          path: python/dist
 
 
 
@@ -167,7 +167,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}-arm-wheels
-          path: python/wheelhouse
+          path: python/dist
           
   
 

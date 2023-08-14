@@ -3,6 +3,7 @@
 
 #include "IR/XCoreOps.h"
 
+#include "Transforms/Options.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "lib_nn/api/nn_layers.h"
 #include "mlir/Pass/Pass.h"
@@ -80,6 +81,10 @@ IntegerAttr getPadValue(PatternRewriter &rewriter, Value inputVal) {
   }
 
   return rewriter.getI32IntegerAttr(padValue);
+}
+
+IntegerAttr getThreadCount(PatternRewriter &rewriter) {
+  return rewriter.getI32IntegerAttr(threadCountOption);
 }
 
 DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {

@@ -364,10 +364,6 @@ int main(int argc, char **argv) {
     // Translate MLIR to flatbuffer string
     // Prepare metadata
     auto module = mod.get();
-    int requiredThreadCount = 1;
-    if (auto attr = module->getAttr(xcRequiredThreadCountAttrName)) {
-      requiredThreadCount = attr.cast<mlir::IntegerAttr>().getInt();
-    }
 
     struct shared_config::xcore_metadata sharedCfg;
     // Store version info
@@ -381,7 +377,7 @@ int main(int argc, char **argv) {
     sharedCfg.xformer_minor_version = xformer::minorVersion;
     sharedCfg.xformer_patch_version = xformer::patchVersion;
     // Store number of threads needed to execute the model
-    sharedCfg.required_thread_count = requiredThreadCount;
+    sharedCfg.required_thread_count = mlir::xcore::threadCountOption;
     auto bufferData =
         std::string((char *)&sharedCfg, sizeof(shared_config::xcore_metadata));
 

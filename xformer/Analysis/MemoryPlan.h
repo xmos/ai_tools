@@ -40,7 +40,8 @@ public:
   //  - If no large-enough gap is found, the current buffer is placed after the
   //    last buffer that's simultaneously active.
   //  - This continues until all buffers are placed, and the offsets stored.
-  std::vector<int> getAllocatedOffsets();
+  std::vector<int> getAllocatedOffsets(const bool overlapOps,
+                                       int &peakMemoryUsed);
 
   Operation *getOpWithMaxMemoryUsed();
 
@@ -69,7 +70,8 @@ private:
     int lastUsed;
   };
 
-  int getOffset(Value v, int size, ValuesOrderedByOffset &allocatedOffsets);
+  int getOffset(Value v, int size, DenseMap<Value, ValueInfo> &valueInfo,
+                ValuesOrderedByOffset &allocatedOffsets);
 
   DenseMap<Value, ValueInfo> valueInfo;
 

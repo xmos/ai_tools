@@ -14,8 +14,7 @@ include "Utils/Utils.td"
 def getLookupTable
     : NativeCodeCall<"getLookupTable($_builder, $0.getDefiningOp())">;
 
-def getThreadCount
-    : NativeCodeCall<"getThreadCount($_builder)">;
+def getThreadCount : NativeCodeCall<"getThreadCount($_builder)">;
 
 foreach activationOp =
     [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp, TFL_HardSwishOp] in {

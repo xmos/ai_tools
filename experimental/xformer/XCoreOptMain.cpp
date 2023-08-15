@@ -115,15 +115,12 @@ cl::opt<bool> convDebugOption("xcore-conv-debug",
                               cl::init(false), cl::cat(XformerCategory),
                               cl::Hidden);
 
-cl::opt<bool> overlapOption("xcore-overlap", cl::desc("Overlap buffers."),
-                            cl::init(true), cl::cat(XformerCategory));
-
 cl::opt<bool> overlapConvOption("xcore-overlap-conv",
                                 cl::desc("Overlap conv also."), cl::init(false),
                                 cl::cat(XformerCategory), cl::Hidden);
 
 cl::opt<bool> offlineOffsetsOption("xcore-offline-offsets",
-                                   cl::desc("Offline offsets"), cl::init(false),
+                                   cl::desc("Offline offsets"), cl::init(true),
                                    cl::cat(XformerCategory));
 
 cl::opt<unsigned> convChannelwiseSplitSizeOption(
@@ -245,6 +242,8 @@ int main(int argc, char **argv) {
 
   // Register any command line options.
   registerPassManagerCLOptions();
+  registerAsmPrinterCLOptions();
+  registerMLIRContextCLOptions();
   xcore::registerXCorePassPipeline();
   PassPipelineCLParser passPipeline("", "Compiler passes to run");
   cl::SetVersionPrinter(PrintVersion);

@@ -19,12 +19,16 @@ class UpdateShapeWithAxis<int i>
           "quant::CastQuantizedTypeAttrFromExpressedType($_builder, $0, "
           "quant::QuantizedType::castToExpressedType($1.getType()), " #i #")">;
 
+def IsQuantizedType : Constraint<CPred<"dyn_cast<QuantizedType>($0.getType()."
+                                       "cast<ShapedType>().getElementType())">>;
+
 // Convert Quantize(Reshape()) -> Reshape(Quantize())
 // This is to merge Quantize with Conv2D if possible
 def : Pat<(TFL_QuantizeOp(TFL_ReshapeOp $input, $shape), $qtype),
           (TFL_ReshapeOp(TFL_QuantizeOp $input,
                          (UpdateShapeWithAxis<-1> $qtype, $input)),
-           $shape)>;
+           $shape),
+          [(IsQuantizedType $input)]>;
 
 // Fuse Quantize(Conv2D()) -> Conv2D()
 def : Pat<(TFL_QuantizeOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh,

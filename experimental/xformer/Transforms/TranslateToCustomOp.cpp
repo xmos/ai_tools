@@ -14,7 +14,13 @@ namespace mlir {
 namespace xcore {
 
 std::vector<uint8_t> Bsign8Op::buildCustomOptions() { return {}; }
-std::vector<uint8_t> LookupOp::buildCustomOptions() { return {}; }
+
+std::vector<uint8_t> LookupOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("tc", (int32_t)getThreadCount()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
 
 std::vector<uint8_t> AddOp::buildCustomOptions() {
   flexbuffers::Builder fbb;

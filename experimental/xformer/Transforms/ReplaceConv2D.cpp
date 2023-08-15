@@ -188,23 +188,7 @@ void ReplaceConv2D::runOnOperation() {
   convrevertpatterns::populateWithGenerated(patterns3);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns3));
 
-  // We walk through all Conv2DV2 ops in the graph and find the maximum required
-  // thread count
-  // This is stored as an attribute in the module and pushed as metadata into
-  // the flatbuffer
-  // TODO: When we multithread other ops, this can be moved into its own pass
-  int requiredThreadCount = 1;
-  func.walk([&](Conv2DV2Op op) {
-    int threadCount = op.getThreadCount();
-    if (threadCount > requiredThreadCount) {
-      requiredThreadCount = threadCount;
-    }
-  });
   // Store as an attribute in the module
-  auto module = func->getParentOfType<ModuleOp>();
-  OpBuilder builder(func);
-  module->setAttr(xcRequiredThreadCountAttrName,
-                  builder.getI32IntegerAttr(requiredThreadCount));
 }
 } // namespace
 

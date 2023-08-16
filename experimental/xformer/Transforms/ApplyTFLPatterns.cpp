@@ -116,6 +116,9 @@ struct HoistQuantizeAboveConcatPattern
     if (!concatOp) {
       return failure();
     }
+    if (!concatOp.getOutput().getType().getElementType().isa<QuantizedType>()) {
+      return failure();
+    }
 
     SmallVector<Value> quantizeOps;
     TFL::QuantizeOp newQuantizeOp;

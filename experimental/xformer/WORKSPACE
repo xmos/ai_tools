@@ -28,6 +28,18 @@ http_archive(
 )
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
+############################### Compile Commands ###############################
+# Hedron's Compile Commands Extractor for Bazel, used to get clangd to work
+# Replace commit hash with latest version, later setup automatic update tool maybe?
+BCCE_HASH = "86dbf526c56cebb2c3a060c09fe8c0458a694d23"
+http_archive(
+    name = "hedron_compile_commands",
+    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/{hash}.tar.gz".format(hash = BCCE_HASH),
+    strip_prefix = "bazel-compile-commands-extractor-{hash}".format(hash = BCCE_HASH),
+)
+load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
+hedron_compile_commands_setup()
+
 ################################## TensorFlow ##################################
 http_archive(
     name = "org_tensorflow",

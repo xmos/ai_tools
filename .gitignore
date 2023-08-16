@@ -29,6 +29,9 @@ _build
 /bazel_pip
 compile_commands.json
 .cache
+wheels/
+python/xmos_ai_tools/xinterpreters/device/lib
+python/xmos_ai_tools/xinterpreters/device/include
 
 # Test cruft
 **/.pytest_cache/*

@@ -27,23 +27,36 @@ struct PlanMemory
 };
 
 void PlanMemory::runOnOperation() {
-  auto func = getOperation();
-  auto module = func->getParentOfType<ModuleOp>();
-  OpBuilder builder(module);
+  if (offlineOffsetsOption) {
+    auto func = getOperation();
 
-  auto &m = getAnalysis<MemoryPlan>();
-  int peakMemoryUsedWithOverlap, peakMemoryUsedWithoutOverlap;
-  auto offlineOffsetsWithOverlap =
-      m.getAllocatedOffsets(/*overlapOps=*/true, peakMemoryUsedWithOverlap);
-  auto offlineOffsetsWithoutOverlap =
-      m.getAllocatedOffsets(/*overlapOps=*/false, peakMemoryUsedWithoutOverlap);
+    bool unSupportedOpsInGraph = false;
+    func.walk<WalkOrder::PreOrder>([&](Operation *op) {
+      if (llvm::isa<TFL::UnidirectionalSequenceLSTMOp, TFL::WhileOp, TFL::IfOp,
+                    TFL::CallOnceOp>(op)) {
+        unSupportedOpsInGraph = true;
+      }
+    });
 
-  if (peakMemoryUsedWithOverlap < peakMemoryUsedWithoutOverlap) {
-    module->setAttr("xc.offsets",
-                    builder.getI32VectorAttr(offlineOffsetsWithOverlap));
-  } else {
-    module->setAttr("xc.offsets",
-                    builder.getI32VectorAttr(offlineOffsetsWithoutOverlap));
+    if (!unSupportedOpsInGraph) {
+      auto module = func->getParentOfType<ModuleOp>();
+      OpBuilder builder(module);
+
+      auto &m = getAnalysis<MemoryPlan>();
+      int peakMemoryUsedWithOverlap, peakMemoryUsedWithoutOverlap;
+      auto offlineOffsetsWithOverlap =
+          m.getAllocatedOffsets(/*overlapOps=*/true, peakMemoryUsedWithOverlap);
+      auto offlineOffsetsWithoutOverlap = m.getAllocatedOffsets(
+          /*overlapOps=*/false, peakMemoryUsedWithoutOverlap);
+
+      if (peakMemoryUsedWithOverlap < peakMemoryUsedWithoutOverlap) {
+        module->setAttr("xc.offsets",
+                        builder.getI32VectorAttr(offlineOffsetsWithOverlap));
+      } else {
+        module->setAttr("xc.offsets",
+                        builder.getI32VectorAttr(offlineOffsetsWithoutOverlap));
+      }
+    }
   }
 }
 } // namespace

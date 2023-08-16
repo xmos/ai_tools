@@ -93,8 +93,11 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         count: Optional[int]
         tensor_details: Optional[Dict[str, Any]]
         count, tensor_details = next(
-            filter(lambda x: x[1]["index"] == tensor_index, enumerate(self.get_input_details())),
-            (None, None)
+            filter(
+                lambda x: x[1]["index"] == tensor_index,
+                enumerate(self.get_input_details()),
+            ),
+            (None, None),
         )
 
         if count is None or tensor_details is None:
@@ -115,7 +118,9 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         print("Setting Input Tensor")
         return
 
-    def get_tensor(self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None) -> ndarray:
+    def get_tensor(
+        self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None
+    ) -> ndarray:
         """! Abstract for reading the data in the output tensor of a model.
         @param tensor_index  The index of output tensor to target.
         @param tensor Tensor of correct shape to write into (optional)
@@ -127,8 +132,11 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         count: Optional[int]
         tensor_details: Optional[Dict[str, Any]]
         count, tensor_details = next(
-            filter(lambda x: x[1]["index"] == tensor_index, enumerate(self.get_output_details())),
-            (None, None)
+            filter(
+                lambda x: x[1]["index"] == tensor_index,
+                enumerate(self.get_output_details()),
+            ),
+            (None, None),
         )
 
         if count is None or tensor_details is None:
@@ -154,7 +162,9 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
 
         return np.reshape(output, tensor_details["shape"])
 
-    def get_input_tensor(self, input_index=0, model_index=0) -> List[Union[int, Tuple[float]]]:
+    def get_input_tensor(
+        self, input_index=0, model_index=0
+    ) -> List[Union[int, Tuple[float]]]:
         """! Abstract for reading the data in the input tensor of a model.
         @param input_index  The index of output tensor to target.
         @param model_index The engine to target, for interpreters that support multiple models
@@ -219,7 +229,11 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         pass
 
     def download_model(
-            self, model_bytes: bytearray, secondary_memory: bool = False, flash: bool = False, model_index: int = 0
+        self,
+        model_bytes: bytearray,
+        secondary_memory: bool = False,
+        flash: bool = False,
+        model_index: int = 0,
     ):
         """! Download a model on to the device.
         @param model_bytes  The byte array containing the model.
@@ -284,7 +298,9 @@ class xcore_tflm_device_interpreter(xcore_tflm_base_interpreter):
         return output.tolist()
 
     @abstractmethod
-    def _upload_data(self, cmd, length, sign=False, tensor_num=0, engine_num=0) -> bytes:
+    def _upload_data(
+        self, cmd, length, sign=False, tensor_num=0, engine_num=0
+    ) -> bytes:
         raise NotImplementedError
 
     @abstractmethod
@@ -343,6 +359,7 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
 
     def _clear_error(self):
         import usb
+
         usb.util.dispose_resources(self._dev)
         self._dev.clear_halt(self._out_ep)
         self._dev.clear_halt(self._in_ep)
@@ -371,13 +388,21 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
                     if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_BUSY:
                         for cfg in self._dev:
                             for intf in cfg:
-                                if self._dev.is_kernel_driver_active(intf.bInterfaceNumber):
+                                if self._dev.is_kernel_driver_active(
+                                    intf.bInterfaceNumber
+                                ):
                                     try:
-                                        self._dev.detach_kernel_driver(intf.bInterfaceNumber)
+                                        self._dev.detach_kernel_driver(
+                                            intf.bInterfaceNumber
+                                        )
                                         self._dev.set_configuration()
                                     except usb.core.USBError:
                                         self._clear_error()
-                                        print("USB error : Could not detach kernel driver from interface({0})".format(intf.bInterfaceNumber))
+                                        print(
+                                            "USB error : Could not detach kernel driver from interface({0})".format(
+                                                intf.bInterfaceNumber
+                                            )
+                                        )
                                         raise IOError()
                 cfg = self._dev.get_active_configuration()
 
@@ -388,14 +413,14 @@ class xcore_tflm_usb_interpreter(xcore_tflm_device_interpreter):
                 intf,
                 # match the first OUT endpoint
                 custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress)
-                                       == usb.util.ENDPOINT_OUT,
+                == usb.util.ENDPOINT_OUT,
             )
 
             self._in_ep = usb.util.find_descriptor(
                 intf,
                 # match the first IN endpoint
                 custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress)
-                                       == usb.util.ENDPOINT_IN,
+                == usb.util.ENDPOINT_IN,
             )
 
             assert self._out_ep is not None

@@ -10,7 +10,8 @@ from pathlib import Path
 from numpy import ndarray
 
 from xmos_ai_tools.xinterpreters.base.base_interpreter import (
-    xcore_tflm_base_interpreter, XTFLMInterpreterStatus,
+    xcore_tflm_base_interpreter,
+    XTFLMInterpreterStatus,
 )
 
 # DLL path for different platforms
@@ -36,6 +37,7 @@ from xmos_ai_tools.xinterpreters.host.exceptions import (
 )
 
 MAX_TENSOR_ARENA_SIZE = 10000000
+
 
 class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
     """! The xcore interpreters host class.
@@ -109,7 +111,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
 
         super().__init__()
 
-    def __enter__(self) -> 'xcore_tflm_host_interpreter':
+    def __enter__(self) -> "xcore_tflm_host_interpreter":
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
@@ -156,11 +158,16 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         length = len(val)
         length2 = self.get_input_tensor_size(tensor_index)
         if length != length2:
-            print("ERROR: mismatching size in set_input_tensor %d vs %d" % (length, length2))
+            print(
+                "ERROR: mismatching size in set_input_tensor %d vs %d"
+                % (length, length2)
+            )
 
         self._check_status(lib.set_input_tensor(self.obj, tensor_index, val, length))
 
-    def get_tensor(self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None) -> ndarray:
+    def get_tensor(
+        self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None
+    ) -> ndarray:
         """! Read data from the output tensor of a model.
         @param tensor_index  The index of output tensor to target.
         @param model_index  The model to target, for interpreters that support multiple models
@@ -172,8 +179,11 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         count: Optional[int]
         tensor_details: Optional[Dict[str, Any]]
         count, tensor_details = next(
-            filter(lambda x: x[1]["index"] == tensor_index, enumerate(self.get_output_details())),
-            (None, None)
+            filter(
+                lambda x: x[1]["index"] == tensor_index,
+                enumerate(self.get_output_details()),
+            ),
+            (None, None),
         )
 
         if count is None or tensor_details is None:
@@ -186,7 +196,10 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         else:
             length = len(tensor.tobytes())
             if length != length:
-                print("ERROR: mismatching size in get_output_tensor %d vs %d" % (length, length))
+                print(
+                    "ERROR: mismatching size in get_output_tensor %d vs %d"
+                    % (length, length)
+                )
 
         data_ptr = tensor.ctypes.data_as(ctypes.c_void_p)
         self._check_status(lib.get_output_tensor(self.obj, count, data_ptr, length))
@@ -208,8 +221,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
         return tensor
 
     def reset(self, model_index: int = 0) -> None:
-        """! Resets the model.
-        """
+        """! Resets the model."""
         self._check_status(lib.reset(self.obj))
 
     def invoke(self, model_index: int = 0) -> None:

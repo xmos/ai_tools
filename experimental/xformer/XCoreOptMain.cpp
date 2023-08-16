@@ -121,7 +121,7 @@ cl::opt<bool> overlapConvOption("xcore-overlap-conv",
 
 cl::opt<bool> offlineOffsetsOption("xcore-offline-offsets",
                                    cl::desc("Offline offsets"), cl::init(true),
-                                   cl::cat(XformerCategory));
+                                   cl::cat(XformerCategory), cl::Hidden);
 
 cl::opt<unsigned> convChannelwiseSplitSizeOption(
     "xcore-conv-channelwise-split-size",
@@ -389,8 +389,7 @@ int main(int argc, char **argv) {
     // std::vector<int> offline_offsets = {
     //    73728, -1, -1, -1, -1, -1, -1, 0, 129024, 73728, 166272, 132096,
     //    73728, 153984, 132096, 73728, 132096, 73728, 0, 52224, 0};
-    if (mlir::xcore::offlineOffsetsOption) {
-      auto attr = module->getAttr("xc.offsets");
+    if (auto attr = module->getAttr("xc.offsets")) {
       auto offline_offsets = std::vector<int>{
           attr.cast<mlir::DenseIntElementsAttr>().getValues<int32_t>().begin(),
           attr.cast<mlir::DenseIntElementsAttr>().getValues<int32_t>().end()};

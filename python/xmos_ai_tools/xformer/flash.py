@@ -72,7 +72,7 @@ class FlashBuilder:
 
     @staticmethod
     def swap_nibbles(x):
-        return ( (x & 0x0F)<<4 | (x & 0xF0)>>4 )
+        return (x & 0x0F) << 4 | (x & 0xF0) >> 4
 
     def add_params(self, engine, params=None, filename=None):
         image = FlashBuilder.create_params_image(params, filename)
@@ -89,7 +89,11 @@ class FlashBuilder:
         The whole thing should be written as is to flash
         """
         headers = [None] * self.engines
-        start = BYTES_FOR_MAGIC_PATTERN + BYTES_FOR_VERSION + BYTES_PER_ENGINE_HEADER * self.engines
+        start = (
+            BYTES_FOR_MAGIC_PATTERN
+            + BYTES_FOR_VERSION
+            + BYTES_PER_ENGINE_HEADER * self.engines
+        )
         for i in range(self.engines):
             headers[i] = FlashBuilder.Header(
                 len(self.models[i]),
@@ -103,14 +107,41 @@ class FlashBuilder:
         # We add the magic fast flash pattern of 32 bytes at the very beginning
         # After that comes the version
         output = bytes(
-            [0xff, 0x00, 0x0f, 0x0f,
-            0x0f, 0x0f, 0x0f, 0x0f,
-            0xff, 0x00, 0xff, 0x00,
-            0xff, 0x00, 0xff, 0x00,
-            0x31, 0xf7, 0xce, 0x08,
-            0x31, 0xf7, 0xce, 0x08,
-            0x9c, 0x63, 0x9c, 0x63,
-            0x9c, 0x63, 0x9c, 0x63])
+            [
+                0xFF,
+                0x00,
+                0x0F,
+                0x0F,
+                0x0F,
+                0x0F,
+                0x0F,
+                0x0F,
+                0xFF,
+                0x00,
+                0xFF,
+                0x00,
+                0xFF,
+                0x00,
+                0xFF,
+                0x00,
+                0x31,
+                0xF7,
+                0xCE,
+                0x08,
+                0x31,
+                0xF7,
+                0xCE,
+                0x08,
+                0x9C,
+                0x63,
+                0x9C,
+                0x63,
+                0x9C,
+                0x63,
+                0x9C,
+                0x63,
+            ]
+        )
 
         output += bytes(
             [VERSION_MAJOR, VERSION_MINOR, 0xFF ^ VERSION_MAJOR, 0xFF ^ VERSION_MINOR]
@@ -148,7 +179,9 @@ class FlashBuilder:
 
 
 def generate_flash(*, output_file, model_files, param_files):
-    assert(len(model_files)==len(param_files)), "The number of provided model files must match the number of param files!"
+    assert len(model_files) == len(
+        param_files
+    ), "The number of provided model files must match the number of param files!"
     num_of_engines = len(model_files)
     fb = FlashBuilder(engines=num_of_engines)
     for i in range(num_of_engines):

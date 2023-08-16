@@ -10,9 +10,11 @@ from tflite.Model import Model
 from tflite.TensorType import TensorType
 import numpy as np
 
+
 class XTFLMInterpreterStatus(Enum):
     OK = 0
     ERROR = 1
+
 
 class xcore_tflm_base_interpreter(ABC):
     """! The xcore interpreters base class.
@@ -26,7 +28,7 @@ class xcore_tflm_base_interpreter(ABC):
         self.models: List[xcore_tflm_base_interpreter.modelData] = []
 
     @abstractmethod
-    def initialise_interpreter(self, model_index: int=0) -> None:
+    def initialise_interpreter(self, model_index: int = 0) -> None:
         """! Abstract initialising interpreter with model associated with model_index.
         @param model_index The engine to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
@@ -44,7 +46,9 @@ class xcore_tflm_base_interpreter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_tensor(self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None) -> ndarray:
+    def get_tensor(
+        self, tensor_index: int = 0, model_index: int = 0, tensor: ndarray = None
+    ) -> ndarray:
         """! Abstract method for reading data from the output tensor of a model.
         @param tensor_index  The index of output tensor to target.
         @param model_index  The model to target, for interpreters that support multiple models
@@ -55,7 +59,9 @@ class xcore_tflm_base_interpreter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_input_tensor(self, input_index: int = 0, model_index: int = 0) -> Union[ndarray, List[Union[int, Tuple[float]]]]:
+    def get_input_tensor(
+        self, input_index: int = 0, model_index: int = 0
+    ) -> Union[ndarray, List[Union[int, Tuple[float]]]]:
         """! Abstract for reading the data in the input tensor of a model.
         @param input_index  The index of input tensor to target.
         @param model_index The engine to target, for interpreters that support multiple models
@@ -218,7 +224,6 @@ class xcore_tflm_base_interpreter(ABC):
 
         inputsList = []
         for input_ in range(0, modelBuf.Subgraphs(0).InputsLength()):
-
             tensorIndex = modelBuf.Subgraphs(0).Inputs(input_)
 
             # Generate dictioary of tensor details
@@ -227,7 +232,9 @@ class xcore_tflm_base_interpreter(ABC):
                 dtype = np.int8
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
-            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+            elif (
+                modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32
+            ):
                 dtype = np.float32
             else:
                 raise Exception
@@ -271,9 +278,7 @@ class xcore_tflm_base_interpreter(ABC):
 
         return inputsList
 
-    def get_output_details(
-            self, model_index: int = 0
-    ) -> List[Dict[str, Any]]:
+    def get_output_details(self, model_index: int = 0) -> List[Dict[str, Any]]:
         """! Reads the output tensor details from the model.
         @param output_index  The index of output tensor to target.
         @param model_index The model to target, for interpreters that support multiple models
@@ -288,7 +293,6 @@ class xcore_tflm_base_interpreter(ABC):
 
         outputsList = []
         for output_ in range(0, modelBuf.Subgraphs(0).OutputsLength()):
-
             # Output tensor is last tensor
             tensorIndex = modelBuf.Subgraphs(0).Outputs(output_)
 
@@ -298,7 +302,9 @@ class xcore_tflm_base_interpreter(ABC):
                 dtype = np.int8
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
-            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32:
+            elif (
+                modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32
+            ):
                 dtype = np.float32
 
             details = {
@@ -466,7 +472,7 @@ class xcore_tflm_base_interpreter(ABC):
             if self.params_content is None and self.params_path is not None:
                 with open(self.params_path, "rb") as input_fd2:
                     self.params_content = input_fd2.read()
- 
+
             # If params_content is None, set to empty byte array
             if self.params_content is None:
                 self.params_content = bytes([])

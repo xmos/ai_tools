@@ -28,4 +28,4 @@ Building xmos-ai-tools
 * Build the XCore host tflm interpreter libraries with default settings, run::
     ``make build``
 
-After following the above instructions, to build xformer, please follow the build instructions `here <../../experimental/xformer#readme>`_. Upon building xformer, you may install ``xmos-ai-tools`` via ``cd python && pip install .``
+After following the above instructions, to build xformer, please follow the build instructions `here <../../xformer#readme>`_. Upon building xformer, you may install ``xmos-ai-tools`` via ``cd python && pip install .``

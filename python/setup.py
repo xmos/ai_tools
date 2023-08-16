@@ -16,15 +16,19 @@ import subprocess
 here = pathlib.Path(__file__).parent.resolve()
 exe_suffix = ".exe" if platform.system() == "Windows" else ""
 XCOREOPT_BINARY: Union[pathlib.Path, str] = pathlib.Path.joinpath(
-    here.parent, "experimental", "xformer", "bazel-bin", "xcore-opt"
+    here.parent, "xformer", "bazel-bin", "xcore-opt"
 )
 XCOREOPT_BINARY = str(XCOREOPT_BINARY) + exe_suffix
 
 # Get the long description from the README file
 LONG_README = (here / "README.md").read_text(encoding="utf-8")
+
+
 # Fix link in Readme to current commit hash
 def get_git_revision_hash() -> str:
-    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+    return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
+
+
 LONG_README = LONG_README.replace("!!COMMIT_HASH!!", get_git_revision_hash())
 
 # xtflm_interpreter path and libs from lib_tflite_micro
@@ -71,10 +75,10 @@ class install_plat_lib(install):
 
 
 # add device lib and headers as package data
-device_files = {root.replace(os.sep, '.'):
-                  ['*.h', '*.a', '*.make', '*.cmake']
-                  for root, d, f in os.walk(os.path.join("xmos_ai_tools", "xinterpreters", "device"))
-                }
+device_files = {
+    root.replace(os.sep, "."): ["*.h", "*.a", "*.make", "*.cmake"]
+    for root, d, f in os.walk(os.path.join("xmos_ai_tools", "xinterpreters", "device"))
+}
 
 # add host interpreter lib
 package_files = {"xmos_ai_tools.xinterpreters.host": XTFLM_INTERPRETER_LIBS}
@@ -118,7 +122,8 @@ setup(
     install_requires=REQUIRED_PACKAGES,
     package_data=package_files,
     data_files=[
-        ("Scripts" if platform.system() == "Windows" else "bin", [XCOREOPT_BINARY])
+        ("Scripts" if platform.system() ==
+         "Windows" else "bin", [XCOREOPT_BINARY])
     ],
     cmdclass={
         "bdist_wheel": bdist_wheel,

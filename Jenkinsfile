@@ -54,7 +54,7 @@ pipeline {
                             // build dll_interpreter for python interface
                             sh "make build"
                             // build xformer
-                            dir("experimental/xformer") {
+                            dir("xformer") {
                                 sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
                                 sh "chmod +x bazelisk-linux-amd64"
                                 sh "./bazelisk-linux-amd64 build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
@@ -80,7 +80,7 @@ pipeline {
                         stage("Host Test") {
                             steps {
                                 withVenv {
-                                    dir("experimental/xformer") {
+                                    dir("xformer") {
                                         // xformer2 unit tests
                                         sh "./bazelisk-linux-amd64 test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
                                     }

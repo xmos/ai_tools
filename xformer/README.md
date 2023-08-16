@@ -11,7 +11,7 @@ packages from `requirements.txt`.
 
 With Bazel installed (check `.bazelversion` for current version),
 you can build with the following command (make sure you run it 
-from the directory /ai_tools/experimental/xformer):
+from the directory /ai_tools/xformer):
 
     bazel build //:xcore-opt
 
@@ -29,7 +29,7 @@ Python package instructions
 
 After building the xcore-opt binary, the python package can be built
 with the following command (make sure you run it from the directory 
-/ai_tools/experimental/xformer/python):
+/ai_tools/xformer/python):
 
     cd python
     python setup.py bdist_wheel

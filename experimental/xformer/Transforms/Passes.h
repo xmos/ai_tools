@@ -37,6 +37,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createApplyXCPatternsPass();
 std::unique_ptr<OperationPass<func::FuncOp>>
 createApplyLoadConstantOpPatternsPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createWriteFlashImagePass();
+std::unique_ptr<OperationPass<func::FuncOp>> createPlanMemoryPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createTranslateToCustomOpPass();
 
 //===----------------------------------------------------------------------===//

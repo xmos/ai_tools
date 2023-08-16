@@ -29,7 +29,7 @@ void MemoryPlan::build() {
     auto type = v.getType().dyn_cast<ShapedType>();
     size_t k = static_cast<size_t>(utils::getShapedTypeSize(type));
     // Align size up to double word = 8 bytes
-    k = ((k + 15) / 16) * 16;
+    k = ((k + 7) / 8) * 8;
     return k;
   };
 
@@ -80,15 +80,6 @@ void MemoryPlan::build() {
     valueInfo[v].firstUsed = operationIds[startOp];
     valueInfo[v].lastUsed = operationIds[lvb->getEndOperation(v, startOp)];
   }
-
-  LLVM_DEBUG(llvm::dbgs() << "\n\n");
-  for (auto v : values) {
-    LLVM_DEBUG(llvm::dbgs() << "\nvalue " << valueInfo[v].id
-                            << " size = " << valueInfo[v].size
-                            << " start op = " << valueInfo[v].firstUsed
-                            << " end op = " << valueInfo[v].lastUsed);
-  }
-  LLVM_DEBUG(llvm::dbgs() << "\n\n");
 }
 
 Operation *MemoryPlan::getOpWithMaxMemoryUsed() {
@@ -122,6 +113,7 @@ Operation *MemoryPlan::getOpWithMaxMemoryUsed() {
 }
 
 int MemoryPlan::getOffset(Value v, int size,
+                          DenseMap<Value, ValueInfo> &valueInfo,
                           ValuesOrderedByOffset &allocatedValues) {
   int offset = 0;
 
@@ -138,7 +130,7 @@ int MemoryPlan::getOffset(Value v, int size,
     }
 
     // Found an overlapping buffer
-    if (allocatedOffset - offset > size) {
+    if (allocatedOffset - offset >= size) {
       // There is a gap
       break;
     } else {
@@ -153,8 +145,11 @@ int MemoryPlan::getOffset(Value v, int size,
   return offset;
 }
 
-std::vector<int> MemoryPlan::getAllocatedOffsets() {
+std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
+                                                 int &peakMemoryUsed) {
   std::vector<int> offsets;
+  // Copy of valueInfo
+  auto vInfo = valueInfo;
 
   // Overlap buffers
   llvm::DenseMap<Value, std::pair<Value, int>> outInVals;
@@ -177,16 +172,16 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
     }
   }
 
-  if (overlapOption) {
+  if (overlapOps) {
     for (auto o : operations) {
       if (llvm::isa<PadOp>(o)) {
         auto in = o->getOperand(0);
         if (in.hasOneUse()) {
           auto out = o->getResult(0);
-          int offset = valueInfo[out].size - valueInfo[in].size;
+          int offset = vInfo[out].size - vInfo[in].size;
           outInVals[out] = {in, offset};
-          valueInfo[in].size += offset;
-          valueInfo[in].lastUsed = valueInfo[out].lastUsed;
+          vInfo[in].size += offset;
+          vInfo[in].lastUsed = vInfo[out].lastUsed;
         }
       }
 
@@ -204,11 +199,11 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
             auto firstVal = outInVals[in].first;
             auto firstOffset = outInVals[in].second;
 
-            offset += valueInfo[out].size - valueInfo[firstVal].size;
+            offset += vInfo[out].size - vInfo[firstVal].size;
 
             outInInVals[out] = {{in, offset}, {firstVal, firstOffset}};
-            valueInfo[firstVal].size += offset;
-            valueInfo[firstVal].lastUsed = valueInfo[out].lastUsed;
+            vInfo[firstVal].size += offset;
+            vInfo[firstVal].lastUsed = vInfo[out].lastUsed;
           }
         }
       }
@@ -220,7 +215,7 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
     if (lhs.second != rhs.second) {
       return lhs.second < rhs.second;
     }
-    return valueInfo[lhs.first].id < valueInfo[rhs.first].id;
+    return vInfo[lhs.first].id < vInfo[rhs.first].id;
   };
   // The top item is the largest one.
   llvm::PriorityQueue<QueueItem, std::vector<QueueItem>,
@@ -229,9 +224,8 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
 
   // Insert values and their sizes into priority queue
   for (auto v : values) {
-    if (!outInVals.count(v) && !outInInVals.count(v) &&
-        !valueInfo[v].isConstant) {
-      queue.push({v, valueInfo[v].size});
+    if (!outInVals.count(v) && !outInInVals.count(v) && !vInfo[v].isConstant) {
+      queue.push({v, vInfo[v].size});
     }
   }
 
@@ -246,7 +240,7 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
     queue.pop();
 
     // check with allocatedValues list
-    int newOffset = getOffset(v, size, allocatedValues);
+    int newOffset = getOffset(v, size, vInfo, allocatedValues);
     allocatedValues.insert({v, newOffset});
   }
 
@@ -300,28 +294,31 @@ std::vector<int> MemoryPlan::getAllocatedOffsets() {
   }
 
   for (auto v : values) {
-    if (valueInfo[v].isConstant) {
+    if (vInfo[v].isConstant) {
       allocatedValues.insert({v, -1});
     }
   }
 
   // Sort the allocated offsets by id, i.e., execution order
   auto cmp = [&](QueueItem a, QueueItem b) {
-    return valueInfo[a.first].id < valueInfo[b.first].id;
+    return vInfo[a.first].id < vInfo[b.first].id;
   };
   std::multiset<QueueItem, decltype(cmp)> allocatedValuesOrderedByID(cmp);
   for (auto i : allocatedValues) {
     allocatedValuesOrderedByID.insert(i);
   }
 
+  size_t peakUsed = 0;
   LLVM_DEBUG(llvm::dbgs() << "\nAllocated offsets : ");
   for (auto i : allocatedValuesOrderedByID) {
     offsets.push_back(i.second);
-    LLVM_DEBUG(llvm::dbgs()
-               << "\nValue " << valueInfo[i.first].id << ", size "
-               << valueInfo[i.first].size << ", offset " << i.second);
+    peakUsed = std::max(peakUsed, vInfo[i.first].size + i.second);
+    LLVM_DEBUG(llvm::dbgs() << "\nValue " << vInfo[i.first].id << ", size "
+                            << vInfo[i.first].size << ", offset " << i.second);
   }
+  LLVM_DEBUG(llvm::dbgs() << "\n\nPEAK USED : " << peakUsed << "\n\n");
   LLVM_DEBUG(llvm::dbgs() << "\n\n");
+  peakMemoryUsed = peakUsed;
 
   return offsets;
 }

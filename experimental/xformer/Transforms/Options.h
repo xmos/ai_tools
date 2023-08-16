@@ -22,7 +22,6 @@ extern llvm::cl::list<unsigned> opSplitTopOpsOption;
 extern llvm::cl::list<unsigned> opSplitNumSplitsOption;
 extern llvm::cl::opt<bool> allowInputModificationOption;
 extern llvm::cl::opt<bool> convDebugOption;
-extern llvm::cl::opt<bool> overlapOption;
 extern llvm::cl::opt<bool> overlapConvOption;
 extern llvm::cl::opt<bool> offlineOffsetsOption;
 extern llvm::cl::opt<unsigned> convChannelwiseSplitSizeOption;

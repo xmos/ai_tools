@@ -41,6 +41,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   }
   // Run canonicalization, which includes combining Reshapes
   pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(createPlanMemoryPass());
   pm.addPass(createTranslateToCustomOpPass());
 }
 

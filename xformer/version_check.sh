@@ -6,7 +6,7 @@ if [ "$1" == "BAZEL_BUILD" ]
 then
     LIB_TFLITE_MICRO_DIR="../../external/lib_tflite_micro/lib_tflite_micro"
 else
-    LIB_TFLITE_MICRO_DIR="../../third_party/lib_tflite_micro/lib_tflite_micro"
+    LIB_TFLITE_MICRO_DIR="../third_party/lib_tflite_micro/lib_tflite_micro"
 fi
 
 cd $LIB_TFLITE_MICRO_DIR

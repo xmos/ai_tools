@@ -402,6 +402,8 @@ class xcore_tflm_base_interpreter(ABC):
                     )
                 )
             self.initialise_interpreter(model_index)
+        else:
+            raise ValueError("model_path must be str")
 
     def get_model(self, model_index: int = 0):
         for model in self.models:

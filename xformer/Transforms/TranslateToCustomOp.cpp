@@ -14,6 +14,11 @@ namespace mlir {
 namespace xcore {
 
 std::vector<uint8_t> Bsign8Op::buildCustomOptions() { return {}; }
+std::vector<uint8_t> Beta_ConvF32Op::buildCustomOptions() { return {}; }
+std::vector<uint8_t> Beta_TransposeConvF32Op::buildCustomOptions() {
+  return {};
+}
+std::vector<uint8_t> Beta_FcF32Op::buildCustomOptions() { return {}; }
 
 std::vector<uint8_t> LookupOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
@@ -171,6 +176,9 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Pad3To4Op>>(ctx);
   patterns.insert<RewriteToCustomOp<StridedSliceOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<Beta_ConvF32Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<Beta_TransposeConvF32Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<Beta_FcF32Op>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

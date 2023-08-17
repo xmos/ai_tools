@@ -132,6 +132,47 @@ def XC_MulOp : XC_Op<"mul", [Pure]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_Beta_ConvF32Op : XC_Op<"beta_convf32", [Pure]> {
+  let summary = "Beta ConvF32 op";
+
+  let description = [{Beta ConvF32 op.}];
+
+  let arguments = (ins
+    TensorOf<[F32]>:$input,
+    TensorOf<[F32]>:$kernels,
+    TensorOf<[F32]>:$bias
+  );
+
+  let results = (outs TensorOf<[F32]> : $output);
+}
+
+def XC_Beta_TransposeConvF32Op : XC_Op<"beta_transposeconvf32", [Pure]> {
+  let summary = "Beta Transpose ConvF32 op";
+
+  let description = [{Beta Transpose ConvF32 op.}];
+
+  let arguments = (ins
+    TensorOf<[F32]>:$input,
+    TensorOf<[F32]>:$kernels,
+    TensorOf<[F32]>:$bias
+  );
+
+  let results = (outs TensorOf<[F32]> : $output);
+}
+
+def XC_Beta_FcF32Op : XC_Op<"beta_fcf32", [Pure]> {
+  let summary = "Beta Fc F32 op";
+
+  let description = [{Beta Fc ConvF32 op.}];
+
+  let arguments = (ins
+    TensorOf<[F32]>:$input,
+    TensorOf<[F32]>:$kernels
+  );
+
+  let results = (outs TensorOf<[F32]> : $output);
+}
+
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
   let summary = "Conv2D V2 op";
 

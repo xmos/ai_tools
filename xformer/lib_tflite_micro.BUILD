@@ -36,5 +36,9 @@ filegroup(
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_3_to_4.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_strided_slice.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_mul.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_beta_convf32.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_beta_transposeconvf32.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_beta_fcf32.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/conv2d_float.c",
     ],
 )

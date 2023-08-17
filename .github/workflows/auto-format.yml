@@ -8,13 +8,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone git repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - id: format
         uses: xmos/xaction_format@v1.0
         with:
           file-extensions:  |
             c h cpp hpp
-          exclude-dirs: "./third-party ./utils/lib_flexbuffers"
+          exclude-dirs: "./third_party"
           c-style: llvm
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      
+      - name: Install black
+        run: pip install black
+
+      - name: Format Python with black
+        run: black . --include '\.py$' --exclude 'third_party'

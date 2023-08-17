@@ -20,7 +20,7 @@ jobs:
     name: Build release archive
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 0
@@ -44,7 +44,7 @@ jobs:
           cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
           make create_zip -j4
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: xcore-archive
           path: third_party/lib_tflite_micro/build/*.zip

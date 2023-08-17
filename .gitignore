@@ -10,7 +10,7 @@
 **/*.eggs/*
 Pipfile.lock
 ai_tools_venv/*
-experimental/xformer/.venv
+xformer/.venv
 
 # Build cruft
 **/.lock*
@@ -57,7 +57,7 @@ python/xmos_ai_tools/xinterpreters/device/include
 *.h5
 *.html
 *training_history.png
-experimental/xformer/model_maker/*.tflite
+xformer/model_maker/*.tflite
 
 # Others
 *.npz

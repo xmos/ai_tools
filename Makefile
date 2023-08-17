@@ -35,7 +35,7 @@ xformer2_integration_test:
 #**************************
 .PHONY: version_check
 version_check:
-		cd ./experimental/xformer && ./version_check.sh
+		cd ./xformer && ./version_check.sh
 
 .PHONY: build
 build: version_check xcore_interpreters_build
@@ -73,21 +73,21 @@ help:
 
 .PHONY: init_linux
 init_linux:
-	export BAZEL_VERSION=`cat experimental/xformer/.bazelversion` ;\
+	export BAZEL_VERSION=`cat xformer/.bazelversion` ;\
 	curl -fLO "https://github.com/bazelbuild/bazel/releases/download/$${BAZEL_VERSION}/bazel-$${BAZEL_VERSION}-installer-linux-x86_64.sh" && \
 	chmod +x bazel-$${BAZEL_VERSION}-installer-linux-x86_64.sh && \
 	./bazel-$${BAZEL_VERSION}-installer-linux-x86_64.sh --prefix=$$PWD/bazel
 
 .PHONY: init_darwin
 init_darwin:
-	export BAZEL_VERSION=`cat experimental/xformer/.bazelversion` ;\
+	export BAZEL_VERSION=`cat xformer/.bazelversion` ;\
 	curl -fLO "https://github.com/bazelbuild/bazel/releases/download/$${BAZEL_VERSION}/bazel-$${BAZEL_VERSION}-installer-darwin-x86_64.sh" && \
 	chmod +x bazel-$${BAZEL_VERSION}-installer-darwin-x86_64.sh && \
 	./bazel-$${BAZEL_VERSION}-installer-darwin-x86_64.sh --prefix=$$PWD/bazel
 
 .PHONY: init_windows
 init_windows:
-	export BAZEL_VERSION=`cat experimental/xformer/.bazelversion` ;\
+	export BAZEL_VERSION=`cat xformer/.bazelversion` ;\
 	curl -fLO 'https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-windows-x86_64.exe'
 	mv bazel-${BAZEL_VERSION}-windows-x86_64.exe bazel.exe
 
@@ -102,10 +102,10 @@ build_release_linux:
 	    python3 -m venv .venv && \
 	    . .venv/bin/activate && \
 	    pip install -r requirements.txt && \
-	    cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures)
+	    cd xformer && ../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt --verbose_failures)
 	rm -rf ../Installs/Linux/External/xformer
 	mkdir -p ../Installs/Linux/External/xformer
-	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Linux/External/xformer
+	cp xformer/bazel-bin/xcore-opt ../Installs/Linux/External/xformer
 
 .PHONY: build_release_darwin
 build_release_darwin:
@@ -113,24 +113,24 @@ build_release_darwin:
 	  . .venv/bin/activate && \
 	  pip3 install --upgrade pip && \
 	  pip3 install -r requirements.txt && \
-	  cd experimental/xformer && ../../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=darwin_config //:xcore-opt --verbose_failures)
+	  cd xformer && ../bazel/bin/bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=darwin_config //:xcore-opt --verbose_failures)
 	rm -rf ../Installs/Mac/External/xformer
 	mkdir -p ../Installs/Mac/External/xformer
-	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Mac/External/xformer
+	cp xformer/bazel-bin/xcore-opt ../Installs/Mac/External/xformer
 
 .PHONY: build_release_windows
 build_release_windows:
 	python3 -m venv .venv
 	(. .venv/bin/activate && pip install -r requirements.txt)
-	(. .venv/bin/activate && cd experimental/xformer && ../../bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=windows_config //:xcore-opt --verbose_failures)
+	(. .venv/bin/activate && cd xformer && ../bazel build --remote_cache=http://srv-bri-bld-cache:8080 --config=windows_config //:xcore-opt --verbose_failures)
 	mkdir -p ../Installs/Linux/External/xformer
-	cp experimental/xformer/bazel-bin/xcore-opt ../Installs/Windows/External/xformer
+	cp xformer/bazel-bin/xcore-opt ../Installs/Windows/External/xformer
 
 TEST_SCRIPT= \
 (cd xmos_ai_tools/src/xinterpreters/host/ && make build)&& \
 (cd xmos_ai_tools && python3 setup.py bdist_wheel &&\
 pip install ./xmos_ai_tools/dist/*"&& \
-(cd experimental/xformer && ../../bazel/bin/bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures)&& \
+(cd xformer && ../bazel/bin/bazel test --remote_cache=http://srv-bri-bld-cache:8080 //Test:all --verbose_failures)&& \
 (pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n $(NUM_PROCS) --junitxml=integration_non_bnns_junit.xml)&& \
 (pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n $(NUM_PROCS) --junitxml=integration_bnns_junit.xml)
 

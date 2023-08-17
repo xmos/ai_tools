@@ -89,7 +89,7 @@ jobs:
           cd $GITHUB_WORKSPACE
           make build
 
-          cd $GITHUB_WORKSPACE/experimental/xformer
+          cd $GITHUB_WORKSPACE/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo "using Google Cloud Storage cache"
             echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }}' >> .bazelrc.user
@@ -152,7 +152,7 @@ jobs:
           cd $GITHUB_WORKSPACE
           make build
 
-          cd $GITHUB_WORKSPACE/experimental/xformer
+          cd $GITHUB_WORKSPACE/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo "using Google Cloud Storage cache"
             echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-arm64-python${{ matrix.python-version }}' >> .bazelrc.user
@@ -206,7 +206,7 @@ jobs:
         # auditwheel requires patchelf and repairs the created wheel file to 
         # be compatible for manylinux.
         run: |
-          pushd $GITHUB_WORKSPACE/experimental/xformer
+          pushd $GITHUB_WORKSPACE/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
             echo "using Google Cloud Storage cache"
             echo -e 'build --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }}' >> .bazelrc.user
@@ -293,7 +293,7 @@ jobs:
           cmake ..
           cmake --build . -t install --parallel --config Release
 
-          cd %GITHUB_WORKSPACE%/experimental/xformer
+          cd %GITHUB_WORKSPACE%/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
           bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --//:disable_version_check
       - name: Build windows wheels

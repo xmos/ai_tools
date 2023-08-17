@@ -18,14 +18,3 @@ jobs:
           exclude-dirs: "./third_party"
           c-style: llvm
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
-      
-      - name: Install black
-        run: pip install black
-
-      - name: Format Python with black
-        run: black . --include '\.py$' --exclude 'third_party'

@@ -25,16 +25,16 @@ jobs:
         python-version: [3.8]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 0
           ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      - uses: google-github-actions/auth@v0
+      - uses: google-github-actions/auth@v1
         continue-on-error: true
         with:
           create_credentials_file: true
@@ -94,16 +94,16 @@ jobs:
         python-version: [3.8]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 0
           ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      - uses: google-github-actions/auth@v0
+      - uses: google-github-actions/auth@v1
         continue-on-error: true
         with:
           create_credentials_file: true
@@ -156,16 +156,16 @@ jobs:
         python-version: [3.8]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 0
           ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      - uses: google-github-actions/auth@v0
+      - uses: google-github-actions/auth@v1
         continue-on-error: true
         with:
           create_credentials_file: true

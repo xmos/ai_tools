@@ -27,15 +27,15 @@ jobs:
         python-version: [3.8]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 0
           ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: google-github-actions/auth@v0
+      - uses: google-github-actions/auth@v1
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
@@ -62,9 +62,9 @@ jobs:
           bazelisk build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --//:disable_version_check
           
           cd $GITHUB_WORKSPACE/python
-          python setup.py bdist_wheel --plat macosx_10_9_x86_64
+          python setup.py bdist_wheel --plat macosx_10_14_x86_64
           
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}-wheels
           path: python/dist
@@ -79,15 +79,15 @@ jobs:
         python-version: [3.8]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 0
           ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: google-github-actions/auth@v0
+      - uses: google-github-actions/auth@v1
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
@@ -117,7 +117,7 @@ jobs:
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat-name macosx_11_0_arm64
           
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}-arm-wheels
           path: python/dist
@@ -132,15 +132,15 @@ jobs:
         python-version: [3.8]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 0
           ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: google-github-actions/auth@v0
+      - uses: google-github-actions/auth@v1
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
@@ -173,7 +173,7 @@ jobs:
             auditwheel repair --plat manylinux2014_x86_64 $f
           done
           
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}-wheels
           # auditwheel creates the output wheel in the wheelhouse folder
@@ -189,15 +189,15 @@ jobs:
         python-version: [3.8]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 0
           ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: google-github-actions/auth@v0
+      - uses: google-github-actions/auth@v1
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
@@ -237,7 +237,7 @@ jobs:
         run: |
           cd python
           python setup.py bdist_wheel
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}-wheels
           path: python/dist
@@ -250,22 +250,22 @@ jobs:
     needs: [macos-release-wheel, macos-arm-release-wheel, manylinux-release-wheel, windows-release-wheel]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: macOS-wheels
           path: macOS-wheels
         if: ${{ needs.macos-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: macOS-arm-wheels
           path: macOS-arm-wheels
         if: ${{ needs.macos-arm-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: Linux-wheels
           path: Linux-wheels
         if: ${{ needs.manylinux-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: Windows-wheels
           path: Windows-wheels

@@ -25,8 +25,8 @@ def IsConstOp
 
 // TFL_Conv2D() -> XC_FakeConv2D()
 def :
-Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, $p, $sh, $sw),
-          (XC_FakeConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, (CreateNoneValue $input), $sh, $sw),[
+Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, $wf, $sh, $sw),
+          (XC_FakeConv2DOp $input, $f, $b, $dh, $dw, $faf, $wf, (CreateNoneValue $input), $sh, $sw),[
               (HasMultipleOfNBytesPerPixel<4> $input),
               (HasMultipleOfNBytesPerPixel<4> $output),
               (HasEqualChannels $input, $f),
@@ -35,9 +35,24 @@ Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf
 
 // TFL_DepthwiseConv2D() -> XC_FakeDepthwiseConv2D()
 def :
-Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, TensorOf<[I32,QI32]>:$b, $dh, $dw, $faf, $p, $sh, $sw, $dm),
-          (XC_FakeDepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, (CreateNoneValue $input), $sh, $sw, $dm),[
+Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, TensorOf<[I32,QI32]>:$b, $dh, $dw, $faf, $wf, $sh, $sw, $dm),
+          (XC_FakeDepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $wf, (CreateNoneValue $input), $sh, $sw, $dm),[
               (HasMultipleOfNBytesPerPixel<4> $input),
               (HasMultipleOfNBytesPerPixel<4> $output),
               (IsConstOp $f),
               ]>;
+
+// F32 TFL_Conv2D() -> XC_Beta_ConvF32()
+def :
+Pat<(TFL_Conv2DOp: $output TensorOf<[F32]>:$input, TensorOf<[F32]>:$f, TensorOf<[F32]>:$b, $dh, $dw, $faf, $wf, $sh, $sw),
+          (XC_Beta_ConvF32Op $input, $f, $b)>;
+
+// F32 TFL_TransposeConv2D() -> XC_Beta_TransposeConvF32()
+def :
+Pat<(TFL_TransposeConvOp: $output $outshape, TensorOf<[F32]>:$f, TensorOf<[F32]>:$input, TensorOf<[F32]>:$b, $wf, $sh, $sw, $faf),
+          (XC_Beta_TransposeConvF32Op $input, $f, $b)>;
+
+// F32 TFL_FullyConnected() -> XC_Beta_FcF32()
+def :
+Pat<(TFL_FullyConnectedOp: $output TensorOf<[F32]>:$input, TensorOf<[F32]>:$f, $b, $faf, $wf, $knd, $aqi),
+          (XC_Beta_FcF32Op $input, $f)>;

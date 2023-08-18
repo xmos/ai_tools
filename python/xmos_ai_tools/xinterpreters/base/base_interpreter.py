@@ -103,6 +103,10 @@ class xcore_tflm_base_interpreter(ABC):
         """! Abstract method to print a plan of memory allocation"""
         raise NotImplementedError
 
+    def allocate_tensors(self):
+        """! Dummy function to match tf.lite.Interpreter() API"""
+        return
+
     def get_input_tensor_size(self, input_index: int = 0, model_index: int = 0) -> int:
         """! Read the size of the input tensor from the model.
         @param input_index  The index of input tensor to target.
@@ -398,6 +402,8 @@ class xcore_tflm_base_interpreter(ABC):
                     )
                 )
             self.initialise_interpreter(model_index)
+        else:
+            raise ValueError("model_path must be str")
 
     def get_model(self, model_index: int = 0):
         for model in self.models:

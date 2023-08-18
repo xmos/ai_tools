@@ -1,5 +1,6 @@
 # Copyright 2022 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
+import os
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Union, Type, Optional, Any, List, Tuple, Dict
@@ -233,7 +234,8 @@ class xcore_tflm_base_interpreter(ABC):
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
             elif (
-                modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32
+                modelBuf.Subgraphs(0).Tensors(
+                    tensorIndex).Type() == TensorType.FLOAT32
             ):
                 dtype = np.float32
             else:
@@ -250,7 +252,8 @@ class xcore_tflm_base_interpreter(ABC):
                 .ShapeSignatureAsNumpy(),
                 "dtype": dtype,
                 "quantization": (
-                    modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().Scale(0),
+                    modelBuf.Subgraphs(0).Tensors(
+                        tensorIndex).Quantization().Scale(0),
                     modelBuf.Subgraphs(0)
                     .Tensors(tensorIndex)
                     .Quantization()
@@ -303,7 +306,8 @@ class xcore_tflm_base_interpreter(ABC):
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
             elif (
-                modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.FLOAT32
+                modelBuf.Subgraphs(0).Tensors(
+                    tensorIndex).Type() == TensorType.FLOAT32
             ):
                 dtype = np.float32
 
@@ -318,7 +322,8 @@ class xcore_tflm_base_interpreter(ABC):
                 .ShapeSignatureAsNumpy(),
                 "dtype": dtype,
                 "quantization": (
-                    modelBuf.Subgraphs(0).Tensors(tensorIndex).Quantization().Scale(0),
+                    modelBuf.Subgraphs(0).Tensors(
+                        tensorIndex).Quantization().Scale(0),
                     modelBuf.Subgraphs(0)
                     .Tensors(tensorIndex)
                     .Quantization()
@@ -368,36 +373,39 @@ class xcore_tflm_base_interpreter(ABC):
         """
 
         # Check model_path or model_content is valid
-        if type(model_path) == str or model_content is not None:
-            tile_found = False
-            # Find correct model and replace
-            for model in self.models:
-                if model.tile == model_index:
-                    model = self.modelData(
-                        model_path,
-                        model_content,
-                        params_path,
-                        params_content,
-                        model_index,
-                        secondary_memory,
-                        flash,
-                    )
-                    tile_found = True
-                    break
-            # If model wasn't previously set, add it to list
-            if not tile_found:
-                self.models.append(
-                    self.modelData(
-                        model_path,
-                        model_content,
-                        params_path,
-                        params_content,
-                        model_index,
-                        secondary_memory,
-                        flash,
-                    )
+        if not (os.path.isfile(model_path) or model_content):
+            raise ValueError(
+                "Either a valid model path or model content must be provided."
+            )
+        tile_found = False
+        # Find correct model and replace
+        for model in self.models:
+            if model.tile == model_index:
+                model = self.modelData(
+                    model_path,
+                    model_content,
+                    params_path,
+                    params_content,
+                    model_index,
+                    secondary_memory,
+                    flash,
                 )
-            self.initialise_interpreter(model_index)
+                tile_found = True
+                break
+        # If model wasn't previously set, add it to list
+        if not tile_found:
+            self.models.append(
+                self.modelData(
+                    model_path,
+                    model_content,
+                    params_path,
+                    params_content,
+                    model_index,
+                    secondary_memory,
+                    flash,
+                )
+            )
+        self.initialise_interpreter(model_index)
 
     def get_model(self, model_index: int = 0):
         for model in self.models:

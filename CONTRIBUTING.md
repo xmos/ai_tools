@@ -113,7 +113,6 @@ We recommend using a workspace-specific `settings.json` file along the lines of 
         "ai_tools_venv": true,
         "**/.DS_Store": true,
         "**/.git/**": true,
-        "**/.mypy_cache/**": true,
         "**/.ipynb_checkpoints/**": true,
         "**/__pycache__/**": true,
         "**/.pytest_cache/**": true,
@@ -126,7 +125,6 @@ We recommend using a workspace-specific `settings.json` file along the lines of 
         "ai_tools_venv": true,
         "**/.DS_Store": true,
         "**/.git/**": true,
-        "**/.mypy_cache/**": true,
         "**/.ipynb_checkpoints/**": true,
         "**/__pycache__/**": true,
         "**/.pytest_cache/**": true,
@@ -143,11 +141,6 @@ We recommend using a workspace-specific `settings.json` file along the lines of 
     },
     "python.languageServer": "Pylance",
     "python.linting.pylintEnabled": true,
-    "python.linting.mypyArgs": [
-        "--config-file=${workspaceFolder}/mypy.ini"
-    ],
-    "python.linting.mypyCategorySeverity.error": "Information",
-    "python.linting.mypyEnabled": true,
     "python.formatting.provider": "black",
     "C_Cpp.clang_format_style": "file",
     "C_Cpp.clang_format_fallbackStyle": "Google",

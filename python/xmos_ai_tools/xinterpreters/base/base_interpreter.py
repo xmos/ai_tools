@@ -377,7 +377,7 @@ class xcore_tflm_base_interpreter(ABC):
         """
 
         # Check model_path or model_content is valid
-        if not (os.path.isfile(model_path) or model_content):
+        if not model_content and not (model_path and os.path.isfile(model_path)):
             raise ValueError(
                 "Either a valid model path or model content must be provided."
             )

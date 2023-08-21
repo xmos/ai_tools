@@ -1,16 +1,16 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
-//#include "tensorflow/lite/micro/all_ops_resolver.h"
+// #include "tensorflow/lite/micro/all_ops_resolver.h"
 
 #include "inference_engine.h"
 #include <cstdio>
-//#include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
-//#include "tensorflow/lite/micro/recording_micro_allocator.
+// #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
+// #include "tensorflow/lite/micro/recording_micro_allocator.
 
 #ifdef _MSC_VER
-  #define DLLEXPORT __declspec(dllexport)
+#define DLLEXPORT __declspec(dllexport)
 #else
-  #define DLLEXPORT
+#define DLLEXPORT
 #endif
 
 //*****************************************
@@ -46,6 +46,7 @@ void add_lib_vision_ops(
   resolver->AddTanh();
   resolver->AddSplitV();
   resolver->AddShape();
+  resolver->AddElu();
 }
 
 extern "C" {
@@ -92,20 +93,20 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
 }
 
 DLLEXPORT void delete_interpreter(inference_engine *ie) {
-  //inference_engine_unload_model(ie);
+  // inference_engine_unload_model(ie);
   free(ie->memory_primary);
   free(ie->xtflm);
   free(ie);
 }
 
 DLLEXPORT int initialize(inference_engine *ie, const char *model_content,
-               size_t model_content_size, const char *param_content) {
+                         size_t model_content_size, const char *param_content) {
   // We need to keep a copy of the model content
   inference_engine_unload_model(ie);
   uint32_t *m = (uint32_t *)model_content;
   memcpy(ie->memory_primary, m, model_content_size);
-  int r = inference_engine_load_model(ie, model_content_size, ie->memory_primary,
-                                      (void *)param_content);
+  int r = inference_engine_load_model(
+      ie, model_content_size, ie->memory_primary, (void *)param_content);
   return kTfLiteOk;
 }
 
@@ -113,40 +114,42 @@ DLLEXPORT void print_memory_plan(inference_engine *ie) {
   ie->xtflm->interpreter->PrintMemoryPlan();
 }
 
-//Unused
-//DLLEXPORT size_t inputs_size(inference_engine *ie) { return ie->inputs; }
+// Unused
+// DLLEXPORT size_t inputs_size(inference_engine *ie) { return ie->inputs; }
 
-//Unused
-//DLLEXPORT size_t outputs_size(inference_engine *ie) { return ie->outputs; }
+// Unused
+// DLLEXPORT size_t outputs_size(inference_engine *ie) { return ie->outputs; }
 
-//Unused
-// DLLEXPORT size_t get_input_tensor_size(inference_engine *ie, int tensor_index) {
-//   return ie->input_sizes[tensor_index];
-// }
+// Unused
+//  DLLEXPORT size_t get_input_tensor_size(inference_engine *ie, int
+//  tensor_index) {
+//    return ie->input_sizes[tensor_index];
+//  }
 
-//Unused
-// DLLEXPORT size_t get_output_tensor_size(inference_engine *ie, int tensor_index) {
-//   return ie->output_sizes[tensor_index];
-// }
+// Unused
+//  DLLEXPORT size_t get_output_tensor_size(inference_engine *ie, int
+//  tensor_index) {
+//    return ie->output_sizes[tensor_index];
+//  }
 
 DLLEXPORT size_t arena_used_bytes(inference_engine *ie) {
   return ie->arena_needed_bytes;
 }
 
 DLLEXPORT int set_input_tensor(inference_engine *ie, size_t tensor_index,
-                     const void *value, const int size) {
+                               const void *value, const int size) {
   memcpy(ie->input_buffers[tensor_index], value, size);
   return 0;
 }
 
-DLLEXPORT int get_input_tensor(inference_engine *ie, size_t tensor_index, void *value,
-                      const int size) {
+DLLEXPORT int get_input_tensor(inference_engine *ie, size_t tensor_index,
+                               void *value, const int size) {
   memcpy(value, ie->input_buffers[tensor_index], size);
   return 0;
 }
 
-DLLEXPORT int get_output_tensor(inference_engine *ie, size_t tensor_index, void *value,
-                      const int size) {
+DLLEXPORT int get_output_tensor(inference_engine *ie, size_t tensor_index,
+                                void *value, const int size) {
   memcpy(value, ie->output_buffers[tensor_index], size);
   return 0;
 }
@@ -155,35 +158,39 @@ DLLEXPORT int invoke(inference_engine *ie) { return interp_invoke_par_5(ie); }
 
 DLLEXPORT int reset(inference_engine *ie) { return interp_reset(ie); }
 
-//Unused
-// DLLEXPORT size_t get_tensor_details_buffer_sizes(inference_engine *ie,
-//                                        size_t tensor_index, size_t *dims,
-//                                        size_t *scales, size_t *zero_points) {
-//   return ie->xtflm->interpreter->GetTensorDetailsBufferSizes(
-//       tensor_index, dims, scales, zero_points);
-// }
+// Unused
+//  DLLEXPORT size_t get_tensor_details_buffer_sizes(inference_engine *ie,
+//                                         size_t tensor_index, size_t *dims,
+//                                         size_t *scales, size_t *zero_points)
+//                                         {
+//    return ie->xtflm->interpreter->GetTensorDetailsBufferSizes(
+//        tensor_index, dims, scales, zero_points);
+//  }
 
-//Unused
-// DLLEXPORT int get_tensor_details(inference_engine *ie, size_t tensor_index, char *name,
-//                        int name_len, int *shape, int *type, float *scale,
-//                        int *zero_point) {
-//   return ie->xtflm->interpreter->GetTensorDetails(
-//       tensor_index, name, name_len, shape, type, scale, zero_point);
-// }
+// Unused
+//  DLLEXPORT int get_tensor_details(inference_engine *ie, size_t tensor_index,
+//  char *name,
+//                         int name_len, int *shape, int *type, float *scale,
+//                         int *zero_point) {
+//    return ie->xtflm->interpreter->GetTensorDetails(
+//        tensor_index, name, name_len, shape, type, scale, zero_point);
+//  }
 
 DLLEXPORT size_t get_error(inference_engine *ie, char *msg) {
   std::strcpy(msg, (const char *)ie->debug_log_buffer);
   return strlen(msg);
 }
 
-//Unused
-// DLLEXPORT size_t input_tensor_index(inference_engine *ie, size_t input_index) {
-//   return ie->xtflm->interpreter->input_tensor_index(input_index);
-// }
+// Unused
+//  DLLEXPORT size_t input_tensor_index(inference_engine *ie, size_t
+//  input_index) {
+//    return ie->xtflm->interpreter->input_tensor_index(input_index);
+//  }
 
-//Unused
-// DLLEXPORT size_t output_tensor_index(inference_engine *ie, size_t output_index) {
-//   return ie->xtflm->interpreter->output_tensor_index(output_index);
-// }
+// Unused
+//  DLLEXPORT size_t output_tensor_index(inference_engine *ie, size_t
+//  output_index) {
+//    return ie->xtflm->interpreter->output_tensor_index(output_index);
+//  }
 
 } // extern "C"

@@ -42,12 +42,13 @@ Perform the following steps once
 
     export XMOS_AITOOLSLIB_PATH=$(python -c "import xmos_ai_tools.xinterpreters.device as device_lib; import os; print(os.path.dirname(device_lib.__file__))")
 
+  Optionally, you may add the relevant ``export`` command in ``venv/bin/activate`` (for pip) or a script in ``($CONDA_PREFIX)/etc/conda/activate.d/`` (for conda), to automatically set the environment variable upon activating your virtual environment.
 
 
 Example applications
 ----------------------------
 
-These are 5 example models; in order of complexity
+These are 4 example models; in order of complexity
 
 * `app_no_flash <../../examples/app_no_flash/README.rst>`_  - a single model, no flash memory used. This is the
   fastest but most pressure on internal memory.

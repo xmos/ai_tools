@@ -6,13 +6,13 @@ import numpy as np
 import os
 import sys
 import subprocess
-import larq_compute_engine as lce
-import tensorflow as tf
 from xmos_ai_tools.xinterpreters import (
     xcore_tflm_host_interpreter,
     xcore_tflm_usb_interpreter,
 )
 from xmos_ai_tools import xformer
+import larq_compute_engine as lce
+import tensorflow as tf
 from itertools import chain
 import yaml
 
@@ -23,7 +23,8 @@ REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
 LIB_TFLM_DIR_PATH = (
-    pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_tflite_micro"
+    pathlib.Path(__file__).resolve(
+    ).parents[1] / "third_party" / "lib_tflite_micro"
 )
 LIB_NN_INCLUDE_PATH = (
     pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_nn"
@@ -35,9 +36,11 @@ TFLM_INCLUDE_PATH = pathlib.Path.joinpath(
 FLATBUFFERS_INCLUDE_PATH = pathlib.Path.joinpath(
     LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "flatbuffers", "include"
 )
-TFLMC_DIR_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "tflite_micro_compiler")
+TFLMC_DIR_PATH = pathlib.Path.joinpath(
+    LIB_TFLM_DIR_PATH, "tflite_micro_compiler")
 TFLMC_BUILD_DIR_PATH = pathlib.Path.joinpath(TFLMC_DIR_PATH, "build")
-TFLMC_EXE_PATH = pathlib.Path.joinpath(TFLMC_BUILD_DIR_PATH, "tflite_micro_compiler")
+TFLMC_EXE_PATH = pathlib.Path.joinpath(
+    TFLMC_BUILD_DIR_PATH, "tflite_micro_compiler")
 TFLMC_MAIN_CPP_PATH = pathlib.Path.joinpath(TFLMC_DIR_PATH, "model_main.cpp")
 
 
@@ -208,8 +211,10 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         input_tensor_type = []
         input_tensor_shape = []
         for i in range(num_of_inputs):
-            input_tensor_type.append(interpreter.get_input_details()[i]["dtype"])
-            input_tensor_shape.append(interpreter.get_input_details()[i]["shape"])
+            input_tensor_type.append(
+                interpreter.get_input_details()[i]["dtype"])
+            input_tensor_shape.append(
+                interpreter.get_input_details()[i]["shape"])
 
     LOGGER.info("Invoking xformer to get xformed model...")
     if testing_detection_postprocess_option:
@@ -259,7 +264,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             for i in range(num_of_inputs):
                 input_tensor.append(
                     np.array(
-                        255 * np.random.random_sample(input_tensor_shape[i]) - 128,
+                        255 *
+                        np.random.random_sample(input_tensor_shape[i]) - 128,
                         dtype=input_tensor_type[i],
                     )
                 )
@@ -281,7 +287,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
 
             for i in range(num_of_inputs):
                 interpreter.set_tensor(
-                    interpreter.get_input_details()[i]["index"], input_tensor[i]
+                    interpreter.get_input_details(
+                    )[i]["index"], input_tensor[i]
                 )
             LOGGER.info("Invoking TFLite interpreter...")
             interpreter.invoke()
@@ -291,7 +298,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             output_zero_points = []
             for i in range(num_of_outputs):
                 outputs.append(
-                    interpreter.get_tensor(interpreter.get_output_details()[i]["index"])
+                    interpreter.get_tensor(
+                        interpreter.get_output_details()[i]["index"])
                 )
                 quant_params = interpreter.get_output_details()[i][
                     "quantization_parameters"
@@ -301,7 +309,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
 
         if testing_on_tflmc_option:
             LOGGER.info("Invoking tflmc...")
-            xformer_outputs = get_tflmc_outputs(tflmc_model_exe, input_tensor, outputs)
+            xformer_outputs = get_tflmc_outputs(
+                tflmc_model_exe, input_tensor, outputs)
         else:
             # Resets variable tensors in the model.
             # This should be called after invoking a model with stateful ops such as LSTM.
@@ -313,7 +322,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             ie.invoke()
             xformer_outputs = []
             for i in range(num_of_outputs):
-                output_tensor = ie.get_tensor(ie.get_output_details()[i]["index"])
+                output_tensor = ie.get_tensor(
+                    ie.get_output_details()[i]["index"])
                 LOGGER.info("outputs: " + str(output_tensor.shape))
                 xformer_outputs.append(output_tensor)
 
@@ -337,13 +347,15 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             max_abs_error = np.amax(np.abs(errors))
 
             if max_abs_error > params["MAX_ABS_ERROR"]:
-                LOGGER.error("Max abs error is too high: " + str(max_abs_error))
+                LOGGER.error("Max abs error is too high: " +
+                             str(max_abs_error))
                 assert max_abs_error <= 1
 
     np.set_printoptions(threshold=np.inf)
     avg_error = running_output_error / running_output_count
     avg_abs_error = running_output_abs_error / running_output_count
-    LOGGER.info(str(max_abs_error) + " " + str(avg_error) + " " + str(avg_abs_error))
+    LOGGER.info(str(max_abs_error) + " " +
+                str(avg_error) + " " + str(avg_abs_error))
 
     failed = False
     if abs(avg_error) > params["ABS_AVG_ERROR"]:

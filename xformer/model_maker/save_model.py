@@ -12,17 +12,21 @@ import pathlib
 rep_ds = tf.data.Dataset.list_files("train_samples/*.jpg")
 HEIGHT, WIDTH = 160, 160
 
-def representative_dataset_gen():
-   for image_path in rep_ds:
-       img = tf.io.read_file(image_path)
-       img = tf.io.decode_image(img, channels=3)
-       img = tf.image.convert_image_dtype(img, tf.float32)
-       resized_img = tf.image.resize(img, (HEIGHT, WIDTH))
-       resized_img = resized_img[tf.newaxis, :]
-       yield [resized_img]
 
-#model = tf.keras.applications.mobilenet_v2.MobileNetV2(input_shape=(HEIGHT, WIDTH, 3), alpha=1.0, include_top=True)
-model = tf.keras.applications.MobileNetV3Small(input_shape=(HEIGHT, WIDTH, 3), alpha=1.0, minimalistic=True) #, include_top=True)
+def representative_dataset_gen():
+    for image_path in rep_ds:
+        img = tf.io.read_file(image_path)
+        img = tf.io.decode_image(img, channels=3)
+        img = tf.image.convert_image_dtype(img, tf.float32)
+        resized_img = tf.image.resize(img, (HEIGHT, WIDTH))
+        resized_img = resized_img[tf.newaxis, :]
+        yield [resized_img]
+
+
+# model = tf.keras.applications.mobilenet_v2.MobileNetV2(input_shape=(HEIGHT, WIDTH, 3), alpha=1.0, include_top=True)
+model = tf.keras.applications.MobileNetV3Small(
+    input_shape=(HEIGHT, WIDTH, 3), alpha=1.0, minimalistic=True
+)  # , include_top=True)
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
 
 
@@ -31,7 +35,7 @@ converter.optimizations = [tf.lite.Optimize.DEFAULT]
 converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
 converter.inference_input_type = tf.int8
 converter.inference_output_type = tf.int8
-#converter.representative_dataset = tf.lite.RepresentativeDataset(representative_dataset_gen)
+# converter.representative_dataset = tf.lite.RepresentativeDataset(representative_dataset_gen)
 converter.representative_dataset = representative_dataset_gen
 model_tflite = converter.convert()
 

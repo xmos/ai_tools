@@ -1,6 +1,6 @@
 NUM_PROCS := 8
 .DEFAULT_GOAL := help
-.PHONY: xcore_interpreters_build xinterpreters_smoke_test_host xformer2_test version_check build test submodule_update clean help
+.PHONY: xcore_interpreters_build xinterpreters_smoke_test_host xformer2_test version_check build test submodule_update clean help patch create_zip
 
 xcore_interpreters_build:
 	$(MAKE) -C python/xmos_ai_tools/xinterpreters/host/ install
@@ -12,15 +12,22 @@ xformer2_integration_test:
 version_check:
 	cd ./xformer && ./version_check.sh
 
-build: version_check xcore_interpreters_build
-
-test: xformer2_integration_test
-
 submodule_update: 
 	git submodule update --init --recursive
 
 clean:
 	$(MAKE) -C python/xmos_ai_tools/xinterpreters/host/ clean
+
+patch:
+	$(MAKE) -C third_party/lib_tflite_micro patch
+
+create_zip:
+	cd third_party/lib_tflite_micro && mkdir -p build && cd build && cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+
+
+build: version_check xcore_interpreters_build
+
+test: xformer2_integration_test
 
 help:
 	@:  # This silences the "Nothing to be done for 'help'" output

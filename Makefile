@@ -23,6 +23,7 @@ patch:
 
 create_zip:
 	cd third_party/lib_tflite_micro && mkdir -p build && cd build && cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+	$(MAKE) -C third_party/lib_tflite_micro/build create_zip
 
 
 build: version_check xcore_interpreters_build

@@ -1,6 +1,6 @@
 NUM_PROCS := 8
 .DEFAULT_GOAL := help
-.PHONY: xcore_interpreters_build xinterpreters_smoke_test_host xformer2_test version_check build test submodule_update clean help patch create_zip
+.PHONY: xcore_interpreters_build xinterpreters_smoke_test_host xformer2_test version_check build test submodule_update clean help patch
 
 xcore_interpreters_build:
 	$(MAKE) -C python/xmos_ai_tools/xinterpreters/host/ install
@@ -21,12 +21,15 @@ clean:
 patch:
 	$(MAKE) -C third_party/lib_tflite_micro patch
 
-create_zip:
-	cd third_party/lib_tflite_micro && mkdir -p build && cd build && cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
-	$(MAKE) -C third_party/lib_tflite_micro/build create_zip
+lsp_setup:
+	cd xformer && bazel run @hedron_compile_commands//:refresh_all
 
+xformer_build:
+	cd xformer && bazel build //:xcore-opt
 
-build: version_check xcore_interpreters_build
+init: submodule_update patch
+
+build: version_check xcore_interpreters_build xformer_build
 
 test: xformer2_integration_test
 

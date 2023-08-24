@@ -30,8 +30,8 @@ _build
 compile_commands.json
 .cache
 wheels/
-python/xmos_ai_tools/xinterpreters/device/lib
-python/xmos_ai_tools/xinterpreters/device/include
+python/xmos_ai_tools/runtime/lib
+python/xmos_ai_tools/runtime/include
 
 # Test cruft
 **/.pytest_cache/*

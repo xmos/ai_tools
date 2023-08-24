@@ -71,11 +71,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: xcore-archive
-          path: python/xmos_ai_tools/xinterpreters/device
+          path: python/xmos_ai_tools/runtime
       - name: Prepare release archive
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/device
+          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/runtime
           unzip release_archive.zip
           rm release_archive.zip
       - name: Build macOS wheels
@@ -132,11 +132,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: xcore-archive
-          path: python/xmos_ai_tools/xinterpreters/device
+          path: python/xmos_ai_tools/runtime
       - name: Prepare release archive
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/device
+          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/runtime
           unzip release_archive.zip
           rm release_archive.zip
       - name: Build macOS arm wheels
@@ -195,11 +195,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: xcore-archive
-          path: python/xmos_ai_tools/xinterpreters/device
+          path: python/xmos_ai_tools/runtime
       - name: Prepare release archive
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/device
+          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/runtime
           unzip release_archive.zip
           rm release_archive.zip
       - name: Build manylinux2014 wheels
@@ -269,11 +269,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: xcore-archive
-          path: python/xmos_ai_tools/xinterpreters/device
+          path: python/xmos_ai_tools/runtime
       - name: Prepare release archive
         shell: cmd
         run: |
-          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/device
+          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/runtime
           7z x release_archive.zip
           del release_archive.zip
       - name: Build xcore-opt and xtflm-interpreter

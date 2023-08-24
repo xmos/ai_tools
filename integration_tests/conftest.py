@@ -5,6 +5,7 @@ import sys
 # workaround to get debug logs when using xdist
 sys.stdout = sys.stderr
 
+
 def pytest_addoption(parser):
     parser.addoption(
         "--s",

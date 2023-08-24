@@ -122,8 +122,7 @@ setup(
     install_requires=REQUIRED_PACKAGES,
     package_data=package_files,
     data_files=[
-        ("Scripts" if platform.system() ==
-         "Windows" else "bin", [XCOREOPT_BINARY])
+        ("Scripts" if platform.system() == "Windows" else "bin", [XCOREOPT_BINARY])
     ],
     cmdclass={
         "bdist_wheel": bdist_wheel,

@@ -17,37 +17,48 @@ from itertools import chain
 import yaml
 
 MAX_ABS_ERROR = 1
-ABS_AVG_ERROR = 1./4
-AVG_ABS_ERROR = 1./4
+ABS_AVG_ERROR = 1.0 / 4
+AVG_ABS_ERROR = 1.0 / 4
 REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
-LIB_TFLM_DIR_PATH = (pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_tflite_micro")
-LIB_NN_INCLUDE_PATH = (pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_nn")
+LIB_TFLM_DIR_PATH = (
+    pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_tflite_micro"
+)
+LIB_NN_INCLUDE_PATH = (
+    pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_nn"
+)
 LIB_TFLM_INCLUDE_PATH = LIB_TFLM_DIR_PATH
-TFLM_INCLUDE_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "tflite-micro")
-FLATBUFFERS_INCLUDE_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "flatbuffers", "include")
+TFLM_INCLUDE_PATH = pathlib.Path.joinpath(
+    LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "tflite-micro"
+)
+FLATBUFFERS_INCLUDE_PATH = pathlib.Path.joinpath(
+    LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "flatbuffers", "include"
+)
 TFLMC_DIR_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "tflite_micro_compiler")
 TFLMC_BUILD_DIR_PATH = pathlib.Path.joinpath(TFLMC_DIR_PATH, "build")
 TFLMC_EXE_PATH = pathlib.Path.joinpath(TFLMC_BUILD_DIR_PATH, "tflite_micro_compiler")
 TFLMC_MAIN_CPP_PATH = pathlib.Path.joinpath(TFLMC_DIR_PATH, "model_main.cpp")
 
-def run_cmd(cmd, working_dir = None):
+
+def run_cmd(cmd, working_dir=None):
     try:
         if working_dir:
-            p = subprocess.run(cmd,
-                            cwd = working_dir,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            check=True)
+            p = subprocess.run(
+                cmd,
+                cwd=working_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=True,
+            )
         else:
-            p = subprocess.run(cmd,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            check=True)
+            p = subprocess.run(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
+            )
     except subprocess.CalledProcessError as e:
         print(e.output)
         sys.exit(1)
+
 
 def get_tflmc_model_exe(temp_dirname):
     if os.getenv("XMOS_AITOOLSLIB_PATH") is None:
@@ -57,31 +68,33 @@ def get_tflmc_model_exe(temp_dirname):
     model_cpp_path = pathlib.Path(temp_dirname) / "model.tflite.cpp"
     # compile model.cpp with model_main.cpp
     model_exe_path = pathlib.Path(temp_dirname) / "a.out"
-    cmd = ["clang++",
-    "-DTF_LITE_DISABLE_X86_NEON",
-    "-DTF_LITE_STATIC_MEMORY",
-    "-DNO_INTERPRETER",
-    "-std=c++14",
-    "-I" + os.getenv("XMOS_AITOOLSLIB_PATH")+ "/include",
-    # "-I" + str(LIB_NN_INCLUDE_PATH),
-    # "-I" + str(TFLM_INCLUDE_PATH),
-    # "-I" + str(FLATBUFFERS_INCLUDE_PATH),
-    "-I" + temp_dirname,
-    "-I" + os.getenv("VIRTUAL_ENV") + "/include",
-    "-g",
-    "-O0",
-    "-lxtflitemicro",
-    "-L" + os.getenv("XMOS_AITOOLSLIB_PATH")+ "/lib",
-    str(model_cpp_path),
-    str(TFLMC_MAIN_CPP_PATH),
-    # "-rpath",
-    # str(TFLMC_BUILD_DIR_PATH),
-    "-o",
-    str(model_exe_path)
+    cmd = [
+        "clang++",
+        "-DTF_LITE_DISABLE_X86_NEON",
+        "-DTF_LITE_STATIC_MEMORY",
+        "-DNO_INTERPRETER",
+        "-std=c++14",
+        "-I" + os.getenv("XMOS_AITOOLSLIB_PATH") + "/include",
+        # "-I" + str(LIB_NN_INCLUDE_PATH),
+        # "-I" + str(TFLM_INCLUDE_PATH),
+        # "-I" + str(FLATBUFFERS_INCLUDE_PATH),
+        "-I" + temp_dirname,
+        "-I" + os.getenv("VIRTUAL_ENV") + "/include",
+        "-g",
+        "-O0",
+        "-lxtflitemicro",
+        "-L" + os.getenv("XMOS_AITOOLSLIB_PATH") + "/lib",
+        str(model_cpp_path),
+        str(TFLMC_MAIN_CPP_PATH),
+        # "-rpath",
+        # str(TFLMC_BUILD_DIR_PATH),
+        "-o",
+        str(model_exe_path),
     ]
     print(" ".join(cmd))
     run_cmd(cmd)
     return model_exe_path
+
 
 def get_tflmc_outputs(model_exe_path, input_tensor, tfl_outputs):
     dirname = model_exe_path.parents[0]
@@ -104,6 +117,7 @@ def get_tflmc_outputs(model_exe_path, input_tensor, tfl_outputs):
 
     return xformer_outputs
 
+
 def get_xformed_model(model: bytes, temp_dirname) -> bytes:
     # write input model to temporary file
     input_file = pathlib.Path(temp_dirname) / "input.tflite"
@@ -113,9 +127,13 @@ def get_xformed_model(model: bytes, temp_dirname) -> bytes:
     # create another temp file for output model
     output_file = pathlib.Path(temp_dirname) / "model.tflite"
 
-    xformer.convert(input_file, output_file, {
-    "xcore-thread-count": 5,
-})
+    xformer.convert(
+        input_file,
+        output_file,
+        {
+            "xcore-thread-count": 5,
+        },
+    )
 
     # read output model content
     with open(output_file, "rb") as fd:
@@ -128,6 +146,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     # for attaching a debugger
     if request.config.getoption("s"):
         import time
+
         time.sleep(5)
 
     # read options passed in
@@ -135,22 +154,24 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     testing_device_option = request.config.getoption("device")
     testing_on_tflmc_option = request.config.getoption("tflmc")
     number_of_samples_option = request.config.getoption("number_of_samples")
-    testing_detection_postprocess_option = True if "detection_postprocess" in request.node.name else False
+    testing_detection_postprocess_option = (
+        True if "detection_postprocess" in request.node.name else False
+    )
 
     params = dict()
-    params['MAX_ABS_ERROR'] = MAX_ABS_ERROR
-    params['ABS_AVG_ERROR'] = ABS_AVG_ERROR
-    params['AVG_ABS_ERROR'] = AVG_ABS_ERROR
-    params['REQUIRED_OUTPUTS'] = REQUIRED_OUTPUTS
+    params["MAX_ABS_ERROR"] = MAX_ABS_ERROR
+    params["ABS_AVG_ERROR"] = ABS_AVG_ERROR
+    params["AVG_ABS_ERROR"] = AVG_ABS_ERROR
+    params["REQUIRED_OUTPUTS"] = REQUIRED_OUTPUTS
 
     model_path = pathlib.Path(filename).resolve()
 
-    yaml_filename = 'params.yaml'
+    yaml_filename = "params.yaml"
 
     yaml_filename = os.path.join(os.path.dirname(model_path), yaml_filename)
-    
+
     if os.path.exists(yaml_filename):
-        with open (yaml_filename) as f:
+        with open(yaml_filename) as f:
             yaml_params = yaml.safe_load(f)
             params.update(yaml_params)
 
@@ -192,7 +213,9 @@ def test_model(request: FixtureRequest, filename: str) -> None:
 
     LOGGER.info("Invoking xformer to get xformed model...")
     if testing_detection_postprocess_option:
-        LOGGER.info("Detection postprocess special case - loading int8 model for xcore...")
+        LOGGER.info(
+            "Detection postprocess special case - loading int8 model for xcore..."
+        )
         with open(model_path.parent.joinpath("test_dtp.xc"), "rb") as fd:
             model_content = fd.read()
     temp_dirname = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
@@ -215,16 +238,18 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     running_output_count = 0
     running_output_error = 0
     running_output_abs_error = 0
-    
+
     test = 0
     np.random.seed(0)
-    while running_output_count < params['REQUIRED_OUTPUTS']:
+    while running_output_count < params["REQUIRED_OUTPUTS"]:
         LOGGER.info("Run #" + str(test))
         test += 1
 
         input_tensor = []
         if testing_detection_postprocess_option:
-            LOGGER.info("Detection postprocess special case - loading input from files...")
+            LOGGER.info(
+                "Detection postprocess special case - loading input from files..."
+            )
             in1 = np.load(model_path.parent.joinpath("in1.npy"))
             input_tensor.append(in1)
             in2 = np.load(model_path.parent.joinpath("in2.npy"))
@@ -232,8 +257,13 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         else:
             LOGGER.info("Creating random input...")
             for i in range(num_of_inputs):
-                input_tensor.append(np.array(255 * np.random.random_sample(input_tensor_shape[i]) - 128, dtype=input_tensor_type[i]))
-                #input_tensor.append(np.array(100 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
+                input_tensor.append(
+                    np.array(
+                        255 * np.random.random_sample(input_tensor_shape[i]) - 128,
+                        dtype=input_tensor_type[i],
+                    )
+                )
+                # input_tensor.append(np.array(100 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
 
         if testing_binary_models_option:
             LOGGER.info("Invoking LCE interpreter...")
@@ -250,7 +280,9 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             interpreter.reset_all_variables()
 
             for i in range(num_of_inputs):
-                interpreter.set_tensor(interpreter.get_input_details()[i]["index"], input_tensor[i])
+                interpreter.set_tensor(
+                    interpreter.get_input_details()[i]["index"], input_tensor[i]
+                )
             LOGGER.info("Invoking TFLite interpreter...")
             interpreter.invoke()
             num_of_outputs = len(interpreter.get_output_details())
@@ -286,36 +318,44 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                 xformer_outputs.append(output_tensor)
 
         # Compare outputs
-        errors = np.array(list(chain(*[np.array(a-b).reshape(-1) for a, b in zip(outputs, xformer_outputs)]))).reshape(-1)
+        errors = np.array(
+            list(
+                chain(
+                    *[
+                        np.array(a - b).reshape(-1)
+                        for a, b in zip(outputs, xformer_outputs)
+                    ]
+                )
+            )
+        ).reshape(-1)
 
         if len(errors) > 0:
-
             running_output_count += np.prod(errors.shape)
             running_output_error += np.sum(errors)
             running_output_abs_error += np.sum(np.abs(errors))
-            
+
             max_abs_error = np.amax(np.abs(errors))
 
-            if (max_abs_error > params['MAX_ABS_ERROR']):
+            if max_abs_error > params["MAX_ABS_ERROR"]:
                 LOGGER.error("Max abs error is too high: " + str(max_abs_error))
-                assert max_abs_error <= 1 
+                assert max_abs_error <= 1
 
     np.set_printoptions(threshold=np.inf)
     avg_error = running_output_error / running_output_count
     avg_abs_error = running_output_abs_error / running_output_count
-    LOGGER.info(str(max_abs_error) + ' ' + str(avg_error) +' ' +  str(avg_abs_error))
-    
+    LOGGER.info(str(max_abs_error) + " " + str(avg_error) + " " + str(avg_abs_error))
+
     failed = False
-    if (abs(avg_error) > params['ABS_AVG_ERROR']):
+    if abs(avg_error) > params["ABS_AVG_ERROR"]:
         failed = True
         LOGGER.error("Abs avg error is too high: " + str(abs(avg_error)))
 
-    if (avg_abs_error > params['AVG_ABS_ERROR']):
+    if avg_abs_error > params["AVG_ABS_ERROR"]:
         failed = True
         LOGGER.error("Avg abs error is too high: " + str(avg_abs_error))
-        
+
     if failed:
-        num_of_fails+= 1
+        num_of_fails += 1
         LOGGER.error("Run #" + str(test) + " failed")
 
     temp_dirname.cleanup()

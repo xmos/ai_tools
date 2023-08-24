@@ -13,7 +13,7 @@ version_check:
 	cd ./xformer && ./version_check.sh
 
 submodule_update: 
-	git submodule update --init --recursive
+	git submodule update --init --recursive --jobs $(NUM_PROCS)
 
 clean:
 	$(MAKE) -C python/xmos_ai_tools/xinterpreters/host/ clean

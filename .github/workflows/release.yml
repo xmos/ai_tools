@@ -98,7 +98,8 @@ jobs:
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
           make patch
           cd $GITHUB_WORKSPACE
-          make build
+          make version_check
+          make xcore_interpreters_build
                     
           cd $GITHUB_WORKSPACE/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
@@ -162,7 +163,8 @@ jobs:
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
           make patch
           cd $GITHUB_WORKSPACE
-          make build
+          make version_check
+          make xcore_interpreters_build
                     
           cd $GITHUB_WORKSPACE/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then

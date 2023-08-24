@@ -49,38 +49,33 @@ def run_cmd(cmd, working_dir = None):
         print(e.output)
         sys.exit(1)
 
-def get_tflmc_model_exe(model, dirname):
-    # write model to temp directory
-    model_path = pathlib.Path(dirname) / "input.tflite"
-    with open(pathlib.Path(model_path).resolve(), "wb") as fd:
-        fd.write(model)
+def get_tflmc_model_exe(temp_dirname):
+    if os.getenv("XMOS_AITOOLSLIB_PATH") is None:
+        print("Path to XMOS AI Tools library and headers not set correctly!")
+        sys.exit(1)
 
-    # compile model with tflmc and create model.cpp
-    model_cpp_path = pathlib.Path(dirname) / "model.cpp"
-    cmd = [str(TFLMC_EXE_PATH), str(model_path), str(model_cpp_path)]
-    run_cmd(cmd)
-
+    model_cpp_path = pathlib.Path(temp_dirname) / "model.tflite.cpp"
     # compile model.cpp with model_main.cpp
-    model_exe_path = pathlib.Path(dirname) / "a.out"
+    model_exe_path = pathlib.Path(temp_dirname) / "a.out"
     cmd = ["clang++",
     "-DTF_LITE_DISABLE_X86_NEON",
     "-DTF_LITE_STATIC_MEMORY",
     "-DNO_INTERPRETER",
     "-std=c++14",
-    "-I" + str(LIB_TFLM_INCLUDE_PATH),
-    "-I" + str(LIB_NN_INCLUDE_PATH),
-    "-I" + str(TFLM_INCLUDE_PATH),
-    "-I" + str(FLATBUFFERS_INCLUDE_PATH),
-    "-I" + dirname,
+    "-I" + os.getenv("XMOS_AITOOLSLIB_PATH")+ "/include",
+    # "-I" + str(LIB_NN_INCLUDE_PATH),
+    # "-I" + str(TFLM_INCLUDE_PATH),
+    # "-I" + str(FLATBUFFERS_INCLUDE_PATH),
+    "-I" + temp_dirname,
     "-I" + os.getenv("VIRTUAL_ENV") + "/include",
     "-g",
     "-O0",
     "-lxtflitemicro",
-    "-L" + str(TFLMC_BUILD_DIR_PATH),
+    "-L" + os.getenv("XMOS_AITOOLSLIB_PATH")+ "/lib",
     str(model_cpp_path),
     str(TFLMC_MAIN_CPP_PATH),
-    "-rpath",
-    str(TFLMC_BUILD_DIR_PATH),
+    # "-rpath",
+    # str(TFLMC_BUILD_DIR_PATH),
     "-o",
     str(model_exe_path)
     ]
@@ -109,23 +104,22 @@ def get_tflmc_outputs(model_exe_path, input_tensor, tfl_outputs):
 
     return xformer_outputs
 
-def get_xformed_model(model: bytes) -> bytes:
+def get_xformed_model(model: bytes, temp_dirname) -> bytes:
     # write input model to temporary file
-    input_file = tempfile.NamedTemporaryFile(delete=False)
-    input_file.write(model)
-    input_file.close()
+    input_file = pathlib.Path(temp_dirname) / "input.tflite"
+    print(input_file)
+    with open(input_file, "wb") as fd:
+        fd.write(model)
     # create another temp file for output model
-    output_file = tempfile.NamedTemporaryFile(delete=False)
+    output_file = pathlib.Path(temp_dirname) / "model.tflite"
 
-    xformer.convert(str(input_file.name), str(output_file.name), {
+    xformer.convert(input_file, output_file, {
     "xcore-thread-count": 5,
 })
 
     # read output model content
-    bits = bytes(output_file.read())
-    output_file.close()
-    os.remove(input_file.name)
-    os.remove(output_file.name)
+    with open(output_file, "rb") as fd:
+        bits = fd.read()
     return bits
 
 
@@ -201,12 +195,12 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         LOGGER.info("Detection postprocess special case - loading int8 model for xcore...")
         with open(model_path.parent.joinpath("test_dtp.xc"), "rb") as fd:
             model_content = fd.read()
-    xformed_model = get_xformed_model(model_content)
+    temp_dirname = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
+    xformed_model = get_xformed_model(model_content, temp_dirname.name)
 
     if testing_on_tflmc_option:
         LOGGER.info("Creating tflmc model exe...")
-        tflmc_temp_dirname = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
-        tflmc_model_exe = get_tflmc_model_exe(xformed_model, tflmc_temp_dirname.name)
+        tflmc_model_exe = get_tflmc_model_exe(temp_dirname.name)
     else:
         LOGGER.info("Creating TFLM XCore interpreter...")
         if testing_device_option:
@@ -223,6 +217,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     running_output_abs_error = 0
     
     test = 0
+    np.random.seed(0)
     while running_output_count < params['REQUIRED_OUTPUTS']:
         LOGGER.info("Run #" + str(test))
         test += 1
@@ -322,10 +317,9 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     if failed:
         num_of_fails+= 1
         LOGGER.error("Run #" + str(test) + " failed")
-            
-    if testing_on_tflmc_option:
-       tflmc_temp_dirname.cleanup()
-    else:
+
+    temp_dirname.cleanup()
+    if not testing_on_tflmc_option:
         # Free allocated objects and cleanup
         # For tflmc testing, we don't create xcore interpreter ie
         # Test comparison is done only on Tensorflow interpreter

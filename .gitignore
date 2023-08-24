@@ -10,7 +10,7 @@
 **/*.eggs/*
 Pipfile.lock
 ai_tools_venv/*
-experimental/xformer/.venv
+xformer/.venv
 
 # Build cruft
 **/.lock*
@@ -27,6 +27,11 @@ _build
 /.tf_configure.bazelrc
 /bazel-*
 /bazel_pip
+compile_commands.json
+.cache
+wheels/
+python/xmos_ai_tools/xinterpreters/device/lib
+python/xmos_ai_tools/xinterpreters/device/include
 
 # Test cruft
 **/.pytest_cache/*
@@ -52,6 +57,7 @@ _build
 *.h5
 *.html
 *training_history.png
+xformer/model_maker/*.tflite
 
 # Others
 *.npz

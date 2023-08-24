@@ -1,26 +1,7 @@
 Example without flash
 =====================
 
-If you haven't done so already, download the XMOS AI tools::
-
-  pip3 install xmos_ai_tools
-
-The two flags that maybe useful after ``install`` are ``--upgrade`` (to
-upgrade to the latest tools) and ``--dev`` (to upgrade to the latest
-development version).
-
-Now initialise your command line environment as follows. For windows::
-
-  FOR /F "delims=" %i IN ('python -c "import xmos_ai_tools.xinterpreters.device as device_lib; import os; print(os.path.dirname(device_lib.__file__))"') DO set XMOS_AITOOLSLIB_PATH=%i
-
-For linux/MacOS::
-
-  export XMOS_AITOOLSLIB_PATH=$(python -c "import xmos_ai_tools.xinterpreters.device as device_lib; import os; print(os.path.dirname(device_lib.__file__))")
-
-And, if you don't have the XMOS tools already, download and install them
-from XXX
-
-[All of this is probably to be moved]
+Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 
 In order to compile and run this example follow these steps::
 
@@ -46,7 +27,7 @@ source code, the third file is the header for the source code.
 
 The second step places the source code into the source directory.
 
-The third step builds the project
+The third step builds the project.
 
 The final step runs the code.
 

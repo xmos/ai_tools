@@ -27,10 +27,10 @@ CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make build
 # Build xcore-opt
 # Crosstool toolchain info is mentioned here, "--crosstool_top"
 # https://github.com/tensorflow/tensorflow/blob/master/.bazelrc
-cd experimental/xformer
+cd xformer
 bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top=@ubuntu20.04-gcc9_manylinux2014-cuda11.2-cudnn8.1-tensorrt7.2_config_cuda//crosstool:toolchain --//:disable_version_check
 
 
 # Build python wheel
-cd ../../python
+cd ../python
 python setup.py bdist_wheel

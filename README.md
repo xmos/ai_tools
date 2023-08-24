@@ -2,7 +2,9 @@ Documentation
 -------------
 
 ## Index
-- [How to use the graph transformer to run a sample model app on XCORE.AI](docs/rst/flow.rst)
+- [Run models on XCORE.AI](docs/rst/flow.rst)
+- [Run models via Python on host](#using-xmos-ai-tools-from-python)
+- [Examples](examples/README.rst)
 - [Graph transformer command-line options](docs/rst/options.rst)
 - [Transforming Pytorch models](docs/rst/pytorch.rst)
 - [FAQ](docs/rst/faq.rst)
@@ -38,7 +40,8 @@ pip3 install xmos-ai-tools --upgrade
 ```
 Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest development version.
 
-### Using xformer from Python
+<a name="using-xmos-ai-tools-from-python"></a>
+## Using xmos-ai-tools from Python
 
 ```python
 from xmos_ai_tools import xformer as xf
@@ -87,7 +90,7 @@ xf.convert("example_int8_model.tflite", "xcore_optimised_int8_flash_model.tflite
 
 Some of the commonly used configuration options are described [here](docs/rst/options.rst)
 
-### Running the xcore model on host interpreter
+## Running the xcore model on host interpreter
 
 ```python
 from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter

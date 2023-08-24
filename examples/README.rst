@@ -13,3 +13,5 @@ These are 5 example models; in order of complexity
 
 * `app_flash_two_models_one_arena <app_flash_two_models_one_arena/README.rst>`_ - two models, with learned parameters in
   flash memory. The models share a single tensor arena (scratch memory).
+
+* `app_profiling <app_profiling/README.rst>`_ - demonstrates how to enable and use profiling to speed up execution.

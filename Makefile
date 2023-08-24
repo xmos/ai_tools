@@ -30,12 +30,12 @@ create_zip:
 	mv third_party/lib_tflite_micro/build/release_archive.zip python/xmos_ai_tools/runtime/release_archive.zip
 	cd python/xmos_ai_tools/runtime && rm -rf lib include && unzip release_archive.zip && rm release_archive.zip
 
-xcore_interpreters_build: create_zip
+xcore_interpreters_build:
 	$(MAKE) -C python/xmos_ai_tools/xinterpreters/host/ install
 
 init: submodule_update patch
 
-build: version_check xcore_interpreters_build xformer_build
+build: version_check create_zip xcore_interpreters_build xformer_build
 
 test: xformer2_integration_test
 

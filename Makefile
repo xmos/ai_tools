@@ -1,6 +1,6 @@
 NUM_PROCS := 8
 .DEFAULT_GOAL := help
-.PHONY: xcore_interpreters_build xinterpreters_smoke_test_host xformer2_test version_check build test submodule_update clean help patch
+.PHONY: xcore_interpreters_build xinterpreters_smoke_test_host xformer2_test version_check build test submodule_update clean help patch xformer_build create_zip
 
 xcore_interpreters_build:
 	$(MAKE) -C python/xmos_ai_tools/xinterpreters/host/ install
@@ -27,9 +27,14 @@ lsp_setup:
 xformer_build:
 	cd xformer && bazel build //:xcore-opt
 
+create_zip:
+	cd third_party/lib_tflite_micro && mkdir -p build && cd build && cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake && $(MAKE) create_zip
+	mv third_party/lib_tflite_micro/build/release_archive.zip python/xmos_ai_tools/release_archive.zip
+	cd python/xmos_ai_tools/ && rm -rf lib include && unzip release_archive.zip && rm release_archive.zip
+
 init: submodule_update patch
 
-build: version_check xcore_interpreters_build xformer_build
+build: version_check create_zip xcore_interpreters_build xformer_build
 
 test: xformer2_integration_test
 

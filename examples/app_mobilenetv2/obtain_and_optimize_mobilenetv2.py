@@ -25,7 +25,10 @@ model = MobileNetV2(
 # Quantize the model to int8 and save
 save_quantized_mobilenet(model, TFLITE_MODEL_PATH, (HEIGHT, WIDTH))
 
-# Convert the model to XCore optimized TFLite via xformer
+# Convert the model to XCore optimized TFLite via xformer:
+# There are various ways to configure the compiler to optimize the model,
+# operator splitting isn't documented yet. This configuration works well for
+# MobileNetV2, reach out if you need assistance with other complex models
 xformer.convert(
     TFLITE_MODEL_PATH,
     OPT_MODEL_PATH,

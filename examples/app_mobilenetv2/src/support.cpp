@@ -4,13 +4,15 @@
 #include <assert.h>
 #include <xcore/channel.h>
 #include "model.tflite.h"
+#include <lion.h>
 
 // The sample input image is initialized at the beginning of the tensor arena.
 // Before we run inference, the input image is copied to the input tensor
 // location in the tensor arena.
 // With this optimization, we don't need an extra array to store the input
 // image. Sample input image is of a LION and of size 160x160x3 = 76800 bytes
-#include <lion.h>
+uint8_t tensor_arena[LARGEST_TENSOR_ARENA_SIZE] __attribute__((aligned(8))) =
+    LION_IMAGE;
 #define LION_CLASS 291
 
 void init(unsigned flash_data) { model_init((void *)flash_data); }

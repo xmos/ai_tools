@@ -15,3 +15,4 @@ Running the example should print::
 
   Correct - Inferred class is LION!
 
+The same lion image is saved in raw format for inference on the host interpreter, and as a header file in ``src/lion.h`` for inference on device.

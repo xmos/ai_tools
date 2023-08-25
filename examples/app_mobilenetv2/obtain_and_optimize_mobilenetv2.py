@@ -59,10 +59,10 @@ xformer.generate_flash(
 with open("lion.bin", "rb") as f:
     data = f.read()
 
-input_array = np.frombuffer(data, dtype=np.uint8).astype(np.int32)
+input_array = np.frombuffer(data, dtype=np.uint8)
 # input image values are in the range 0 to 255
 # we subtract 128 to change to -128 to 127 for int8
-input_array = input_array - 128
+input_array = (input_array - 128).astype(np.int8)
 
 
 interpreter = xcore_tflm_host_interpreter()
@@ -75,7 +75,7 @@ interpreter.allocate_tensors()
 (input_details,) = interpreter.get_input_details()
 (output_details,) = interpreter.get_output_details()
 
-input_data = np.asarray(input_array, dtype=input_details["dtype"])
+input_data = input_array.astype(input_details["dtype"])
 input_data = np.reshape(input_data, input_details["shape"])
 interpreter.set_tensor(input_details["index"], input_data)
 

@@ -7,7 +7,7 @@ project(xtflm_python VERSION 1.0.1)
 set(X86 ON)
 
 # This variable is ignored on platforms other than Apple
-set(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk) 
+set(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk) 
 
 set(CMAKE_CXX_FLAGS "-std=c++11" CACHE STRING "C++ Compiler Base Flags" FORCE)
 

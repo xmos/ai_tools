@@ -39,6 +39,7 @@ def convert(
     global __compilation_output, __arena_size
     __compilation_output = process_call.stdout.decode("utf-8")
     size_str = re.sub("((.|\n|\r)*)Tensor arena size :", "", __compilation_output)
+    size_str = re.sub("(\n|\r)((.|\n|\r)*)", "", size_str)
     __arena_size = int(size_str.strip())
 
     return process_call.returncode

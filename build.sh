@@ -44,11 +44,14 @@ build_xformer() {
         bazel_compile_commands
     fi
     cd xformer
-    if [ "$MACHINE_ARCH" = "x86" ] ; then
-        bazel build --jobs $NUM_PROCS //:xcore-opt
-    else
-        bazel build --jobs $NUM_PROCS //:xcore-opt --cpu=darwin_arm64
+    bazel_cmd="bazel build --jobs $NUM_PROCS //:xcore-opt"
+    if [ "$MACHINE_ARCH" = "arm" ] ; then
+        bazel_cmd+=" --cpu=darwin_arm64"
     fi
+    if [ "$DEBUG" = "true" ] ; then
+        bazel_cmd+=" -c dbg --spawn_strategy=local --javacopt=\"-g\" --copt=\"-g\" --strip=\"never\" --verbose_failures --sandbox_debug"
+    fi
+    eval $bazel_cmd
     cd $SCRIPT_DIR
 }
 

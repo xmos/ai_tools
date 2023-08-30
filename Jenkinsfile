@@ -52,8 +52,7 @@ pipeline {
                                 sh "make patch"
                             }
                             // build dll_interpreter for python interface
-                            sh "make version_check"
-                            sh "make xcore_interpreters_build"
+                            sh "./build.sh -T xinterpreter -b"
                             // build xformer
                             dir("xformer") {
                                 sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"

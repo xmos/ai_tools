@@ -4,8 +4,9 @@ Work Flow
 ``xmos-ai-tools`` is available on https://pypi.org/project/xmos-ai-tools/.
 It includes:
 
-* the MLIR-based XCore optimizer(xformer) to optimize Tensorflow Lite models for XCore
+* the MLIR-based XCore optimizer (``xformer``) to optimize Tensorflow Lite models for XCore
 * the XCore tflm interpreter to run the transformed models on host
+* the XCore tflm runtime to run transformed models on device
 
 Installation steps
 -------------
@@ -61,6 +62,7 @@ These are 4 example models; in order of complexity
 * `app_flash_two_models_one_arena <../../examples/app_flash_two_models_one_arena/README.rst>`_ - two models, with learned parameters in
   flash memory. The models share a single tensor arena (scratch memory).
 
+For more examples, see the `examples folder <../../examples/README.rst>`_.
 
 
 More info regarding the generated C++ model files

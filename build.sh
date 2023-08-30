@@ -23,6 +23,7 @@ help() {
     echo "  -c, --clean       Clean build"
     echo "  -t, --test        Test build"
     echo "  -d, --debug       Enable debug"
+    echo "  -l, --lsp         Enable compile_commands.json generations"
     echo "  -j, --jobs [N]    Set number of jobs (default: nproc)"
     echo "  -T, --target [T]  Set target:"
     echo "                      init         Initialise repository (update submodules and patch ltflm)"

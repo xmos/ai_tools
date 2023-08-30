@@ -68,6 +68,7 @@ xformer/model_maker/*.tflite
 **/notebooks/**/*.jpg
 **/notebooks/**/*.txt.*
 
+# £xamples
 examples/app_no_flash/model.tflite
 examples/app_no_flash/src/model.tflite.cpp
 examples/app_no_flash/src/model.tflite.h
@@ -95,3 +96,9 @@ examples/app_flash_two_models_one_arena/src/model1.tflite.h
 examples/app_flash_two_models_one_arena/src/model2.tflite.cpp
 examples/app_flash_two_models_one_arena/src/model2.tflite.h
 examples/app_flash_two_models_one_arena/xcore_flash_binary.out
+examples/app_mobilenetv2/src/model.tflite
+examples/app_mobilenetv2/src/model.tflite.cpp
+examples/app_mobilenetv2/src/model.tflite.h
+examples/app_mobilenetv2/src/model_flash.params
+examples/app_mobilenetv2/xcore_flash_binary.out
+examples/app_mobilenetv2/mobilenetv2.tflite

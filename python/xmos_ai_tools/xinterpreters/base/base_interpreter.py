@@ -372,38 +372,37 @@ class xcore_tflm_base_interpreter(ABC):
         """
 
         # Check model_path or model_content is valid
-        if type(model_path) == str or model_content is not None:
-            tile_found = False
-            # Find correct model and replace
-            for model in self.models:
-                if model.tile == model_index:
-                    model = self.modelData(
-                        model_path,
-                        model_content,
-                        params_path,
-                        params_content,
-                        model_index,
-                        secondary_memory,
-                        flash,
-                    )
-                    tile_found = True
-                    break
-            # If model wasn't previously set, add it to list
-            if not tile_found:
-                self.models.append(
-                    self.modelData(
-                        model_path,
-                        model_content,
-                        params_path,
-                        params_content,
-                        model_index,
-                        secondary_memory,
-                        flash,
-                    )
+        if not model_path and not model_content:
+            raise ValueError("model_path or model_content must be provided")
+        tile_found = False
+        # Find correct model and replace
+        for model in self.models:
+            if model.tile == model_index:
+                model = self.modelData(
+                    model_path,
+                    model_content,
+                    params_path,
+                    params_content,
+                    model_index,
+                    secondary_memory,
+                    flash,
                 )
-            self.initialise_interpreter(model_index)
-        else:
-            raise ValueError("model_path must be str")
+                tile_found = True
+                break
+        # If model wasn't previously set, add it to list
+        if not tile_found:
+            self.models.append(
+                self.modelData(
+                    model_path,
+                    model_content,
+                    params_path,
+                    params_content,
+                    model_index,
+                    secondary_memory,
+                    flash,
+                )
+            )
+        self.initialise_interpreter(model_index)
 
     def get_model(self, model_index: int = 0):
         for model in self.models:

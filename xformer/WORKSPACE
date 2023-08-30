@@ -31,7 +31,7 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 ############################### Compile Commands ###############################
 # Hedron's Compile Commands Extractor for Bazel, used to get clangd to work
 # Replace commit hash with latest version, later setup automatic update tool maybe?
-BCCE_HASH = "86dbf526c56cebb2c3a060c09fe8c0458a694d23"
+BCCE_HASH = "e16062717d9b098c3c2ac95717d2b3e661c50608"
 http_archive(
     name = "hedron_compile_commands",
     url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/{hash}.tar.gz".format(hash = BCCE_HASH),

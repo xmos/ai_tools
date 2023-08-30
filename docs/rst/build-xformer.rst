@@ -1,31 +1,41 @@
-Building xmos-ai-tools
+Compiling xmos-ai-tools from source
 ======================
 
-* Some dependent libraries are included as git submodules. These can be obtained by cloning this repository with the following commands::
+Requirements:
+#############
 
-    git clone git@github.com:xmos/ai_tools.git
-    cd ai_tools
-    make submodule_update
-
-
-* Install version 15 or later of the XMOS tools from your preferred location and activate it by sourcing ``SetEnv`` in the installation root.
-
+* Install version 15 or later of the `XMOS tools <https://www.xmos.ai/software-tools/>`_ from your preferred location and activate it by sourcing ``SetEnv`` in the installation root.
 
 * `CMake 3.23 <https://cmake.org/download/>`_ or newer is required for building libraries and test firmware.
 
-* To set up and activate the environment, simply run::
+* Clone the repository::
+
+    git clone git@github.com:xmos/ai_tools.git
+    cd ai_tools
+
+* Set up and activate a Python virtual environment (or conda)::
 
     python -m venv ./venv
     . ./venv/bin/activate 
 
+* Install the necessary python packages using ``pip``  inside the environment::
 
-* Install the necessary python packages using ``pip``  inside the venv::
-    ``pip install -r ./requirements.txt``
+    pip install -r ./requirements.txt
 
-* Apply our patch for tflite-micro, run::
-    ``cd third_party/lib_tflite_micro && make patch``
+Building:
+#########
 
-* Build the XCore host tflm interpreter libraries with default settings, run::
-    ``make build``
+* Clone submodules and apply patch to ``tflite-micro``::
 
-After following the above instructions, to build xformer, please follow the build instructions `here <../../xformer#readme>`_. Upon building xformer, you may install ``xmos-ai-tools`` via ``cd python && pip install .``
+    ./build.sh --target init
+
+* Build ``xformer`` and ``xinterpreters`` with the default settings::
+
+    ./build.sh --target all --build
+
+* (Optional) other ``./build.sh`` flags:
+
+    * ``--debug`` flag for a debug build.
+    * ``--clean`` to remove build artifacts.
+    * ``--test`` to run integration tests (on host)
+    * ``--lsp`` to generate ``compile_commands.json``

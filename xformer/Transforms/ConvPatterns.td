@@ -42,15 +42,24 @@ Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, 
               (IsConstOp $f),
               ]>;
 
+// TODO: Special case, we only optimize conv with filter width 5, filter height
+// 2, and stride height 3
+def Hasfw5fh2
+    : Constraint<CPred<"$0.getType().cast<ShapedType>().getRank() == 4 && "
+                       "$0.getType().cast<ShapedType>().getDimSize(1) == 5 && "
+                       "$0.getType().cast<ShapedType>().getDimSize(2) == 2">>;
+
 // F32 TFL_Conv2D() -> XC_Beta_ConvF32()
 def :
-Pat<(TFL_Conv2DOp: $output TensorOf<[F32]>:$input, TensorOf<[F32]>:$f, TensorOf<[F32]>:$b, $dh, $dw, $faf, $wf, $sh, $sw),
-          (XC_Beta_ConvF32Op $input, $f, $b)>;
+Pat<(TFL_Conv2DOp: $output TensorOf<[F32]>:$input, TensorOf<[F32]>:$f, TensorOf<[F32]>:$b, $dh, $dw, $faf, $wf, ConstantAttr<I32Attr, "3">, ConstantAttr<I32Attr, "1">),
+          (XC_Beta_ConvF32Op $input, $f, $b),
+          [(Hasfw5fh2 $f)]>;
 
 // F32 TFL_TransposeConv2D() -> XC_Beta_TransposeConvF32()
 def :
-Pat<(TFL_TransposeConvOp: $output $outshape, TensorOf<[F32]>:$f, TensorOf<[F32]>:$input, TensorOf<[F32]>:$b, $wf, $sh, $sw, $faf),
-          (XC_Beta_TransposeConvF32Op $input, $f, $b)>;
+Pat<(TFL_TransposeConvOp: $output $outshape, TensorOf<[F32]>:$f, TensorOf<[F32]>:$input, TensorOf<[F32]>:$b, $wf, ConstantAttr<I32Attr, "3">, ConstantAttr<I32Attr, "1">, $faf),
+          (XC_Beta_TransposeConvF32Op $input, $f, $b),
+          [(Hasfw5fh2 $f)]>;
 
 // F32 TFL_FullyConnected() -> XC_Beta_FcF32()
 def :

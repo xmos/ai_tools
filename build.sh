@@ -1,4 +1,14 @@
-NUM_PROCS=$(nproc)
+OS=$(uname)
+
+if [ "$OS" = "Linux" ]; then
+    NUM_PROCS=$(nproc)
+elif [ "$OS" = "Darwin" ]; then
+    NUM_PROCS=$(sysctl -n hw.ncpu)
+else
+    echo "Unsupported operating system."
+    exit 1
+fi
+
 ACTION="--build"
 TARGET=""
 DEBUG="false"

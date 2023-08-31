@@ -1,3 +1,6 @@
+#!/bin/bash
+
+set -e
 OS=$(uname)
 
 if [ "$OS" = "Linux" ]; then
@@ -27,17 +30,17 @@ fi
 
 help() {
     echo "Usage: $(basename "$0") [ACTIONS]..."
-    echo "  -b, --build       Build (default)"
-    echo "  -c, --clean       Clean build"
-    echo "  -t, --test        Test build"
-    echo "  -d, --debug       Enable debug"
-    echo "  -j, --jobs [N]    Set number of jobs (default: nproc)"
-    echo "  -T, --target [T]  Set target:"
-    echo "                      init         Initialise repository (update submodules and patch ltflm)"
-    echo "                      all          Build everything"
-    echo "                      xinterpreter Build interpreter only"
-    echo "                      xformer      Build compiler only"
-    echo "  -h, --help        Show this help message"
+    echo "  -b                Build (default)"
+    echo "  -c                Clean build"
+    echo "  -t                Test build"
+    echo "  -d                Enable debug"
+    echo "  -j [NUM_PROCS]    Set number of jobs (default: nproc)"
+    echo "  -T [TARGET]       Set target:"
+    echo "       init         Initialise repository (update submodules and patch ltflm)"
+    echo "       all          Build everything"
+    echo "       xinterpreter Build interpreter only"
+    echo "       xformer      Build compiler only"
+    echo "  -h                Show this help message"
     exit 1
 }
 

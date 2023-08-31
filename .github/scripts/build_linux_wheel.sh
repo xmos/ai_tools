@@ -17,7 +17,7 @@ git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/
 git describe --tags
 
 CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ make -C third_party/lib_tflite_micro patch 
-CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter -b
+CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b
 
 
 # Build xcore-opt

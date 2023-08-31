@@ -36,11 +36,11 @@ Perform the following steps once
 
   On Windows, run the following command::
 
-    FOR /F "delims=" %i IN ('python -c "import xmos_ai_tools.xinterpreters.device as device_lib; import os; print(os.path.dirname(device_lib.__file__))"') DO set XMOS_AITOOLSLIB_PATH=%i
+    FOR /F "delims=" %i IN ('python -c "import xmos_ai_tools.runtime as rt; import os; print(os.path.dirname(rt.__file__))"') DO set XMOS_AITOOLSLIB_PATH=%i
 
   On MacOS and Linux, run the following command::
 
-    export XMOS_AITOOLSLIB_PATH=$(python -c "import xmos_ai_tools.xinterpreters.device as device_lib; import os; print(os.path.dirname(device_lib.__file__))")
+    export XMOS_AITOOLSLIB_PATH=$(python -c "import xmos_ai_tools.runtime as rt; import os; print(os.path.dirname(rt.__file__))")
 
   Optionally, you may add the relevant ``export`` command in ``venv/bin/activate`` (for pip) or a script in ``($CONDA_PREFIX)/etc/conda/activate.d/`` (for conda), to automatically set the environment variable upon activating your virtual environment.
 

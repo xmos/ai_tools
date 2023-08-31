@@ -1,9 +1,19 @@
-NUM_PROCS=$(nproc)
+OS=$(uname)
+
+if [ "$OS" = "Linux" ]; then
+    NUM_PROCS=$(nproc)
+elif [ "$OS" = "Darwin" ]; then
+    NUM_PROCS=$(sysctl -n hw.ncpu)
+else
+    echo "Unsupported operating system."
+    exit 1
+fi
+
 ACTION="--build"
 TARGET=""
 DEBUG="false"
 LSP="false"
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+SCRIPT_DIR="$(cd "$(dirname "$0")"; pwd -P)"
 ARCH=$(uname -m)
 MACHINE_ARCH=""
 if [ "$ARCH" = "x86_64" ] ; then
@@ -14,8 +24,6 @@ else
   echo "Unknown architecture"
   exit 1
 fi
-
-TEMP=$(getopt -o "c,b,t,d,j:T:h,l" --long "clean,build,test,debug,jobs:,target:,help,lsp" -n "$(basename "$0")" -- "$@")
 
 help() {
     echo "Usage: $(basename "$0") [ACTIONS]..."
@@ -32,6 +40,35 @@ help() {
     echo "  -h, --help        Show this help message"
     exit 1
 }
+
+while getopts "cbtdj:T:hl" opt; do
+    case $opt in
+        c)
+            ACTION="--clean";;
+        b)
+            ACTION="--build";;
+        t)
+            ACTION="--test";;
+        d)
+            DEBUG="true";;
+        j)
+            NUM_PROCS="$OPTARG";;
+        T)
+            TARGET="$OPTARG";;
+        h)
+            help;;
+        l)
+            LSP="true";;
+        *)
+            echo "Invalid option: -$OPTARG" >&2
+            help;;
+    esac
+done
+
+if [ -z "$TARGET" ]; then
+    echo "No target specified."
+    help
+fi
 
 bazel_compile_commands() {
     cd xformer
@@ -107,41 +144,6 @@ test_xinterpreter() {
     echo "Not implemented yet"
     exit 1
 }
-
-if [ $? -ne 0 ] || [ "$TEMP" = " -- " ] ; then
-    echo "Error parsing options."
-    help
-fi
-
-eval set -- "$TEMP"
-while true; do
-  case "$1" in
-    --help|-h)
-      help;;
-    --clean|-c)
-      ACTION="--clean"; shift;;
-    --build|-b)
-      ACTION="--build"; shift;;
-    --test|-t)
-      ACTION="--test"; shift;;
-    --debug|-d)
-      DEBUG="true"; shift;;
-    --lsp|-l)
-      LSP="true"; shift;;
-    --jobs|-j)
-      NUM_PROCS="$2"; shift 2;;
-    --target|-T)
-      TARGET="$2"; shift 2;;
-    --)
-      shift; break;;
-    *)
-  esac
-done
-
-if [ -z "$TARGET" ]; then
-    echo "No target specified."
-    help
-fi
 
 # we want this script to build the repository it's in, no matter where we call it from
 cd $SCRIPT_DIR

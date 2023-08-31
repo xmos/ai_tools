@@ -1,10 +1,6 @@
 Documentation
 -------------
 
-## Introduction
-
-This library is used to optimise TFLite models for `XCore.AI`. It contains a compiler (`xmos_ai_tools.xformer` or `xcore-opt`), host and device interpreters (`xmos_ai_tools.xinterpreters`), and wraps a device runtime in `lib_tflite_micro` (`xmos_ai_tools.runtime.device_lib`). 
-
 ## Index
 - [Run models on XCORE.AI](docs/rst/flow.rst)
 - [Run models via Python on host](#using-xmos-ai-tools-from-python)

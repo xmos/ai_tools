@@ -87,7 +87,7 @@ jobs:
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
           make patch
           cd $GITHUB_WORKSPACE
-          ./build.sh -T xinterpreter -b
+          ./build.sh -T xinterpreter-nozip -b
 
           cd $GITHUB_WORKSPACE/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
@@ -150,7 +150,7 @@ jobs:
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
           make patch
           cd $GITHUB_WORKSPACE
-          ./build.sh -T xinterpreter -b
+          ./build.sh -T xinterpreter-nozip -b
 
           cd $GITHUB_WORKSPACE/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then

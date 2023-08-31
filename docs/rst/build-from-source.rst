@@ -39,3 +39,7 @@ Building:
     * ``--clean`` to remove build artifacts.
     * ``--test`` to run integration tests (on host)
     * ``--lsp`` to generate ``compile_commands.json``
+
+* Install the Python package in your environment::
+
+    cd python && pip install .

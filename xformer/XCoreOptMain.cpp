@@ -40,14 +40,8 @@ cl::opt<unsigned> threadCountOption("xcore-thread-count",
 
 cl::opt<std::string> flashImageFilenameOption(
     "xcore-flash-image-file",
-    cl::desc("The file to write the xcore flash image. Alias: --f"),
+    cl::desc("The file to write the xcore flash image."),
     cl::value_desc("filename"), cl::init(""), cl::cat(XformerCategory));
-
-// cl::alias aliasFlashImageOption("f",
-//                                 cl::desc("Alias for
-//                                 --xcore-flash-image-file"),
-//                                 cl::aliasopt(flashImageFilenameOption),
-//                                 cl::cat(XformerCategory));
 
 cl::opt<unsigned> loadExternallyIfLargerOption(
     "xcore-load-externally-if-larger",

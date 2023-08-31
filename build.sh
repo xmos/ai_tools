@@ -1,3 +1,6 @@
+#!/bin/bash
+
+set -e
 OS=$(uname)
 
 if [ "$OS" = "Linux" ]; then
@@ -27,18 +30,17 @@ fi
 
 help() {
     echo "Usage: $(basename "$0") [ACTIONS]..."
-    echo "  -b, --build       Build (default)"
-    echo "  -c, --clean       Clean build"
-    echo "  -t, --test        Test build"
-    echo "  -d, --debug       Enable debug"
-    echo "  -l, --lsp         Enable compile_commands.json generations"
-    echo "  -j, --jobs [N]    Set number of jobs (default: nproc)"
-    echo "  -T, --target [T]  Set target:"
-    echo "                      init         Initialise repository (update submodules and patch ltflm)"
-    echo "                      all          Build everything"
-    echo "                      xinterpreter Build interpreter only"
-    echo "                      xformer      Build compiler only"
-    echo "  -h, --help        Show this help message"
+    echo "  -b                Build (default)"
+    echo "  -c                Clean build"
+    echo "  -t                Test build"
+    echo "  -d                Enable debug"
+    echo "  -j [NUM_PROCS]    Set number of jobs (default: nproc)"
+    echo "  -T [TARGET]       Set target:"
+    echo "       init         Initialise repository (update submodules and patch ltflm)"
+    echo "       all          Build everything"
+    echo "       xinterpreter Build interpreter only"
+    echo "       xformer      Build compiler only"
+    echo "  -h                Show this help message"
     exit 1
 }
 
@@ -112,7 +114,7 @@ unsupported_action() {
     exit 1
 }
 
-build_xinterpreter() {
+create_zip() {
     cd third_party/lib_tflite_micro
     mkdir -p build
     cd build
@@ -124,6 +126,10 @@ build_xinterpreter() {
     rm -rf lib include
     unzip release_archive.zip
     rm release_archive.zip
+    cd $SCRIPT_DIR
+}
+
+build_xinterpreter() {
     cd $SCRIPT_DIR
     if [ "$LSP" = "true" ] ; then
         bear make -C python/xmos_ai_tools/xinterpreters/host install -j$NUM_PROCS
@@ -168,6 +174,7 @@ case $TARGET in
     case $ACTION in
       --build)
         version_check
+        create_zip
         build_xinterpreter
         ;;
       --clean)
@@ -181,10 +188,24 @@ case $TARGET in
         ;;
     esac
     ;;
+  # this is a mess: xinterpreter-nozip only used for CI
+  xinterpreter-nozip)
+    case $ACTION in
+      --build)
+        version_check
+        build_xinterpreter
+        ;;
+      *)
+        unsupported_action
+        ;;
+    esac
+    ;;
   all)
     case $ACTION in
       --build)
+        version_check
         build_xformer
+        create_zip
         build_xinterpreter
         ;;
       --clean)

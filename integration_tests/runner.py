@@ -1,3 +1,4 @@
+import time
 import pathlib
 import logging
 import tempfile
@@ -8,13 +9,11 @@ import sys
 import subprocess
 import larq_compute_engine as lce
 import tensorflow as tf
-from xmos_ai_tools.xinterpreters import (
-    xcore_tflm_host_interpreter,
-    xcore_tflm_usb_interpreter,
-)
+from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
 from xmos_ai_tools import xformer
-from itertools import chain
 import yaml
+
+np.random.seed(0)
 
 MAX_ABS_ERROR = 1
 ABS_AVG_ERROR = 1.0 / 4
@@ -35,87 +34,20 @@ TFLM_INCLUDE_PATH = pathlib.Path.joinpath(
 FLATBUFFERS_INCLUDE_PATH = pathlib.Path.joinpath(
     LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "flatbuffers", "include"
 )
-TFLMC_DIR_PATH = pathlib.Path.joinpath(LIB_TFLM_DIR_PATH, "tflite_micro_compiler")
-TFLMC_BUILD_DIR_PATH = pathlib.Path.joinpath(TFLMC_DIR_PATH, "build")
-TFLMC_EXE_PATH = pathlib.Path.joinpath(TFLMC_BUILD_DIR_PATH, "tflite_micro_compiler")
-TFLMC_MAIN_CPP_PATH = pathlib.Path.joinpath(TFLMC_DIR_PATH, "model_main.cpp")
 
 
 def run_cmd(cmd, working_dir=None):
     try:
-        if working_dir:
-            p = subprocess.run(
-                cmd,
-                cwd=working_dir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                check=True,
-            )
-        else:
-            p = subprocess.run(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
-            )
+        subprocess.run(
+            cmd,
+            cwd=working_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=True,
+        )
     except subprocess.CalledProcessError as e:
         print(e.output)
         sys.exit(1)
-
-
-def get_tflmc_model_exe(temp_dirname):
-    if os.getenv("XMOS_AITOOLSLIB_PATH") is None:
-        print("Path to XMOS AI Tools library and headers not set correctly!")
-        sys.exit(1)
-
-    model_cpp_path = pathlib.Path(temp_dirname) / "model.tflite.cpp"
-    # compile model.cpp with model_main.cpp
-    model_exe_path = pathlib.Path(temp_dirname) / "a.out"
-    cmd = [
-        "clang++",
-        "-DTF_LITE_DISABLE_X86_NEON",
-        "-DTF_LITE_STATIC_MEMORY",
-        "-DNO_INTERPRETER",
-        "-std=c++14",
-        "-I" + os.getenv("XMOS_AITOOLSLIB_PATH") + "/include",
-        # "-I" + str(LIB_NN_INCLUDE_PATH),
-        # "-I" + str(TFLM_INCLUDE_PATH),
-        # "-I" + str(FLATBUFFERS_INCLUDE_PATH),
-        "-I" + temp_dirname,
-        "-I" + os.getenv("VIRTUAL_ENV") + "/include",
-        "-g",
-        "-O0",
-        "-lxtflitemicro",
-        "-L" + os.getenv("XMOS_AITOOLSLIB_PATH") + "/lib",
-        str(model_cpp_path),
-        str(TFLMC_MAIN_CPP_PATH),
-        # "-rpath",
-        # str(TFLMC_BUILD_DIR_PATH),
-        "-o",
-        str(model_exe_path),
-    ]
-    print(" ".join(cmd))
-    run_cmd(cmd)
-    return model_exe_path
-
-
-def get_tflmc_outputs(model_exe_path, input_tensor, tfl_outputs):
-    dirname = model_exe_path.parents[0]
-    # write input tensor to npy in temp directory
-    input_npy = dirname / "in.npy"
-    np.save(input_npy, input_tensor)
-    # run a.out with in.npy
-    cmd = [str(model_exe_path), str(input_npy)]
-    run_cmd(cmd, dirname)
-
-    # read in out.npy into xformer_outputs
-    xformer_outputs = []
-    for i in range(len(tfl_outputs)):
-        output_filename = str(i) + ".npy"
-        output_arr = np.load(dirname / output_filename)
-        # print(tfl_outputs[0].shape)
-        reshaped_arr = np.reshape(output_arr, tfl_outputs[i].shape)
-        # print(reshaped_arr)
-        xformer_outputs.append(reshaped_arr)
-
-    return xformer_outputs
 
 
 def get_xformed_model(model: bytes, temp_dirname) -> bytes:
@@ -126,14 +58,8 @@ def get_xformed_model(model: bytes, temp_dirname) -> bytes:
         fd.write(model)
     # create another temp file for output model
     output_file = pathlib.Path(temp_dirname) / "model.tflite"
-
-    xformer.convert(
-        input_file,
-        output_file,
-        {
-            "xcore-thread-count": 5,
-        },
-    )
+    hyper_params = {"xcore-thread-count": 5}
+    xformer.convert(input_file, output_file, hyper_params)
 
     # read output model content
     with open(output_file, "rb") as fd:
@@ -141,227 +67,229 @@ def get_xformed_model(model: bytes, temp_dirname) -> bytes:
     return bits
 
 
-# Run the model on Larq/TFLite interpreter and compare the output with xformed model on XCore TFLM
-def test_model(request: FixtureRequest, filename: str) -> None:
-    # for attaching a debugger
-    if request.config.getoption("s"):
-        import time
-
-        time.sleep(5)
-
-    # read options passed in
-    testing_binary_models_option = request.config.getoption("bnn")
-    testing_device_option = request.config.getoption("device")
-    testing_on_tflmc_option = request.config.getoption("tflmc")
-    number_of_samples_option = request.config.getoption("number_of_samples")
-    testing_detection_postprocess_option = (
-        True if "detection_postprocess" in request.node.name else False
-    )
-
-    params = dict()
+def get_params(model_path: pathlib.Path) -> dict:
+    params = {}
     params["MAX_ABS_ERROR"] = MAX_ABS_ERROR
     params["ABS_AVG_ERROR"] = ABS_AVG_ERROR
     params["AVG_ABS_ERROR"] = AVG_ABS_ERROR
     params["REQUIRED_OUTPUTS"] = REQUIRED_OUTPUTS
-
-    model_path = pathlib.Path(filename).resolve()
-
-    yaml_filename = "params.yaml"
-
-    yaml_filename = os.path.join(os.path.dirname(model_path), yaml_filename)
-
+    yaml_filename = os.path.join(os.path.dirname(model_path), "params.yaml")
     if os.path.exists(yaml_filename):
         with open(yaml_filename) as f:
-            yaml_params = yaml.safe_load(f)
-            params.update(yaml_params)
+            params.update(yaml.safe_load(f))
+    return params
+
+
+def parse_request(request: FixtureRequest) -> dict:
+    opt_list = ["bnn", "device", "s"]
+    opt_dict = {opt: request.config.getoption(opt) for opt in opt_list}
+    opt_dict["detection_postprocess"] = "detection_postprocess" in request.node.name
+    return opt_dict
+
+
+class InterpreterAdapter:
+    def __init__(self, interpreter):
+        self._interpreter = interpreter
+        if isinstance(interpreter, lce.testing.Interpreter):
+            self._is_bnn = True
+            self._num_inputs = len(interpreter.input_types)
+            self._num_outputs = len(interpreter.output_types)
+        elif isinstance(interpreter, tf.lite.Interpreter):
+            interpreter.allocate_tensors()
+            self._is_bnn = False
+            self._num_inputs = len(interpreter.get_input_details())
+            self._num_outputs = len(interpreter.get_output_details())
+        else:
+            raise AttributeError(f"Unknown interpreter: {interpreter.__class__}")
+        self._input_tensors = None
+        self._output_tensors = None
+
+    def reset_variables(self) -> None:
+        """Reset all stateful variable in interpreter (call after invoking RNN's)"""
+        if self._is_bnn:
+            # larq doesn't support that? We're not using binary LSTM's anyway
+            pass
+        else:
+            self._interpreter.reset_all_variables()
+
+    def set_tensors(self, tensors: list) -> None:
+        assert len(tensors) == self._num_inputs
+        if self._is_bnn:
+            self._input_tensors = tensors
+        else:
+            for i in range(self._num_inputs):
+                self._interpreter.set_tensor(
+                    self._interpreter.get_input_details()[i]["index"], tensors[i]
+                )
+
+    def invoke(self) -> None:
+        if self._is_bnn:
+            assert self._input_tensors is not None
+            self._output_tensors = self._interpreter.predict(self._input_tensors)
+            if len(self._output_tensors) == 1:
+                self._output_tensors = [self._output_tensors]
+        else:
+            self._interpreter.invoke()
+
+    @property
+    def outputs(self):
+        if self._is_bnn:
+            return self._output_tensors
+        out_dets = self._interpreter.get_output_details()
+        return [self._interpreter.get_tensor(det["index"]) for det in out_dets]
+
+    @property
+    def num_inputs(self):
+        return self._num_inputs
+
+    @property
+    def input_types(self):
+        if self._is_bnn:
+            return list(self._interpreter.input_types)
+        else:
+            return [
+                self._interpreter.get_input_details()[i]["dtype"]
+                for i in range(self._num_inputs)
+            ]
+
+    @property
+    def input_shapes(self):
+        if self._is_bnn:
+            return list(self._interpreter.input_shapes)
+        else:
+            return [
+                self._interpreter.get_input_details()[i]["shape"]
+                for i in range(self._num_inputs)
+            ]
+
+
+def get_interpreter(model_content, opt_dict):
+    if opt_dict["bnn"]:
+        LOGGER.info("Creating LCE interpreter...")
+        temp_interpreter = lce.testing.Interpreter(
+            model_content, num_threads=1, use_reference_bconv=True
+        )
+    else:
+        LOGGER.info("Creating TFLite interpreter...")
+        temp_interpreter = tf.lite.Interpreter(
+            model_content=model_content,
+            experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_REF,
+            experimental_preserve_all_tensors=True,
+        )
+    return InterpreterAdapter(temp_interpreter)
+
+
+def get_input_tensors(
+    interpreter: InterpreterAdapter, parent_dir: pathlib.Path
+) -> list:
+    # hacky but should be enough
+    if parent_dir.joinpath("in1.npy").is_file():
+        LOGGER.info("Detected input files - loading...")
+        num = interpreter.num_inputs
+        return [np.load(parent_dir.joinpath(f"in{i+1}.npy")) for i in range(num)]
+    LOGGER.info("Creating random input...")
+    shapes, types = interpreter.input_shapes, interpreter.input_types
+    return [
+        np.random.randint(-128, high=127, size=s, dtype=dt)
+        for (s, dt) in zip(shapes, types)
+    ]
+
+
+def get_interpreter_outputs(
+    interpreter: InterpreterAdapter, input_tensors: list
+) -> list:
+    interpreter.reset_variables()
+    interpreter.set_tensors(input_tensors)
+    LOGGER.info("Invoking interpreter...")
+    interpreter.invoke()
+    return interpreter.outputs
+
+
+# Run the model on Larq/TFLite interpreter and compare the output with xformed model on XCore TFLM
+def test_model(request: FixtureRequest, filename: str) -> None:
+    # for attaching a debugger
+    opt_dict = parse_request(request)
+    if opt_dict["s"]:
+        time.sleep(5)
+
+    model_path = pathlib.Path(filename).resolve()
+    params = get_params(model_path)
 
     if not model_path.exists():
-        LOGGER.error("model file not found!")
+        LOGGER.error("Model file not found!")
         assert False
     # read in model from file
     with open(model_path, "rb") as fd:
         model_content = fd.read()
 
-    if testing_binary_models_option:
-        LOGGER.info("Creating LCE interpreter...")
-        interpreter = lce.testing.Interpreter(
-            model_content, num_threads=1, use_reference_bconv=True
-        )
-        # interpreter = lce.testing.Interpreter(model_content, num_threads=1)
-        num_of_inputs = len(interpreter.input_types)
-        input_tensor_type = []
-        input_tensor_shape = []
-        for i in range(num_of_inputs):
-            input_tensor_type.append(interpreter.input_types[i])
-            input_tensor_shape.append(interpreter.input_shapes[i])
-    else:
-        LOGGER.info("Creating TFLite interpreter...")
-        interpreter = tf.lite.Interpreter(
-            model_content=model_content,
-            experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_REF,
-            experimental_preserve_all_tensors=True,
-        )
-        # interpreter = tf.lite.Interpreter(
-        #     model_content=model_content)
-        interpreter.allocate_tensors()
-        num_of_inputs = len(interpreter.get_input_details())
-        input_tensor_type = []
-        input_tensor_shape = []
-        for i in range(num_of_inputs):
-            input_tensor_type.append(interpreter.get_input_details()[i]["dtype"])
-            input_tensor_shape.append(interpreter.get_input_details()[i]["shape"])
+    interpreter = get_interpreter(model_content, opt_dict)
 
     LOGGER.info("Invoking xformer to get xformed model...")
-    if testing_detection_postprocess_option:
+    if opt_dict["detection_postprocess"]:
         LOGGER.info(
             "Detection postprocess special case - loading int8 model for xcore..."
         )
         with open(model_path.parent.joinpath("test_dtp.xc"), "rb") as fd:
             model_content = fd.read()
+
     temp_dirname = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
     xformed_model = get_xformed_model(model_content, temp_dirname.name)
 
-    if testing_on_tflmc_option:
-        LOGGER.info("Creating tflmc model exe...")
-        tflmc_model_exe = get_tflmc_model_exe(temp_dirname.name)
-    else:
-        LOGGER.info("Creating TFLM XCore interpreter...")
-        if testing_device_option:
-            ie = xcore_tflm_usb_interpreter()
-        else:
-            ie = xcore_tflm_host_interpreter()
-        ie.set_model(model_content=xformed_model, secondary_memory=False)
+    LOGGER.info("Creating TFLM XCore interpreter...")
+    ie = xcore_tflm_host_interpreter()
+    ie.set_model(model_content=xformed_model, secondary_memory=False)
 
     # Run tests
-    num_of_fails = 0
-
-    running_output_count = 0
-    running_output_error = 0
-    running_output_abs_error = 0
-
-    test = 0
-    np.random.seed(0)
-    while running_output_count < params["REQUIRED_OUTPUTS"]:
-        LOGGER.info("Run #" + str(test))
+    num_fails = run_out_count = run_out_err = run_out_abs_err = test = 0
+    while run_out_count < params["REQUIRED_OUTPUTS"]:
+        LOGGER.info(f"Run #{test}")
         test += 1
+        input_tensors = get_input_tensors(interpreter, model_path.parent)
+        outputs = get_interpreter_outputs(interpreter, input_tensors)
+        num_outputs = len(outputs)
+        ie.reset()
 
-        input_tensor = []
-        if testing_detection_postprocess_option:
-            LOGGER.info(
-                "Detection postprocess special case - loading input from files..."
-            )
-            in1 = np.load(model_path.parent.joinpath("in1.npy"))
-            input_tensor.append(in1)
-            in2 = np.load(model_path.parent.joinpath("in2.npy"))
-            input_tensor.append(in2)
-        else:
-            LOGGER.info("Creating random input...")
-            for i in range(num_of_inputs):
-                input_tensor.append(
-                    np.array(
-                        255 * np.random.random_sample(input_tensor_shape[i]) - 128,
-                        dtype=input_tensor_type[i],
-                    )
-                )
-                # input_tensor.append(np.array(100 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
-
-        if testing_binary_models_option:
-            LOGGER.info("Invoking LCE interpreter...")
-            outputs = interpreter.predict(input_tensor)
-            # for some reason, batch dim is missing in lce when only one output
-            if len(outputs) == 1:
-                outputs = [outputs]
-            num_of_outputs = len(outputs)
-            output_scales = interpreter.output_scales
-            output_zero_points = interpreter.output_zero_points
-        else:
-            # Resets variable tensors in the model.
-            # This should be called after invoking a model with stateful ops such as LSTM.
-            interpreter.reset_all_variables()
-
-            for i in range(num_of_inputs):
-                interpreter.set_tensor(
-                    interpreter.get_input_details()[i]["index"], input_tensor[i]
-                )
-            LOGGER.info("Invoking TFLite interpreter...")
-            interpreter.invoke()
-            num_of_outputs = len(interpreter.get_output_details())
-            outputs = []
-            output_scales = []
-            output_zero_points = []
-            for i in range(num_of_outputs):
-                outputs.append(
-                    interpreter.get_tensor(interpreter.get_output_details()[i]["index"])
-                )
-                quant_params = interpreter.get_output_details()[i][
-                    "quantization_parameters"
-                ]
-                output_scales.append(quant_params["scales"])
-                output_zero_points.append(quant_params["zero_points"])
-
-        if testing_on_tflmc_option:
-            LOGGER.info("Invoking tflmc...")
-            xformer_outputs = get_tflmc_outputs(tflmc_model_exe, input_tensor, outputs)
-        else:
-            # Resets variable tensors in the model.
-            # This should be called after invoking a model with stateful ops such as LSTM.
-            ie.reset()
-
-            LOGGER.info("Invoking XCORE interpreter...")
-            for i in range(num_of_inputs):
-                ie.set_tensor(i, input_tensor[i])
-            ie.invoke()
-            xformer_outputs = []
-            for i in range(num_of_outputs):
-                output_tensor = ie.get_tensor(ie.get_output_details()[i]["index"])
-                LOGGER.info("outputs: " + str(output_tensor.shape))
-                xformer_outputs.append(output_tensor)
+        LOGGER.info("Invoking XCORE interpreter...")
+        for i in range(interpreter.num_inputs):
+            ie.set_tensor(i, input_tensors[i])
+        ie.invoke()
+        xf_outputs = []
+        for i in range(num_outputs):
+            output_tensor = ie.get_tensor(ie.get_output_details()[i]["index"])
+            LOGGER.info("outputs: " + str(output_tensor.shape))
+            xf_outputs.append(output_tensor)
 
         # Compare outputs
-        errors = np.array(
-            list(
-                chain(
-                    *[
-                        np.array(a - b).reshape(-1)
-                        for a, b in zip(outputs, xformer_outputs)
-                    ]
-                )
-            )
-        ).reshape(-1)
+        errors = np.concatenate(
+            [(a - b).reshape(-1) for a, b in zip(outputs, xf_outputs)]
+        )
 
         if len(errors) > 0:
-            running_output_count += np.prod(errors.shape)
-            running_output_error += np.sum(errors)
-            running_output_abs_error += np.sum(np.abs(errors))
-
-            max_abs_error = np.amax(np.abs(errors))
-
+            run_out_count += np.prod(errors.shape)
+            run_out_err += np.sum(errors)
+            run_out_abs_err += np.sum(np.abs(errors))
+            max_abs_error = np.max(np.abs(errors))
             if max_abs_error > params["MAX_ABS_ERROR"]:
-                LOGGER.error("Max abs error is too high: " + str(max_abs_error))
+                LOGGER.error(f"Max abs error is too high: {max_abs_error}")
                 assert max_abs_error <= 1
 
     np.set_printoptions(threshold=np.inf)
-    avg_error = running_output_error / running_output_count
-    avg_abs_error = running_output_abs_error / running_output_count
-    LOGGER.info(str(max_abs_error) + " " + str(avg_error) + " " + str(avg_abs_error))
+    avg_error = run_out_err / run_out_count
+    avg_abs_error = run_out_abs_err / run_out_count
+    LOGGER.info(f"{max_abs_error} {avg_error} {avg_abs_error}")
 
-    failed = False
+    def fail(msg: str) -> None:
+        nonlocal num_fails
+        num_fails += 1
+        LOGGER.error(msg)
+        LOGGER.error(f"Run #{test} failed")
+
     if abs(avg_error) > params["ABS_AVG_ERROR"]:
-        failed = True
-        LOGGER.error("Abs avg error is too high: " + str(abs(avg_error)))
+        fail(f"Abs avg error is too high: {abs(avg_error)}")
 
     if avg_abs_error > params["AVG_ABS_ERROR"]:
-        failed = True
-        LOGGER.error("Avg abs error is too high: " + str(avg_abs_error))
-
-    if failed:
-        num_of_fails += 1
-        LOGGER.error("Run #" + str(test) + " failed")
+        fail(f"Avg abs error is too high: {avg_abs_error}")
 
     temp_dirname.cleanup()
-    if not testing_on_tflmc_option:
-        # Free allocated objects and cleanup
-        # For tflmc testing, we don't create xcore interpreter ie
-        # Test comparison is done only on Tensorflow interpreter
-        ie.close()
-    assert num_of_fails == 0
+    ie.close()
+    assert num_fails == 0

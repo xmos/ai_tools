@@ -241,7 +241,7 @@ class xcore_tflm_base_interpreter(ABC):
             ):
                 dtype = np.float32
             else:
-                raise Exception
+                raise TypeError
 
             details = {
                 "name": str(modelBuf.Subgraphs(0).Tensors(tensorIndex).Name())[

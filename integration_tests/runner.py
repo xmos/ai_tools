@@ -163,7 +163,7 @@ class InterpreterAdapter:
             ]
 
 
-def get_interpreter(model_content, opt_dict):
+def get_ref_interpreter(model_content, opt_dict):
     if opt_dict["bnn"]:
         LOGGER.info("Creating LCE interpreter...")
         temp_interpreter = lce.testing.Interpreter(
@@ -195,14 +195,34 @@ def get_input_tensors(
     ]
 
 
-def get_interpreter_outputs(
-    interpreter: InterpreterAdapter, input_tensors: list
-) -> list:
+def get_ref_outputs(interpreter: InterpreterAdapter, input_tensors: list) -> list:
     interpreter.reset_variables()
     interpreter.set_tensors(input_tensors)
     LOGGER.info("Invoking interpreter...")
     interpreter.invoke()
     return interpreter.outputs
+
+
+def get_xf_interpreter(model_content):
+    temp_dirname = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
+    xformed_model = get_xformed_model(model_content, temp_dirname.name)
+
+    LOGGER.info("Creating TFLM XCore interpreter...")
+    ie = xcore_tflm_host_interpreter()
+    ie.set_model(model_content=xformed_model, secondary_memory=False)
+    return ie, temp_dirname
+
+
+def get_xf_outputs(ie, input_tensors):
+    ie.reset()
+    LOGGER.info("Invoking XCore interpreter...")
+    for i, j in enumerate(input_tensors):
+        ie.set_tensor(i, j)
+    ie.invoke()
+    outputs = [ie.get_tensor(i["index"]) for i in ie.get_output_details()]
+    for out in outputs:
+        LOGGER.info(f"outputs: {out.shape}")
+    return outputs
 
 
 # Run the model on Larq/TFLite interpreter and compare the output with xformed model on XCore TFLM
@@ -222,7 +242,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     with open(model_path, "rb") as fd:
         model_content = fd.read()
 
-    interpreter = get_interpreter(model_content, opt_dict)
+    interpreter = get_ref_interpreter(model_content, opt_dict)
 
     LOGGER.info("Invoking xformer to get xformed model...")
     if opt_dict["detection_postprocess"]:
@@ -232,12 +252,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         with open(model_path.parent.joinpath("test_dtp.xc"), "rb") as fd:
             model_content = fd.read()
 
-    temp_dirname = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
-    xformed_model = get_xformed_model(model_content, temp_dirname.name)
-
-    LOGGER.info("Creating TFLM XCore interpreter...")
-    ie = xcore_tflm_host_interpreter()
-    ie.set_model(model_content=xformed_model, secondary_memory=False)
+    ie, temp_dirname = get_xf_interpreter(model_content)
 
     # Run tests
     num_fails = run_out_count = run_out_err = run_out_abs_err = test = 0
@@ -245,20 +260,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         LOGGER.info(f"Run #{test}")
         test += 1
         input_tensors = get_input_tensors(interpreter, model_path.parent)
-        outputs = get_interpreter_outputs(interpreter, input_tensors)
-        num_outputs = len(outputs)
-        ie.reset()
-
-        LOGGER.info("Invoking XCORE interpreter...")
-        for i in range(interpreter.num_inputs):
-            ie.set_tensor(i, input_tensors[i])
-        ie.invoke()
-        xf_outputs = []
-        for i in range(num_outputs):
-            output_tensor = ie.get_tensor(ie.get_output_details()[i]["index"])
-            LOGGER.info("outputs: " + str(output_tensor.shape))
-            xf_outputs.append(output_tensor)
-
+        outputs = get_ref_outputs(interpreter, input_tensors)
+        xf_outputs = get_xf_outputs(ie, input_tensors)
         # Compare outputs
         errors = np.concatenate(
             [(a - b).reshape(-1) for a, b in zip(outputs, xf_outputs)]
@@ -273,7 +276,6 @@ def test_model(request: FixtureRequest, filename: str) -> None:
                 LOGGER.error(f"Max abs error is too high: {max_abs_error}")
                 assert max_abs_error <= 1
 
-    np.set_printoptions(threshold=np.inf)
     avg_error = run_out_err / run_out_count
     avg_abs_error = run_out_abs_err / run_out_count
     LOGGER.info(f"{max_abs_error} {avg_error} {avg_abs_error}")

@@ -201,8 +201,9 @@ struct ChannelwiseSplitConv2DOutputPattern
 
       auto newConv2DOp = rewriter.create<TFL::Conv2DOp>(
           op.getLoc(), splitResultType, op.getInput(), splitFilterQConstOp,
-          splitBiasQConstOpOrNone, 1, 1, op.getFusedActivationFunction(),
-          "VALID", 1, 1);
+          splitBiasQConstOpOrNone, op.getDilationHFactor(),
+          op.getDilationWFactor(), op.getFusedActivationFunction(), "VALID",
+          op.getStrideH(), op.getStrideW());
 
       conv2DOps.push_back(newConv2DOp.getResult());
 

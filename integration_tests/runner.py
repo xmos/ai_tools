@@ -12,6 +12,7 @@ import tensorflow as tf
 from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
 from xmos_ai_tools import xformer
 import yaml
+from abc import ABC, abstractmethod, abstractproperty
 
 np.random.seed(0)
 
@@ -34,6 +35,88 @@ TFLM_INCLUDE_PATH = pathlib.Path.joinpath(
 FLATBUFFERS_INCLUDE_PATH = pathlib.Path.joinpath(
     LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "flatbuffers", "include"
 )
+
+
+class AbstractRunner(ABC):
+    def __init__(self, model_content: bytes):
+        pass
+
+    @abstractmethod
+    def predict(self, inputs: list) -> list:
+        pass
+
+
+class RefRunner(AbstractRunner, ABC):
+    @abstractproperty
+    def input_details(self) -> tuple:
+        pass
+
+
+class XFRunner(AbstractRunner, ABC):
+    @abstractmethod
+    def close(self) -> None:
+        pass
+
+
+class BnnInterpreter(RefRunner):
+    def __init__(self, model_content):
+        self._interpreter = lce.testing.Interpreter(
+            model_content, num_threads=1, use_reference_bconv=True
+        )
+
+    def predict(self, inputs):
+        outs = self._interpreter.predict(inputs)
+        return [outs] if len(outs) == 1 else outs
+
+    @property
+    def input_details(self):
+        return self._interpreter.input_types, self._interpreter.input_shapes
+
+
+class TFLiteInterpreter(RefRunner):
+    def __init__(self, model_content):
+        self._interpreter = tf.lite.Interpreter(
+            model_content=model_content,
+            experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_REF,
+            experimental_preserve_all_tensors=True,
+        )
+        self._interpreter.allocate_tensors()
+        dets = self._interpreter.get_input_details()
+        self._in_ids = [i["index"] for i in dets]
+        self._in_shapes = [i["shape"] for i in dets]
+        self._in_types = [i["dtype"] for i in dets]
+
+    def predict(self, inputs):
+        self._interpreter.reset_all_variables()
+        for idx, input in zip(self._in_ids, inputs):
+            self._interpreter.set_tensor(idx, input)
+        self._interpreter.invoke()
+        dets = self._interpreter.get_output_details()
+        return [self._interpreter.get_tensor(i["index"]) for i in dets]
+
+    @property
+    def input_details(self):
+        return self._in_types, self._in_shapes
+
+
+class XFHostInterpreter(XFRunner):
+    def __init__(self, model_content):
+        self._temp_dir = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
+        model = get_xformed_model(model_content, self._temp_dir.name)
+        self._interpreter = xcore_tflm_host_interpreter()
+        self._interpreter.set_model(model_content=model, secondary_memory=False)
+
+    def predict(self, inputs):
+        self._interpreter.reset()
+        for i, j in enumerate(inputs):
+            self._interpreter.set_tensor(i, j)
+        self._interpreter.invoke()
+        dets = self._interpreter.get_output_details()
+        return [self._interpreter.get_tensor(i["index"]) for i in dets]
+
+    def close(self):
+        self._interpreter.close()
+        self._temp_dir.cleanup()
 
 
 def run_cmd(cmd, working_dir=None):
@@ -80,155 +163,23 @@ def get_params(model_path: pathlib.Path) -> dict:
     return params
 
 
-def parse_request(request: FixtureRequest) -> dict:
-    opt_list = ["bnn", "device", "s"]
-    opt_dict = {opt: request.config.getoption(opt) for opt in opt_list}
-    opt_dict["detection_postprocess"] = "detection_postprocess" in request.node.name
-    return opt_dict
-
-
-class InterpreterAdapter:
-    def __init__(self, interpreter):
-        self._interpreter = interpreter
-        if isinstance(interpreter, lce.testing.Interpreter):
-            self._is_bnn = True
-            self._num_inputs = len(interpreter.input_types)
-            self._num_outputs = len(interpreter.output_types)
-        elif isinstance(interpreter, tf.lite.Interpreter):
-            interpreter.allocate_tensors()
-            self._is_bnn = False
-            self._num_inputs = len(interpreter.get_input_details())
-            self._num_outputs = len(interpreter.get_output_details())
+def get_input_tensors(runner: AbstractRunner, parent_dir: pathlib.Path) -> list:
+    types, shapes = runner.input_details
+    ins = []
+    for i, (s, d) in enumerate(zip(shapes, types)):
+        f = parent_dir.joinpath(f"in{i+1}.npy")
+        if f.is_file():
+            ins.append(np.load(f))
         else:
-            raise AttributeError(f"Unknown interpreter: {interpreter.__class__}")
-        self._input_tensors = None
-        self._output_tensors = None
-
-    def reset_variables(self) -> None:
-        """Reset all stateful variable in interpreter (call after invoking RNN's)"""
-        if self._is_bnn:
-            # larq doesn't support that? We're not using binary LSTM's anyway
-            pass
-        else:
-            self._interpreter.reset_all_variables()
-
-    def set_tensors(self, tensors: list) -> None:
-        assert len(tensors) == self._num_inputs
-        if self._is_bnn:
-            self._input_tensors = tensors
-        else:
-            for i in range(self._num_inputs):
-                self._interpreter.set_tensor(
-                    self._interpreter.get_input_details()[i]["index"], tensors[i]
-                )
-
-    def invoke(self) -> None:
-        if self._is_bnn:
-            assert self._input_tensors is not None
-            self._output_tensors = self._interpreter.predict(self._input_tensors)
-            if len(self._output_tensors) == 1:
-                self._output_tensors = [self._output_tensors]
-        else:
-            self._interpreter.invoke()
-
-    @property
-    def outputs(self):
-        if self._is_bnn:
-            return self._output_tensors
-        out_dets = self._interpreter.get_output_details()
-        return [self._interpreter.get_tensor(det["index"]) for det in out_dets]
-
-    @property
-    def num_inputs(self):
-        return self._num_inputs
-
-    @property
-    def input_types(self):
-        if self._is_bnn:
-            return list(self._interpreter.input_types)
-        else:
-            return [
-                self._interpreter.get_input_details()[i]["dtype"]
-                for i in range(self._num_inputs)
-            ]
-
-    @property
-    def input_shapes(self):
-        if self._is_bnn:
-            return list(self._interpreter.input_shapes)
-        else:
-            return [
-                self._interpreter.get_input_details()[i]["shape"]
-                for i in range(self._num_inputs)
-            ]
+            ins.append(np.random.randint(-128, high=127, size=s, dtype=d))
+    return ins
 
 
-def get_ref_interpreter(model_content, opt_dict):
-    if opt_dict["bnn"]:
-        LOGGER.info("Creating LCE interpreter...")
-        temp_interpreter = lce.testing.Interpreter(
-            model_content, num_threads=1, use_reference_bconv=True
-        )
-    else:
-        LOGGER.info("Creating TFLite interpreter...")
-        temp_interpreter = tf.lite.Interpreter(
-            model_content=model_content,
-            experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_REF,
-            experimental_preserve_all_tensors=True,
-        )
-    return InterpreterAdapter(temp_interpreter)
-
-
-def get_input_tensors(
-    interpreter: InterpreterAdapter, parent_dir: pathlib.Path
-) -> list:
-    # hacky but should be enough
-    if parent_dir.joinpath("in1.npy").is_file():
-        LOGGER.info("Detected input files - loading...")
-        num = interpreter.num_inputs
-        return [np.load(parent_dir.joinpath(f"in{i+1}.npy")) for i in range(num)]
-    LOGGER.info("Creating random input...")
-    shapes, types = interpreter.input_shapes, interpreter.input_types
-    return [
-        np.random.randint(-128, high=127, size=s, dtype=dt)
-        for (s, dt) in zip(shapes, types)
-    ]
-
-
-def get_ref_outputs(interpreter: InterpreterAdapter, input_tensors: list) -> list:
-    interpreter.reset_variables()
-    interpreter.set_tensors(input_tensors)
-    LOGGER.info("Invoking interpreter...")
-    interpreter.invoke()
-    return interpreter.outputs
-
-
-def get_xf_interpreter(model_content):
-    temp_dirname = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
-    xformed_model = get_xformed_model(model_content, temp_dirname.name)
-
-    LOGGER.info("Creating TFLM XCore interpreter...")
-    ie = xcore_tflm_host_interpreter()
-    ie.set_model(model_content=xformed_model, secondary_memory=False)
-    return ie, temp_dirname
-
-
-def get_xf_outputs(ie, input_tensors):
-    ie.reset()
-    LOGGER.info("Invoking XCore interpreter...")
-    for i, j in enumerate(input_tensors):
-        ie.set_tensor(i, j)
-    ie.invoke()
-    outputs = [ie.get_tensor(i["index"]) for i in ie.get_output_details()]
-    for out in outputs:
-        LOGGER.info(f"outputs: {out.shape}")
-    return outputs
-
-
-# Run the model on Larq/TFLite interpreter and compare the output with xformed model on XCore TFLM
+# Run the model on Larq/TFLite interpreter,
+# compare the output with xformed model on XCore TFLM
 def test_model(request: FixtureRequest, filename: str) -> None:
     # for attaching a debugger
-    opt_dict = parse_request(request)
+    opt_dict = {i: request.config.getoption(i) for i in ["bnn", "device", "s"]}
     if opt_dict["s"]:
         time.sleep(5)
 
@@ -242,29 +193,33 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     with open(model_path, "rb") as fd:
         model_content = fd.read()
 
-    interpreter = get_ref_interpreter(model_content, opt_dict)
+    if opt_dict["bnn"]:
+        ref_interpreter = BnnInterpreter(model_content)
+    else:
+        ref_interpreter = TFLiteInterpreter(model_content)
 
-    LOGGER.info("Invoking xformer to get xformed model...")
-    if opt_dict["detection_postprocess"]:
-        LOGGER.info(
-            "Detection postprocess special case - loading int8 model for xcore..."
-        )
-        with open(model_path.parent.joinpath("test_dtp.xc"), "rb") as fd:
+    # some models are special (such as detection_postprocess), they don't have
+    # a reference int8 TFLite operator and need to be loaded separately
+    special_path = model_path.parent.joinpath("special.tflite.xc")
+    if special_path.is_file():
+        LOGGER.info("Processing special model")
+        with open(special_path, "rb") as fd:
             model_content = fd.read()
 
-    ie, temp_dirname = get_xf_interpreter(model_content)
+    LOGGER.info("Invoking xformer to get xformed model...")
+    xf_interpreter = XFHostInterpreter(model_content)
 
     # Run tests
     num_fails = run_out_count = run_out_err = run_out_abs_err = test = 0
     while run_out_count < params["REQUIRED_OUTPUTS"]:
         LOGGER.info(f"Run #{test}")
         test += 1
-        input_tensors = get_input_tensors(interpreter, model_path.parent)
-        outputs = get_ref_outputs(interpreter, input_tensors)
-        xf_outputs = get_xf_outputs(ie, input_tensors)
+        input_tensors = get_input_tensors(ref_interpreter, model_path.parent)
+        ref_outputs = ref_interpreter.predict(input_tensors)
+        xf_outputs = xf_interpreter.predict(input_tensors)
         # Compare outputs
         errors = np.concatenate(
-            [(a - b).reshape(-1) for a, b in zip(outputs, xf_outputs)]
+            [(a - b).reshape(-1) for a, b in zip(ref_outputs, xf_outputs)]
         )
 
         if len(errors) > 0:
@@ -292,6 +247,5 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     if avg_abs_error > params["AVG_ABS_ERROR"]:
         fail(f"Avg abs error is too high: {avg_abs_error}")
 
-    temp_dirname.cleanup()
-    ie.close()
+    xf_interpreter.close()
     assert num_fails == 0

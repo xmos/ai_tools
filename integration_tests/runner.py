@@ -22,12 +22,9 @@ AVG_ABS_ERROR = 1.0 / 4
 REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
-LIB_TFLM_DIR_PATH = (
-    pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_tflite_micro"
-)
-LIB_NN_INCLUDE_PATH = (
-    pathlib.Path(__file__).resolve().parents[1] / "third_party" / "lib_nn"
-)
+ROOT_DIR = pathlib.Path(__file__).resolve().parents[1]
+LIB_TFLM_DIR_PATH = ROOT_DIR / "third_party" / "lib_tflite_micro"
+LIB_NN_INCLUDE_PATH = ROOT_DIR / "third_party" / "lib_nn"
 LIB_TFLM_INCLUDE_PATH = LIB_TFLM_DIR_PATH
 TFLM_INCLUDE_PATH = pathlib.Path.joinpath(
     LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "tflite-micro"
@@ -49,6 +46,13 @@ class AbstractRunner(ABC):
 class RefRunner(AbstractRunner, ABC):
     @abstractproperty
     def input_details(self) -> tuple:
+        """Abstract property to get input details of model
+
+        Returns:
+            tuple[list[type], list[list[int]]]
+            A tuple containing a list of dtypes and a list of shapes
+            expected by each of the model's inputs.
+        """
         pass
 
 
@@ -60,11 +64,13 @@ class XFRunner(AbstractRunner, ABC):
 
 class BnnInterpreter(RefRunner):
     def __init__(self, model_content):
+        LOGGER.info("Creating LCE interpreter")
         self._interpreter = lce.testing.Interpreter(
             model_content, num_threads=1, use_reference_bconv=True
         )
 
     def predict(self, inputs):
+        LOGGER.info("Invoking LCE interpreter")
         outs = self._interpreter.predict(inputs)
         return [outs] if len(outs) == 1 else outs
 
@@ -75,6 +81,7 @@ class BnnInterpreter(RefRunner):
 
 class TFLiteInterpreter(RefRunner):
     def __init__(self, model_content):
+        LOGGER.info("Creating TFLite interpreter")
         self._interpreter = tf.lite.Interpreter(
             model_content=model_content,
             experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_REF,
@@ -87,6 +94,7 @@ class TFLiteInterpreter(RefRunner):
         self._in_types = [i["dtype"] for i in dets]
 
     def predict(self, inputs):
+        LOGGER.info("Invoking TFLite interpreter")
         self._interpreter.reset_all_variables()
         for idx, input in zip(self._in_ids, inputs):
             self._interpreter.set_tensor(idx, input)

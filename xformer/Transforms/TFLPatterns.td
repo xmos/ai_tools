@@ -190,6 +190,7 @@ def PadChannelOutputType
           "$0.getType().cast<ShapedType>().getElementType())">;
 
 // PadChannel(PadSpatial) to PadSpatial(PadChannel)
+// Match cases where arith constant op and tfl constant op are both used
 foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
 def:
   Pat<(TFL_PadOp
@@ -206,6 +207,34 @@ def:
         (HasOnlyChannelPadding $padding_channel_attr),
       ]>;
 }
+
+def : Pat<(TFL_PadOp
+           : $output(TFL_PadOp $input,
+                     (Arith_ConstantOp
+                      : $padding_spatial_op $padding_spatial_attr)),
+             (TFL_ConstOp
+              : $padding_channel_op $padding_channel_attr)),
+          (TFL_PadOp(TFL_PadOp $input, $padding_channel_op,
+                     (returnType(PadChannelOutputType $input, $output))),
+           $padding_spatial_op),
+          [
+            (HasOnlySpatialPadding $padding_spatial_attr),
+            (HasOnlyChannelPadding $padding_channel_attr),
+          ]>;
+
+def : Pat<(TFL_PadOp
+           : $output(TFL_PadOp $input,
+                     (TFL_ConstOp
+                      : $padding_spatial_op $padding_spatial_attr)),
+             (Arith_ConstantOp
+              : $padding_channel_op $padding_channel_attr)),
+          (TFL_PadOp(TFL_PadOp $input, $padding_channel_op,
+                     (returnType(PadChannelOutputType $input, $output))),
+           $padding_spatial_op),
+          [
+            (HasOnlySpatialPadding $padding_spatial_attr),
+            (HasOnlyChannelPadding $padding_channel_attr),
+          ]>;
 
 // Get padding values and output type as two return values
 def GetBConv2DPaddingValues

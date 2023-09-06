@@ -53,12 +53,6 @@ class RefRunner(AbstractRunner, ABC):
         pass
 
 
-class XFRunner(AbstractRunner, ABC):
-    @abstractmethod
-    def close(self) -> None:
-        pass
-
-
 class BnnInterpreter(RefRunner):
     def __init__(self, model_content):
         LOGGER.info("Creating LCE interpreter")
@@ -104,7 +98,7 @@ class TFLiteInterpreter(RefRunner):
         return self._in_types, self._in_shapes
 
 
-class XFHostInterpreter(XFRunner):
+class XFHostInterpreter(AbstractRunner):
     def __init__(self, model_content):
         self._temp_dir = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
         model = get_xformed_model(model_content, self._temp_dir.name)
@@ -119,7 +113,7 @@ class XFHostInterpreter(XFRunner):
         dets = self._interpreter.get_output_details()
         return [self._interpreter.get_tensor(i["index"]) for i in dets]
 
-    def close(self):
+    def __del__(self):
         self._interpreter.close()
         self._temp_dir.cleanup()
 
@@ -252,5 +246,4 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     if avg_abs_error > params["AVG_ABS_ERROR"]:
         fail(f"Avg abs error is too high: {avg_abs_error}")
 
-    xf_interpreter.close()
     assert num_fails == 0

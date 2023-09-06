@@ -35,9 +35,6 @@ FLATBUFFERS_INCLUDE_PATH = pathlib.Path.joinpath(
 
 
 class AbstractRunner(ABC):
-    def __init__(self, model_content: bytes):
-        pass
-
     @abstractmethod
     def predict(self, inputs: list) -> list:
         pass

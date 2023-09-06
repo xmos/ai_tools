@@ -102,3 +102,6 @@ examples/app_mobilenetv2/src/model.tflite.h
 examples/app_mobilenetv2/src/model_flash.params
 examples/app_mobilenetv2/xcore_flash_binary.out
 examples/app_mobilenetv2/mobilenetv2.tflite
+examples/app_profiling/model.tflite
+examples/app_profiling/src/model.tflite.h
+examples/app_profiling/src/model.tflite.cpp

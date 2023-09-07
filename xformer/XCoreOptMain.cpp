@@ -35,13 +35,21 @@ namespace xcore {
 static cl::OptionCategory XformerCategory("Xformer options");
 
 cl::opt<unsigned> threadCountOption("xcore-thread-count",
-                                    cl::desc("Thread count"), cl::init(1),
+                                    cl::desc("[-tc] Thread count"), cl::init(1),
                                     cl::cat(XformerCategory));
+
+cl::alias aliasThreadCountOption("tc",
+                                 cl::desc("Alias to --xcore-thread-count"),
+                                 cl::aliasopt(threadCountOption));
 
 cl::opt<std::string> flashImageFilenameOption(
     "xcore-flash-image-file",
-    cl::desc("The file to write the xcore flash image."),
+    cl::desc("[-f] The file to write the xcore flash image."),
     cl::value_desc("filename"), cl::init(""), cl::cat(XformerCategory));
+
+cl::alias aliasFlashImageOption("f",
+                                cl::desc("Alias for --xcore-flash-image-file"),
+                                cl::aliasopt(flashImageFilenameOption));
 
 cl::opt<unsigned> loadExternallyIfLargerOption(
     "xcore-load-externally-if-larger",
@@ -222,7 +230,7 @@ int main(int argc, char **argv) {
       cl::cat(mlir::xcore::XformerCategory), cl::Hidden);
   static cl::opt<std::string> tflmcPrefixOption(
       "xcore-naming-prefix",
-      cl::desc("Specify naming prefix(also \"--xp\") for compiled model"
+      cl::desc("[-xp] Specify naming prefix for compiled model"
                "(default = \"model_\")."),
       cl::init("model_"), cl::cat(mlir::xcore::XformerCategory));
   static cl::alias aliasTflmcPrefixOption(

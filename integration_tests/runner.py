@@ -14,7 +14,7 @@ from xmos_ai_tools import xformer
 import yaml
 from abc import ABC, abstractmethod, abstractproperty
 
-np.random.seed(0)
+tf.keras.utils.set_random_seed(42)
 
 MAX_ABS_ERROR = 1
 ABS_AVG_ERROR = 1.0 / 4

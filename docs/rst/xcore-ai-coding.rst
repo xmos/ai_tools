@@ -124,8 +124,7 @@ than AI code is present.
 We support most operators and types that are in TensorFlow Lite
 for Micro; but only a subset of those operators have been optimized to run
 on the device. The list of operators supported are TensorFlow Lite for 
-Microcontrollers operations listed in 
-https://github.com/tensorflow/tflite-micro/blob/f474248365ad48654ba8a27ac5bf49a6afbb80e7/tensorflow/lite/micro/all_ops_resolver.cc, except the following operations:
+Microcontrollers operations listed `here <https://github.com/tensorflow/tflite-micro/blob/f474248365ad48654ba8a27ac5bf49a6afbb80e7/tensorflow/lite/micro/all_ops_resolver.cc>`_, except the following operations:
 - ``assign_variable``, ``call once``, ``if``, ``read variable``, ``var_handle``, ``while``.
 Convolutional networks with int8 datatypes typically run at
 high speed. It is fine for some operations to execute as float32. As long

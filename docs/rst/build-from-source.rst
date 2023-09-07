@@ -27,18 +27,18 @@ Building:
 
 * Clone submodules and apply patch to ``tflite-micro``::
 
-    ./build.sh --target init
+    ./build.sh -T init
 
-* Build ``xformer`` and ``xinterpreters`` with the default settings::
+* Build ``xformer`` and ``xinterpreter`` with the default settings::
 
-    ./build.sh --target all --build
+    ./build.sh -T all -b
 
 * (Optional) other ``./build.sh`` flags:
 
-    * ``--debug`` flag for a debug build.
-    * ``--clean`` to remove build artifacts.
-    * ``--test`` to run integration tests (on host)
-    * ``--lsp`` to generate ``compile_commands.json``
+    * ``-d`` (debug) flag for a debug build.
+    * ``-c`` (clean) to remove build artifacts.
+    * ``-t`` (test) to run integration tests (on host)
+    * ``-l`` (lsp) to generate ``compile_commands.json``
 
 * Install the Python package in your environment::
 

@@ -1,0 +1,1210 @@
+In archive /home/XMOS/michaelpoluektov/mambaforge/envs/tools/lib/python3.8/site-packages/xmos_ai_tools/runtime/lib/libxtflitemicro.a:
+
+flatbuffer_utils.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1495568 Jan  1 00:00 1970 flatbuffer_utils.cc.o
+
+
+micro_error_reporter.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  26688 Jan  1 00:00 1970 micro_error_reporter.cc.o
+
+
+flatbuffer_conversions_bridge.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1181760 Jan  1 00:00 1970 flatbuffer_conversions_bridge.cc.o
+
+
+micro_resource_variable.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1210136 Jan  1 00:00 1970 micro_resource_variable.cc.o
+
+
+micro_string.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  20440 Jan  1 00:00 1970 micro_string.cc.o
+
+
+micro_utils.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1188472 Jan  1 00:00 1970 micro_utils.cc.o
+
+
+memory_helpers.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1221024 Jan  1 00:00 1970 memory_helpers.cc.o
+
+
+activations.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1230032 Jan  1 00:00 1970 activations.cc.o
+
+
+activations_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1255560 Jan  1 00:00 1970 activations_common.cc.o
+
+
+add.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1351320 Jan  1 00:00 1970 add.cc.o
+
+
+add_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1227960 Jan  1 00:00 1970 add_common.cc.o
+
+
+add_n.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1260400 Jan  1 00:00 1970 add_n.cc.o
+
+
+slice.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1274040 Jan  1 00:00 1970 slice.cc.o
+
+
+arg_min_max.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1241040 Jan  1 00:00 1970 arg_min_max.cc.o
+
+
+batch_to_space_nd.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1235448 Jan  1 00:00 1970 batch_to_space_nd.cc.o
+
+
+broadcast_args.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1223384 Jan  1 00:00 1970 broadcast_args.cc.o
+
+
+broadcast_to.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1248792 Jan  1 00:00 1970 broadcast_to.cc.o
+
+
+cast.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1261040 Jan  1 00:00 1970 cast.cc.o
+
+
+ceil.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1216368 Jan  1 00:00 1970 ceil.cc.o
+
+
+circular_buffer.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1223800 Jan  1 00:00 1970 circular_buffer.cc.o
+
+
+circular_buffer_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1203000 Jan  1 00:00 1970 circular_buffer_common.cc.o
+
+
+circular_buffer_flexbuffers_generated_data.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0   3344 Jan  1 00:00 1970 circular_buffer_flexbuffers_generated_data.cc.o
+
+
+comparisons.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1514432 Jan  1 00:00 1970 comparisons.cc.o
+
+
+concatenation.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1289576 Jan  1 00:00 1970 concatenation.cc.o
+
+
+conv.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1294176 Jan  1 00:00 1970 conv.cc.o
+
+
+conv_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1224560 Jan  1 00:00 1970 conv_common.cc.o
+
+
+cumsum.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1264176 Jan  1 00:00 1970 cumsum.cc.o
+
+
+depth_to_space.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1231840 Jan  1 00:00 1970 depth_to_space.cc.o
+
+
+depthwise_conv.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1273280 Jan  1 00:00 1970 depthwise_conv.cc.o
+
+
+depthwise_conv_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1242392 Jan  1 00:00 1970 depthwise_conv_common.cc.o
+
+
+dequantize.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1237320 Jan  1 00:00 1970 dequantize.cc.o
+
+
+dequantize_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1220216 Jan  1 00:00 1970 dequantize_common.cc.o
+
+
+detection_postprocess_flexbuffers_generated_data.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0   4104 Jan  1 00:00 1970 detection_postprocess_flexbuffers_generated_data.cc.o
+
+
+div.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1362672 Jan  1 00:00 1970 div.cc.o
+
+
+elementwise.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1319208 Jan  1 00:00 1970 elementwise.cc.o
+
+
+elu.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1229048 Jan  1 00:00 1970 elu.cc.o
+
+
+ethosu.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  15824 Jan  1 00:00 1970 ethosu.cc.o
+
+
+exp.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1220032 Jan  1 00:00 1970 exp.cc.o
+
+
+expand_dims.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1226240 Jan  1 00:00 1970 expand_dims.cc.o
+
+
+fill.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1230416 Jan  1 00:00 1970 fill.cc.o
+
+
+floor.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1212424 Jan  1 00:00 1970 floor.cc.o
+
+
+floor_div.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1254672 Jan  1 00:00 1970 floor_div.cc.o
+
+
+floor_mod.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1253712 Jan  1 00:00 1970 floor_mod.cc.o
+
+
+fully_connected.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1283336 Jan  1 00:00 1970 fully_connected.cc.o
+
+
+fully_connected_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1224352 Jan  1 00:00 1970 fully_connected_common.cc.o
+
+
+gather.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1222480 Jan  1 00:00 1970 gather.cc.o
+
+
+gather_nd.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1227416 Jan  1 00:00 1970 gather_nd.cc.o
+
+
+hard_swish.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1259592 Jan  1 00:00 1970 hard_swish.cc.o
+
+
+hard_swish_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1224872 Jan  1 00:00 1970 hard_swish_common.cc.o
+
+
+kernel_util.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1228248 Jan  1 00:00 1970 kernel_util.cc.o
+
+
+l2_pool_2d.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1254976 Jan  1 00:00 1970 l2_pool_2d.cc.o
+
+
+l2norm.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1300056 Jan  1 00:00 1970 l2norm.cc.o
+
+
+leaky_relu.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1260584 Jan  1 00:00 1970 leaky_relu.cc.o
+
+
+leaky_relu_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1221432 Jan  1 00:00 1970 leaky_relu_common.cc.o
+
+
+log_softmax.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1378008 Jan  1 00:00 1970 log_softmax.cc.o
+
+
+logical.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1217672 Jan  1 00:00 1970 logical.cc.o
+
+
+logical_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1243664 Jan  1 00:00 1970 logical_common.cc.o
+
+
+logistic.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1344560 Jan  1 00:00 1970 logistic.cc.o
+
+
+logistic_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1232400 Jan  1 00:00 1970 logistic_common.cc.o
+
+
+maximum_minimum.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1330192 Jan  1 00:00 1970 maximum_minimum.cc.o
+
+
+mirror_pad.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1219912 Jan  1 00:00 1970 mirror_pad.cc.o
+
+
+mul.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1223984 Jan  1 00:00 1970 mul.cc.o
+
+
+mul_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1324472 Jan  1 00:00 1970 mul_common.cc.o
+
+
+neg.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1212520 Jan  1 00:00 1970 neg.cc.o
+
+
+pack.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1219824 Jan  1 00:00 1970 pack.cc.o
+
+
+pad.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1274176 Jan  1 00:00 1970 pad.cc.o
+
+
+pooling.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1270384 Jan  1 00:00 1970 pooling.cc.o
+
+
+pooling_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1256520 Jan  1 00:00 1970 pooling_common.cc.o
+
+
+prelu.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1258720 Jan  1 00:00 1970 prelu.cc.o
+
+
+prelu_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1236528 Jan  1 00:00 1970 prelu_common.cc.o
+
+
+quantize.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1200464 Jan  1 00:00 1970 quantize.cc.o
+
+
+quantize_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1306160 Jan  1 00:00 1970 quantize_common.cc.o
+
+
+reduce.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1221336 Jan  1 00:00 1970 reduce.cc.o
+
+
+reduce_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1342312 Jan  1 00:00 1970 reduce_common.cc.o
+
+
+reshape.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1209480 Jan  1 00:00 1970 reshape.cc.o
+
+
+resize_bilinear.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1245976 Jan  1 00:00 1970 resize_bilinear.cc.o
+
+
+resize_nearest_neighbor.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1245952 Jan  1 00:00 1970 resize_nearest_neighbor.cc.o
+
+
+round.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1217912 Jan  1 00:00 1970 round.cc.o
+
+
+select.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1286448 Jan  1 00:00 1970 select.cc.o
+
+
+shape.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1206280 Jan  1 00:00 1970 shape.cc.o
+
+
+softmax.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1361352 Jan  1 00:00 1970 softmax.cc.o
+
+
+softmax_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1241760 Jan  1 00:00 1970 softmax_common.cc.o
+
+
+space_to_batch_nd.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1252992 Jan  1 00:00 1970 space_to_batch_nd.cc.o
+
+
+space_to_depth.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1231336 Jan  1 00:00 1970 space_to_depth.cc.o
+
+
+split.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1223392 Jan  1 00:00 1970 split.cc.o
+
+
+split_v.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1224440 Jan  1 00:00 1970 split_v.cc.o
+
+
+squared_difference.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1318128 Jan  1 00:00 1970 squared_difference.cc.o
+
+
+squeeze.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1211016 Jan  1 00:00 1970 squeeze.cc.o
+
+
+strided_slice.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1336376 Jan  1 00:00 1970 strided_slice.cc.o
+
+
+sub.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1349072 Jan  1 00:00 1970 sub.cc.o
+
+
+sub_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1224856 Jan  1 00:00 1970 sub_common.cc.o
+
+
+svdf.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1242224 Jan  1 00:00 1970 svdf.cc.o
+
+
+svdf_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1296864 Jan  1 00:00 1970 svdf_common.cc.o
+
+
+tanh.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1352344 Jan  1 00:00 1970 tanh.cc.o
+
+
+transpose.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1234888 Jan  1 00:00 1970 transpose.cc.o
+
+
+transpose_conv.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1307208 Jan  1 00:00 1970 transpose_conv.cc.o
+
+
+lstm_eval.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1319160 Jan  1 00:00 1970 lstm_eval.cc.o
+
+
+lstm_eval_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1239976 Jan  1 00:00 1970 lstm_eval_common.cc.o
+
+
+unidirectional_sequence_lstm.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1302640 Jan  1 00:00 1970 unidirectional_sequence_lstm.cc.o
+
+
+unpack.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1215608 Jan  1 00:00 1970 unpack.cc.o
+
+
+zeros_like.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1218672 Jan  1 00:00 1970 zeros_like.cc.o
+
+
+if.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1206672 Jan  1 00:00 1970 if.cc.o
+
+
+while.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1205560 Jan  1 00:00 1970 while.cc.o
+
+
+call_once.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1205248 Jan  1 00:00 1970 call_once.cc.o
+
+
+common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  20808 Jan  1 00:00 1970 common.cc.o
+
+
+error_reporter.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0   6008 Jan  1 00:00 1970 error_reporter.cc.o
+
+
+tensor_utils.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0   9832 Jan  1 00:00 1970 tensor_utils.cc.o
+
+
+flatbuffer_conversions.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 2340032 Jan  1 00:00 1970 flatbuffer_conversions.cc.o
+
+
+op_resolver.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1301800 Jan  1 00:00 1970 op_resolver.cc.o
+
+
+kernel_util.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 210016 Jan  1 00:00 1970 kernel_util.cc.o
+
+
+quantization_util.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 190544 Jan  1 00:00 1970 quantization_util.cc.o
+
+
+portable_tensor_utils.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 167184 Jan  1 00:00 1970 portable_tensor_utils.cc.o
+
+
+schema_utils.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1189688 Jan  1 00:00 1970 schema_utils.cc.o
+
+
+micro_log.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  13848 Jan  1 00:00 1970 micro_log.cc.o
+
+
+add_elementwise.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0  12816 Jan  1 00:00 1970 add_elementwise.c.o
+
+
+bsign.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   9816 Jan  1 00:00 1970 bsign.c.o
+
+
+nn_operator.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0  10552 Jan  1 00:00 1970 nn_operator.c.o
+
+
+nn_operator_conv.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   5224 Jan  1 00:00 1970 nn_operator_conv.c.o
+
+
+pad.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   8440 Jan  1 00:00 1970 pad.c.o
+
+
+pad_3_to_4.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   9032 Jan  1 00:00 1970 pad_3_to_4.c.o
+
+
+vpu_memcpy.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   5264 Jan  1 00:00 1970 vpu_memcpy.c.o
+
+
+vpu_memset.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   4432 Jan  1 00:00 1970 vpu_memset.c.o
+
+
+vpu_sim.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0  46272 Jan  1 00:00 1970 vpu_sim.c.o
+
+
+AggregateFn.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 417592 Jan  1 00:00 1970 AggregateFn.cpp.o
+
+
+AggregateFn_DW.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 402616 Jan  1 00:00 1970 AggregateFn_DW.cpp.o
+
+
+Filter2D.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 226984 Jan  1 00:00 1970 Filter2D.cpp.o
+
+
+MemCpyFn.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 210776 Jan  1 00:00 1970 MemCpyFn.cpp.o
+
+
+OutputTransformFn.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 629072 Jan  1 00:00 1970 OutputTransformFn.cpp.o
+
+
+conv2d_utils.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 323856 Jan  1 00:00 1970 conv2d_utils.cpp.o
+
+
+util.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 175720 Jan  1 00:00 1970 util.cpp.o
+
+
+Filter2dGeometry.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 186176 Jan  1 00:00 1970 Filter2dGeometry.cpp.o
+
+
+ImageGeometry.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 179144 Jan  1 00:00 1970 ImageGeometry.cpp.o
+
+
+WindowGeometry.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 180008 Jan  1 00:00 1970 WindowGeometry.cpp.o
+
+
+WindowLocation.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 188968 Jan  1 00:00 1970 WindowLocation.cpp.o
+
+
+asm_constants.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   5272 Jan  1 00:00 1970 asm_constants.c.o
+
+
+xcore_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  15680 Jan  1 00:00 1970 xcore_common.cc.o
+
+
+xcore_custom_options.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1266712 Jan  1 00:00 1970 xcore_custom_options.cc.o
+
+
+xcore_add.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1313664 Jan  1 00:00 1970 xcore_add.cc.o
+
+
+xcore_bsign.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1255864 Jan  1 00:00 1970 xcore_bsign.cc.o
+
+
+xcore_conv2d_v2.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1589888 Jan  1 00:00 1970 xcore_conv2d_v2.cc.o
+
+
+xcore_detection_post.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1353624 Jan  1 00:00 1970 xcore_detection_post.cc.o
+
+
+xcore_load_from_flash.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1299752 Jan  1 00:00 1970 xcore_load_from_flash.cc.o
+
+
+xcore_lookup.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1298048 Jan  1 00:00 1970 xcore_lookup.cc.o
+
+
+xcore_strided_slice.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1327136 Jan  1 00:00 1970 xcore_strided_slice.cc.o
+
+
+xcore_pad.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1299376 Jan  1 00:00 1970 xcore_pad.cc.o
+
+
+xcore_3_to_4.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1296536 Jan  1 00:00 1970 xcore_3_to_4.cc.o
+
+
+xcore_mul.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1319608 Jan  1 00:00 1970 xcore_mul.cc.o
+
+
+xcore_beta_convf32.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1233344 Jan  1 00:00 1970 xcore_beta_convf32.cc.o
+
+
+xcore_beta_transposeconvf32.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1233552 Jan  1 00:00 1970 xcore_beta_transposeconvf32.cc.o
+
+
+xcore_beta_fcf32.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1232424 Jan  1 00:00 1970 xcore_beta_fcf32.cc.o
+
+
+conv2d_float.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   8688 Jan  1 00:00 1970 conv2d_float.c.o
+
+In archive /home/XMOS/michaelpoluektov/mambaforge/envs/tools/lib/python3.8/site-packages/xmos_ai_tools/runtime/lib/libxtflitemicro.a:
+
+flatbuffer_utils.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1495568 Jan  1 00:00 1970 flatbuffer_utils.cc.o
+
+
+micro_error_reporter.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  26688 Jan  1 00:00 1970 micro_error_reporter.cc.o
+
+
+flatbuffer_conversions_bridge.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1181760 Jan  1 00:00 1970 flatbuffer_conversions_bridge.cc.o
+
+
+micro_resource_variable.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1210136 Jan  1 00:00 1970 micro_resource_variable.cc.o
+
+
+micro_string.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  20440 Jan  1 00:00 1970 micro_string.cc.o
+
+
+micro_utils.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1188472 Jan  1 00:00 1970 micro_utils.cc.o
+
+
+memory_helpers.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1221024 Jan  1 00:00 1970 memory_helpers.cc.o
+
+
+activations.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1230032 Jan  1 00:00 1970 activations.cc.o
+
+
+activations_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1255560 Jan  1 00:00 1970 activations_common.cc.o
+
+
+add.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1351320 Jan  1 00:00 1970 add.cc.o
+
+
+add_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1227960 Jan  1 00:00 1970 add_common.cc.o
+
+
+add_n.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1260400 Jan  1 00:00 1970 add_n.cc.o
+
+
+slice.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1274040 Jan  1 00:00 1970 slice.cc.o
+
+
+arg_min_max.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1241040 Jan  1 00:00 1970 arg_min_max.cc.o
+
+
+batch_to_space_nd.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1235448 Jan  1 00:00 1970 batch_to_space_nd.cc.o
+
+
+broadcast_args.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1223384 Jan  1 00:00 1970 broadcast_args.cc.o
+
+
+broadcast_to.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1248792 Jan  1 00:00 1970 broadcast_to.cc.o
+
+
+cast.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1261040 Jan  1 00:00 1970 cast.cc.o
+
+
+ceil.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1216368 Jan  1 00:00 1970 ceil.cc.o
+
+
+circular_buffer.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1223800 Jan  1 00:00 1970 circular_buffer.cc.o
+
+
+circular_buffer_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1203000 Jan  1 00:00 1970 circular_buffer_common.cc.o
+
+
+circular_buffer_flexbuffers_generated_data.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0   3344 Jan  1 00:00 1970 circular_buffer_flexbuffers_generated_data.cc.o
+
+
+comparisons.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1514432 Jan  1 00:00 1970 comparisons.cc.o
+
+
+concatenation.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1289576 Jan  1 00:00 1970 concatenation.cc.o
+
+
+conv.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1294176 Jan  1 00:00 1970 conv.cc.o
+
+
+conv_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1224560 Jan  1 00:00 1970 conv_common.cc.o
+
+
+cumsum.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1264176 Jan  1 00:00 1970 cumsum.cc.o
+
+
+depth_to_space.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1231840 Jan  1 00:00 1970 depth_to_space.cc.o
+
+
+depthwise_conv.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1273280 Jan  1 00:00 1970 depthwise_conv.cc.o
+
+
+depthwise_conv_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1242392 Jan  1 00:00 1970 depthwise_conv_common.cc.o
+
+
+dequantize.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1237320 Jan  1 00:00 1970 dequantize.cc.o
+
+
+dequantize_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1220216 Jan  1 00:00 1970 dequantize_common.cc.o
+
+
+detection_postprocess_flexbuffers_generated_data.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0   4104 Jan  1 00:00 1970 detection_postprocess_flexbuffers_generated_data.cc.o
+
+
+div.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1362672 Jan  1 00:00 1970 div.cc.o
+
+
+elementwise.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1319208 Jan  1 00:00 1970 elementwise.cc.o
+
+
+elu.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1229048 Jan  1 00:00 1970 elu.cc.o
+
+
+ethosu.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  15824 Jan  1 00:00 1970 ethosu.cc.o
+
+
+exp.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1220032 Jan  1 00:00 1970 exp.cc.o
+
+
+expand_dims.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1226240 Jan  1 00:00 1970 expand_dims.cc.o
+
+
+fill.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1230416 Jan  1 00:00 1970 fill.cc.o
+
+
+floor.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1212424 Jan  1 00:00 1970 floor.cc.o
+
+
+floor_div.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1254672 Jan  1 00:00 1970 floor_div.cc.o
+
+
+floor_mod.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1253712 Jan  1 00:00 1970 floor_mod.cc.o
+
+
+fully_connected.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1283336 Jan  1 00:00 1970 fully_connected.cc.o
+
+
+fully_connected_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1224352 Jan  1 00:00 1970 fully_connected_common.cc.o
+
+
+gather.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1222480 Jan  1 00:00 1970 gather.cc.o
+
+
+gather_nd.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1227416 Jan  1 00:00 1970 gather_nd.cc.o
+
+
+hard_swish.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1259592 Jan  1 00:00 1970 hard_swish.cc.o
+
+
+hard_swish_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1224872 Jan  1 00:00 1970 hard_swish_common.cc.o
+
+
+kernel_util.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1228248 Jan  1 00:00 1970 kernel_util.cc.o
+
+
+l2_pool_2d.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1254976 Jan  1 00:00 1970 l2_pool_2d.cc.o
+
+
+l2norm.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1300056 Jan  1 00:00 1970 l2norm.cc.o
+
+
+leaky_relu.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1260584 Jan  1 00:00 1970 leaky_relu.cc.o
+
+
+leaky_relu_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1221432 Jan  1 00:00 1970 leaky_relu_common.cc.o
+
+
+log_softmax.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1378008 Jan  1 00:00 1970 log_softmax.cc.o
+
+
+logical.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1217672 Jan  1 00:00 1970 logical.cc.o
+
+
+logical_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1243664 Jan  1 00:00 1970 logical_common.cc.o
+
+
+logistic.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1344560 Jan  1 00:00 1970 logistic.cc.o
+
+
+logistic_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1232400 Jan  1 00:00 1970 logistic_common.cc.o
+
+
+maximum_minimum.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1330192 Jan  1 00:00 1970 maximum_minimum.cc.o
+
+
+mirror_pad.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1219912 Jan  1 00:00 1970 mirror_pad.cc.o
+
+
+mul.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1223984 Jan  1 00:00 1970 mul.cc.o
+
+
+mul_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1324472 Jan  1 00:00 1970 mul_common.cc.o
+
+
+neg.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1212520 Jan  1 00:00 1970 neg.cc.o
+
+
+pack.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1219824 Jan  1 00:00 1970 pack.cc.o
+
+
+pad.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1274176 Jan  1 00:00 1970 pad.cc.o
+
+
+pooling.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1270384 Jan  1 00:00 1970 pooling.cc.o
+
+
+pooling_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1256520 Jan  1 00:00 1970 pooling_common.cc.o
+
+
+prelu.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1258720 Jan  1 00:00 1970 prelu.cc.o
+
+
+prelu_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1236528 Jan  1 00:00 1970 prelu_common.cc.o
+
+
+quantize.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1200464 Jan  1 00:00 1970 quantize.cc.o
+
+
+quantize_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1306160 Jan  1 00:00 1970 quantize_common.cc.o
+
+
+reduce.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1221336 Jan  1 00:00 1970 reduce.cc.o
+
+
+reduce_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1342312 Jan  1 00:00 1970 reduce_common.cc.o
+
+
+reshape.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1209480 Jan  1 00:00 1970 reshape.cc.o
+
+
+resize_bilinear.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1245976 Jan  1 00:00 1970 resize_bilinear.cc.o
+
+
+resize_nearest_neighbor.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1245952 Jan  1 00:00 1970 resize_nearest_neighbor.cc.o
+
+
+round.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1217912 Jan  1 00:00 1970 round.cc.o
+
+
+select.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1286448 Jan  1 00:00 1970 select.cc.o
+
+
+shape.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1206280 Jan  1 00:00 1970 shape.cc.o
+
+
+softmax.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1361352 Jan  1 00:00 1970 softmax.cc.o
+
+
+softmax_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1241760 Jan  1 00:00 1970 softmax_common.cc.o
+
+
+space_to_batch_nd.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1252992 Jan  1 00:00 1970 space_to_batch_nd.cc.o
+
+
+space_to_depth.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1231336 Jan  1 00:00 1970 space_to_depth.cc.o
+
+
+split.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1223392 Jan  1 00:00 1970 split.cc.o
+
+
+split_v.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1224440 Jan  1 00:00 1970 split_v.cc.o
+
+
+squared_difference.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1318128 Jan  1 00:00 1970 squared_difference.cc.o
+
+
+squeeze.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1211016 Jan  1 00:00 1970 squeeze.cc.o
+
+
+strided_slice.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1336376 Jan  1 00:00 1970 strided_slice.cc.o
+
+
+sub.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1349072 Jan  1 00:00 1970 sub.cc.o
+
+
+sub_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1224856 Jan  1 00:00 1970 sub_common.cc.o
+
+
+svdf.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1242224 Jan  1 00:00 1970 svdf.cc.o
+
+
+svdf_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1296864 Jan  1 00:00 1970 svdf_common.cc.o
+
+
+tanh.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1352344 Jan  1 00:00 1970 tanh.cc.o
+
+
+transpose.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1234888 Jan  1 00:00 1970 transpose.cc.o
+
+
+transpose_conv.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1307208 Jan  1 00:00 1970 transpose_conv.cc.o
+
+
+lstm_eval.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1319160 Jan  1 00:00 1970 lstm_eval.cc.o
+
+
+lstm_eval_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1239976 Jan  1 00:00 1970 lstm_eval_common.cc.o
+
+
+unidirectional_sequence_lstm.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1302640 Jan  1 00:00 1970 unidirectional_sequence_lstm.cc.o
+
+
+unpack.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1215608 Jan  1 00:00 1970 unpack.cc.o
+
+
+zeros_like.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1218672 Jan  1 00:00 1970 zeros_like.cc.o
+
+
+if.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1206672 Jan  1 00:00 1970 if.cc.o
+
+
+while.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1205560 Jan  1 00:00 1970 while.cc.o
+
+
+call_once.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1205248 Jan  1 00:00 1970 call_once.cc.o
+
+
+common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  20808 Jan  1 00:00 1970 common.cc.o
+
+
+error_reporter.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0   6008 Jan  1 00:00 1970 error_reporter.cc.o
+
+
+tensor_utils.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0   9832 Jan  1 00:00 1970 tensor_utils.cc.o
+
+
+flatbuffer_conversions.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 2340032 Jan  1 00:00 1970 flatbuffer_conversions.cc.o
+
+
+op_resolver.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1301800 Jan  1 00:00 1970 op_resolver.cc.o
+
+
+kernel_util.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 210016 Jan  1 00:00 1970 kernel_util.cc.o
+
+
+quantization_util.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 190544 Jan  1 00:00 1970 quantization_util.cc.o
+
+
+portable_tensor_utils.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 167184 Jan  1 00:00 1970 portable_tensor_utils.cc.o
+
+
+schema_utils.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1189688 Jan  1 00:00 1970 schema_utils.cc.o
+
+
+micro_log.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  13848 Jan  1 00:00 1970 micro_log.cc.o
+
+
+add_elementwise.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0  12816 Jan  1 00:00 1970 add_elementwise.c.o
+
+
+bsign.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   9816 Jan  1 00:00 1970 bsign.c.o
+
+
+nn_operator.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0  10552 Jan  1 00:00 1970 nn_operator.c.o
+
+
+nn_operator_conv.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   5224 Jan  1 00:00 1970 nn_operator_conv.c.o
+
+
+pad.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   8440 Jan  1 00:00 1970 pad.c.o
+
+
+pad_3_to_4.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   9032 Jan  1 00:00 1970 pad_3_to_4.c.o
+
+
+vpu_memcpy.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   5264 Jan  1 00:00 1970 vpu_memcpy.c.o
+
+
+vpu_memset.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   4432 Jan  1 00:00 1970 vpu_memset.c.o
+
+
+vpu_sim.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0  46272 Jan  1 00:00 1970 vpu_sim.c.o
+
+
+AggregateFn.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 417592 Jan  1 00:00 1970 AggregateFn.cpp.o
+
+
+AggregateFn_DW.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 402616 Jan  1 00:00 1970 AggregateFn_DW.cpp.o
+
+
+Filter2D.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 226984 Jan  1 00:00 1970 Filter2D.cpp.o
+
+
+MemCpyFn.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 210776 Jan  1 00:00 1970 MemCpyFn.cpp.o
+
+
+OutputTransformFn.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 629072 Jan  1 00:00 1970 OutputTransformFn.cpp.o
+
+
+conv2d_utils.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 323856 Jan  1 00:00 1970 conv2d_utils.cpp.o
+
+
+util.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 175720 Jan  1 00:00 1970 util.cpp.o
+
+
+Filter2dGeometry.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 186176 Jan  1 00:00 1970 Filter2dGeometry.cpp.o
+
+
+ImageGeometry.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 179144 Jan  1 00:00 1970 ImageGeometry.cpp.o
+
+
+WindowGeometry.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 180008 Jan  1 00:00 1970 WindowGeometry.cpp.o
+
+
+WindowLocation.cpp.o:     file format elf64-x86-64
+rw-r--r-- 0/0 188968 Jan  1 00:00 1970 WindowLocation.cpp.o
+
+
+asm_constants.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   5272 Jan  1 00:00 1970 asm_constants.c.o
+
+
+xcore_common.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0  15680 Jan  1 00:00 1970 xcore_common.cc.o
+
+
+xcore_custom_options.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1266712 Jan  1 00:00 1970 xcore_custom_options.cc.o
+
+
+xcore_add.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1313664 Jan  1 00:00 1970 xcore_add.cc.o
+
+
+xcore_bsign.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1255864 Jan  1 00:00 1970 xcore_bsign.cc.o
+
+
+xcore_conv2d_v2.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1589888 Jan  1 00:00 1970 xcore_conv2d_v2.cc.o
+
+
+xcore_detection_post.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1353624 Jan  1 00:00 1970 xcore_detection_post.cc.o
+
+
+xcore_load_from_flash.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1299752 Jan  1 00:00 1970 xcore_load_from_flash.cc.o
+
+
+xcore_lookup.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1298048 Jan  1 00:00 1970 xcore_lookup.cc.o
+
+
+xcore_strided_slice.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1327136 Jan  1 00:00 1970 xcore_strided_slice.cc.o
+
+
+xcore_pad.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1299376 Jan  1 00:00 1970 xcore_pad.cc.o
+
+
+xcore_3_to_4.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1296536 Jan  1 00:00 1970 xcore_3_to_4.cc.o
+
+
+xcore_mul.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1319608 Jan  1 00:00 1970 xcore_mul.cc.o
+
+
+xcore_beta_convf32.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1233344 Jan  1 00:00 1970 xcore_beta_convf32.cc.o
+
+
+xcore_beta_transposeconvf32.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1233552 Jan  1 00:00 1970 xcore_beta_transposeconvf32.cc.o
+
+
+xcore_beta_fcf32.cc.o:     file format elf64-x86-64
+rw-r--r-- 0/0 1232424 Jan  1 00:00 1970 xcore_beta_fcf32.cc.o
+
+
+conv2d_float.c.o:     file format elf64-x86-64
+rw-r--r-- 0/0   8688 Jan  1 00:00 1970 conv2d_float.c.o
+

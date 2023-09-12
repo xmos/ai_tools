@@ -30,6 +30,9 @@ pipeline {
             agent {
                 label "linux && 64 && !noAVX2"
             }
+            environment {
+                BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
+            }
             stages {
                 stage("Setup") {
                     steps {
@@ -57,7 +60,7 @@ pipeline {
                             dir("xformer") {
                                 sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
                                 sh "chmod +x bazelisk-linux-amd64"
-                                sh "./bazelisk-linux-amd64 build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
+                                sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
                             }
                             // build python wheel with xformer and install into env
                             dir ("python") {
@@ -82,7 +85,7 @@ pipeline {
                                 withVenv {
                                     dir("xformer") {
                                         // xformer2 unit tests
-                                        sh "./bazelisk-linux-amd64 test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+                                        sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
                                     }
                                     // xformer2 integration tests
                                     sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_junit.xml"

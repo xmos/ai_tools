@@ -1,4 +1,5 @@
 import time
+import platform
 import pathlib
 import logging
 import tempfile
@@ -22,16 +23,16 @@ AVG_ABS_ERROR = 1.0 / 4
 REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
-ROOT_DIR = pathlib.Path(__file__).resolve().parents[1]
+FILE_PATH = pathlib.Path(__file__).resolve()
+ROOT_DIR = FILE_PATH.parents[1]
+MAIN_CPP_PATH = FILE_PATH.parents[0] / "compile_test.cpp"
 LIB_TFLM_DIR_PATH = ROOT_DIR / "third_party" / "lib_tflite_micro"
 LIB_NN_INCLUDE_PATH = ROOT_DIR / "third_party" / "lib_nn"
-LIB_TFLM_INCLUDE_PATH = LIB_TFLM_DIR_PATH
-TFLM_INCLUDE_PATH = pathlib.Path.joinpath(
-    LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "tflite-micro"
-)
-FLATBUFFERS_INCLUDE_PATH = pathlib.Path.joinpath(
-    LIB_TFLM_DIR_PATH, "lib_tflite_micro", "submodules", "flatbuffers", "include"
-)
+TFLM_SUBMODULES_PATH = LIB_TFLM_DIR_PATH / "lib_tflite_micro" / "submodules"
+TFLM_INCLUDE_PATH = TFLM_SUBMODULES_PATH / "tflite-micro"
+FLATBUFFERS_INCLUDE_PATH = TFLM_SUBMODULES_PATH / "flatbuffers" / "include"
+# Assumes old version of clang
+CPP_COMPILER = "g++" if platform.system() == "Linux" else "clang++"
 
 
 class AbstractRunner(ABC):
@@ -40,7 +41,7 @@ class AbstractRunner(ABC):
         pass
 
 
-class RefRunner(AbstractRunner, ABC):
+class AbstractRefRunner(AbstractRunner):
     @abstractproperty
     def input_details(self) -> tuple:
         """Abstract property to get input details of model
@@ -53,7 +54,30 @@ class RefRunner(AbstractRunner, ABC):
         pass
 
 
-class BnnInterpreter(RefRunner):
+class AbstractXFRunner(AbstractRunner):
+    def __init__(self, model):
+        temp_dir = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
+        self._temp_dir = temp_dir
+        self._dir_path = pathlib.Path(temp_dir.name)
+        input_file = self._dir_path / "input.tflite"
+        with open(input_file, "wb") as fd:
+            fd.write(model)
+        output_file = self._dir_path / "model.tflite"
+        hyper_params = {"xcore-thread-count": 5}
+        xformer.convert(input_file, output_file, hyper_params)
+        with open(output_file, "rb") as fd:
+            model = fd.read()
+        # We use interpreter for compiled too (for output details), it's a hack
+        self._interpreter = xcore_tflm_host_interpreter()
+        self._interpreter.set_model(model_content=model, secondary_memory=False)
+        self._dets = self._interpreter.get_output_details()
+
+    def __del__(self):
+        self._interpreter.close()
+        self._temp_dir.cleanup()
+
+
+class BnnInterpreter(AbstractRefRunner):
     def __init__(self, model_content):
         LOGGER.info("Creating LCE interpreter")
         self._interpreter = lce.testing.Interpreter(
@@ -70,7 +94,7 @@ class BnnInterpreter(RefRunner):
         return self._interpreter.input_types, self._interpreter.input_shapes
 
 
-class TFLiteInterpreter(RefRunner):
+class TFLiteInterpreter(AbstractRefRunner):
     def __init__(self, model_content):
         LOGGER.info("Creating TFLite interpreter")
         self._interpreter = tf.lite.Interpreter(
@@ -98,24 +122,57 @@ class TFLiteInterpreter(RefRunner):
         return self._in_types, self._in_shapes
 
 
-class XFHostInterpreter(AbstractRunner):
+class XFHostRuntime(AbstractXFRunner):
     def __init__(self, model_content):
-        self._temp_dir = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
-        model = get_xformed_model(model_content, self._temp_dir.name)
-        self._interpreter = xcore_tflm_host_interpreter()
-        self._interpreter.set_model(model_content=model, secondary_memory=False)
+        path_var = os.getenv("XMOS_AITOOLSLIB_PATH")
+        if path_var is None:
+            LOGGER.error("XMOS_AITOOLSLIB_PATH not set properly.")
+            sys.exit(1)
+        super().__init__(model_content)
+        self._model_exe_path = self._dir_path / "a.out"
+        cmd = [
+            CPP_COMPILER,
+            "-DTF_LITE_DISABLE_X86_NEON",
+            "-DTF_LITE_STATIC_MEMORY",
+            "-DNO_INTERPRETER",
+            "-std=c++14",
+            f"-I{path_var}/include",
+            f"-I{self._dir_path}",
+            "-g",
+            "-O0",
+            f"-L{path_var}/lib",
+            f"{self._dir_path}/model.tflite.cpp",
+            f"{MAIN_CPP_PATH}",
+            "-o",
+            f"{self._model_exe_path}",
+            "-lxtflitemicro",
+        ]
+        print(" ".join(cmd))
+        run_cmd(cmd)
+
+    def predict(self, inputs):
+        # main.cpp expect inputs as in{n} and writes outputs as out{m} for each input/output
+        for i, inp in enumerate(inputs):
+            input_name = self._dir_path / f"in{i}"
+            inp.tofile(input_name)
+        run_cmd([str(self._model_exe_path)], self._dir_path)
+        en = enumerate([i["shape"] for i in self._dets])
+        return [
+            np.fromfile(self._dir_path / f"out{i}", dtype=np.int8).reshape(s)
+            for i, s in en
+        ]
+
+
+class XFHostInterpreter(AbstractXFRunner):
+    def __init__(self, model_content):
+        super().__init__(model_content)
 
     def predict(self, inputs):
         self._interpreter.reset()
         for i, j in enumerate(inputs):
             self._interpreter.set_tensor(i, j)
         self._interpreter.invoke()
-        dets = self._interpreter.get_output_details()
-        return [self._interpreter.get_tensor(i["index"]) for i in dets]
-
-    def __del__(self):
-        self._interpreter.close()
-        self._temp_dir.cleanup()
+        return [self._interpreter.get_tensor(i["index"]) for i in self._dets]
 
 
 def run_cmd(cmd, working_dir=None):
@@ -132,23 +189,6 @@ def run_cmd(cmd, working_dir=None):
         sys.exit(1)
 
 
-def get_xformed_model(model: bytes, temp_dirname) -> bytes:
-    # write input model to temporary file
-    input_file = pathlib.Path(temp_dirname) / "input.tflite"
-    print(input_file)
-    with open(input_file, "wb") as fd:
-        fd.write(model)
-    # create another temp file for output model
-    output_file = pathlib.Path(temp_dirname) / "model.tflite"
-    hyper_params = {"xcore-thread-count": 5}
-    xformer.convert(input_file, output_file, hyper_params)
-
-    # read output model content
-    with open(output_file, "rb") as fd:
-        bits = fd.read()
-    return bits
-
-
 def get_params(model_path: pathlib.Path) -> dict:
     params = {}
     params["MAX_ABS_ERROR"] = MAX_ABS_ERROR
@@ -162,7 +202,7 @@ def get_params(model_path: pathlib.Path) -> dict:
     return params
 
 
-def get_input_tensors(runner: AbstractRunner, parent_dir: pathlib.Path) -> list:
+def get_input_tensors(runner: AbstractRefRunner, parent_dir: pathlib.Path) -> list:
     types, shapes = runner.input_details
     ins = []
     for i, (s, d) in enumerate(zip(shapes, types)):
@@ -178,7 +218,8 @@ def get_input_tensors(runner: AbstractRunner, parent_dir: pathlib.Path) -> list:
 # compare the output with xformed model on XCore TFLM
 def test_model(request: FixtureRequest, filename: str) -> None:
     # for attaching a debugger
-    opt_dict = {i: request.config.getoption(i) for i in ["bnn", "device", "s"]}
+    flags = ["bnn", "device", "compiled", "s"]
+    opt_dict = {i: request.config.getoption(i) for i in flags}
     if opt_dict["s"]:
         time.sleep(5)
 
@@ -206,7 +247,10 @@ def test_model(request: FixtureRequest, filename: str) -> None:
             model_content = fd.read()
 
     LOGGER.info("Invoking xformer to get xformed model...")
-    xf_interpreter = XFHostInterpreter(model_content)
+    if opt_dict["compiled"]:
+        xf_runner = XFHostRuntime(model_content)
+    else:
+        xf_runner = XFHostInterpreter(model_content)
 
     # Run tests
     num_fails = run_out_count = run_out_err = run_out_abs_err = test = 0
@@ -215,7 +259,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         test += 1
         input_tensors = get_input_tensors(ref_interpreter, model_path.parent)
         ref_outputs = ref_interpreter.predict(input_tensors)
-        xf_outputs = xf_interpreter.predict(input_tensors)
+        xf_outputs = xf_runner.predict(input_tensors)
         # Compare outputs
         errors = np.concatenate(
             [(a - b).reshape(-1) for a, b in zip(ref_outputs, xf_outputs)]

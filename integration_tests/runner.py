@@ -156,10 +156,10 @@ class XFHostRuntime(AbstractXFRunner):
             input_name = self._dir_path / f"in{i}"
             inp.tofile(input_name)
         run_cmd([str(self._model_exe_path)], self._dir_path)
-        en = enumerate([i["shape"] for i in self._dets])
+        en = enumerate([(i["dtype"], i["shape"]) for i in self._dets])
         return [
-            np.fromfile(self._dir_path / f"out{i}", dtype=np.int8).reshape(s)
-            for i, s in en
+            np.fromfile(self._dir_path / f"out{i}", dtype=d).reshape(s)
+            for i, (d, s) in en
         ]
 
 

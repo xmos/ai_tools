@@ -20,14 +20,7 @@ def pytest_addoption(parser):
         "--device", default=False, action="store_true", help="run tests on xcore"
     )
     parser.addoption(
-        "--tflmc", default=False, action="store_true", help="run tests on tflmc"
-    )
-    parser.addoption(
-        "--number_of_samples",
-        default=100,
-        action="store",
-        type=int,
-        help="number of samples to run",
+        "--compiled", default=False, action="store_true", help="test compiled models"
     )
     parser.addoption(
         "--models_path",

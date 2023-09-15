@@ -72,9 +72,16 @@ class AbstractXFRunner(AbstractRunner):
         self._interpreter.set_model(model_content=model, secondary_memory=False)
         self._dets = self._interpreter.get_output_details()
 
+    # Try/except in case we cancel operation before interpreter/dir initialised
     def __del__(self):
-        self._interpreter.close()
-        self._temp_dir.cleanup()
+        try:
+            self._interpreter.close()
+        except AttributeError:
+            pass
+        try:
+            self._temp_dir.cleanup()
+        except AttributeError:
+            pass
 
 
 class BnnInterpreter(AbstractRefRunner):

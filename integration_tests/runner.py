@@ -134,7 +134,6 @@ class XFHostRuntime(AbstractXFRunner):
     def __init__(self, model_content):
         path_var = os.path.dirname(rt.__file__)
         super().__init__(model_content)
-        print(os.listdir(f"{path_var}/include"))
         self._model_exe_path = self._dir_path / "a.out"
         cmd = [
             CPP_COMPILER,

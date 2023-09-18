@@ -182,10 +182,10 @@ case $TARGET in
     case $ACTION in
       --build)
         version_check
+        clean_runtime
         create_zip "xcore"
         clean_runtime
         create_zip "x86"
-        clean_runtime
         build_xinterpreter
         ;;
       --clean)

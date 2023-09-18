@@ -169,23 +169,13 @@ case $TARGET in
     patch
     ;;
   xformer)
-    case $ACTION in
-      --build)
-        build_xformer
-        ;;
-      *)
-        unsupported_action
-        ;;
-    esac
+    build_xformer
     ;;
   xinterpreter)
     case $ACTION in
       --build)
         version_check
-        clean_runtime
         create_zip "xcore"
-        clean_runtime
-        create_zip "x86"
         build_xinterpreter
         ;;
       --clean)
@@ -201,14 +191,33 @@ case $TARGET in
     esac
     ;;
   # this is a mess: xinterpreter-nozip only used for CI
+  runtime-host)
+    case $ACTION in
+      --build)
+        version_check
+        clean_runtime
+        create_zip "x86"
+        clean_runtime
+        ;;
+      --clean)
+        clean_runtime
+        ;;
+      *)
+        unsupported_action
+        ;;
+    esac
+    ;;
   xinterpreter-nozip)
     case $ACTION in
       --build)
         version_check
         build_xinterpreter
         ;;
-      *)
-        unsupported_action
+      --clean)
+        clean_xinterpreter
+        ;;
+      --test)
+        test_xinterpreter
         ;;
     esac
     ;;

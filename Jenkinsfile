@@ -49,6 +49,7 @@ pipeline {
                     steps {
                         withVenv {
                             // build dll_interpreter for python interface
+                            sh "./build.sh -T runtime-host -b"
                             sh "./build.sh -T xinterpreter-nozip -b"
                             // build xformer
                             dir("xformer") {

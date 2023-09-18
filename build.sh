@@ -183,6 +183,9 @@ case $TARGET in
       --build)
         version_check
         create_zip "xcore"
+        clean_runtime
+        create_zip "x86"
+        clean_runtime
         build_xinterpreter
         ;;
       --clean)
@@ -203,21 +206,6 @@ case $TARGET in
       --build)
         version_check
         build_xinterpreter
-        ;;
-      *)
-        unsupported_action
-        ;;
-    esac
-    ;;
-  # also a mess: a shell script was a bad idea...
-  runtime-host)
-    case $ACTION in
-      --build)
-        version_check
-        create_zip "xcore"
-        clean_runtime
-        create_zip "x86"
-        clean_runtime
         ;;
       *)
         unsupported_action

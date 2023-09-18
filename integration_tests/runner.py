@@ -152,7 +152,7 @@ class XFHostRuntime(AbstractXFRunner):
             f"{MAIN_CPP_PATH}",
             "-o",
             f"{self._model_exe_path}",
-            "-lxtflitemicro",
+            "-lx86tflitemicro",
         ]
         print(" ".join(cmd))
         run_cmd(cmd)

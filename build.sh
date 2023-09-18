@@ -118,13 +118,17 @@ create_zip() {
     cd third_party/lib_tflite_micro
     mkdir -p build
     cd build
-    cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+    if [ "$1" = "xcore" ]; then
+        cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+    else
+        cmake .. -DLIB_NAME=x86tflitemicro
+    fi
     make create_zip -j$NUM_PROCS
     cd $SCRIPT_DIR
     mv third_party/lib_tflite_micro/build/release_archive.zip python/xmos_ai_tools/runtime/release_archive.zip
     cd python/xmos_ai_tools/runtime
-    rm -rf lib include
-    unzip release_archive.zip
+    rm -rf include
+    unzip -o release_archive.zip
     rm release_archive.zip
     cd $SCRIPT_DIR
 }
@@ -145,6 +149,10 @@ xformer_integration_test() {
 
 clean_xinterpreter() {
     make -C python/xmos_ai_tools/xinterpreters/host clean
+}
+
+clean_runtime() {
+    rm -rf third_party/lib_tflite_micro/build
 }
 
 test_xinterpreter() {
@@ -174,11 +182,12 @@ case $TARGET in
     case $ACTION in
       --build)
         version_check
-        create_zip
+        create_zip "xcore"
         build_xinterpreter
         ;;
       --clean)
         clean_xinterpreter
+        clean_runtime
         ;;
       --test)
         test_xinterpreter
@@ -200,12 +209,27 @@ case $TARGET in
         ;;
     esac
     ;;
+  # also a mess: a shell script was a bad idea...
+  runtime-host)
+    case $ACTION in
+      --build)
+        version_check
+        create_zip "xcore"
+        clean_runtime
+        create_zip "x86"
+        clean_runtime
+        ;;
+      *)
+        unsupported_action
+        ;;
+    esac
+    ;;
   all)
     case $ACTION in
       --build)
         version_check
         build_xformer
-        create_zip
+        create_zip "xcore"
         build_xinterpreter
         ;;
       --clean)

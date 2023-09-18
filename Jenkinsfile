@@ -37,10 +37,8 @@ pipeline {
                 stage("Setup") {
                     steps {
                         println "Stage running on: ${env.NODE_NAME}"
-                        // clone
                         checkout scm
-                        sh 'git submodule update --init --recursive --jobs \$(nproc)'
-                        // create venv and install pip packages
+                        sh "./build.sh -T init"
                         createVenv("requirements.txt")
                         withVenv {
                             sh "pip install -r requirements.txt"
@@ -50,10 +48,6 @@ pipeline {
                 stage("Build") {
                     steps {
                         withVenv {
-                            // apply tflite-micro patch
-                            dir("third_party/lib_tflite_micro") {
-                                sh "make patch"
-                            }
                             // build dll_interpreter for python interface
                             sh "./build.sh -T xinterpreter-nozip -b"
                             // build xformer
@@ -84,12 +78,12 @@ pipeline {
                             steps {
                                 withVenv {
                                     dir("xformer") {
-                                        // xformer2 unit tests
                                         sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
                                     }
-                                    // xformer2 integration tests
                                     sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_junit.xml"
                                     sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n 8 --junitxml=integration_tests/integration_bnns_junit.xml"
+                                    // sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns --compiled -n 8 --junitxml=integration_compiled_non_bnns_junit.xml"
+                                    // sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn --compiled -n 8 --junitxml=integration_compiled_bnns_junit.xml"
                                     // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                                     // This step collects these files for display in Jenkins UI
                                     junit "**/*_junit.xml"

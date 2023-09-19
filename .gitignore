@@ -102,3 +102,11 @@ examples/app_mobilenetv2/src/model.tflite.h
 examples/app_mobilenetv2/src/model_flash.params
 examples/app_mobilenetv2/xcore_flash_binary.out
 examples/app_mobilenetv2/mobilenetv2.tflite
+examples/app_yolov8_classification/src/model.tflite
+examples/app_yolov8_classification/src/model.tflite.cpp
+examples/app_yolov8_classification/src/model.tflite.h
+examples/app_yolov8_classification/src/model_flash.params
+examples/app_yolov8_classification/xcore_flash_binary.out
+examples/app_yolov8_classification/yolov8n-cls.onnx
+examples/app_yolov8_classification/yolov8n-cls.pt
+examples/app_yolov8_classification/yolov8n-cls_saved_model/

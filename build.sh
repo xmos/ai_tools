@@ -118,13 +118,17 @@ create_zip() {
     cd third_party/lib_tflite_micro
     mkdir -p build
     cd build
-    cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+    if [ "$1" = "xcore" ]; then
+        cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+    else
+        cmake .. -DLIB_NAME=x86tflitemicro
+    fi
     make create_zip -j$NUM_PROCS
     cd $SCRIPT_DIR
     mv third_party/lib_tflite_micro/build/release_archive.zip python/xmos_ai_tools/runtime/release_archive.zip
     cd python/xmos_ai_tools/runtime
-    rm -rf lib include
-    unzip release_archive.zip
+    rm -rf include
+    unzip -o release_archive.zip
     rm release_archive.zip
     cd $SCRIPT_DIR
 }
@@ -147,6 +151,10 @@ clean_xinterpreter() {
     make -C python/xmos_ai_tools/xinterpreters/host clean
 }
 
+clean_runtime() {
+    rm -rf third_party/lib_tflite_micro/build
+}
+
 test_xinterpreter() {
     echo "Not implemented yet"
     exit 1
@@ -161,24 +169,18 @@ case $TARGET in
     patch
     ;;
   xformer)
-    case $ACTION in
-      --build)
-        build_xformer
-        ;;
-      *)
-        unsupported_action
-        ;;
-    esac
+    build_xformer
     ;;
   xinterpreter)
     case $ACTION in
       --build)
         version_check
-        create_zip
+        create_zip "xcore"
         build_xinterpreter
         ;;
       --clean)
         clean_xinterpreter
+        clean_runtime
         ;;
       --test)
         test_xinterpreter
@@ -189,14 +191,33 @@ case $TARGET in
     esac
     ;;
   # this is a mess: xinterpreter-nozip only used for CI
+  runtime-host)
+    case $ACTION in
+      --build)
+        version_check
+        clean_runtime
+        create_zip "x86"
+        clean_runtime
+        ;;
+      --clean)
+        clean_runtime
+        ;;
+      *)
+        unsupported_action
+        ;;
+    esac
+    ;;
   xinterpreter-nozip)
     case $ACTION in
       --build)
         version_check
         build_xinterpreter
         ;;
-      *)
-        unsupported_action
+      --clean)
+        clean_xinterpreter
+        ;;
+      --test)
+        test_xinterpreter
         ;;
     esac
     ;;
@@ -205,7 +226,7 @@ case $TARGET in
       --build)
         version_check
         build_xformer
-        create_zip
+        create_zip "xcore"
         build_xinterpreter
         ;;
       --clean)

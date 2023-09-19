@@ -12,6 +12,7 @@ import larq_compute_engine as lce
 import tensorflow as tf
 from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
 from xmos_ai_tools import xformer
+import xmos_ai_tools.runtime as rt
 import yaml
 from abc import ABC, abstractmethod, abstractproperty
 
@@ -72,9 +73,16 @@ class AbstractXFRunner(AbstractRunner):
         self._interpreter.set_model(model_content=model, secondary_memory=False)
         self._dets = self._interpreter.get_output_details()
 
+    # Try/except in case we cancel operation before interpreter/dir initialised
     def __del__(self):
-        self._interpreter.close()
-        self._temp_dir.cleanup()
+        try:
+            self._interpreter.close()
+        except AttributeError:
+            pass
+        try:
+            self._temp_dir.cleanup()
+        except AttributeError:
+            pass
 
 
 class BnnInterpreter(AbstractRefRunner):
@@ -124,10 +132,7 @@ class TFLiteInterpreter(AbstractRefRunner):
 
 class XFHostRuntime(AbstractXFRunner):
     def __init__(self, model_content):
-        path_var = os.getenv("XMOS_AITOOLSLIB_PATH")
-        if path_var is None:
-            LOGGER.error("XMOS_AITOOLSLIB_PATH not set properly.")
-            sys.exit(1)
+        path_var = os.path.dirname(rt.__file__)
         super().__init__(model_content)
         self._model_exe_path = self._dir_path / "a.out"
         cmd = [
@@ -145,7 +150,7 @@ class XFHostRuntime(AbstractXFRunner):
             f"{MAIN_CPP_PATH}",
             "-o",
             f"{self._model_exe_path}",
-            "-lxtflitemicro",
+            "-lx86tflitemicro",
         ]
         print(" ".join(cmd))
         run_cmd(cmd)

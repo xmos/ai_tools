@@ -281,14 +281,16 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectBinaryParams(
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &thresholdsData,
     int &scratchBytes) const {
-  nn::DerefInputFn::Params imToColParams(args.X, args.K);
+  nn::DerefInputFn imToCol(args.X, args.K);
+  auto imToColParams = imToCol.getParams();
 
   std::array<int, 4> filterShape = {args.outputDepth, args.filterHeight,
                                     args.filterWidth, args.inputDepth};
   nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
       (int8_t *)args.filter.data(), filterShape, 1, args.padValue);
 
-  nn::MatMulBinaryDirectFn::Params afParams(args.X, args.K, args.inputDepth);
+  nn::MatMulBinaryDirectFn af(args.X, args.K, args.inputDepth);
+  auto afParams = af.getParams();
 
   // adjust the thresholds from xorpopcount space
   // to xcore space
@@ -298,13 +300,13 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectBinaryParams(
   nn::OutputTransformFn::pad_final_access(adjustedThresholds, VPU_INT16_EPV,
                                           (int16_t)args.padValue);
 
-  std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
-  std::string afStr = afParams.serialise<nn::MatMulBinaryDirectFn::Params>();
-  std::string otStr = ""; // otParams.serialise<nn::OT_int8::Params>();
+  std::string mfStr =
+      std::string((char *)&imToColParams, sizeof(imToColParams));
+  std::string afStr = std::string((char *)&afParams, sizeof(afParams));
+  std::string otStr = "";
 
   abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
-          args.imageRegionSplits, args.Y);
+      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -320,7 +322,8 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectBinaryParams(
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &thresholdsData,
     int &scratchBytes) const {
-  nn::ImToColValid::Params imToColParams(args.X, args.K, args.inputDepth);
+  nn::ImToColValid imToCol(args.X, args.K, args.inputDepth);
+  auto imToColParams = imToCol.getParams();
 
   std::array<int, 4> filterShape = {args.outputDepth, args.filterHeight,
                                     args.filterWidth, args.inputDepth};
@@ -330,7 +333,8 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectBinaryParams(
   const int elementsPerByte = 8;
   int inputBytes =
       args.filterHeight * args.filterWidth * args.inputDepth / elementsPerByte;
-  nn::MatMulBinary::Params afParams(args.outputDepth, inputBytes);
+  nn::MatMulBinary af(args.outputDepth, inputBytes);
+  auto afParams = af.getParams();
 
   // adjust the thresholds from xorpopcount space
   // to xcore space
@@ -340,13 +344,13 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectBinaryParams(
   nn::OutputTransformFn::pad_final_access(adjustedThresholds, VPU_INT16_EPV,
                                           (int16_t)args.padValue);
 
-  std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
-  std::string afStr = afParams.serialise<nn::MatMulBinary::Params>();
-  std::string otStr = ""; // otParams.serialise<nn::OT_int8::Params>();
+  std::string mfStr =
+      std::string((char *)&imToColParams, sizeof(imToColParams));
+  std::string afStr = std::string((char *)&afParams, sizeof(afParams));
+  std::string otStr = "";
 
   abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
-          args.imageRegionSplits, args.Y);
+      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -362,14 +366,16 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectInt8Params(
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
-  nn::DerefInputFn::Params imToColParams(args.X, args.K);
+  nn::DerefInputFn imToCol(args.X, args.K);
+  auto imToColParams = imToCol.getParams();
 
   std::array<int, 4> filterShape = {args.outputDepth, args.filterHeight,
                                     args.filterWidth, args.inputDepth};
   nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
       (int8_t *)args.filter.data(), filterShape, 1, args.padValue);
 
-  nn::MatMulBinaryDirectFn::Params afParams(args.X, args.K, args.inputDepth);
+  nn::MatMulBinaryDirectFn af(args.X, args.K, args.inputDepth);
+  auto afParams = af.getParams();
 
   int receptiveVolume = args.filterHeight * args.filterWidth * args.inputDepth;
   nn::MulsAndBias mulAndBiases = nn::OT_int8_clamped::canonicalise_mul_and_bias(
@@ -388,16 +394,17 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectInt8Params(
                                           VPU_INT16_EPV,
                                           (int16_t)args.padValue);
 
-  nn::OT_int8_clamped::Params otParams((int32_t)args.outputDepth,
-                                       qp.initial_shr, qp.final_shr);
+  nn::OT_int8_clamped ot((int32_t)args.outputDepth, qp.initial_shr,
+                         qp.final_shr);
+  auto otParams = ot.getParams();
 
-  std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
-  std::string afStr = afParams.serialise<nn::MatMulBinaryDirectFn::Params>();
-  std::string otStr = otParams.serialise<nn::OT_int8_clamped::Params>();
+  std::string mfStr =
+      std::string((char *)&imToColParams, sizeof(imToColParams));
+  std::string afStr = std::string((char *)&afParams, sizeof(afParams));
+  std::string otStr = std::string((char *)&otParams, sizeof(otParams));
 
   abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
-          args.imageRegionSplits, args.Y);
+      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);
@@ -413,7 +420,8 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
     int &scratchBytes) const {
-  nn::ImToColValid::Params imToColParams(args.X, args.K, args.inputDepth);
+  nn::ImToColValid imToCol(args.X, args.K, args.inputDepth);
+  auto imToColParams = imToCol.getParams();
 
   std::array<int, 4> filterShape = {args.outputDepth, args.filterHeight,
                                     args.filterWidth, args.inputDepth};
@@ -424,7 +432,8 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
   int inputBytes =
       args.filterHeight * args.filterWidth * args.inputDepth / elementsPerByte;
 
-  nn::MatMulBinary::Params afParams(args.outputDepth, inputBytes);
+  nn::MatMulBinary af(args.outputDepth, inputBytes);
+  auto afParams = af.getParams();
 
   int receptiveVolume = args.filterHeight * args.filterWidth * args.inputDepth;
   nn::MulsAndBias mulAndBiases = nn::OT_int8_clamped::canonicalise_mul_and_bias(
@@ -443,16 +452,17 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
                                           VPU_INT16_EPV,
                                           (int16_t)args.padValue);
 
-  nn::OT_int8_clamped::Params otParams((int32_t)args.outputDepth,
-                                       qp.initial_shr, qp.final_shr);
+  nn::OT_int8_clamped ot((int32_t)args.outputDepth, qp.initial_shr,
+                         qp.final_shr);
+  auto otParams = ot.getParams();
 
-  std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
-  std::string afStr = afParams.serialise<nn::MatMulBinary::Params>();
-  std::string otStr = otParams.serialise<nn::OT_int8_clamped::Params>();
+  std::string mfStr =
+      std::string((char *)&imToColParams, sizeof(imToColParams));
+  std::string afStr = std::string((char *)&afParams, sizeof(afParams));
+  std::string otStr = std::string((char *)&otParams, sizeof(otParams));
 
   abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
-          args.imageRegionSplits, args.Y);
+      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   strParams.push_back(otStr);

@@ -46,6 +46,56 @@ Perform the following steps once
   Optionally, you may add the relevant ``export`` command in ``venv/bin/activate`` (for pip) or a script in ``($CONDA_PREFIX)/etc/conda/activate.d/`` (for conda), to automatically set the environment variable upon activating your virtual environment.
 
 
+Cmake Setup
+-----------
+
+Cmake can be used to link the library onto your project. In that case you do not need to set the envrionement variable, as the cmake script will automatically find the library.
+Here below an example of the CMakeLists.txt file that fins the library and creates a static library target called ``tflite_micro``.
+
+
+.. code-block:: cmake
+
+  # Get path of xmos ai tools usign python script
+  set(CMD "\
+  import os; \
+  import xmos_ai_tools.xinterpreters.device as dl; \
+  print(os.path.dirname(dl.__file__)) \
+  ")
+
+  execute_process(
+      COMMAND python -c "${CMD}"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+      OUTPUT_VARIABLE XMOS_AITOOLSLIB_PATH
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+  # tflite_micro - add dependancy
+  set(XMOS_AITOOLSLIB_PATH_CMAKE "${XMOS_AITOOLSLIB_PATH}/buildfiles/aitoolslib.cmake")
+
+  if(XMOS_AITOOLSLIB_PATH STREQUAL "")
+      message(FATAL_ERROR "Path to XMOS AI tools NOT found")
+  elseif(NOT EXISTS  ${XMOS_AITOOLSLIB_PATH_CMAKE})
+      message(FATAL_ERROR "Cmake NOT found in this path")
+  else()
+      message("Found python package xmos-ai-tools at: ${XMOS_AITOOLSLIB_PATH}")
+      include(${XMOS_AITOOLSLIB_PATH_CMAKE})
+      set(LIB_NAME tflite_micro)
+      add_library(${LIB_NAME} STATIC IMPORTED GLOBAL)
+      target_compile_definitions(${LIB_NAME} INTERFACE ${XMOS_AITOOLSLIB_DEFINITIONS})
+      set_target_properties(${LIB_NAME}  PROPERTIES
+          LINKER_LANGUAGE CXX
+          IMPORTED_LOCATION ${XMOS_AITOOLSLIB_LIBRARIES}
+          INTERFACE_INCLUDE_DIRECTORIES ${XMOS_AITOOLSLIB_INCLUDES})
+  endif()
+
+
+Then the library can be linked to the target as follows:
+
+.. code-block:: cmake
+  
+  target_link_libraries(${TARGET} PUBLIC tflite_micro)
+
+
 Example applications
 ----------------------------
 

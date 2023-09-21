@@ -50,8 +50,7 @@ Cmake Setup
 -----------
 
 Cmake can be used to link the library onto your project. In that case you do not need to set the envrionement variable, as the cmake script will automatically find the library.
-Here below an example of the CMakeLists.txt file that fins the library and creates a static library target called ``tflite_micro``.
-
+The following CMakeLists.txt file can be used as a template to create the static library called ``tflite_micro`` for your project.
 
 .. code-block:: cmake
 

@@ -127,11 +127,11 @@ struct ReplaceStridedSlicePattern
         nn::WindowGeometry({yDiff, xDiff, static_cast<int>(inputDepth)},
                            {beginY, beginX}, {1, 1, 1}, {strideY, strideX});
 
-    nn::ImToColValid::Params imToColParams(image_geom, window_geom,
-                                           static_cast<int>(inputDepth),
-                                           /*dont_zero_pad_at_the_end=*/true);
-
-    std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
+    nn::ImToColValid imToCol(image_geom, window_geom,
+                             static_cast<int>(inputDepth),
+                             /*dont_zero_pad_at_the_end=*/true);
+    auto imToColParams = imToCol.getParams();
+    auto mfStr = std::string((char *)&imToColParams, sizeof(imToColParams));
 
     auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceOp>(
         stridedSliceOp.getLoc(), stridedSliceOp.getType(),

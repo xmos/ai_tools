@@ -7,7 +7,10 @@
 #include "IR/XCoreOps.h"
 
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
-#include "lib_nn/api/Conv2d.hpp"
+#include "lib_nn/api/AbstractKernel.hpp"
+#include "lib_nn/api/AggregateFn.hpp"
+#include "lib_nn/api/MemCpyFn.hpp"
+#include "lib_nn/api/OutputTransformFn.hpp"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
@@ -244,16 +247,16 @@ private:
                            std::vector<int16_t> &mulsBiasesData) const;
 };
 
-template <typename Filter2DParams>
-llvm::SmallVector<std::string> getAbstractKernelParamsForMultipleThreads(
+static llvm::SmallVector<std::string> getAbstractKernelParamsForMultipleThreads(
     llvm::SmallVector<std::array<int, 4>> imageRegionSplits,
     const nn::ImageGeometry &Y) {
   llvm::SmallVector<std::string> abstractKernelParams;
   for (auto &regionsplits : imageRegionSplits) {
     auto ir = nn::ImageRegion(regionsplits[0], regionsplits[1], 0,
                               regionsplits[2], regionsplits[3], Y.depth);
-    Filter2DParams akParams(Y, ir, VPU_INT8_ACC_PERIOD);
-    std::string akpStr = akParams.template serialise<Filter2DParams>();
+    nn::AbstractKernel ak(Y, ir, VPU_INT8_ACC_PERIOD);
+    auto akParams = ak.getParams();
+    std::string akpStr = std::string((char *)&akParams, sizeof(akParams));
     abstractKernelParams.push_back(akpStr);
   }
   return abstractKernelParams;

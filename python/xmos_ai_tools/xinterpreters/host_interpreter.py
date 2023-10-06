@@ -24,7 +24,7 @@ else:
 
 lib = ctypes.cdll.LoadLibrary(lib_path)
 
-from xmos_ai_tools.xinterpreters.host.exceptions import (
+from xmos_ai_tools.xinterpreters.exceptions import (
     InterpreterError,
     AllocateTensorsError,
     InvokeError,

@@ -130,33 +130,33 @@ class xmos_io_server(ABC):
             # TODO - more checks that we have the right device..
             self._dev = usb.core.find(idVendor=0x20B1, product="xAISRV")
 
-            # set the active configuration. With no arguments, the first
-            # configuration will be the active one
-            self._dev.set_configuration()
+        # set the active configuration. With no arguments, the first
+        # configuration will be the active one
+        self._dev.set_configuration()
 
-            # get an endpoint instance
-            cfg = self._dev.get_active_configuration()
+        # get an endpoint instance
+        cfg = self._dev.get_active_configuration()
 
-            intf = cfg[(0, 0)]
+        intf = cfg[(0, 0)]
 
-            self._out_ep = usb.util.find_descriptor(
-                intf,
-                # match the first OUT endpoint
-                custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress)
-                == usb.util.ENDPOINT_OUT,
-            )
+        self._out_ep = usb.util.find_descriptor(
+            intf,
+            # match the first OUT endpoint
+            custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress)
+            == usb.util.ENDPOINT_OUT,
+        )
 
-            self._in_ep = usb.util.find_descriptor(
-                intf,
-                # match the first IN endpoint
-                custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress)
-                == usb.util.ENDPOINT_IN,
-            )
+        self._in_ep = usb.util.find_descriptor(
+            intf,
+            # match the first IN endpoint
+            custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress)
+            == usb.util.ENDPOINT_IN,
+        )
 
-            assert self._out_ep is not None
-            assert self._in_ep is not None
+        assert self._out_ep is not None
+        assert self._in_ep is not None
 
-            print("Connected to XCORE_IO_SERVER via USB")
+        print("Connected to XCORE_IO_SERVER via USB")
 
     # TODO move to super()
     def start_inference(self):

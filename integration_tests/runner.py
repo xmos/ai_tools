@@ -14,7 +14,7 @@ import tensorflow as tf
 from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
 from xmos_ai_tools import xformer
 import xmos_ai_tools.runtime as rt
-from xmos_ai_tools import io_server
+from xmos_ai_tools.io_server import xmos_io_server
 import yaml
 from abc import ABC, abstractmethod, abstractproperty
 
@@ -38,16 +38,6 @@ TFLM_INCLUDE_PATH = TFLM_SUBMODULES_PATH / "tflite-micro"
 FLATBUFFERS_INCLUDE_PATH = TFLM_SUBMODULES_PATH / "flatbuffers" / "include"
 # Assumes old version of clang
 CPP_COMPILER = "g++" if platform.system() == "Linux" else "clang++"
-
-def print_dir_tree(start_path, level=0, max_level=3):
-    if level > max_level:
-        return
-    for entry in os.listdir(start_path):
-        print("  " * level + entry)
-        full_path = os.path.join(start_path, entry)
-        if os.path.isdir(full_path):
-            print_dir_tree(full_path, level + 1, max_level)
-
 
 def dont_throw(obj, attr_name, method_name):
     try:
@@ -189,18 +179,17 @@ class XFDeviceRuntime(AbstractXFRunner):
     def __init__(self, model_content):
         super().__init__(model_content)
         # compile model, two dirs because xmake
-        dst_dir = self._dir_path / "device_test" / "device_test"
+        dst_dir = self._dir_path / "device_test"
         shutil.copytree(LIB_XUD_PATH, self._dir_path / "lib_xud")
         shutil.copytree(DEVICE_TEST_PATH, dst_dir)
         shutil.copy(self._dir_path / "model.tflite.h", dst_dir / "src/")
         shutil.copy(self._dir_path / "model.tflite.cpp", dst_dir / "src/")
-        print_dir_tree(self._dir_path)
         run_cmd(["xmake"], working_dir=dst_dir)
-        xe_path = next((self._dir_path / "bin").glob("*.xe")).name
+        xe_path = dst_dir/ "bin" / next((dst_dir / "bin").glob("*.xe")).name
         self._p = subprocess.Popen(["xrun", "--xscope", "--id", "0", xe_path])
         # overwriting _interpreter from super()
         dont_throw(self, "_interpreter", "close")
-        self._interpreter = io_server()
+        self._interpreter = xmos_io_server()
         self._interpreter.connect()
 
     def predict(self, inputs):
@@ -209,12 +198,10 @@ class XFDeviceRuntime(AbstractXFRunner):
         self._interpreter.start_inference()
         en = enumerate([(i["dtype"], i["shape"]) for i in self._dets])
         return [
-            np.frombuffer(
+            np.array(
                 self._interpreter.read_output_tensor(
                     np.dtype(d) * np.prod(s), tensor_num=i
-                ),
-                dtype=d,
-            ).reshape(s)
+                ), dtype=d)[:np.prod(s)].reshape(s)
             for i, (d, s) in en
         ]
 

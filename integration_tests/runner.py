@@ -294,6 +294,8 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     LOGGER.info("Invoking xformer to get xformed model...")
     if opt_dict["compiled"]:
         xf_runner = XFHostRuntime(model_content)
+    elif opt_dict["device"]:
+        xf_runner = XFDeviceRuntime(model_content)
     else:
         xf_runner = XFHostInterpreter(model_content)
 

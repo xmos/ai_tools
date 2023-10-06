@@ -1,1 +1,1 @@
-from host_interpreter import TFLMHostInterpreter
+from .host_interpreter import TFLMHostInterpreter

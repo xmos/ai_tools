@@ -128,7 +128,7 @@ class xmos_io_server(ABC):
         self._dev = None
         while self._dev is None:
             # TODO - more checks that we have the right device..
-            self._dev = usb.core.find(idVendor=0x20B1, idProduct=0xA15E)
+            self._dev = usb.core.find(idVendor=0x20B1, product="xAISRV")
 
             # set the active configuration. With no arguments, the first
             # configuration will be the active one

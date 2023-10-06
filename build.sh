@@ -136,9 +136,9 @@ create_zip() {
 build_xinterpreter() {
     cd $SCRIPT_DIR
     if [ "$LSP" = "true" ] ; then
-        bear make -C python/xmos_ai_tools/xinterpreters/host install -j$NUM_PROCS
+        bear make -C python/xmos_ai_tools/xinterpreters install -j$NUM_PROCS
     else
-        make -C python/xmos_ai_tools/xinterpreters/host install -j$NUM_PROCS
+        make -C python/xmos_ai_tools/xinterpreters install -j$NUM_PROCS
     fi
 }
 
@@ -148,7 +148,7 @@ xformer_integration_test() {
 }
 
 clean_xinterpreter() {
-    make -C python/xmos_ai_tools/xinterpreters/host clean
+    make -C python/xmos_ai_tools/xinterpreters clean
 }
 
 clean_runtime() {

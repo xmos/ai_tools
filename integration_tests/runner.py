@@ -1,6 +1,7 @@
 import time
 import platform
-import pathlib
+import shutil
+from pathlib import Path
 import logging
 import tempfile
 from _pytest.fixtures import FixtureRequest
@@ -13,6 +14,7 @@ import tensorflow as tf
 from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
 from xmos_ai_tools import xformer
 import xmos_ai_tools.runtime as rt
+from xmos_ai_tools import xmos_io_server
 import yaml
 from abc import ABC, abstractmethod, abstractproperty
 
@@ -24,9 +26,10 @@ AVG_ABS_ERROR = 1.0 / 4
 REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
-FILE_PATH = pathlib.Path(__file__).resolve()
+FILE_PATH = Path(__file__).resolve()
 ROOT_DIR = FILE_PATH.parents[1]
 MAIN_CPP_PATH = FILE_PATH.parents[0] / "compile_test.cpp"
+DEVICE_TEST_PATH = FILE_PATH.parents[0] / "device_test"
 LIB_TFLM_DIR_PATH = ROOT_DIR / "third_party" / "lib_tflite_micro"
 LIB_NN_INCLUDE_PATH = ROOT_DIR / "third_party" / "lib_nn"
 TFLM_SUBMODULES_PATH = LIB_TFLM_DIR_PATH / "lib_tflite_micro" / "submodules"
@@ -34,6 +37,13 @@ TFLM_INCLUDE_PATH = TFLM_SUBMODULES_PATH / "tflite-micro"
 FLATBUFFERS_INCLUDE_PATH = TFLM_SUBMODULES_PATH / "flatbuffers" / "include"
 # Assumes old version of clang
 CPP_COMPILER = "g++" if platform.system() == "Linux" else "clang++"
+
+
+def dont_throw(func):
+    try:
+        func()
+    except Exception:
+        pass
 
 
 class AbstractRunner(ABC):
@@ -59,7 +69,7 @@ class AbstractXFRunner(AbstractRunner):
     def __init__(self, model):
         temp_dir = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
         self._temp_dir = temp_dir
-        self._dir_path = pathlib.Path(temp_dir.name)
+        self._dir_path = Path(temp_dir.name)
         input_file = self._dir_path / "input.tflite"
         with open(input_file, "wb") as fd:
             fd.write(model)
@@ -75,14 +85,8 @@ class AbstractXFRunner(AbstractRunner):
 
     # Try/except in case we cancel operation before interpreter/dir initialised
     def __del__(self):
-        try:
-            self._interpreter.close()
-        except AttributeError:
-            pass
-        try:
-            self._temp_dir.cleanup()
-        except AttributeError:
-            pass
+        dont_throw(self._interpreter.close)
+        dont_throw(self._temp_dir.clean)
 
 
 class BnnInterpreter(AbstractRefRunner):
@@ -168,6 +172,42 @@ class XFHostRuntime(AbstractXFRunner):
         ]
 
 
+class XFDeviceRuntime(AbstractXFRunner):
+    def __init__(self, model_content):
+        super().__init__(model_content)
+        # compile model via xmake
+        dst_dir = self._dir_path / "device_test"
+        shutil.copytree(DEVICE_TEST_PATH, dst_dir)
+        shutil.copy(self._dir_path / "model.tflite.h", dst_dir / "src/")
+        shutil.copy(self._dir_path / "model.tflite.cpp", dst_dir / "src/")
+        run_cmd(["xmake"], working_dir=dst_dir)
+        xe_path = next((self._dir_path / "bin").glob("*.xe")).name
+        self._p = subprocess.Popen(["xrun", "--xscope", "--id", "0", xe_path])
+        # overwriting _interpreter from super()
+        dont_throw(self._interpreter.close())
+        self._interpreter = xmos_io_server()
+        self._interpreter.connect()
+
+    def predict(self, inputs):
+        for i, inp in enumerate(inputs):
+            self._interpreter.write_input_tensor(inp.tobytes(), tensor_num=i)
+        self._interpreter.start_inference()
+        en = enumerate([(i["dtype"], i["shape"]) for i in self._dets])
+        return [
+            np.frombuffer(
+                self._interpreter.read_output_tensor(
+                    np.dtype(d) * np.prod(s), tensor_num=i
+                ),
+                dtype=d,
+            ).reshape(s)
+            for i, (d, s) in en
+        ]
+
+    def __del__(self):
+        dont_throw(self._p.terminate)
+        super().__del__()
+
+
 class XFHostInterpreter(AbstractXFRunner):
     def __init__(self, model_content):
         super().__init__(model_content)
@@ -194,7 +234,7 @@ def run_cmd(cmd, working_dir=None):
         sys.exit(1)
 
 
-def get_params(model_path: pathlib.Path) -> dict:
+def get_params(model_path: Path) -> dict:
     params = {}
     params["MAX_ABS_ERROR"] = MAX_ABS_ERROR
     params["ABS_AVG_ERROR"] = ABS_AVG_ERROR
@@ -207,7 +247,7 @@ def get_params(model_path: pathlib.Path) -> dict:
     return params
 
 
-def get_input_tensors(runner: AbstractRefRunner, parent_dir: pathlib.Path) -> list:
+def get_input_tensors(runner: AbstractRefRunner, parent_dir: Path) -> list:
     types, shapes = runner.input_details
     ins = []
     for i, (s, d) in enumerate(zip(shapes, types)):
@@ -228,7 +268,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     if opt_dict["s"]:
         time.sleep(5)
 
-    model_path = pathlib.Path(filename).resolve()
+    model_path = Path(filename).resolve()
     params = get_params(model_path)
 
     if not model_path.exists():

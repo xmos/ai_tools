@@ -11,10 +11,10 @@ import sys
 import subprocess
 import larq_compute_engine as lce
 import tensorflow as tf
-from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
+from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 from xmos_ai_tools import xformer
 import xmos_ai_tools.runtime as rt
-from xmos_ai_tools.io_server import xmos_io_server
+from xmos_ai_tools.io_server import IOServer
 import yaml
 from abc import ABC, abstractmethod, abstractproperty
 
@@ -38,6 +38,7 @@ TFLM_INCLUDE_PATH = TFLM_SUBMODULES_PATH / "tflite-micro"
 FLATBUFFERS_INCLUDE_PATH = TFLM_SUBMODULES_PATH / "flatbuffers" / "include"
 # Assumes old version of clang
 CPP_COMPILER = "g++" if platform.system() == "Linux" else "clang++"
+
 
 def dont_throw(obj, attr_name, method_name):
     try:
@@ -79,7 +80,7 @@ class AbstractXFRunner(AbstractRunner):
         with open(output_file, "rb") as fd:
             model = fd.read()
         # We use interpreter for compiled too (for output details), it's a hack
-        self._interpreter = xcore_tflm_host_interpreter()
+        self._interpreter = TFLMHostInterpreter()
         self._interpreter.set_model(model_content=model, secondary_memory=False)
         self._dets = self._interpreter.get_output_details()
 
@@ -185,11 +186,11 @@ class XFDeviceRuntime(AbstractXFRunner):
         shutil.copy(self._dir_path / "model.tflite.h", dst_dir / "src/")
         shutil.copy(self._dir_path / "model.tflite.cpp", dst_dir / "src/")
         run_cmd(["xmake"], working_dir=dst_dir)
-        xe_path = dst_dir/ "bin" / next((dst_dir / "bin").glob("*.xe")).name
+        xe_path = dst_dir / "bin" / next((dst_dir / "bin").glob("*.xe")).name
         self._p = subprocess.Popen(["xrun", "--xscope", "--id", "0", xe_path])
         # overwriting _interpreter from super()
         dont_throw(self, "_interpreter", "close")
-        self._interpreter = xmos_io_server()
+        self._interpreter = IOServer()
         self._interpreter.connect()
 
     def predict(self, inputs):
@@ -201,7 +202,9 @@ class XFDeviceRuntime(AbstractXFRunner):
             np.array(
                 self._interpreter.read_output_tensor(
                     np.dtype(d) * np.prod(s), tensor_num=i
-                ), dtype=d)[:np.prod(s)].reshape(s)
+                ),
+                dtype=d,
+            )[: np.prod(s)].reshape(s)
             for i, (d, s) in en
         ]
 

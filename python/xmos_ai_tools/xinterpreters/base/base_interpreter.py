@@ -16,7 +16,7 @@ class XTFLMInterpreterStatus(Enum):
     ERROR = 1
 
 
-class xcore_tflm_base_interpreter(ABC):
+class TFLMBaseInterpreter(ABC):
     """! The xcore interpreters base class.
     Defines a common base interface to be used by the host and device interpreters.
     """
@@ -25,7 +25,7 @@ class xcore_tflm_base_interpreter(ABC):
         """! Base interpreter initializer.
         Initialises the list of models attached to the interpreter.
         """
-        self.models: List[xcore_tflm_base_interpreter.modelData] = []
+        self.models: List[TFLMBaseInterpreter.modelData] = []
 
     @abstractmethod
     def initialise_interpreter(self, model_index: int = 0) -> None:

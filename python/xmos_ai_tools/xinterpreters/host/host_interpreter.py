@@ -2,7 +2,7 @@
 # XMOS Public License: Version 1
 import sys
 import ctypes
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 import numpy as np
 from pathlib import Path
@@ -10,7 +10,7 @@ from pathlib import Path
 from numpy import ndarray
 
 from xmos_ai_tools.xinterpreters.base.base_interpreter import (
-    xcore_tflm_base_interpreter,
+    TFLMBaseInterpreter,
     XTFLMInterpreterStatus,
 )
 
@@ -39,7 +39,7 @@ from xmos_ai_tools.xinterpreters.host.exceptions import (
 MAX_TENSOR_ARENA_SIZE = 10000000
 
 
-class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
+class TFLMHostInterpreter(TFLMBaseInterpreter):
     """! The xcore interpreters host class.
     The interpreter to be used on a host, inherits from base interpreter.
     """
@@ -111,7 +111,7 @@ class xcore_tflm_host_interpreter(xcore_tflm_base_interpreter):
 
         super().__init__()
 
-    def __enter__(self) -> "xcore_tflm_host_interpreter":
+    def __enter__(self) -> "TFLMHostInterpreter":
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback) -> None:

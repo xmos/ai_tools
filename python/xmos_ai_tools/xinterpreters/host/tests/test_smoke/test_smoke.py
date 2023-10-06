@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import sys, os
 import numpy as np
 import tensorflow as tf
 
-from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
+from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 
 # Load model/params content to test set model arguments
 with open("./smoke_model.tflite", "rb") as fd:
@@ -17,7 +16,7 @@ interpreter = tf.lite.Interpreter(
     experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_REF,
     experimental_preserve_all_tensors=True,
 )
-ie = xcore_tflm_host_interpreter()
+ie = TFLMHostInterpreter()
 
 interpreter.allocate_tensors()
 input_tensor_details = interpreter.get_input_details()[0]

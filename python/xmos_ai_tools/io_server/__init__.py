@@ -1,10 +1,4 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
-from abc import ABC, abstractmethod
-
-import sys
-import struct
-import array
-
 IOSERVER_INVOKE = int(0x01)
 IOSERVER_TENSOR_SEND_OUTPUT = int(0x02)
 IOSERVER_TENSOR_RECV_INPUT = int(0x03)
@@ -22,13 +16,7 @@ class IOError(XMOS_IO_SERVER):
     pass
 
 
-class InferenceError(XMOS_IO_SERVER):
-    """Inference Error from device"""
-
-    pass
-
-
-class xmos_io_server(ABC):
+class IOServer:
     def __init__(self, timeout=5000):
         self.__out_ep = None
         self.__in_ep = None

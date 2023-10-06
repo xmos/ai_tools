@@ -45,7 +45,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 endif()
 
 set(TOP_DIR
-  "${CMAKE_CURRENT_SOURCE_DIR}/../../../../third_party/lib_tflite_micro")
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../../third_party/lib_tflite_micro")
 
 include(${TOP_DIR}/cmakefiles/xtflm.cmake)
 

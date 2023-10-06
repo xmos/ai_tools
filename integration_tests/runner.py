@@ -14,7 +14,7 @@ import tensorflow as tf
 from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
 from xmos_ai_tools import xformer
 import xmos_ai_tools.runtime as rt
-from xmos_ai_tools import xmos_io_server
+from xmos_ai_tools import io_server
 import yaml
 from abc import ABC, abstractmethod, abstractproperty
 
@@ -29,6 +29,7 @@ LOGGER = logging.getLogger(__name__)
 FILE_PATH = Path(__file__).resolve()
 ROOT_DIR = FILE_PATH.parents[1]
 MAIN_CPP_PATH = FILE_PATH.parents[0] / "compile_test.cpp"
+LIB_XUD_PATH = ROOT_DIR / "third_party" / "lib_xud"
 DEVICE_TEST_PATH = FILE_PATH.parents[0] / "device_test"
 LIB_TFLM_DIR_PATH = ROOT_DIR / "third_party" / "lib_tflite_micro"
 LIB_NN_INCLUDE_PATH = ROOT_DIR / "third_party" / "lib_nn"
@@ -38,11 +39,20 @@ FLATBUFFERS_INCLUDE_PATH = TFLM_SUBMODULES_PATH / "flatbuffers" / "include"
 # Assumes old version of clang
 CPP_COMPILER = "g++" if platform.system() == "Linux" else "clang++"
 
+def print_dir_tree(start_path, level=0, max_level=3):
+    if level > max_level:
+        return
+    for entry in os.listdir(start_path):
+        print("  " * level + entry)
+        full_path = os.path.join(start_path, entry)
+        if os.path.isdir(full_path):
+            print_dir_tree(full_path, level + 1, max_level)
 
-def dont_throw(func):
+
+def dont_throw(obj, attr_name, method_name):
     try:
-        func()
-    except Exception:
+        getattr(getattr(obj, attr_name), method_name)()
+    except AttributeError:
         pass
 
 
@@ -85,8 +95,7 @@ class AbstractXFRunner(AbstractRunner):
 
     # Try/except in case we cancel operation before interpreter/dir initialised
     def __del__(self):
-        dont_throw(self._interpreter.close)
-        dont_throw(self._temp_dir.clean)
+        dont_throw(self, "_temp_dir", "clean")
 
 
 class BnnInterpreter(AbstractRefRunner):
@@ -171,21 +180,27 @@ class XFHostRuntime(AbstractXFRunner):
             for i, (d, s) in en
         ]
 
+    def __del__(self):
+        dont_throw(self, "_interpreter", "close")
+        super().__del__()
+
 
 class XFDeviceRuntime(AbstractXFRunner):
     def __init__(self, model_content):
         super().__init__(model_content)
-        # compile model via xmake
-        dst_dir = self._dir_path / "device_test"
+        # compile model, two dirs because xmake
+        dst_dir = self._dir_path / "device_test" / "device_test"
+        shutil.copytree(LIB_XUD_PATH, self._dir_path / "lib_xud")
         shutil.copytree(DEVICE_TEST_PATH, dst_dir)
         shutil.copy(self._dir_path / "model.tflite.h", dst_dir / "src/")
         shutil.copy(self._dir_path / "model.tflite.cpp", dst_dir / "src/")
+        print_dir_tree(self._dir_path)
         run_cmd(["xmake"], working_dir=dst_dir)
         xe_path = next((self._dir_path / "bin").glob("*.xe")).name
         self._p = subprocess.Popen(["xrun", "--xscope", "--id", "0", xe_path])
         # overwriting _interpreter from super()
-        dont_throw(self._interpreter.close())
-        self._interpreter = xmos_io_server()
+        dont_throw(self, "_interpreter", "close")
+        self._interpreter = io_server()
         self._interpreter.connect()
 
     def predict(self, inputs):
@@ -204,7 +219,7 @@ class XFDeviceRuntime(AbstractXFRunner):
         ]
 
     def __del__(self):
-        dont_throw(self._p.terminate)
+        dont_throw(self, "_p", "terminate")
         super().__del__()
 
 

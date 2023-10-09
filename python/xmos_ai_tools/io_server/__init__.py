@@ -11,11 +11,13 @@ IOSERVER_TENSOR_RECV_INPUT = int(0x03)
 
 class IOServerError(Exception):
     """Error from device"""
+
     pass
 
 
 class IOError(IOServerError):
     """IO Error from device"""
+
     pass
 
 
@@ -29,11 +31,12 @@ def handle_usb_error(func):
                 raise IOError()
             else:
                 raise IOServerError(f"Wow...") from e
+
     return wrapper
 
 
 class IOServer:
-    def __init__(self, timeout=5000, output_details: Tuple[dict, ...]=None):
+    def __init__(self, timeout=5000, output_details: Tuple[dict, ...] = None):
         self.__out_ep = None
         self.__in_ep = None
         self._dev = None
@@ -43,10 +46,10 @@ class IOServer:
         super().__init__()
 
     def bytes_to_arr(self, data_bytes, tensor_num):
-        if output_details:
-            d = output_details[tensor_num]
+        if self._output_details:
+            d = self._output_details[tensor_num]
             s = d["shape"]
-            return np.frombuffer(data_bytes, dtype=d["dtype"])[:np.prod(s)].reshape(s)
+            return np.frombuffer(data_bytes, dtype=d["dtype"])[: np.prod(s)].reshape(s)
         return np.frombuffer(data_bytes, dtype=np.uint8)
 
     def write_input_tensor(self, raw_img, tensor_num=0, model_num=0):

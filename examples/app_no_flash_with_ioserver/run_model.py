@@ -45,6 +45,7 @@ interpreter.allocate_tensors()
 (input_details,) = interpreter.get_input_details()
 (output_details,) = interpreter.get_output_details()
 
+print(output_details)
 # Read input image and convert to array
 input_data = img_to_arr("human.jpg", input_details)
 interpreter.set_tensor(input_details["index"], input_data)
@@ -69,21 +70,23 @@ print_detections(detections)
 ########################################################################
 
 # The app must be running on xcore so that it can be connected via USB
-ie = IOServer()
+# Providing output details is optional
+ie = IOServer(output_details=(output_details,))
 ie.connect()
 
 input_data = img_to_arr("human.jpg", input_details)
 ie.write_input_tensor(input_data.tobytes())
 ie.start_inference()
-# ie.read_output_tensor returns an array with at least four bytes
+# ie.read_output_tensor() will return a numpy array
+# Since we've provided output details, the output will be reshaped and
+# Converted to the corresponding dtype automatically, otherwise we'd receive
+# a 1D array of uint8's (with a number of elements being a multiple of 4)
 # For this model, the output tensor is only two bytes
-detections = ie.read_output_tensor(2)
+detections = ie.read_output_tensor().flatten()
 print_detections(detections)
 
 input_data = img_to_arr("nonhuman.jpg", input_details)
 ie.write_input_tensor(input_data.tobytes())
 ie.start_inference()
-# ie.read_output_tensor returns a byte array with at least four bytes
-# For this model, the output tensor is only two bytes
-detections = ie.read_output_tensor(2)
+detections = ie.read_output_tensor().flatten()
 print_detections(detections)

@@ -198,15 +198,7 @@ class XFDeviceRuntime(AbstractXFRunner):
             self._interpreter.write_input_tensor(inp.tobytes(), tensor_num=i)
         self._interpreter.start_inference()
         en = enumerate([(i["dtype"], i["shape"]) for i in self._dets])
-        return [
-            np.array(
-                self._interpreter.read_output_tensor(
-                    np.dtype(d) * np.prod(s), tensor_num=i
-                ),
-                dtype=d,
-            )[: np.prod(s)].reshape(s)
-            for i, (d, s) in en
-        ]
+        return [self._interpreter.read_output_tensor(i) for i, (d, s) in en]
 
     def __del__(self):
         dont_throw(self, "_p", "terminate")

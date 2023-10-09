@@ -1,6 +1,8 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import usb
+from typing import Tuple
+import numpy as np
 
 IOSERVER_INVOKE = int(0x01)
 IOSERVER_TENSOR_SEND_OUTPUT = int(0x02)
@@ -31,24 +33,21 @@ def handle_usb_error(func):
 
 
 class IOServer:
-    def __init__(self, timeout=5000):
+    def __init__(self, timeout=5000, output_details: Tuple[dict, ...]=None):
         self.__out_ep = None
         self.__in_ep = None
         self._dev = None
+        self._output_details = output_details
         self._timeout = timeout
         self._max_block_size = 512  # TODO read from (usb) device?
         super().__init__()
 
-    def bytes_to_ints(self, data_bytes, bpi=1):
-        output_data_int = []
-
-        # TODO better way of doing this?
-        for i in range(0, len(data_bytes), bpi):
-            x = data_bytes[i : i + bpi]
-            y = int.from_bytes(x, byteorder="little", signed=True)
-            output_data_int.append(y)
-
-        return output_data_int
+    def bytes_to_arr(self, data_bytes, tensor_num):
+        if output_details:
+            d = output_details[tensor_num]
+            s = d["shape"]
+            return np.frombuffer(data_bytes, dtype=d["dtype"])[:np.prod(s)].reshape(s)
+        return np.frombuffer(data_bytes, dtype=np.uint8)
 
     def write_input_tensor(self, raw_img, tensor_num=0, model_num=0):
         self._download_data(
@@ -58,17 +57,15 @@ class IOServer:
             model_num=model_num,
         )
 
-    def read_output_tensor(self, length, tensor_num=0, model_num=0):
+    def read_output_tensor(self, tensor_num=0, model_num=0):
         # Retrieve result from device
         data_read = self._upload_data(
             IOSERVER_TENSOR_SEND_OUTPUT,
-            length,
             model_num=model_num,
             tensor_num=tensor_num,
         )
-        assert type(data_read) is list
-
-        return self.bytes_to_ints(data_read)
+        assert type(data_read) is bytearray
+        return self.bytes_to_arr(data_read, tensor_num)
 
     @handle_usb_error
     def _download_data(self, cmd, data_bytes, tensor_num=0, model_num=0):
@@ -76,18 +73,17 @@ class IOServer:
         self._out_ep.write(bytes([cmd, model_num, tensor_num]))
         self._out_ep.write(data_bytes, 1000)
         if (len(data_bytes) % self._max_block_size) == 0:
-            self._out_ep.write(bytearray([]), 1000)
+            self._out_ep.write(bytearray(), 1000)
 
     @handle_usb_error
-    def _upload_data(self, cmd, length, tensor_num=0, model_num=0):
-        read_data = []
+    def _upload_data(self, cmd, tensor_num=0, model_num=0):
+        read_data = bytearray()
         self._out_ep.write(bytes([cmd, model_num, tensor_num]), self._timeout)
         buff = usb.util.create_buffer(self._max_block_size)
-        while True:
-            read_len = self._dev.read(self._in_ep, buff, 10000)
+        read_len = self._dev.read(self._in_ep, buff, 10000)
+        while read_len == self._max_block_size:
             read_data.extend(buff[:read_len])
-            if read_len != self._max_block_size:
-                break
+            read_len = self._dev.read(self._in_ep, buff, 10000)
 
         return read_data
 

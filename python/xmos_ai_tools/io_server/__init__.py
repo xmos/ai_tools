@@ -27,6 +27,7 @@ def handle_usb_error(func):
                 raise IOError()
             else:
                 raise IOServerError(f"Wow...") from e
+    return wrapper
 
 
 class IOServer:

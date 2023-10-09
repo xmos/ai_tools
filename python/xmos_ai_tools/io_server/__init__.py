@@ -84,9 +84,10 @@ class IOServer:
         self._out_ep.write(bytes([cmd, model_num, tensor_num]), self._timeout)
         buff = usb.util.create_buffer(self._max_block_size)
         read_len = self._dev.read(self._in_ep, buff, 10000)
+        read_data.extend(buff[:read_len])
         while read_len == self._max_block_size:
-            read_data.extend(buff[:read_len])
             read_len = self._dev.read(self._in_ep, buff, 10000)
+            read_data.extend(buff[:read_len])
 
         return read_data
 

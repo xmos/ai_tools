@@ -36,7 +36,7 @@ def handle_usb_error(func):
 
 
 class IOServer:
-    def __init__(self, timeout=5000, output_details: Tuple[dict, ...] = None):
+    def __init__(self, output_details: Tuple[dict, ...] = None, timeout=5000):
         self.__out_ep = None
         self.__in_ep = None
         self._dev = None

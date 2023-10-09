@@ -190,15 +190,14 @@ class XFDeviceRuntime(AbstractXFRunner):
         self._p = subprocess.Popen(["xrun", "--xscope", "--id", "0", xe_path])
         # overwriting _interpreter from super()
         dont_throw(self, "_interpreter", "close")
-        self._interpreter = IOServer()
+        self._interpreter = IOServer(output_details=self._dets)
         self._interpreter.connect()
 
     def predict(self, inputs):
         for i, inp in enumerate(inputs):
             self._interpreter.write_input_tensor(inp.tobytes(), tensor_num=i)
         self._interpreter.start_inference()
-        en = enumerate([(i["dtype"], i["shape"]) for i in self._dets])
-        return [self._interpreter.read_output_tensor(i) for i, (d, s) in en]
+        return [self._interpreter.read_output_tensor(i) for i in range(len(self._dets))]
 
     def __del__(self):
         dont_throw(self, "_p", "terminate")

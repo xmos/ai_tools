@@ -22,6 +22,12 @@ def img_to_arr(image_file, input_details):
     return input_data
 
 
+def print_detections(detections):
+    label = "Not human" if detections[0] > detections[1] else "Human"
+    percentage = (detections[1] + 128) * 100 / 255
+    print(f"{label} ({percentage:.0f}%)")
+
+
 OPT_MODEL_PATH = "src/model.tflite"
 
 ########################################################################
@@ -46,13 +52,7 @@ interpreter.set_tensor(input_details["index"], input_data)
 # Inference
 interpreter.invoke()
 (detections,) = interpreter.get_tensor(output_details["index"])
-print(
-    "%s (%d%%)"
-    % (
-        "No human" if detections[0] > detections[1] else "Human",
-        (detections[1] + 128) * 100 / 255,
-    )
-)
+print_detections(detections)
 
 # Read input image and convert to array
 input_data = img_to_arr("nonhuman.jpg", input_details)
@@ -61,13 +61,7 @@ interpreter.set_tensor(input_details["index"], input_data)
 # Inference
 interpreter.invoke()
 (detections,) = interpreter.get_tensor(output_details["index"])
-print(
-    "%s (%d%%)"
-    % (
-        "Not human" if detections[0] > detections[1] else "Human",
-        (detections[1] + 128) * 100 / 255,
-    )
-)
+print_detections(detections)
 
 
 ########################################################################
@@ -84,13 +78,7 @@ ie.start_inference()
 # ie.read_output_tensor returns an array with at least four bytes
 # For this model, the output tensor is only two bytes
 detections = ie.read_output_tensor(2)
-print(
-    "%s (%d%%)"
-    % (
-        "Not human" if detections[0] > detections[1] else "Human",
-        (detections[1] + 128) * 100 / 255,
-    )
-)
+print_detections(detections)
 
 input_data = img_to_arr("nonhuman.jpg", input_details)
 ie.write_input_tensor(input_data.tobytes())
@@ -98,10 +86,4 @@ ie.start_inference()
 # ie.read_output_tensor returns a byte array with at least four bytes
 # For this model, the output tensor is only two bytes
 detections = ie.read_output_tensor(2)
-print(
-    "%s (%d%%)"
-    % (
-        "Not human" if detections[0] > detections[1] else "Human",
-        (detections[1] + 128) * 100 / 255,
-    )
-)
+print_detections(detections)

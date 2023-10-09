@@ -1,19 +1,32 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
+
+import usb
+
 IOSERVER_INVOKE = int(0x01)
 IOSERVER_TENSOR_SEND_OUTPUT = int(0x02)
 IOSERVER_TENSOR_RECV_INPUT = int(0x03)
 
 
-class XMOS_IO_SERVER(Exception):
+class IOServerError(Exception):
     """Error from device"""
-
     pass
 
 
-class IOError(XMOS_IO_SERVER):
+class IOError(IOServerError):
     """IO Error from device"""
-
     pass
+
+
+def handle_usb_error(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except usb.core.USBError as e:
+            print(f"USB error {e}")
+            if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
+                raise IOError()
+            else:
+                raise IOServerError(f"Wow...") from e
 
 
 class IOServer:
@@ -52,67 +65,36 @@ class IOServer:
             model_num=model_num,
             tensor_num=tensor_num,
         )
-
-        assert type(data_read) == list
+        assert type(data_read) is list
 
         return self.bytes_to_ints(data_read)
 
+    @handle_usb_error
     def _download_data(self, cmd, data_bytes, tensor_num=0, model_num=0):
-        import usb
+        # TODO rm this extra CMD packet
+        self._out_ep.write(bytes([cmd, model_num, tensor_num]))
+        self._out_ep.write(data_bytes, 1000)
+        if (len(data_bytes) % self._max_block_size) == 0:
+            self._out_ep.write(bytearray([]), 1000)
 
-        # print('Len ', len(data_bytes))
-        try:
-            # TODO rm this extra CMD packet
-            self._out_ep.write(bytes([cmd, model_num, tensor_num]))
-
-            # data_bytes = bytes([cmd]) + data_bytes
-            # print('Written ', len(data_bytes))
-
-            self._out_ep.write(data_bytes, 1000)
-            # print('Done ', len(data_bytes))
-
-            if (len(data_bytes) % self._max_block_size) == 0:
-                self._out_ep.write(bytearray([]), 1000)
-
-        except usb.core.USBError as e:
-            print("USB error  ", str(e))
-            if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
-                raise IOError()
-
+    @handle_usb_error
     def _upload_data(self, cmd, length, tensor_num=0, model_num=0):
-        import usb
-
         read_data = []
+        self._out_ep.write(bytes([cmd, model_num, tensor_num]), self._timeout)
+        buff = usb.util.create_buffer(self._max_block_size)
+        while True:
+            read_len = self._dev.read(self._in_ep, buff, 10000)
+            read_data.extend(buff[:read_len])
+            if read_len != self._max_block_size:
+                break
 
-        try:
-            self._out_ep.write(bytes([cmd, model_num, tensor_num]), self._timeout)
-            buff = usb.util.create_buffer(self._max_block_size)
-            while True:
-                read_len = self._dev.read(self._in_ep, buff, 10000)
-                read_data.extend(buff[:read_len])
-                # print('_Up got ', read_len)
-                if read_len != self._max_block_size:
-                    break
-
-            return read_data
-
-        except usb.core.USBError as e:
-            if e.backend_error_code == usb.backend.libusb1.LIBUSB_ERROR_PIPE:
-                # print("USB error, IN/OUT pipe halted")
-                raise IOError()
-            else:
-                print("Wow ", e)
+        return read_data
 
     def _clear_error(self):
         self._dev.clear_halt(self._out_ep)
         self._dev.clear_halt(self._in_ep)
 
     def connect(self):
-        import usb
-
-        # import usb.backend.libusb1
-
-        # backend = usb.backend.libusb1.get_backend(find_library=lambda x: "/Users/deepakpanickal/Downloads/libusb-1.0.26-binaries/macos_11.6/lib/libusb-1.0.dylib")
         self._dev = None
         while self._dev is None:
             # TODO - more checks that we have the right device..
@@ -124,9 +106,7 @@ class IOServer:
 
         # get an endpoint instance
         cfg = self._dev.get_active_configuration()
-
         intf = cfg[(0, 0)]
-
         self._out_ep = usb.util.find_descriptor(
             intf,
             # match the first OUT endpoint

@@ -181,11 +181,12 @@ class XFDeviceRuntime(AbstractXFRunner):
         super().__init__(model_content)
         # compile model, two dirs because xmake
         dst_dir = self._dir_path / "device_test"
+        # dst_dir = DEVICE_TEST_PATH
         shutil.copytree(LIB_XUD_PATH, self._dir_path / "lib_xud")
         shutil.copytree(DEVICE_TEST_PATH, dst_dir)
         shutil.copy(self._dir_path / "model.tflite.h", dst_dir / "src/")
         shutil.copy(self._dir_path / "model.tflite.cpp", dst_dir / "src/")
-        run_cmd(["xmake"], working_dir=dst_dir)
+        run_cmd(["xmake", "-j8"], working_dir=dst_dir)
         xe_path = dst_dir / "bin" / next((dst_dir / "bin").glob("*.xe")).name
         self._p = subprocess.Popen(["xrun", "--xscope", "--id", "0", xe_path])
         # overwriting _interpreter from super()

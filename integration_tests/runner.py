@@ -299,7 +299,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         xf_runner = XFHostInterpreter(model_content)
 
     # Run tests
-    num_fails = run_out_count = run_out_err = run_out_abs_err = test = 0
+    num_fails = run_out_count = run_out_err = run_out_abs_err = test = max_abs_err = 0
     while run_out_count < params["REQUIRED_OUTPUTS"]:
         LOGGER.info(f"Run #{test}")
         test += 1
@@ -310,19 +310,17 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         errors = np.concatenate(
             [(a - b).reshape(-1) for a, b in zip(ref_outputs, xf_outputs)]
         )
+        if not len(errors):
+            continue
 
-        if len(errors) > 0:
-            run_out_count += np.prod(errors.shape)
-            run_out_err += np.sum(errors)
-            run_out_abs_err += np.sum(np.abs(errors))
-            max_abs_error = np.max(np.abs(errors))
-            if max_abs_error > params["MAX_ABS_ERROR"]:
-                LOGGER.error(f"Max abs error is too high: {max_abs_error}")
-                assert max_abs_error <= 1
+        run_out_count += np.prod(errors.shape)
+        run_out_err += np.sum(errors)
+        run_out_abs_err += np.sum(np.abs(errors))
+        max_abs_err = max(np.max(np.abs(errors)), max_abs_err)
 
-    avg_error = run_out_err / run_out_count
-    avg_abs_error = run_out_abs_err / run_out_count
-    LOGGER.info(f"{max_abs_error} {avg_error} {avg_abs_error}")
+    avg_err = run_out_err / run_out_count
+    avg_abs_err = run_out_abs_err / run_out_count
+    LOGGER.info(f"{max_abs_err} {avg_err} {avg_abs_err}")
 
     def fail(msg: str) -> None:
         nonlocal num_fails
@@ -330,10 +328,13 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         LOGGER.error(msg)
         LOGGER.error(f"Run #{test} failed")
 
-    if abs(avg_error) > params["ABS_AVG_ERROR"]:
-        fail(f"Abs avg error is too high: {abs(avg_error)}")
+    if max_abs_err > params["MAX_ABS_ERROR"]:
+        fail(f"Max abs error is too high: {max_abs_err}")
 
-    if avg_abs_error > params["AVG_ABS_ERROR"]:
-        fail(f"Avg abs error is too high: {avg_abs_error}")
+    if abs(avg_err) > params["ABS_AVG_ERROR"]:
+        fail(f"Abs avg error is too high: {abs(avg_err)}")
+
+    if avg_abs_err > params["AVG_ABS_ERROR"]:
+        fail(f"Avg abs error is too high: {avg_abs_err}")
 
     assert num_fails == 0

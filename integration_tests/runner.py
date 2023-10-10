@@ -43,7 +43,8 @@ CPP_COMPILER = "g++" if platform.system() == "Linux" else "clang++"
 def dont_throw(obj, attr_name, method_name):
     try:
         getattr(getattr(obj, attr_name), method_name)()
-    except AttributeError:
+    except AttributeError as e:
+        print(e)
         pass
 
 
@@ -86,7 +87,8 @@ class AbstractXFRunner(AbstractRunner):
 
     # Try/except in case we cancel operation before interpreter/dir initialised
     def __del__(self):
-        dont_throw(self, "_temp_dir", "clean")
+        dont_throw(self, "_interpreter", "close")
+        dont_throw(self, "_temp_dir", "cleanup")
 
 
 class BnnInterpreter(AbstractRefRunner):
@@ -186,7 +188,7 @@ class XFDeviceRuntime(AbstractXFRunner):
         shutil.copytree(DEVICE_TEST_PATH, dst_dir)
         shutil.copy(self._dir_path / "model.tflite.h", dst_dir / "src/")
         shutil.copy(self._dir_path / "model.tflite.cpp", dst_dir / "src/")
-        run_cmd(["xmake", "-j8"], working_dir=dst_dir)
+        run_cmd(["xmake", "-j4"], working_dir=dst_dir)
         xe_path = dst_dir / "bin" / next((dst_dir / "bin").glob("*.xe")).name
         self._p = subprocess.Popen(["xrun", "--xscope", "--id", "0", xe_path])
         # overwriting _interpreter from super()

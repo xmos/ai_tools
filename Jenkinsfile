@@ -94,6 +94,18 @@ pipeline {
                                 }
                             }
                         }
+                        stage("Hardware Test") {
+                            agent {
+                                label "xcore.ai-explorer && lpddr && !macos"
+                            }
+                            steps {
+                                withVenv {
+                                    sh "pytest integration_tests/runner.py -- models_path integration_tests/models/complex_models/non-bnns -n 1 --junitxml=integration_tests/integration_device_junit.xml"
+                                    // display junit here
+                                }
+                            }
+
+                        }
                         // stage("Hardware Test") {
                         //     agent {
                         //         label "xcore.ai-explorer && lpddr && !macos"

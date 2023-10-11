@@ -65,12 +65,10 @@ pipeline {
                     agent { label "xcore.ai-explorer && lpddr && !macos" }
                     steps { script { runTests("device") } }
                 }
+                // TODO: Add this somewhere, preferably without re-downloading bazel
                 // dir("xformer") {
                 //     sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
                 // }
-                // // regression test for xmos_ai_tools juypiter notebooks
-                // sh "pip install pytest nbmake"
-                // sh "pytest --nbmake ./docs/notebooks/*.ipynb"
             }
         }
     }
@@ -95,6 +93,9 @@ def runTests(String platform) {
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n 8 --junitxml=integration_tests/integration_bnns_junit.xml"
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns --compiled -n 8 --junitxml=integration_compiled_non_bnns_junit.xml"
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn --compiled -n 8 --junitxml=integration_compiled_bnns_junit.xml"
+            // notebook regression tests
+            sh "pip install pytest nbmake"
+            sh "pytest --nbmake ./docs/notebooks/*.ipynb"
         }
         junit "**/*_junit.xml"
     }

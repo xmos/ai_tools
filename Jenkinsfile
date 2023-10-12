@@ -73,7 +73,7 @@ pipeline {
             // }
         } }
     }
-    post { cleanup { xcoreCleanSandbox() } }
+    // post { cleanup { xcoreCleanSandbox() } }
 }
 
 def runTests(String platform) {

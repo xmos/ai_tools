@@ -53,27 +53,25 @@ pipeline {
                         stash name:"xmos_ai_tools_wheel", includes: "dist/*"
                     }
                 } } }
+            }
             post { cleanup { xcoreCleanSandbox() } }
-            }
         } 
-        stage("Tests") {
-            parallel {
-                stage("Host Test") {
-                    agent { label "linux && 64 && !noAVX2" }
-                    steps { script { runTests("host") } }
-                    post { cleanup { xcoreCleanSandbox() } }
-                }
-                stage("Device Test") {
-                    agent { label "xcore.ai-explorer && lpddr && !macos" }
-                    steps { script { runTests("device") } }
-                    post { cleanup { xcoreCleanSandbox() } }
-                }
-                // TODO: Add this somewhere, preferably without re-downloading bazel
-                // dir("xformer") {
-                //     sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
-                // }
+        stage("Tests") { parallel {
+            stage("Host Test") {
+                agent { label "linux && 64 && !noAVX2" }
+                steps { script { runTests("host") } }
+                post { cleanup { xcoreCleanSandbox() } }
             }
-        }
+            stage("Device Test") {
+                agent { label "xcore.ai-explorer && lpddr && !macos" }
+                steps { script { runTests("device") } }
+                post { cleanup { xcoreCleanSandbox() } }
+            }
+            // TODO: Add this somewhere, preferably without re-downloading bazel
+            // dir("xformer") {
+            //     sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+            // }
+        } }
     }
     post { cleanup { xcoreCleanSandbox() } }
 }

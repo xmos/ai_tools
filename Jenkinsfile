@@ -45,6 +45,9 @@ pipeline {
                         sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
                         sh "chmod +x bazelisk-linux-amd64"
                         sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
+                        // TODO: factor this out
+                        // yes, this is a test, but might as well not download bazel again
+                        sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
                     }
                     // build python wheel with xformer and install into env
                     dir ("python") {
@@ -67,10 +70,6 @@ pipeline {
                 steps { script { runTests("device") } }
                 post { cleanup { xcoreCleanSandbox() } }
             }
-            // TODO: Add this somewhere, preferably without re-downloading bazel
-            // dir("xformer") {
-            //     sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
-            // }
         } }
     }
 }

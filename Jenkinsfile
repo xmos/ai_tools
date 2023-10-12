@@ -53,6 +53,7 @@ pipeline {
                         stash name:"xmos_ai_tools_wheel", includes: "dist/*"
                     }
                 } } }
+            post { cleanup { xcoreCleanSandbox() } }
             }
         } 
         stage("Tests") {
@@ -60,10 +61,12 @@ pipeline {
                 stage("Host Test") {
                     agent { label "linux && 64 && !noAVX2" }
                     steps { script { runTests("host") } }
+                    post { cleanup { xcoreCleanSandbox() } }
                 }
                 stage("Device Test") {
                     agent { label "xcore.ai-explorer && lpddr && !macos" }
                     steps { script { runTests("device") } }
+                    post { cleanup { xcoreCleanSandbox() } }
                 }
                 // TODO: Add this somewhere, preferably without re-downloading bazel
                 // dir("xformer") {

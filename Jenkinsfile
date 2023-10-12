@@ -62,7 +62,15 @@ pipeline {
         stage("Tests") { parallel {
             stage("Host Test") {
                 agent { label "linux && 64 && !noAVX2" }
-                steps { script { runTests("host") } }
+                stages {
+                    stage("Integration Tests") { steps { 
+                        script { runTests("host") } 
+                    } }
+                    stage("Notebook Tests") { steps { withVenv {
+                        sh "pip install pytest nbmake"
+                        sh "pytest --nbmake ./docs/notebooks/**/*.ipynb"
+                    } } }
+                }
                 post { cleanup { xcoreCleanSandbox() } }
             }
             stage("Device Test") {
@@ -93,8 +101,6 @@ def runTests(String platform) {
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns --compiled -n 8 --junitxml=integration_compiled_non_bnns_junit.xml"
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn --compiled -n 8 --junitxml=integration_compiled_bnns_junit.xml"
             // notebook regression tests
-            sh "pip install pytest nbmake"
-            sh "pytest --nbmake ./docs/notebooks/*.ipynb"
         }
         junit "**/*_junit.xml"
     }

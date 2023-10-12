@@ -68,7 +68,10 @@ pipeline {
                     } }
                     stage("Notebook Tests") { steps { withVenv {
                         sh "pip install pytest nbmake"
-                        sh "pytest --nbmake ./docs/notebooks/**/*.ipynb"
+                        sh "pytest --nbmake ./docs/notebooks/*.ipynb"
+                        // Test the pytorch to keras notebooks overnight? Need to manually install all requirements
+                        // Also these train models so it takes a while
+                        // sh "pytest --nbmake ./docs/notebooks/*.ipynb"
                     } } }
                 }
                 post { cleanup { xcoreCleanSandbox() } }
@@ -95,6 +98,10 @@ def runTests(String platform) {
         }
         if (platform == "device") {
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns -n 1 --junitxml=integration_tests/integration_device_junit.xml"
+            // lstms are always problematic
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_lstm -n 1"
+            // test a float32 layer
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_detection_postprocess -n 1"
         } else if (platform == "host") {
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_junit.xml"
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n 8 --junitxml=integration_tests/integration_bnns_junit.xml"

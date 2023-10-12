@@ -54,7 +54,7 @@ pipeline {
                     }
                 } } }
             }
-            // post { cleanup { xcoreCleanSandbox() } }
+            post { cleanup { xcoreCleanSandbox() } }
         } 
         stage("Tests") { parallel {
             stage("Host Test") {

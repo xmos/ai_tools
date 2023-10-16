@@ -1,5 +1,5 @@
 from xmos_ai_tools import xformer
-from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
+from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 from ultralytics import YOLO
 import numpy as np
 
@@ -14,16 +14,12 @@ NAMING_PREFIX = "model_"
 ###############################################
 
 # Load a model
-model = YOLO('yolov8n-cls.pt')  # load an official model
+model = YOLO("yolov8n-cls.pt")  # load an official model
 
 # Export the model
 _format = "tflite"
 
-model.export(
-    format=_format,
-    imgsz=(HEIGHT, WIDTH),
-    int8=True
-    )
+model.export(format=_format, imgsz=(HEIGHT, WIDTH), int8=True)
 
 # Convert the model to XCore optimized TFLite via xformer:
 # There are various ways to configure the compiler to optimize the model,
@@ -60,7 +56,7 @@ input_array = np.frombuffer(data, dtype=np.uint8)
 input_array = (input_array - 128).astype(np.int8)
 
 
-interpreter = xcore_tflm_host_interpreter()
+interpreter = TFLMHostInterpreter()
 interpreter.set_model(model_path=OPT_MODEL_PATH, params_path=OPT_PARAMS_PATH)
 interpreter.allocate_tensors()
 

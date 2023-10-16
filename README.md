@@ -93,9 +93,9 @@ Some of the commonly used configuration options are described [here](docs/rst/op
 ## Running the xcore model on host interpreter
 
 ```python
-from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
+from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 
-ie = xcore_tflm_host_interpreter()
+ie = TFLMHostInterpreter()
 ie.set_model(model_path='path_to_xcore_model', params_path='path_to_xcore_params')
 ie.set_tensor(ie.get_input_details()[0]['index'], value='input_data')
 ie.invoke()

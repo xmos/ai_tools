@@ -1,6 +1,7 @@
 import time
 import platform
-import pathlib
+import shutil
+from pathlib import Path
 import logging
 import tempfile
 from _pytest.fixtures import FixtureRequest
@@ -10,9 +11,10 @@ import sys
 import subprocess
 import larq_compute_engine as lce
 import tensorflow as tf
-from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
+from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 from xmos_ai_tools import xformer
 import xmos_ai_tools.runtime as rt
+from xmos_ai_tools.io_server import IOServer
 import yaml
 from abc import ABC, abstractmethod, abstractproperty
 
@@ -24,9 +26,11 @@ AVG_ABS_ERROR = 1.0 / 4
 REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
-FILE_PATH = pathlib.Path(__file__).resolve()
+FILE_PATH = Path(__file__).resolve()
 ROOT_DIR = FILE_PATH.parents[1]
 MAIN_CPP_PATH = FILE_PATH.parents[0] / "compile_test.cpp"
+LIB_XUD_PATH = ROOT_DIR / "third_party" / "lib_xud"
+DEVICE_TEST_PATH = FILE_PATH.parents[0] / "device_test"
 LIB_TFLM_DIR_PATH = ROOT_DIR / "third_party" / "lib_tflite_micro"
 LIB_NN_INCLUDE_PATH = ROOT_DIR / "third_party" / "lib_nn"
 TFLM_SUBMODULES_PATH = LIB_TFLM_DIR_PATH / "lib_tflite_micro" / "submodules"
@@ -34,6 +38,14 @@ TFLM_INCLUDE_PATH = TFLM_SUBMODULES_PATH / "tflite-micro"
 FLATBUFFERS_INCLUDE_PATH = TFLM_SUBMODULES_PATH / "flatbuffers" / "include"
 # Assumes old version of clang
 CPP_COMPILER = "g++" if platform.system() == "Linux" else "clang++"
+
+
+def dont_throw(obj, attr_name, method_name):
+    try:
+        getattr(getattr(obj, attr_name), method_name)()
+    except AttributeError as e:
+        print(e)
+        pass
 
 
 class AbstractRunner(ABC):
@@ -59,7 +71,7 @@ class AbstractXFRunner(AbstractRunner):
     def __init__(self, model):
         temp_dir = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
         self._temp_dir = temp_dir
-        self._dir_path = pathlib.Path(temp_dir.name)
+        self._dir_path = Path(temp_dir.name)
         input_file = self._dir_path / "input.tflite"
         with open(input_file, "wb") as fd:
             fd.write(model)
@@ -69,20 +81,14 @@ class AbstractXFRunner(AbstractRunner):
         with open(output_file, "rb") as fd:
             model = fd.read()
         # We use interpreter for compiled too (for output details), it's a hack
-        self._interpreter = xcore_tflm_host_interpreter()
+        self._interpreter = TFLMHostInterpreter()
         self._interpreter.set_model(model_content=model, secondary_memory=False)
         self._dets = self._interpreter.get_output_details()
 
     # Try/except in case we cancel operation before interpreter/dir initialised
     def __del__(self):
-        try:
-            self._interpreter.close()
-        except AttributeError:
-            pass
-        try:
-            self._temp_dir.cleanup()
-        except AttributeError:
-            pass
+        dont_throw(self, "_interpreter", "close")
+        dont_throw(self, "_temp_dir", "cleanup")
 
 
 class BnnInterpreter(AbstractRefRunner):
@@ -167,6 +173,39 @@ class XFHostRuntime(AbstractXFRunner):
             for i, (d, s) in en
         ]
 
+    def __del__(self):
+        dont_throw(self, "_interpreter", "close")
+        super().__del__()
+
+
+class XFDeviceRuntime(AbstractXFRunner):
+    def __init__(self, model_content):
+        super().__init__(model_content)
+        # compile model, two dirs because xmake
+        dst_dir = self._dir_path / "device_test"
+        # dst_dir = DEVICE_TEST_PATH
+        shutil.copytree(LIB_XUD_PATH, self._dir_path / "lib_xud")
+        shutil.copytree(DEVICE_TEST_PATH, dst_dir)
+        shutil.copy(self._dir_path / "model.tflite.h", dst_dir / "src/")
+        shutil.copy(self._dir_path / "model.tflite.cpp", dst_dir / "src/")
+        run_cmd(["xmake", "-j4"], working_dir=dst_dir)
+        xe_path = dst_dir / "bin" / next((dst_dir / "bin").glob("*.xe")).name
+        self._p = subprocess.Popen(["xrun", "--xscope", "--id", "0", xe_path])
+        # overwriting _interpreter from super()
+        dont_throw(self, "_interpreter", "close")
+        self._interpreter = IOServer(output_details=self._dets)
+        self._interpreter.connect()
+
+    def predict(self, inputs):
+        for i, inp in enumerate(inputs):
+            self._interpreter.write_input_tensor(inp.tobytes(), tensor_num=i)
+        self._interpreter.start_inference()
+        return [self._interpreter.read_output_tensor(i) for i in range(len(self._dets))]
+
+    def __del__(self):
+        dont_throw(self, "_p", "terminate")
+        super().__del__()
+
 
 class XFHostInterpreter(AbstractXFRunner):
     def __init__(self, model_content):
@@ -194,7 +233,7 @@ def run_cmd(cmd, working_dir=None):
         sys.exit(1)
 
 
-def get_params(model_path: pathlib.Path) -> dict:
+def get_params(model_path: Path) -> dict:
     params = {}
     params["MAX_ABS_ERROR"] = MAX_ABS_ERROR
     params["ABS_AVG_ERROR"] = ABS_AVG_ERROR
@@ -207,7 +246,7 @@ def get_params(model_path: pathlib.Path) -> dict:
     return params
 
 
-def get_input_tensors(runner: AbstractRefRunner, parent_dir: pathlib.Path) -> list:
+def get_input_tensors(runner: AbstractRefRunner, parent_dir: Path) -> list:
     types, shapes = runner.input_details
     ins = []
     for i, (s, d) in enumerate(zip(shapes, types)):
@@ -228,7 +267,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     if opt_dict["s"]:
         time.sleep(5)
 
-    model_path = pathlib.Path(filename).resolve()
+    model_path = Path(filename).resolve()
     params = get_params(model_path)
 
     if not model_path.exists():
@@ -254,11 +293,13 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     LOGGER.info("Invoking xformer to get xformed model...")
     if opt_dict["compiled"]:
         xf_runner = XFHostRuntime(model_content)
+    elif opt_dict["device"]:
+        xf_runner = XFDeviceRuntime(model_content)
     else:
         xf_runner = XFHostInterpreter(model_content)
 
     # Run tests
-    num_fails = run_out_count = run_out_err = run_out_abs_err = test = 0
+    num_fails = run_out_count = run_out_err = run_out_abs_err = test = max_abs_err = 0
     while run_out_count < params["REQUIRED_OUTPUTS"]:
         LOGGER.info(f"Run #{test}")
         test += 1
@@ -269,19 +310,17 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         errors = np.concatenate(
             [(a - b).reshape(-1) for a, b in zip(ref_outputs, xf_outputs)]
         )
+        if not len(errors):
+            continue
 
-        if len(errors) > 0:
-            run_out_count += np.prod(errors.shape)
-            run_out_err += np.sum(errors)
-            run_out_abs_err += np.sum(np.abs(errors))
-            max_abs_error = np.max(np.abs(errors))
-            if max_abs_error > params["MAX_ABS_ERROR"]:
-                LOGGER.error(f"Max abs error is too high: {max_abs_error}")
-                assert max_abs_error <= 1
+        run_out_count += np.prod(errors.shape)
+        run_out_err += np.sum(errors)
+        run_out_abs_err += np.sum(np.abs(errors))
+        max_abs_err = max(np.max(np.abs(errors)), max_abs_err)
 
-    avg_error = run_out_err / run_out_count
-    avg_abs_error = run_out_abs_err / run_out_count
-    LOGGER.info(f"{max_abs_error} {avg_error} {avg_abs_error}")
+    avg_err = run_out_err / run_out_count
+    avg_abs_err = run_out_abs_err / run_out_count
+    LOGGER.info(f"{max_abs_err} {avg_err} {avg_abs_err}")
 
     def fail(msg: str) -> None:
         nonlocal num_fails
@@ -289,10 +328,13 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         LOGGER.error(msg)
         LOGGER.error(f"Run #{test} failed")
 
-    if abs(avg_error) > params["ABS_AVG_ERROR"]:
-        fail(f"Abs avg error is too high: {abs(avg_error)}")
+    if max_abs_err > params["MAX_ABS_ERROR"]:
+        fail(f"Max abs error is too high: {max_abs_err}")
 
-    if avg_abs_error > params["AVG_ABS_ERROR"]:
-        fail(f"Avg abs error is too high: {avg_abs_error}")
+    if abs(avg_err) > params["ABS_AVG_ERROR"]:
+        fail(f"Abs avg error is too high: {abs(avg_err)}")
+
+    if avg_abs_err > params["AVG_ABS_ERROR"]:
+        fail(f"Avg abs error is too high: {avg_abs_err}")
 
     assert num_fails == 0

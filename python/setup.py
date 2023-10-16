@@ -81,7 +81,7 @@ device_files = {
 }
 
 # add host interpreter lib
-package_files = {"xmos_ai_tools.xinterpreters.host": XTFLM_INTERPRETER_LIBS}
+package_files = {"xmos_ai_tools.xinterpreters": XTFLM_INTERPRETER_LIBS}
 package_files.update(device_files)
 
 setup(

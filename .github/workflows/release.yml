@@ -302,7 +302,7 @@ jobs:
           
           cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
           patch -p0 < ../../../patches/tflite-micro.patch
-          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/host
+          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters
           mkdir -p build
           cd build
           cmake ..

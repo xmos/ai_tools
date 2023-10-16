@@ -72,6 +72,9 @@ xformer/model_maker/*.tflite
 examples/app_no_flash/model.tflite
 examples/app_no_flash/src/model.tflite.cpp
 examples/app_no_flash/src/model.tflite.h
+examples/app_no_flash_with_ioserver/src/model.tflite
+examples/app_no_flash_with_ioserver/src/model.tflite.cpp
+examples/app_no_flash_with_ioserver/src/model.tflite.h
 examples/app_flash_single_model/model.params
 examples/app_flash_single_model/model.tflite
 examples/app_flash_single_model/src/model.tflite.cpp

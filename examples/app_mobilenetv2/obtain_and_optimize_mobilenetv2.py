@@ -1,5 +1,5 @@
 from xmos_ai_tools import xformer
-from xmos_ai_tools.xinterpreters import xcore_tflm_host_interpreter
+from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2
 from save_mobilenet import save_quantized_mobilenet
 import numpy as np
@@ -65,7 +65,7 @@ input_array = np.frombuffer(data, dtype=np.uint8)
 input_array = (input_array - 128).astype(np.int8)
 
 
-interpreter = xcore_tflm_host_interpreter()
+interpreter = TFLMHostInterpreter()
 interpreter.set_model(model_path=OPT_MODEL_PATH, params_path=OPT_PARAMS_PATH)
 interpreter.allocate_tensors()
 

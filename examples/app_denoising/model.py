@@ -58,7 +58,7 @@ def get_trunet():
     out = tf.exp(x)
     model = tf.keras.models.Model(inputs=inp, outputs=out)
     optimizer = tf.keras.optimizers.Adam(4e-4)
-    model.compile(optimizer=optimizer, loss="mse")
+    model.compile(optimizer=optimizer, loss=si_sdr_loss)
     return model
 
 

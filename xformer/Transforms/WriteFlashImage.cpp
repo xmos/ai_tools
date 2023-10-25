@@ -4,6 +4,7 @@
 #include "IR/XCoreOps.h"
 #include "Transforms/Options.h"
 #include "Utils/FileIO.h"
+#include "Utils/TileRamSupport.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
@@ -94,6 +95,8 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
       for (int i = 0; i < opNums.size(); i++) {
         ownerOp->setOperand(opNums[i], loadFlashOp.getResult(i));
       }
+
+      loadFlashOp->moveBefore(ownerOp);
       loadOp.erase();
     } else {
       std::vector<char> loadOpData = getTensorData(loadOp);
@@ -103,6 +106,18 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
           loadOp.getLoc(), loadOp.getType(), address,
           rewriter.getArrayAttr(dataSizes));
       rewriter.replaceOp(loadOp, loadFlashOp.getOutput());
+
+      // Find all uses of loadFlashOp and find the first Owner op
+      // so that we can move the loading to just before that op.
+      mlir::Operation *firstOwnerOp =
+          loadFlashOp->getResult(0).getUses().begin()->getOwner();
+      for (const mlir::OpOperand &use : loadFlashOp->getResult(0).getUses()) {
+        mlir::Operation *op = use.getOwner();
+        if (op->isBeforeInBlock(firstOwnerOp)) {
+          firstOwnerOp = op;
+        }
+      }
+      loadFlashOp->moveBefore(firstOwnerOp);
     }
 
     tensorsVec_->push_back(tensorData);
@@ -112,27 +127,6 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
 
 private:
   std::vector<std::vector<char>> *tensorsVec_;
-};
-
-struct MoveLoadOpPattern : public OpRewritePattern<LoadFlashOp> {
-  MoveLoadOpPattern(MLIRContext *context)
-      : OpRewritePattern<LoadFlashOp>(context) {}
-
-  LogicalResult matchAndRewrite(LoadFlashOp loadFlashOp,
-                                PatternRewriter &rewriter) const override {
-    // Constants are usually allocated in the beginning of the function.
-    // Lowering them to load from flash op leads to loading constants from flash
-    // occurring in the beginning of graph execution before other ops are
-    // executed, thereby needing a much larger tensor arena.
-    // We move the op to right before the user op (user op would be conv or
-    // lookup op etc, any op that is using the constant).
-    // This is so that when we lower to flatbuffer the loadOp will be located
-    // in the graph close to the user op.
-    Operation *ownerOp =
-        loadFlashOp->getResult(0).getUses().begin()->getOwner();
-    loadFlashOp->moveBefore(ownerOp);
-    return success();
-  }
 };
 
 void WriteFlashImage::runOnOperation() {
@@ -150,12 +144,19 @@ void WriteFlashImage::runOnOperation() {
   std::vector<std::vector<char>> tensorsVec;
   RewritePatternSet patterns(ctx);
   patterns.insert<WriteFlashImagePattern>(&tensorsVec, ctx);
-  patterns.insert<MoveLoadOpPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 
+  if (tileLoadOption) {
+    if (failed(utils::writeTileServerDataToFile(flashImageFilenameOption,
+                                                tensorsVec))) {
+      f.emitError("Failed to write tile data!");
+      signalPassFailure();
+      return;
+    }
+  }
   // Write tensor data to flash image file
-  if (failed(
-          utils::writeFlashImageToFile(flashImageFilenameOption, tensorsVec))) {
+  else if (failed(utils::writeFlashImageToFile(flashImageFilenameOption,
+                                               tensorsVec))) {
     f.emitError("Failed to write flash image!");
     signalPassFailure();
     return;

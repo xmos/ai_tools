@@ -2,12 +2,15 @@
 // XMOS Public License: Version 1
 
 #include "Utils/FileIO.h"
+#include "Utils/TileRamSupport.h"
 
 #include "mlir/Support/FileUtilities.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_export.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_import.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
+
+#include <iomanip>
 
 namespace mlir {
 namespace xcore {
@@ -33,6 +36,39 @@ LogicalResult writeFlashImageToFile(const std::string &filename,
   }
 
   return utils::writeDataToFile(filename, data);
+}
+
+LogicalResult
+writeTileServerDataToFile(const std::string &filename,
+                          std::vector<std::vector<char>> tensorsVec) {
+  // Add header
+  auto tileHeader = utils::tileRamHeader();
+  tensorsVec.insert(tensorsVec.begin(), tileHeader);
+
+  std::ostringstream out;
+  out << R"(#ifndef TILESERVERGEN_H
+#define TILESERVERGEN_H
+
+const int8_t tile_server_weights[] = {
+)";
+  int lineEnding = 0;
+  for (auto const &tensor : tensorsVec) {
+    for (auto const &i : tensor) {
+      out << (int)i << ", ";
+      lineEnding++;
+      if (lineEnding > 80) {
+        out << "\n";
+        lineEnding = 0;
+      }
+    }
+  }
+
+  out << R"(};
+
+#endif // TILESERVERGEN_H
+)";
+
+  return utils::writeDataToFile(filename, out.str());
 }
 
 LogicalResult getFlatBufferStringFromMLIR(

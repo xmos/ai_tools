@@ -30,7 +30,12 @@ struct ApplyLoadConstantOpPatterns
   void runOnOperation() override;
 };
 
+static int totalSize_ = 0;
+
 bool shouldBeLoadedExternally(Attribute values) {
+  if (totalSize_ > maxLoadExternalSizeOption) {
+    return false;
+  }
   // values might be UnitAttr or BoolAttr which are too small to be loaded
   // externally anyway
   auto totalSizeInBits = 0;
@@ -40,6 +45,7 @@ bool shouldBeLoadedExternally(Attribute values) {
         (valuesAttr.getNumElements() *
          valuesAttr.getType().getElementType().getIntOrFloatBitWidth());
   }
+  totalSize_ += totalSizeInBits / CHAR_BIT;
   return totalSizeInBits / CHAR_BIT > loadExternallyIfLargerOption;
 }
 

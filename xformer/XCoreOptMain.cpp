@@ -34,6 +34,10 @@ namespace xcore {
 // and -help) will be hidden.
 static cl::OptionCategory XformerCategory("Xformer options");
 
+cl::opt<bool> enableBetaFloatOption("xcore-enable-beta-float",
+                                    cl::desc("Enable beta float support."),
+                                    cl::init(false), cl::cat(XformerCategory));
+
 cl::opt<unsigned> threadCountOption("xcore-thread-count",
                                     cl::desc("[-tc] Thread count"), cl::init(1),
                                     cl::cat(XformerCategory));
@@ -51,12 +55,23 @@ cl::alias aliasFlashImageOption("f",
                                 cl::desc("Alias for --xcore-flash-image-file"),
                                 cl::aliasopt(flashImageFilenameOption));
 
+cl::opt<bool> tileLoadOption("xcore-load-tile",
+                             cl::desc("Enable loading weights from a tile."),
+                             cl::init(false), cl::cat(XformerCategory));
+
 cl::opt<unsigned> loadExternallyIfLargerOption(
     "xcore-load-externally-if-larger",
     cl::desc("Load constants externally if larger than given limit in bytes "
              "(default = 96 bytes). Cannot be specified when "
              "xcore-flash-image-file is not provided."),
     cl::init(96), cl::cat(XformerCategory), cl::Hidden);
+
+cl::opt<unsigned> maxLoadExternalSizeOption(
+    "xcore-max-load-external-size",
+    cl::desc("The size of external load image from flash or tile will be "
+             "limited to the max specified bytes "
+             "(default = UINT_MAX bytes)."),
+    cl::init(UINT_MAX), cl::cat(XformerCategory), cl::Hidden);
 
 // This option is to provide an error threshold.
 // The maximum average error between the reference and quantised
@@ -277,6 +292,13 @@ int main(int argc, char **argv) {
   };
 
   // Validate options
+  if (mlir::xcore::tileLoadOption.getNumOccurrences() > 0 &&
+      mlir::xcore::threadCountOption < 4) {
+    return failedMessage("Please specify at least four threads using "
+                         "xcore-thread-count option when using the "
+                         "xcore-load-tile option!");
+  }
+
   if (mlir::xcore::loadExternallyIfLargerOption.getNumOccurrences() > 0 &&
       mlir::xcore::flashImageFilenameOption.empty()) {
     return failedMessage(
@@ -289,7 +311,7 @@ int main(int argc, char **argv) {
        !(mlir::xcore::opSplitTopOpsOption.empty()) ||
        !(mlir::xcore::opSplitNumSplitsOption.empty()))) {
     return failedMessage(
-        "target size option cannot be used with start, end, and "
+        "Target size option cannot be used with start, end, and "
         "numSplits options");
   }
 

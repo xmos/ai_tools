@@ -76,7 +76,7 @@ class install_plat_lib(install):
 
 # add device lib and headers as package data
 device_files = {
-    root.replace(os.sep, "."): ["*.h", "*.a", "*.make", "*.cmake"]
+    root.replace(os.sep, "."): ["*.h", "*.a", "*.lib", "*.make", "*.cmake"]
     for root, d, f in os.walk(os.path.join("xmos_ai_tools", "runtime"))
 }
 

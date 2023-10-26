@@ -53,7 +53,7 @@ jobs:
           mkdir -p build
           cd build
           cmake ..
-          cmake --build . -t install --parallel --config Release
+          cmake --build . -t install --parallel 3 --config Release
 
       - name: Build xformer
         shell: bash
@@ -208,7 +208,7 @@ jobs:
           mkdir -p build
           cd build
           cmake ..
-          cmake --build . -t install --parallel --config Release
+          cmake --build . -t install --parallel 2 --config Release
 
       - name: Build xformer
         shell: cmd

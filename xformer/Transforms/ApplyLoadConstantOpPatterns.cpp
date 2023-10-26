@@ -62,7 +62,7 @@ bool isNotUsedByLoadConstantOp(Value result) {
 
 void ApplyLoadConstantOpPatterns::runOnOperation() {
   func::FuncOp f = getOperation();
-  if (flashImageFilenameOption.empty()) {
+  if (weightsFilenameOption.empty()) {
     f.emitError("Flash image file option should be provided to run this pass!");
     signalPassFailure();
     return;

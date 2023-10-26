@@ -70,7 +70,7 @@ Name of the file where to place the optimized TFLITE model
 Number of threads to translate for (max=5). Defaults to 1.
 
 
-``xcore-flash-image-file filename``
+``xcore-weights-file filename``
 +++++++++++++++++++++++++++++++++++
 
 File to place the learned parameters in. If this option is not specified,
@@ -86,7 +86,7 @@ be slower but allows large numbers of learned parameters to be used.
 Sets a threshold under which to not place learned parameters in flash. The
 default is set to 96 bytes. If less than 96 bytes, the overhead of lowering to flash is 
 more than the benefit gained. This option is only meaningful if
-``xcore-flash-image-file`` has been used. You can experiment with this
+``xcore-weights-file`` has been used. You can experiment with this
 parameter to get a different trade-off between speed and memory requirements.
                           
 ``xcore-reduce-memory true|false``

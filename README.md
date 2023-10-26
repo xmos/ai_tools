@@ -81,10 +81,10 @@ xf.convert("example_int8_model.tflite", "xcore_optimised_int8_model.tflite", {
 })
 ```
 
-To create a parameters file and a tflite model suitable for loading to flash, use the "xcore-flash-image-file" option.
+To create a parameters file and a tflite model suitable for loading to flash, use the "xcore-weights-file" option.
 ```python
 xf.convert("example_int8_model.tflite", "xcore_optimised_int8_flash_model.tflite", {
-    "xcore-flash-image-file ": "./xcore_params.params",
+    "xcore-weights-file ": "./xcore_params.params",
 })
 ```
 

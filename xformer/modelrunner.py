@@ -43,7 +43,7 @@ def get_xformed_model(model, args):
             "-o",
             str(output_path),
             "--xcore-thread-count=" + args.tc,
-            "--xcore-flash-image-file=" + str(params_path),
+            "--xcore-weights-file=" + str(params_path),
             # "--lce-translate-tfl",
             # "--xcore-replace-with-conv2dv2",
             # "--xcore-translate-to-customop"

@@ -46,14 +46,16 @@ cl::alias aliasThreadCountOption("tc",
                                  cl::desc("Alias to --xcore-thread-count"),
                                  cl::aliasopt(threadCountOption));
 
-cl::opt<std::string> flashImageFilenameOption(
-    "xcore-flash-image-file",
-    cl::desc("[-f] The file to write the xcore flash image."),
-    cl::value_desc("filename"), cl::init(""), cl::cat(XformerCategory));
+cl::opt<std::string>
+    weightsFilenameOption("xcore-weights-file",
+                          cl::desc("[-f] The file to write weights into so "
+                                   "that they can be externally loaded."),
+                          cl::value_desc("filename"), cl::init(""),
+                          cl::cat(XformerCategory));
 
-cl::alias aliasFlashImageOption("f",
-                                cl::desc("Alias for --xcore-flash-image-file"),
-                                cl::aliasopt(flashImageFilenameOption));
+cl::alias aliasWeightsFilenameOption("f",
+                                     cl::desc("Alias for --xcore-weights-file"),
+                                     cl::aliasopt(weightsFilenameOption));
 
 cl::opt<bool> tileLoadOption("xcore-load-tile",
                              cl::desc("Enable loading weights from a tile."),
@@ -63,7 +65,7 @@ cl::opt<unsigned> loadExternallyIfLargerOption(
     "xcore-load-externally-if-larger",
     cl::desc("Load constants externally if larger than given limit in bytes "
              "(default = 96 bytes). Cannot be specified when "
-             "xcore-flash-image-file is not provided."),
+             "xcore-weights-file is not provided."),
     cl::init(96), cl::cat(XformerCategory), cl::Hidden);
 
 cl::opt<unsigned> maxLoadExternalSizeOption(
@@ -300,9 +302,9 @@ int main(int argc, char **argv) {
   }
 
   if (mlir::xcore::loadExternallyIfLargerOption.getNumOccurrences() > 0 &&
-      mlir::xcore::flashImageFilenameOption.empty()) {
+      mlir::xcore::weightsFilenameOption.empty()) {
     return failedMessage(
-        "Please specify the xcore-flash-image-file option when specifying the "
+        "Please specify the xcore-weights-file option when specifying the "
         "xcore-load-externally-if-larger option!");
   }
 

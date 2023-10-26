@@ -9,10 +9,10 @@ sets of learned parameters into a single flash image.
 
 In order to compile and run this example follow these steps::
 
-  xcore-opt --xcore-flash-image-file=model1.params \
+  xcore-opt --xcore-weights-file=model1.params \
             --xcore-naming-prefix=model1_ \
             vww_quant1.tflite -o model1.tflite
-  xcore-opt --xcore-flash-image-file=model2.params \
+  xcore-opt --xcore-weights-file=model2.params \
             --xcore-naming-prefix=model2_ \
             vww_quant2.tflite -o model2.tflite
   mv model1.tflite.cpp model1.tflite.h src

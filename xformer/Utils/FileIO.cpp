@@ -27,8 +27,8 @@ LogicalResult writeDataToFile(const std::string &filename, std::string data) {
   return success();
 }
 
-LogicalResult writeFlashImageToFile(const std::string &filename,
-                                    std::vector<std::vector<char>> tensorsVec) {
+LogicalResult writeWeightsToFile(const std::string &filename,
+                                 std::vector<std::vector<char>> tensorsVec) {
   // Combine data for the tensors
   std::string data;
   for (auto const &tensor : tensorsVec) {

@@ -35,9 +35,9 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceConv2DPass());
   pm.addPass(createApplyXCPatternsPass());
   // Add to pipeline only if flash image file option is provided
-  if (!flashImageFilenameOption.empty()) {
+  if (!weightsFilenameOption.empty()) {
     pm.addPass(createApplyLoadConstantOpPatternsPass());
-    pm.addPass(createWriteFlashImagePass());
+    pm.addPass(createWriteWeightsPass());
   }
   // Run canonicalization, which includes combining Reshapes
   pm.addPass(mlir::createCanonicalizerPass());

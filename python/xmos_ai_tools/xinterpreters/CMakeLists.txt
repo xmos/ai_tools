@@ -14,12 +14,13 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 else()
   set(BUILD_FLAGS
               "-g"
-              "-O3")
+              "-O2")
 endif()
 
 
 if(DEFINED ENV{CMAKE_ENABLE_DARWIN_TARGET_ARM64})
-  set(BUILD_FLAGS "${BUILD_FLAGS} -target arm64-apple-macos11")
+  set(CMAKE_OSX_ARCHITECTURES "arm64"
+    CACHE STRING "The list of target architectures to build")
 endif()
 
 set(TOP_DIR

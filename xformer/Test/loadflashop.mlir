@@ -1,4 +1,4 @@
-// RUN: xcore-opt --mlir-io %s --xcore-write-flash-image --xcore-flash-image-file=/dev/null | FileCheck %s
+// RUN: xcore-opt --mlir-io %s --xcore-write-flash-image --xcore-weights-file=/dev/null | FileCheck %s
 
 // CHECK-LABEL: valid
 func.func @valid(%arg0: tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>) -> tensor<?x32x!quant.uniform<i8:f32, 0.037329975515604019:-13>> attributes {tf.entry_function = {inputs = "flatten_input", outputs = "Identity"}} {

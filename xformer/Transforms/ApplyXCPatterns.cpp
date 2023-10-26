@@ -30,6 +30,8 @@ struct ApplyXCPatterns
   void runOnOperation() override;
 };
 
+bool isBetaFloatEnabled() { return enableBetaFloatOption; }
+
 StringAttr getPaddingPlan(PatternRewriter &rewriter, TFL::PadOp padOp) {
   DenseIntElementsAttr paddingAttr;
   if (!matchPattern(padOp.getPadding(), m_Constant(&paddingAttr))) {
@@ -83,8 +85,17 @@ IntegerAttr getPadValue(PatternRewriter &rewriter, Value inputVal) {
   return rewriter.getI32IntegerAttr(padValue);
 }
 
-IntegerAttr getThreadCount(PatternRewriter &rewriter) {
-  return rewriter.getI32IntegerAttr(threadCountOption);
+IntegerAttr getActivationType(PatternRewriter &rewriter, Operation *op) {
+  // TODO: Refactor to use shared header file for enum
+  if (isa<TFL::EluOp>(op)) {
+    return rewriter.getI32IntegerAttr(0);
+  } else if (isa<TFL::LogisticOp>(op)) {
+    return rewriter.getI32IntegerAttr(1);
+  } else if (isa<TFL::TanhOp>(op)) {
+    return rewriter.getI32IntegerAttr(2);
+  } else {
+    llvm_unreachable("Unsupported op!");
+  }
 }
 
 DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {

@@ -14,18 +14,20 @@ namespace mlir {
 namespace xcore {
 
 std::vector<uint8_t> Bsign8Op::buildCustomOptions() { return {}; }
+
+std::vector<uint8_t> Beta_ActivationF32Op::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("type", (int32_t)getType()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+std::vector<uint8_t> Beta_ConcatF32Op::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Beta_ConvF32Op::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Beta_TransposeConvF32Op::buildCustomOptions() {
   return {};
 }
 std::vector<uint8_t> Beta_FcF32Op::buildCustomOptions() { return {}; }
-
-std::vector<uint8_t> LookupOp::buildCustomOptions() {
-  flexbuffers::Builder fbb;
-  fbb.Map([&]() { fbb.Int("tc", (int32_t)getThreadCount()); });
-  fbb.Finish();
-  return fbb.GetBuffer();
-}
+std::vector<uint8_t> LookupOp::buildCustomOptions() { return {}; }
 
 std::vector<uint8_t> AddOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
@@ -176,6 +178,8 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Pad3To4Op>>(ctx);
   patterns.insert<RewriteToCustomOp<StridedSliceOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<Beta_ActivationF32Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<Beta_ConcatF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ConvF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_TransposeConvF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_FcF32Op>>(ctx);

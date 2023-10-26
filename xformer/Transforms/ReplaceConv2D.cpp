@@ -157,6 +157,8 @@ struct ReplaceConv2D
   void runOnOperation() override;
 };
 
+bool isBetaFloatEnabled() { return enableBetaFloatOption; }
+
 namespace convpatterns {
 #include "Transforms/GeneratedConvPatterns.inc"
 }

@@ -14,16 +14,27 @@ include "Utils/Utils.td"
 def getLookupTable
     : NativeCodeCall<"getLookupTable($_builder, $0.getDefiningOp())">;
 
-def getThreadCount : NativeCodeCall<"getThreadCount($_builder)">;
-
 foreach activationOp =
     [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp, TFL_HardSwishOp] in {
 def:
   Pat<(activationOp
             : $output TensorOf<[QI8]>:$input),
             (XC_LookupOp $input, (Arith_ConstantOp (getLookupTable
-            $output)), (getThreadCount))>;
+            $output)))>;
 }
+
+def getActivationType
+    : NativeCodeCall<"getActivationType($_builder, $0.getDefiningOp())">;
+
+foreach activationOp = [TFL_EluOp, TFL_LogisticOp, TFL_TanhOp] in {
+def:
+  Pat<(activationOp
+            : $output TensorOf<[F32]>:$input),
+            (XC_Beta_ActivationF32Op $input, (getActivationType $output)), [(isBetaFloatEnabled)]>;
+}
+
+def : Pat<(TFL_ConcatenationOp $input, $axis, $faf),
+          (XC_Beta_ConcatF32Op $input), [(isBetaFloatEnabled)]>;
 
 def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
 

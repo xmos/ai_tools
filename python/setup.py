@@ -76,7 +76,7 @@ class install_plat_lib(install):
 
 # add device lib and headers as package data
 device_files = {
-    root.replace(os.sep, "."): ["*.h", "*.a", "*.make", "*.cmake"]
+    root.replace(os.sep, "."): ["*.h", "*.a", "*.lib", "*.make", "*.cmake"]
     for root, d, f in os.walk(os.path.join("xmos_ai_tools", "runtime"))
 }
 
@@ -107,9 +107,9 @@ setup(
         "Intended Audience :: Science/Research",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -117,7 +117,7 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     packages=find_namespace_packages(),
     install_requires=REQUIRED_PACKAGES,
     package_data=package_files,

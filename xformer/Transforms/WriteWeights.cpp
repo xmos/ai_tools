@@ -4,6 +4,7 @@
 #include "IR/XCoreOps.h"
 #include "Transforms/Options.h"
 #include "Utils/FileIO.h"
+#include "Utils/TileRamSupport.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
@@ -16,9 +17,9 @@ namespace xcore {
 
 namespace {
 // Write flash image
-struct WriteFlashImage
-    : public PassWrapper<WriteFlashImage, OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(WriteFlashImage)
+struct WriteWeights
+    : public PassWrapper<WriteWeights, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(WriteWeights)
 
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
@@ -28,9 +29,9 @@ struct WriteFlashImage
   void runOnOperation() override;
 };
 
-struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
-  WriteFlashImagePattern(std::vector<std::vector<char>> *tensorsVec,
-                         MLIRContext *context)
+struct WriteWeightsPattern : public OpRewritePattern<LoadConstantOp> {
+  WriteWeightsPattern(std::vector<std::vector<char>> *tensorsVec,
+                      MLIRContext *context)
       : OpRewritePattern<LoadConstantOp>(context), tensorsVec_(tensorsVec) {}
 
   std::vector<char> getTensorData(LoadConstantOp loadOp) const {
@@ -94,6 +95,8 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
       for (int i = 0; i < opNums.size(); i++) {
         ownerOp->setOperand(opNums[i], loadFlashOp.getResult(i));
       }
+
+      loadFlashOp->moveBefore(ownerOp);
       loadOp.erase();
     } else {
       std::vector<char> loadOpData = getTensorData(loadOp);
@@ -103,6 +106,18 @@ struct WriteFlashImagePattern : public OpRewritePattern<LoadConstantOp> {
           loadOp.getLoc(), loadOp.getType(), address,
           rewriter.getArrayAttr(dataSizes));
       rewriter.replaceOp(loadOp, loadFlashOp.getOutput());
+
+      // Find all uses of loadFlashOp and find the first Owner op
+      // so that we can move the loading to just before that op.
+      mlir::Operation *firstOwnerOp =
+          loadFlashOp->getResult(0).getUses().begin()->getOwner();
+      for (const mlir::OpOperand &use : loadFlashOp->getResult(0).getUses()) {
+        mlir::Operation *op = use.getOwner();
+        if (op->isBeforeInBlock(firstOwnerOp)) {
+          firstOwnerOp = op;
+        }
+      }
+      loadFlashOp->moveBefore(firstOwnerOp);
     }
 
     tensorsVec_->push_back(tensorData);
@@ -114,30 +129,9 @@ private:
   std::vector<std::vector<char>> *tensorsVec_;
 };
 
-struct MoveLoadOpPattern : public OpRewritePattern<LoadFlashOp> {
-  MoveLoadOpPattern(MLIRContext *context)
-      : OpRewritePattern<LoadFlashOp>(context) {}
-
-  LogicalResult matchAndRewrite(LoadFlashOp loadFlashOp,
-                                PatternRewriter &rewriter) const override {
-    // Constants are usually allocated in the beginning of the function.
-    // Lowering them to load from flash op leads to loading constants from flash
-    // occurring in the beginning of graph execution before other ops are
-    // executed, thereby needing a much larger tensor arena.
-    // We move the op to right before the user op (user op would be conv or
-    // lookup op etc, any op that is using the constant).
-    // This is so that when we lower to flatbuffer the loadOp will be located
-    // in the graph close to the user op.
-    Operation *ownerOp =
-        loadFlashOp->getResult(0).getUses().begin()->getOwner();
-    loadFlashOp->moveBefore(ownerOp);
-    return success();
-  }
-};
-
-void WriteFlashImage::runOnOperation() {
+void WriteWeights::runOnOperation() {
   func::FuncOp f = getOperation();
-  if (flashImageFilenameOption.empty()) {
+  if (weightsFilenameOption.empty()) {
     f.emitError("Flash image file option should be provided to run this pass!");
     signalPassFailure();
     return;
@@ -149,13 +143,20 @@ void WriteFlashImage::runOnOperation() {
   // with a LoadFlashOp
   std::vector<std::vector<char>> tensorsVec;
   RewritePatternSet patterns(ctx);
-  patterns.insert<WriteFlashImagePattern>(&tensorsVec, ctx);
-  patterns.insert<MoveLoadOpPattern>(ctx);
+  patterns.insert<WriteWeightsPattern>(&tensorsVec, ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 
+  if (tileLoadOption) {
+    if (failed(utils::writeTileServerDataToFile(weightsFilenameOption,
+                                                tensorsVec))) {
+      f.emitError("Failed to write tile data!");
+      signalPassFailure();
+      return;
+    }
+  }
   // Write tensor data to flash image file
-  if (failed(
-          utils::writeFlashImageToFile(flashImageFilenameOption, tensorsVec))) {
+  else if (failed(
+               utils::writeWeightsToFile(weightsFilenameOption, tensorsVec))) {
     f.emitError("Failed to write flash image!");
     signalPassFailure();
     return;
@@ -163,12 +164,12 @@ void WriteFlashImage::runOnOperation() {
 }
 } // namespace
 
-// Creates an instance of the WriteFlashImage pass.
-std::unique_ptr<OperationPass<func::FuncOp>> createWriteFlashImagePass() {
-  return std::make_unique<WriteFlashImage>();
+// Creates an instance of the WriteWeights pass.
+std::unique_ptr<OperationPass<func::FuncOp>> createWriteWeightsPass() {
+  return std::make_unique<WriteWeights>();
 }
 
-static PassRegistration<WriteFlashImage> pass;
+static PassRegistration<WriteWeights> pass;
 
 } // namespace xcore
 } // namespace mlir

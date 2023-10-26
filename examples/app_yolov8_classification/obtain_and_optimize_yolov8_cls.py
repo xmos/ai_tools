@@ -29,7 +29,7 @@ xformer.convert(
     TFLITE_MODEL_PATH,
     OPT_MODEL_PATH,
     {
-        "xcore-flash-image-file": OPT_PARAMS_PATH,
+        "xcore-weights-file": OPT_PARAMS_PATH,
         "xcore-thread-count": "5",
         "xcore-naming-prefix": NAMING_PREFIX,
     },

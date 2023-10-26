@@ -3,6 +3,8 @@
 
 // Utility predicates that are shared by multiple passes.
 
+def isBetaFloatEnabled : Constraint<CPred<"isBetaFloatEnabled()">>;
+
 // Check that bytes per pixel is a multiple of n
 class HasMultipleOfNBytesPerPixel<int n>
     : Constraint<CPred<

@@ -5,7 +5,7 @@ Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 
 In order to compile and run this example follow these steps::
 
-  xcore-opt --xcore-flash-image-file=model.params vww_quant.tflite -o model.tflite
+  xcore-opt --xcore-weights-file=model.params vww_quant.tflite -o model.tflite
   mv model.tflite.cpp model.tflite.h src
   xmake
   python -c 'from xmos_ai_tools import xformer as xf; xf.generate_flash(

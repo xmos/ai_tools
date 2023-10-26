@@ -19,8 +19,7 @@ endif()
 
 
 if(DEFINED ENV{CMAKE_ENABLE_DARWIN_TARGET_ARM64})
-  set(CMAKE_OSX_ARCHITECTURES "arm64"
-    CACHE STRING "The list of target architectures to build")
+  set(BUILD_FLAGS ${BUILD_FLAGS} "-target" "arm64-apple-macos11")
 endif()
 
 set(TOP_DIR

@@ -291,7 +291,7 @@ jobs:
           mkdir -p build
           cd build
           cmake ..
-          cmake --build . -t install --parallel --config Release
+          cmake --build . -t install --parallel 2 --config Release
 
           cd %GITHUB_WORKSPACE%/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC

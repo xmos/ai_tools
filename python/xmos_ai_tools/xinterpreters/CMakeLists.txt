@@ -49,7 +49,11 @@ target_sources(host_xtflitemicro
     PRIVATE ${XTFLIB_KERNEL_SOURCES}
 )
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  set(BUILD_FLAGS ${BUILD_FLAGS} "-fPIC")
+endif()
 target_compile_options(host_xtflitemicro PRIVATE ${BUILD_FLAGS})
+
 target_link_options(host_xtflitemicro PRIVATE ${BUILD_FLAGS})
 target_compile_definitions(host_xtflitemicro PUBLIC
     ${DEFINTIONS}

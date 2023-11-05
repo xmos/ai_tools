@@ -11,7 +11,7 @@
 +    if(val.length() % 16 != 0) {
 +      module_.emitError(
 +            "metadata string must be aligned to 16 bytes");
-+        return llvm::None;
++        return std::nullopt;
 +      }
 +    std::string value = std::string(val.length(), '\0')
 +                            .assign(val.begin(), val.begin() + val.length());

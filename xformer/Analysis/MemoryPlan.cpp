@@ -7,6 +7,7 @@
 #include "Utils/Util.h"
 
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "xcore-memory-plan"
 

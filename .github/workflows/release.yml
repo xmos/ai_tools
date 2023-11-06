@@ -62,7 +62,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -125,7 +125,7 @@ jobs:
     runs-on: macos-11
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -189,7 +189,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -233,7 +233,7 @@ jobs:
             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
             -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
             -v ${PWD}:/ai_tools -w /ai_tools \
-            tensorflow/build:2.10-python${{ matrix.python-version }} \
+            tensorflow/build:2.15-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
@@ -257,7 +257,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3

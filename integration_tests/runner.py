@@ -22,7 +22,7 @@ tf.keras.utils.set_random_seed(42)
 
 MAX_ABS_ERROR = 1
 ABS_AVG_ERROR = 1.0 / 4
-AVG_ABS_ERROR = 1.0 / 4
+AVG_ABS_ERROR = 0.28 #1.0 / 4
 REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 

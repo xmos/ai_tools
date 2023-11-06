@@ -43,6 +43,16 @@ build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
 build:windows --copt=-DNOGDI
 build:windows --host_copt=-DNOGDI
 
+# On Windows, `__cplusplus` is wrongly defined without this switch
+# See https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
+build:windows --copt=/Zc:__cplusplus
+build:windows --host_copt=/Zc:__cplusplus
+
+# Speed Windows compile times. Available in VS 16.4 (we are on 16.11). See
+# https://groups.google.com/a/tensorflow.org/d/topic/build/SsW98Eo7l3o/discussion
+build:windows --copt=/d2ReducedOptimizeHugeFunctions
+build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
+
 # MSVC (Windows): Standards-conformant preprocessor mode
 # See https://docs.microsoft.com/en-us/cpp/preprocessor/preprocessor-experimental-overview
 build:windows --copt=/Zc:preprocessor
@@ -63,6 +73,8 @@ build:windows --verbose_failures
 # See: https://github.com/bazelbuild/bazel/issues/5163
 build:windows --features=compiler_param_file
 build:windows --features=archive_param_file
+
+build:windows --enable_runfiles
 
 # Link with these libs only on macos
 build:macos --linkopt=-framework

@@ -43,8 +43,7 @@ hedron_compile_commands_setup()
 ################################## TensorFlow ##################################
 http_archive(
     name = "org_tensorflow",
-    patch_args = ["-p0"],
-    patch_tool = "patch",
+    patch_args = ["-p1"],
     patches = [
           "//patches:flatbuffer_export.patch",
           "//patches:softmax.patch",
@@ -130,8 +129,7 @@ pip_parse(
 ########################### larq compute engine ################################
 http_archive(
     name = "lce",
-    patch_args = ["-p0"],
-    patch_tool = "patch",
+    patch_args = ["-p1"],
     patches = [
           "//patches:tf_update.patch",
     ],

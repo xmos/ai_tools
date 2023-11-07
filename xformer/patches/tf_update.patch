@@ -1,7 +1,7 @@
-diff --git larq_compute_engine/mlir/BUILD larq_compute_engine/mlir/BUILD
+diff --git a/larq_compute_engine/mlir/BUILD b/larq_compute_engine/mlir/BUILD
 index d174313..9300137 100644
---- larq_compute_engine/mlir/BUILD
-+++ larq_compute_engine/mlir/BUILD
+--- a/larq_compute_engine/mlir/BUILD
++++ b/larq_compute_engine/mlir/BUILD
 @@ -9,7 +9,7 @@ package(
  td_library(
      name = "lce_ops_td_file",
@@ -11,10 +11,10 @@ index d174313..9300137 100644
      deps = [
          "@llvm-project//mlir:SideEffectInterfacesTdFiles",
          "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
-diff --git larq_compute_engine/mlir/ir/lce_ops.h larq_compute_engine/mlir/ir/lce_ops.h
+diff --git a/larq_compute_engine/mlir/ir/lce_ops.h b/larq_compute_engine/mlir/ir/lce_ops.h
 index f19dd81..0293e18 100644
---- larq_compute_engine/mlir/ir/lce_ops.h
-+++ larq_compute_engine/mlir/ir/lce_ops.h
+--- a/larq_compute_engine/mlir/ir/lce_ops.h
++++ b/larq_compute_engine/mlir/ir/lce_ops.h
 @@ -1,6 +1,7 @@
  #ifndef LARQ_COMPUTE_ENGINE_MLIR_IR_LCE_OPS_H_
  #define LARQ_COMPUTE_ENGINE_MLIR_IR_LCE_OPS_H_

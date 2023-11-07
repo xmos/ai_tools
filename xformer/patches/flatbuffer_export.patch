@@ -1,7 +1,9 @@
---- tensorflow/compiler/mlir/lite/flatbuffer_export.cc	2022-03-28 16:22:27.000000000 +0100
-+++ tensorflow/compiler/mlir/lite/flatbuffer_export.cc	2022-03-28 16:21:41.000000000 +0100
-@@ -1553,10 +1553,13 @@
-       BuildMetadata("min_runtime_version", std::string(kByteStringSize, '\0')));
+diff --git a/tensorflow/compiler/mlir/lite/flatbuffer_export.cc b/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
+index 1a55e517791..b330af083a3 100644
+--- a/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
++++ b/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
+@@ -2577,10 +2577,13 @@ Translator::CreateMetadataVector() {
+   }
    for (const auto& kv : metadata_) {
      const std::string& val = kv.second;
 -    // Only take the first kByteStringSize values.
@@ -17,4 +19,4 @@
 +                            .assign(val.begin(), val.begin() + val.length());
      metadata.push_back(BuildMetadata(kv.first, value));
    }
-   return builder_.CreateVector(metadata);
+ 

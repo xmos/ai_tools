@@ -1,68 +1,84 @@
 import tensorflow as tf
-import tensorflow.keras.layers as l
 import numpy as np
+from tensorflow.keras.layers import (Input, GRU, ReLU, Reshape,
+                                     BatchNormalization, Conv2D,
+                                     Conv2DTranspose, Concatenate)
 
 TIMESTEPS = None
-SAMPLES = 321
-LOG10 = np.log(10)
-
-
-def red_sum(t, kd=True):
-    return tf.reduce_sum(t, axis=[1, 2], keepdims=kd)
-
-
-def si_sdr_loss(y_true, y_pred):
-    alpha = red_sum(y_true * y_pred) / red_sum(tf.square(y_true))
-    s_target = alpha * y_true
-    si_sdr = 10 * tf.math.log(red_sum(tf.square(s_target), False) / (
-        red_sum(tf.square(s_target-y_pred), False) + 1e-7)) / LOG10
-    return -si_sdr
+SAMPLES = 1281
 
 
 def bn_relu(x):
-    return l.ReLU()(l.BatchNormalization()(x))
+    return ReLU()(BatchNormalization()(x))
 
 
-def get_trunet():
-    inp = l.Input(shape=(SAMPLES, 257, 1))
-    x = tf.pad(inp, tf.constant([[0, 0], [0, 0], [0, 2], [0, 0]]))
-    x = l.Conv2D(64, kernel_size=[1, 5], strides=[1, 2], padding="valid")(x)
-    xs = [bn_relu(x)]
-    for k, s in zip([3, 5, 3, 5, 3], [1, 2, 1, 2, 2]):
-        # SEPARABLE!!!
-        x = l.Conv2D(128, kernel_size=[1, k],
-                     strides=[1, s], padding="same")(xs[-1])
+def simple_sigmoid(x):
+    return tf.clip_by_value(ReLU()(x + .5), 0, 1)
+
+
+def simple_tanh(x):
+    return tf.clip_by_value(x, -1, 1)
+
+
+def gru_block(x, num_samples, enc_f, state_input):
+    num_chans = 32
+    x = Reshape([num_samples, num_chans * enc_f])(x)
+    if state_input is not None:
+        x, state = GRU(num_chans * enc_f, return_state=True,
+                       return_sequences=True, unroll=True)(x, state_input)
+        # activation=simple_tanh,
+        # recurrent_activation=simple_sigmoid)(x, state_input)
+    else:
+        x, state = GRU(num_chans * enc_f, return_sequences=True)(x), None
+        # activation=simple_tanh,
+        # recurrent_activation=simple_sigmoid)(x), None
+    x = Reshape([num_samples, enc_f, 32])(x)
+    return x, state
+
+
+def get_trunet(num_freqs=64, num_samples=SAMPLES, inference=False):
+    channels = [24, 32, 48, 48, 64, 64]
+    strides = [2, 1, 2, 1, 2, 2]
+    k_sizes = [5, 3, 5, 3, 5, 3]
+    zipped = list(zip(k_sizes, strides, channels))
+    inp = Input(shape=(num_samples, num_freqs, 1))
+    state_input = Input(shape=(64,)) if inference else None
+    x = BatchNormalization()(inp)
+    x = Conv2D(channels[0], kernel_size=[1, k_sizes[0]],
+               strides=[1, strides[0]], padding="same", use_bias=False)(x)
+    x = bn_relu(x)
+    xs = [x]
+    for k, s, c in zipped[1:]:
+        x = Conv2D(c, kernel_size=[1, k], strides=[
+                   1, s], padding="same", use_bias=False)(x)
         x = bn_relu(x)
         xs.append(x)
-    x = tf.reshape(xs[-1], [-1, 16, 128])
-    x = l.Bidirectional(l.GRU(64, return_sequences=True))(x)
-    x = tf.reshape(x, [-1, SAMPLES, 16, 128])
-    x = l.Conv1D(64, kernel_size=1, strides=1, padding="same")(x)
+    x = Conv2D(32, kernel_size=[1, 2], strides=[1, 2],
+               padding="same", use_bias=False)(x)
     x = bn_relu(x)
-    x = tf.reshape(tf.transpose(x, [0, 2, 1, 3]), [-1, SAMPLES, 64])
-    x = l.GRU(128, return_sequences=True)(x)
-    x = tf.transpose(tf.reshape(x, [-1, 16, SAMPLES, 128]), [0, 2, 1, 3])
-    x = l.Conv2D(128, kernel_size=[1, 1], strides=1, padding="same")(x)
+    x, new_state = gru_block(x, num_samples, 2, state_input)
+    x = Conv2DTranspose(32, kernel_size=[1, 2], strides=[1, 2],
+                        padding="same", use_bias=False)(x)
     x = bn_relu(x)
-    for k, s, skip in zip([3, 5, 3, 5, 3], [2, 2, 1, 2, 1], xs[:1:-1]):
-        x = l.Concatenate()([x, skip])
-        x = l.Conv2D(64, kernel_size=[1, 1], strides=1, padding="same")(x)
+    for (k, s, c), skip in list(zip(zipped, xs))[:1:-1]:
+        cs = (c * 2) // 3
+        x = Concatenate()([x, skip])
+        x = Conv2D(cs, kernel_size=[1, 1], use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = Conv2DTranspose(cs, kernel_size=[1, k], strides=[1, s],
+                            padding="same", use_bias=False)(x)
         x = bn_relu(x)
-        # x = l.BatchNormalization()(x)
-        x = l.Conv2DTranspose(
-            64, kernel_size=[1, k], strides=[1, s], padding="same")(x)
-        x = bn_relu(x)
-    x = l.Concatenate()([x, xs[0]])
-    x = l.Conv2DTranspose(1, kernel_size=[1, 5], strides=[1, 2],
-                          padding="valid")(x)[:, :, :257]
-    out = tf.exp(x)
-    model = tf.keras.models.Model(inputs=inp, outputs=out)
-    optimizer = tf.keras.optimizers.Adam(4e-4)
-    model.compile(optimizer=optimizer, loss=si_sdr_loss)
+    x = Concatenate()([x, xs[0]])
+    x = Conv2DTranspose(1, kernel_size=[1, k_sizes[0]],
+                        strides=[1, strides[0]], padding="same")(x)
+    out = tf.keras.activations.sigmoid(x)
+    inputs = [inp, state_input] if inference else inp
+    outputs = [out, new_state] if inference else out * inp
+    model = tf.keras.models.Model(inputs=inputs, outputs=outputs)
     return model
 
 
 if __name__ == "__main__":
-    model = get_trunet()
+    model = get_trunet(64, 1, inference=True)
     print(np.sum([np.prod(i.shape) for i in model.trainable_weights]))
-    # tf.keras.utils.plot_model(model, show_shapes=True)
+    tf.keras.utils.plot_model(model, show_shapes=True)

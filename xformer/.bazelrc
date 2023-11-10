@@ -75,6 +75,8 @@ build:windows --features=compiler_param_file
 build:windows --features=archive_param_file
 
 build:windows --enable_runfiles
+build:windows --linkopt=/FORCE:MULTIPLE
+build:windows --host_linkopt=/FORCE:MULTIPLE
 
 # Link with these libs only on macos
 build:macos --linkopt=-framework

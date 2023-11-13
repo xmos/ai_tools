@@ -285,7 +285,7 @@ jobs:
 
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
 
-          cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
+          cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro
           make patch
           cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters
           mkdir -p build

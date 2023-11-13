@@ -18,7 +18,7 @@ do
     curl "$URL" | tar -C "$OUTPUT_PATH" -f - -x -j
 done
 
-### DOWNLOAD NOISE SAMPLES ###
+## DOWNLOAD NOISE SAMPLES ###
 repo_subdir="noise_train"
 
 git -C "$DATA_DIR" init

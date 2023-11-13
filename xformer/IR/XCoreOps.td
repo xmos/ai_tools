@@ -32,7 +32,6 @@ def XCoreDialect : Dialect {
   }];
 
   let cppNamespace = "::mlir::xcore";
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 //===----------------------------------------------------------------------===//

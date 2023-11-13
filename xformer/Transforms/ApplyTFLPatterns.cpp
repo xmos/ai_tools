@@ -45,13 +45,13 @@ getConvPaddingValues(PatternRewriter &rewriter, T conv2DOp,
   // Find padding values
   int64_t newHeight, newWidth;
   int64_t padTop, padBottom, padLeft, padRight;
-  if (tensorflow::GetWindowedOutputSizeVerboseV2(
+  if (tensorflow::GetWindowedOutputSizeVerbose(
           inputHeight, filterHeight, dilationHeight, strideHeight,
           tensorflow::Padding::SAME, &newHeight, &padTop,
           &padBottom) != tensorflow::OkStatus()) {
     conv2DOp->emitError("Could not obtain SAME padding values for Conv op!");
   }
-  if (tensorflow::GetWindowedOutputSizeVerboseV2(
+  if (tensorflow::GetWindowedOutputSizeVerbose(
           inputWidth, filterWidth, dilationWidth, strideWidth,
           tensorflow::Padding::SAME, &newWidth, &padLeft,
           &padRight) != tensorflow::OkStatus()) {

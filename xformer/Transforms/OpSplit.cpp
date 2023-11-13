@@ -126,7 +126,7 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
       auto stridedSliceOp = rewriter.create<TFL::StridedSliceOp>(
           targetReplacement.getLoc(), stridedSliceOutputType, targetReplacement,
           beginConstantOp, endConstantOp, stridesConstantOp, begin_mask,
-          end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask);
+          end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask, false);
 
       // Add label, for safety when raising slice later
       stridedSliceOp->setAttr(opSplitLabel, rewriter.getUnitAttr());
@@ -330,13 +330,13 @@ struct RaiseStridedSliceHorizontalPattern
                                         ? tensorflow::Padding::VALID
                                         : tensorflow::Padding::SAME;
     // Get pad values for conv op
-    if (tensorflow::GetWindowedOutputSizeVerboseV2(
+    if (tensorflow::GetWindowedOutputSizeVerbose(
             inputHeight, filterHeight, dilation_h_factor, strideHeight,
             opPadding, &newHeight, &padTop,
             &padBottom) != tensorflow::OkStatus()) {
       return failure();
     }
-    if (tensorflow::GetWindowedOutputSizeVerboseV2(
+    if (tensorflow::GetWindowedOutputSizeVerbose(
             inputWidth, filterWidth, dilation_w_factor, strideWidth, opPadding,
             &newWidth, &padLeft, &padRight) != tensorflow::OkStatus()) {
       return failure();
@@ -428,7 +428,7 @@ struct RaiseStridedSliceHorizontalPattern
         beginConstantOp, endConstantOp, stridedSlice.getStrides(),
         stridedSlice.getBeginMask(), stridedSlice.getEndMask(),
         stridedSlice.getEllipsisMask(), stridedSlice.getNewAxisMask(),
-        stridedSlice.getShrinkAxisMask());
+        stridedSlice.getShrinkAxisMask(), stridedSlice.getOffset());
     stridedSliceReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     // Adjust shape for padding
@@ -629,7 +629,7 @@ struct RaiseStridedSliceHorizontalPadPattern
         beginConstantOp, endConstantOp, stridedSlice.getStrides(),
         stridedSlice.getBeginMask(), stridedSlice.getEndMask(),
         stridedSlice.getEllipsisMask(), stridedSlice.getNewAxisMask(),
-        stridedSlice.getShrinkAxisMask());
+        stridedSlice.getShrinkAxisMask(), stridedSlice.getOffset());
     stridedSliceReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     // Adjust shape for padding

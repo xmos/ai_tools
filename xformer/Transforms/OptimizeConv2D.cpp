@@ -436,7 +436,7 @@ createPaddedConvWithStridedSliceOp(int padSize, T convOp, Value paddedFilterOp,
 
   auto stridedSliceOp = rewriter.create<TFL::StridedSliceOp>(
       convOp.getLoc(), convOp.getOutput().getType(), convReplacement,
-      beginConstantOp, endConstantOp, stridesConstantOp, 0, 0, 0, 0, 0);
+      beginConstantOp, endConstantOp, stridesConstantOp, 0, 0, 0, 0, 0, false);
   return stridedSliceOp;
 }
 

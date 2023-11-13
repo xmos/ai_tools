@@ -7,6 +7,8 @@
 
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
+#include <iomanip>
+
 namespace mlir {
 namespace xcore {
 
@@ -138,13 +140,13 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
     tensorflow::Padding opPadding = conv2DOp.getPadding() == "VALID"
                                         ? tensorflow::Padding::VALID
                                         : tensorflow::Padding::SAME;
-    if (tensorflow::GetWindowedOutputSizeVerboseV2(
+    if (tensorflow::GetWindowedOutputSizeVerbose(
             args.inputHeight, args.filterHeight, conv2DOp.getDilationHFactor(),
             conv2DOp.getStrideH(), opPadding, &newHeight, &padTop,
             &padBottom) != tensorflow::OkStatus()) {
       return failure();
     }
-    if (tensorflow::GetWindowedOutputSizeVerboseV2(
+    if (tensorflow::GetWindowedOutputSizeVerbose(
             args.inputWidth, args.filterWidth, conv2DOp.getDilationWFactor(),
             conv2DOp.getStrideW(), opPadding, &newWidth, &padLeft,
             &padRight) != tensorflow::OkStatus()) {

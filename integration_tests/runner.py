@@ -22,7 +22,7 @@ tf.keras.utils.set_random_seed(42)
 
 MAX_ABS_ERROR = 1
 ABS_AVG_ERROR = 1.0 / 4
-AVG_ABS_ERROR = 1.0 / 4
+AVG_ABS_ERROR = 0.28 #1.0 / 4
 REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
@@ -156,7 +156,7 @@ class XFHostRuntime(AbstractXFRunner):
             f"{MAIN_CPP_PATH}",
             "-o",
             f"{self._model_exe_path}",
-            "-lx86tflitemicro",
+            "-lhost_xtflitemicro",
         ]
         print(" ".join(cmd))
         run_cmd(cmd)

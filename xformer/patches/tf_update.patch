@@ -1,7 +1,7 @@
-diff --git larq_compute_engine/mlir/BUILD larq_compute_engine/mlir/BUILD
-index d0c5c83..96147f8 100644
---- larq_compute_engine/mlir/BUILD
-+++ larq_compute_engine/mlir/BUILD
+diff --git a/larq_compute_engine/mlir/BUILD b/larq_compute_engine/mlir/BUILD
+index d174313..9300137 100644
+--- a/larq_compute_engine/mlir/BUILD
++++ b/larq_compute_engine/mlir/BUILD
 @@ -9,7 +9,7 @@ package(
  td_library(
      name = "lce_ops_td_file",
@@ -11,59 +11,15 @@ index d0c5c83..96147f8 100644
      deps = [
          "@llvm-project//mlir:SideEffectInterfacesTdFiles",
          "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
-diff --git larq_compute_engine/mlir/transforms/translate_tflite.cc larq_compute_engine/mlir/transforms/translate_tflite.cc
-index b96ccb9..da7062c 100644
---- larq_compute_engine/mlir/transforms/translate_tflite.cc
-+++ larq_compute_engine/mlir/transforms/translate_tflite.cc
-@@ -22,8 +22,12 @@ static llvm::StringRef ConvertPaddingAttr(tflite::Padding padding_type) {
- namespace mlir {
- namespace TFL {
+diff --git a/larq_compute_engine/mlir/ir/lce_ops.h b/larq_compute_engine/mlir/ir/lce_ops.h
+index f19dd81..0293e18 100644
+--- a/larq_compute_engine/mlir/ir/lce_ops.h
++++ b/larq_compute_engine/mlir/ir/lce_ops.h
+@@ -1,6 +1,7 @@
+ #ifndef LARQ_COMPUTE_ENGINE_MLIR_IR_LCE_OPS_H_
+ #define LARQ_COMPUTE_ENGINE_MLIR_IR_LCE_OPS_H_
  
-+namespace {
-+
- struct TranslateToLCE
-     : public PassWrapper<TranslateToLCE, OperationPass<mlir::func::FuncOp>> {
-+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TranslateToLCE)
-+
-   llvm::StringRef getArgument() const final { return "lce-translate-tfl"; }
-   llvm::StringRef getDescription() const final {
-     return "Translate TFL custom ops to LCE ops";
-@@ -39,16 +43,16 @@ struct TranslateToLCEPattern : public OpRewritePattern<TFL::CustomOp> {
++#include "mlir/Bytecode/BytecodeOpInterface.h"
+ #include "mlir/Dialect/Quant/QuantTypes.h"
+ #include "mlir/Interfaces/SideEffectInterfaces.h"
  
-   LogicalResult matchAndRewrite(TFL::CustomOp custom_op,
-                                 PatternRewriter& rewriter) const override {
--    auto stringData = custom_op.custom_option().getValue();
-+    auto stringData = custom_op.getCustomOption().getValue();
- 
-     // Replace CustomOp with relevant LarqOp
--    if (custom_op.custom_code() == "LceQuantize") {
-+    if (custom_op.getCustomCode() == "LceQuantize") {
-       rewriter.replaceOpWithNewOp<lq::QuantizeOp>(
-           custom_op, custom_op->getResultTypes(), custom_op->getOperands());
--    } else if (custom_op.custom_code() == "LceDequantize") {
-+    } else if (custom_op.getCustomCode() == "LceDequantize") {
-       rewriter.replaceOpWithNewOp<lq::DequantizeOp>(
-           custom_op, custom_op->getResultTypes(), custom_op->getOperands());
--    } else if (custom_op.custom_code() == "LceBMaxPool2d") {
-+    } else if (custom_op.getCustomCode() == "LceBMaxPool2d") {
-       auto map =
-           flexbuffers::GetRoot((uint8_t*)stringData.data(), stringData.size())
-               .AsMap();
-@@ -58,7 +62,7 @@ struct TranslateToLCEPattern : public OpRewritePattern<TFL::CustomOp> {
-               static_cast<tflite::Padding>(map["padding"].AsInt32())),
-           map["stride_width"].AsInt32(), map["stride_height"].AsInt32(),
-           map["filter_width"].AsInt32(), map["filter_height"].AsInt32());
--    } else if (custom_op.custom_code() == "LceBconv2d") {
-+    } else if (custom_op.getCustomCode() == "LceBconv2d") {
-       auto map =
-           flexbuffers::GetRoot((uint8_t*)stringData.data(), stringData.size())
-               .AsMap();
-@@ -88,6 +92,8 @@ void TranslateToLCE::runOnOperation() {
-   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
- }
- 
-+} // namespace
-+
- // Creates an instance of the TranslateToLCE pass.
- std::unique_ptr<OperationPass<mlir::func::FuncOp>> CreateTranslateToLCEPass() {
-   return std::make_unique<TranslateToLCE>();

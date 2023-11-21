@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#define LOG2_8_Q_VALUE                    3
+#define LOG2_16_Q_VALUE                  10
+
 int log2_8(uint32_t x);
 int log2_16(uint32_t x);
 

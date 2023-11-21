@@ -38,9 +38,17 @@ pipeline {
                     setupEnvironment()
                 } }
                 stage("Build") { steps { withVenv {
+                    // build runtime
                     createZip("x86")
-                    // TODO: Make this use CMake! and in parallel everywhere?
-                    sh "make -C python/xmos_ai_tools/xinterpreters install -j4"
+                    dir("python/xmos_ai_tools/runtime") {
+                        unstash "release_archive" 
+                        sh "unzip release_archive.zip"
+                        sh "rm release_archive.zip"
+                    }
+                    dir("python/xmos_ai_tools/xinterpreters/build") {
+                        sh "cmake .."
+                        sh "cmake --build . -t install --parallel 4 --config Release"
+                    }
                     // build xformer
                     dir("xformer") {
                         sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
@@ -54,7 +62,7 @@ pipeline {
                     dir ("python") {
                         sh "python3 setup.py bdist_wheel"
                         sh "pip install dist/*"
-                        stash name:"xmos_ai_tools_wheel", includes: "dist/*"
+                        stash name: "xmos_ai_tools_wheel", includes: "dist/*"
                     }
                 } } }
             }

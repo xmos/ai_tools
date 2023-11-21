@@ -110,7 +110,7 @@ def setupEnvironment() {
         checkout scm
         if (isUnix()){
             sh "git submodule update --init --recursive --jobs 4"
-            make -C third_party/lib_tflite_micro patch
+            sh "make -C third_party/lib_tflite_micro patch"
             createVenv("requirements.txt")
             withVenv { sh "pip install -r requirements.txt" }
         } else {

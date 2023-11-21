@@ -15,6 +15,11 @@ pipeline {
             defaultValue: '15.2.1',
             description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
         )
+        string( 
+            name: 'TAG_VERSION',
+            defaultValue: '',
+            description: 'The release version, leave empty to not publish a release'
+        )
     }
 
     options {
@@ -30,16 +35,12 @@ pipeline {
             agent { label "linux && 64 && !noAVX2" } 
             stages {
                 stage("Setup") { steps {
-                    println "Stage running on: ${env.NODE_NAME}"
-                    checkout scm
-                    sh "./build.sh -T init"
-                    createVenv("requirements.txt")
-                    withVenv { sh "pip install -r requirements.txt" }
+                    setupEnvironment()
                 } }
                 stage("Build") { steps { withVenv {
-                    // build dll_interpreter for python interface
-                    sh "./build.sh -T runtime-host -b"
-                    sh "./build.sh -T xinterpreter-nozip -b"
+                    createZip("x86")
+                    // TODO: Make this use CMake! and in parallel everywhere?
+                    sh "make -C python/xmos_ai_tools/xinterpreters install -j4"
                     // build xformer
                     dir("xformer") {
                         sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
@@ -63,9 +64,7 @@ pipeline {
             stage("Host Test") {
                 agent { label "linux && 64 && !noAVX2" }
                 stages {
-                    stage("Integration Tests") { steps { 
-                        script { runTests("host") } 
-                    } }
+                    stage("Integration Tests") { steps { runTests("host") } }
                     stage("Notebook Tests") { steps { withVenv {
                         sh "pip install pytest nbmake"
                         sh "pytest --nbmake ./docs/notebooks/*.ipynb"
@@ -78,37 +77,75 @@ pipeline {
             }
             stage("Device Test") {
                 agent { label "xcore.ai-explorer && lpddr && !macos" }
-                steps { script { runTests("device") } }
+                steps { runTests("device") }
                 post { cleanup { xcoreCleanSandbox() } }
             }
         } }
     }
 }
 
+
+def createZip(String platform) {
+    script {
+        dir("xformer") { sh "./version_check.sh" }
+        dir("third_party/lib_tflite_micro") {
+            sh "mkdir -p build"
+            dir("build") {
+                if (platform == "device") {
+                    sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
+                } else {
+                    sh "cmake .. -DLIB_NAME=x86tflitemicro"
+                }
+                sh "make create_zip -j4"
+            }
+        }
+    }
+    stash name: "release_archive", includes: "third_party/lib_tflite_micro/build/*.zip"
+}
+
+
+def setupEnvironment() {
+    script {
+        println "Stage running on: ${env.NODE_NAME}"
+        checkout scm
+        if (isUnix()){
+            sh "git submodule update --init --recursive --jobs 4"
+            make -C third_party/lib_tflite_micro patch
+            createVenv("requirements.txt")
+            withVenv { sh "pip install -r requirements.txt" }
+        } else {
+            // Windows specific setup steps
+        }
+    }
+}
+
+
 def runTests(String platform) {
-    println "Stage running on: ${env.NODE_NAME}"
-    checkout scm
-    sh "./build.sh -T init"
-    createVenv("requirements.txt")
-    withVenv {
-        sh "pip install -r requirements.txt"
-        dir ("python") {
-            unstash "xmos_ai_tools_wheel"
-            sh "pip install dist/*"
+    script {
+        println "Stage running on: ${env.NODE_NAME}"
+        checkout scm
+        sh "./build.sh -T init"
+        createVenv("requirements.txt")
+        withVenv {
+            sh "pip install -r requirements.txt"
+            dir ("python") {
+                unstash "xmos_ai_tools_wheel"
+                sh "pip install dist/*"
+            }
+            if (platform == "device") {
+                sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns -n 1 --junitxml=integration_tests/integration_device_junit.xml"
+                // lstms are always problematic
+                sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_lstm -n 1"
+                // test a float32 layer
+                sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_detection_postprocess -n 1"
+            } else if (platform == "host") {
+                sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_junit.xml"
+                sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n 8 --junitxml=integration_tests/integration_bnns_junit.xml"
+                sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns --compiled -n 8 --junitxml=integration_compiled_non_bnns_junit.xml"
+                sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn --compiled -n 8 --junitxml=integration_compiled_bnns_junit.xml"
+                // notebook regression tests
+            }
+            junit "**/*_junit.xml"
         }
-        if (platform == "device") {
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns -n 1 --junitxml=integration_tests/integration_device_junit.xml"
-            // lstms are always problematic
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_lstm -n 1"
-            // test a float32 layer
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_detection_postprocess -n 1"
-        } else if (platform == "host") {
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_junit.xml"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n 8 --junitxml=integration_tests/integration_bnns_junit.xml"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns --compiled -n 8 --junitxml=integration_compiled_non_bnns_junit.xml"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn --compiled -n 8 --junitxml=integration_compiled_bnns_junit.xml"
-            // notebook regression tests
-        }
-        junit "**/*_junit.xml"
     }
 }

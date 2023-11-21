@@ -4,6 +4,7 @@
 #ifndef XFORMER_IR_XCOREOPS_H
 #define XFORMER_IR_XCOREOPS_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"

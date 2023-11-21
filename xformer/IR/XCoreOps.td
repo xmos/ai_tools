@@ -32,7 +32,6 @@ def XCoreDialect : Dialect {
   }];
 
   let cppNamespace = "::mlir::xcore";
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 //===----------------------------------------------------------------------===//
@@ -130,6 +129,31 @@ def XC_MulOp : XC_Op<"mul", [Pure]> {
   );
 
   let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_Beta_ActivationF32Op : XC_Op<"beta_activationf32", [Pure]> {
+  let summary = "Beta ActivationF32 op";
+
+  let description = [{Beta ActivationF32 op.}];
+
+  let arguments = (ins
+    TensorOf<[F32]>:$input,
+    I32Attr:$type
+  );
+
+  let results = (outs TensorOf<[F32]> : $output);
+}
+
+def XC_Beta_ConcatF32Op : XC_Op<"beta_concatf32", [Pure]> {
+  let summary = "Beta ConcatF32 op";
+
+  let description = [{Beta ConcatF32 op.}];
+
+  let arguments = (ins
+    Variadic<TensorOf<[F32]>>:$input
+  );
+
+  let results = (outs TensorOf<[F32]> : $output);
 }
 
 def XC_Beta_ConvF32Op : XC_Op<"beta_convf32", [Pure]> {
@@ -248,7 +272,7 @@ def XC_LookupOp : XC_Op<"lookup", [Pure]> {
 
   let description = [{Lookup table op.}];
 
-  let arguments = (ins TensorOf<[QI8]> : $input, TensorOf<[I8]> : $lut, I32Attr : $thread_count);
+  let arguments = (ins TensorOf<[QI8]> : $input, TensorOf<[I8]> : $lut);
 
   let results = (outs TensorOf<[QI8]> : $output);
 }

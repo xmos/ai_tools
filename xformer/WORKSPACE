@@ -31,7 +31,7 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 ############################### Compile Commands ###############################
 # Hedron's Compile Commands Extractor for Bazel, used to get clangd to work
 # Replace commit hash with latest version, later setup automatic update tool maybe?
-BCCE_HASH = "86dbf526c56cebb2c3a060c09fe8c0458a694d23"
+BCCE_HASH = "e16062717d9b098c3c2ac95717d2b3e661c50608"
 http_archive(
     name = "hedron_compile_commands",
     url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/{hash}.tar.gz".format(hash = BCCE_HASH),
@@ -43,17 +43,39 @@ hedron_compile_commands_setup()
 ################################## TensorFlow ##################################
 http_archive(
     name = "org_tensorflow",
-    patch_args = ["-p0"],
-    patch_tool = "patch",
+    patch_args = ["-p1"],
     patches = [
           "//patches:flatbuffer_export.patch",
           "//patches:softmax.patch",
     ],
-    sha256 = "af0584df1a4e28763c32c218b39f8c4f3784fabb6a8859b00c02d743864dc191",
-    strip_prefix = "tensorflow-2.12.0",
+    sha256 = "45b722efebb4355159eac54f6520675c42ee7c3c21670abf0a371e66210bf8bd",
+    strip_prefix = "tensorflow-2.15.0-rc0",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/refs/tags/v2.12.0.zip",
+        "https://github.com/tensorflow/tensorflow/archive/refs/tags/v2.15.0-rc0.zip",
     ],
+)
+
+http_archive(
+    name = "rules_python",
+    sha256 = "0a8003b044294d7840ac7d9d73eef05d6ceb682d7516781a4ec62eeb34702578",
+    strip_prefix = "rules_python-0.24.0",
+    url = "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.24.0.tar.gz",
+)
+
+load("@rules_python//python:repositories.bzl", "python_register_toolchains")
+load(
+    "@org_tensorflow//tensorflow/tools/toolchains/python:python_repo.bzl",
+    "python_repository",
+)
+
+python_repository(name = "python_version_repo")
+
+load("@python_version_repo//:py_version.bzl", "HERMETIC_PYTHON_VERSION")
+
+python_register_toolchains(
+    name = "python",
+    ignore_root_user_error = True,
+    python_version = HERMETIC_PYTHON_VERSION,
 )
 
 # Import all of the tensorflow dependencies. Note that we are deliberately
@@ -97,20 +119,24 @@ local_repository(
     path = "../third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro",
 )
 
+# We require this due to includes in BUILD file in tflite_micro/python/tflite_micro
+load("@rules_python//python:pip.bzl", "pip_parse")
+pip_parse(
+    name = "tflm_pip_deps",
+    requirements_lock = "@tflite_micro//third_party:python_requirements.txt",
+)
+
 ########################### larq compute engine ################################
 http_archive(
     name = "lce",
-    patch_args = ["-p0"],
-    patch_tool = "patch",
+    patch_args = ["-p1"],
     patches = [
           "//patches:tf_update.patch",
     ],
-    sha256 = "63d77277103e29fd365bf07a32006a06d47d1960fcdf0bfee1417eac95d58279",
-    strip_prefix = "compute-engine-9a7713816682fa311fe07ada5956a5498bbd2dda",
-    # https://github.com/larq/compute-engine/tree/9a7713816682fa311fe07ada5956a5498bbd2dda
-    # From 04 Nov 2022
+    sha256 = "809412dec49eb061bf7a64b721782b02cd47321a118b99c9cfa092756eef781b",
+    strip_prefix = "compute-engine-0.13.0",
     urls = [
-        "https://github.com/larq/compute-engine/archive/9a7713816682fa311fe07ada5956a5498bbd2dda.zip",
+        "https://github.com/larq/compute-engine/archive/refs/tags/v0.13.0.zip",
     ],
 )
 

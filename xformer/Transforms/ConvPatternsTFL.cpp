@@ -7,6 +7,8 @@
 
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
+#include <iomanip>
+
 namespace mlir {
 namespace xcore {
 
@@ -138,13 +140,13 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
     tensorflow::Padding opPadding = conv2DOp.getPadding() == "VALID"
                                         ? tensorflow::Padding::VALID
                                         : tensorflow::Padding::SAME;
-    if (tensorflow::GetWindowedOutputSizeVerboseV2(
+    if (tensorflow::GetWindowedOutputSizeVerbose(
             args.inputHeight, args.filterHeight, conv2DOp.getDilationHFactor(),
             conv2DOp.getStrideH(), opPadding, &newHeight, &padTop,
             &padBottom) != tensorflow::OkStatus()) {
       return failure();
     }
-    if (tensorflow::GetWindowedOutputSizeVerboseV2(
+    if (tensorflow::GetWindowedOutputSizeVerbose(
             args.inputWidth, args.filterWidth, conv2DOp.getDilationWFactor(),
             conv2DOp.getStrideW(), opPadding, &newWidth, &padLeft,
             &padRight) != tensorflow::OkStatus()) {
@@ -309,10 +311,10 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
       nn::OutputTransformFn::pad_final_access(serialisedMultipliersAndBiases,
                                               VPU_INT16_EPV,
                                               (int16_t)args.padValue);
-      nn::OT_int8_channelwise::Params otParams((int32_t)args.outputDepth,
-                                               qp.final_shr);
+      nn::OT_int8_channelwise ot((int32_t)args.outputDepth, qp.final_shr);
+      auto otParams = ot.getParams();
+      otStr = std::string((char *)&otParams, sizeof(otParams));
 
-      otStr = otParams.serialise<nn::OT_int8_channelwise::Params>();
       mulsBiasesData = serialisedMultipliersAndBiases;
       return success();
     }
@@ -323,10 +325,10 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
         nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(
         serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
-    nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
-                                 qp.final_shr);
+    nn::OT_int8 ot((int32_t)args.outputDepth, qp.initial_shr, qp.final_shr);
+    auto otParams = ot.getParams();
+    otStr = std::string((char *)&otParams, sizeof(otParams));
 
-    otStr = otParams.serialise<nn::OT_int8::Params>();
     mulsBiasesData = serialisedMultipliersAndBiases;
   }
 
@@ -338,22 +340,24 @@ LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, int &scratchBytes) const {
 
-  nn::ImToColPadded::Params imToColParams(args.X, args.K, args.padding,
-                                          args.inputDepth, args.inputZeroPoint);
+  nn::ImToColPadded imToCol(args.X, args.K, args.padding, args.inputDepth,
+                            args.inputZeroPoint);
+  auto imToColParams = imToCol.getParams();
 
   std::array<int, 4> filterShape = {args.outputDepth, args.filterHeight,
                                     args.filterWidth, args.inputDepth};
   nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
       (int8_t *)args.filter.data(), filterShape, 8, args.padValue);
   int inputBytes = args.filterHeight * args.filterWidth * args.inputDepth;
-  nn::MatMulInt8::Params afParams(args.outputDepth, inputBytes);
+  nn::MatMulInt8 af(args.outputDepth, inputBytes);
+  auto afParams = af.getParams();
 
-  std::string mfStr = imToColParams.serialise<nn::ImToColPadded::Params>();
-  std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
+  std::string mfStr =
+      std::string((char *)&imToColParams, sizeof(imToColParams));
+  std::string afStr = std::string((char *)&afParams, sizeof(afParams));
 
   abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
-          args.imageRegionSplits, args.Y);
+      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;
@@ -368,21 +372,23 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, int &scratchBytes) const {
 
-  nn::ImToColValid::Params imToColParams(args.X, args.K, args.inputDepth);
+  nn::ImToColValid imToCol(args.X, args.K, args.inputDepth);
+  auto imToColParams = imToCol.getParams();
 
   std::array<int, 4> filterShape = {args.outputDepth, args.filterHeight,
                                     args.filterWidth, args.inputDepth};
   nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
       (int8_t *)args.filter.data(), filterShape, 8, args.padValue);
   int inputBytes = args.filterHeight * args.filterWidth * args.inputDepth;
-  nn::MatMulInt8::Params afParams(args.outputDepth, inputBytes);
+  nn::MatMulInt8 af(args.outputDepth, inputBytes);
+  auto afParams = af.getParams();
 
-  std::string mfStr = imToColParams.serialise<nn::ImToColValid::Params>();
-  std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
+  std::string mfStr =
+      std::string((char *)&imToColParams, sizeof(imToColParams));
+  std::string afStr = std::string((char *)&afParams, sizeof(afParams));
 
   abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
-          args.imageRegionSplits, args.Y);
+      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;
@@ -397,20 +403,22 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, int &scratchBytes) const {
 
-  nn::DerefInputFn::Params imToColParams(args.X, args.K);
+  nn::DerefInputFn imToCol(args.X, args.K);
+  auto imToColParams = imToCol.getParams();
 
   std::array<int, 4> filterShape = {args.outputDepth, args.filterHeight,
                                     args.filterWidth, args.inputDepth};
   nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
       (int8_t *)args.filter.data(), filterShape, 8, args.padValue);
-  nn::MatMulDirectFn::Params afParams(args.X, args.K, args.inputDepth);
+  nn::MatMulDirectFn af(args.X, args.K, args.inputDepth);
+  auto afParams = af.getParams();
 
-  std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
-  std::string afStr = afParams.serialise<nn::MatMulDirectFn::Params>();
+  std::string mfStr =
+      std::string((char *)&imToColParams, sizeof(imToColParams));
+  std::string afStr = std::string((char *)&afParams, sizeof(afParams));
 
   abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads<nn::Filter2D::Params>(
-          args.imageRegionSplits, args.Y);
+      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;
@@ -537,10 +545,10 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
       nn::OutputTransformFn::pad_final_access(serialisedMultipliersAndBiases,
                                               VPU_INT16_EPV,
                                               (int16_t)args.padValue);
-      nn::OT_int8_channelwise::Params otParams((int32_t)args.outputDepth,
-                                               qp.final_shr);
+      nn::OT_int8_channelwise ot((int32_t)args.outputDepth, qp.final_shr);
+      auto otParams = ot.getParams();
 
-      otStr = otParams.serialise<nn::OT_int8_channelwise::Params>();
+      otStr = std::string((char *)&otParams, sizeof(otParams));
       mulsBiasesData = serialisedMultipliersAndBiases;
       return success();
     }
@@ -550,10 +558,10 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
         nn::OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
     nn::OutputTransformFn::pad_final_access(
         serialisedMultipliersAndBiases, VPU_INT16_EPV, (int16_t)args.padValue);
-    nn::OT_int8::Params otParams((int32_t)args.outputDepth, qp.initial_shr,
-                                 qp.final_shr);
+    nn::OT_int8 ot((int32_t)args.outputDepth, qp.initial_shr, qp.final_shr);
+    auto otParams = ot.getParams();
 
-    otStr = otParams.serialise<nn::OT_int8::Params>();
+    otStr = std::string((char *)&otParams, sizeof(otParams));
     mulsBiasesData = serialisedMultipliersAndBiases;
     return success();
   }
@@ -565,20 +573,22 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DValidDirectParams(
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, int &scratchBytes) const {
 
-  nn::DerefInputFn::Params imToColParams(args.X, args.K);
+  nn::DerefInputFn imToCol(args.X, args.K);
+  auto imToColParams = imToCol.getParams();
 
   std::array<int, 4> filterShape = {1, args.filterHeight, args.filterWidth,
                                     args.inputDepth};
   nn::Conv2dReorderedWeights rw = nn::MatMulDirectFn_DW::reorder_kernel_weights(
       (int8_t *)args.filter.data(), filterShape, args.padValue);
-  nn::MatMulDirectFn_DW::Params afParams(args.X, args.K);
+  nn::MatMulDirectFn_DW af(args.X, args.K);
+  auto afParams = af.getParams();
 
-  std::string mfStr = imToColParams.serialise<nn::DerefInputFn::Params>();
-  std::string afStr = afParams.serialise<nn::MatMulDirectFn_DW::Params>();
+  std::string mfStr =
+      std::string((char *)&imToColParams, sizeof(imToColParams));
+  std::string afStr = std::string((char *)&afParams, sizeof(afParams));
 
   abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads<nn::Filter2D_DW::Params>(
-          args.imageRegionSplits, args.Y);
+      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;
@@ -593,21 +603,23 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DPaddedIndirectParams(
     llvm::SmallVector<std::string> &abstractKernelParams,
     std::vector<int8_t> &weightsData, int &scratchBytes) const {
 
-  nn::ImToColPadded::Params imToColParams(args.X, args.K, args.padding, 16,
-                                          args.inputZeroPoint);
+  nn::ImToColPadded imToCol(args.X, args.K, args.padding, 16,
+                            args.inputZeroPoint);
+  auto imToColParams = imToCol.getParams();
 
   std::array<int, 4> filterShape = {1, args.filterHeight, args.filterWidth,
                                     args.inputDepth};
   nn::Conv2dReorderedWeights rw = nn::MatMulDirectFn_DW::reorder_kernel_weights(
       (int8_t *)args.filter.data(), filterShape, args.padValue);
-  nn::MatMulDirectFn_DW::Params afParams(args.K);
+  nn::MatMulDirectFn_DW af(args.K);
+  auto afParams = af.getParams();
 
-  std::string mfStr = imToColParams.serialise<nn::ImToColPadded::Params>();
-  std::string afStr = afParams.serialise<nn::MatMulDirectFn_DW::Params>();
+  std::string mfStr =
+      std::string((char *)&imToColParams, sizeof(imToColParams));
+  std::string afStr = std::string((char *)&afParams, sizeof(afParams));
 
   abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads<nn::Filter2D_DW::Params>(
-          args.imageRegionSplits, args.Y);
+      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;

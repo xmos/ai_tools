@@ -1,6 +1,6 @@
-// RUN: xcore-opt --mlir-io %s --xcore-apply-loadconstantop-patterns --xcore-flash-image-file=/dev/null --xcore-load-externally-if-larger=0 | FileCheck %s
+// RUN: xcore-opt --mlir-io %s --xcore-apply-loadconstantop-patterns --xcore-weights-file=/dev/null --xcore-load-externally-if-larger=0 | FileCheck %s
 
-// RUN: xcore-opt --mlir-io %s --xcore-apply-loadconstantop-patterns --xcore-flash-image-file=/dev/null --xcore-load-externally-if-larger=16 | FileCheck %s -check-prefix=LARGER-CHECK
+// RUN: xcore-opt --mlir-io %s --xcore-apply-loadconstantop-patterns --xcore-weights-file=/dev/null --xcore-load-externally-if-larger=16 | FileCheck %s -check-prefix=LARGER-CHECK
 
 // CHECK-LABEL: valid
 func.func @valid(%arg0: tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>) -> tensor<?x32x!quant.uniform<i8:f32, 0.037329975515604019:-13>> attributes {tf.entry_function = {inputs = "flatten_input", outputs = "Identity"}} {

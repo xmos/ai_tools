@@ -13,8 +13,12 @@ namespace utils {
 
 LogicalResult writeDataToFile(const std::string &filename, std::string data);
 
-LogicalResult writeFlashImageToFile(const std::string &filename,
-                                    std::vector<std::vector<char>> tensorsVec);
+LogicalResult writeWeightsToFile(const std::string &filename,
+                                 std::vector<std::vector<char>> tensorsVec);
+
+LogicalResult
+writeTileServerDataToFile(const std::string &filename,
+                          std::vector<std::vector<char>> tensorsVec);
 
 LogicalResult getFlatBufferStringFromMLIR(
     mlir::ModuleOp module, std::map<std::string, std::string> metadata,

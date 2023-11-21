@@ -12,7 +12,7 @@ The first question that you will have is "can I run my model on your
 device". The answer depends on the model and the economic constraints of
 the hardware that you wish to deploy the model on. We first explain the
 variables of the model, then the characteristics of the XCORE device, and
-then some rules of thumb
+then some rules of thumb.
 
 Model characteristics
 +++++++++++++++++++++
@@ -99,7 +99,7 @@ models do slow down. Very small models (say, 100 kByte) are held in
 internal memory, larger models are typically streamed from flash. The
 latter enables networks with up to a few million learned parameters to
 execute efficiently. Significantly larger networks, with tens of millions
-of learned parameters will can be executed from flash, but the speed of
+of learned parameters can be executed from flash, but the speed of
 execution (frame rate) may be lower than desired. Large models may be
 stored in external LPDDR memory which is fast but has a slightly higher BOM
 cost.
@@ -124,8 +124,7 @@ than AI code is present.
 We support most operators and types that are in TensorFlow Lite
 for Micro; but only a subset of those operators have been optimized to run
 on the device. The list of operators supported are TensorFlow Lite for 
-Microcontrollers operations listed in 
-https://github.com/tensorflow/tflite-micro/blob/f474248365ad48654ba8a27ac5bf49a6afbb80e7/tensorflow/lite/micro/all_ops_resolver.cc, except the following operations:
+Microcontrollers operations listed `here <https://github.com/tensorflow/tflite-micro/blob/f474248365ad48654ba8a27ac5bf49a6afbb80e7/tensorflow/lite/micro/all_ops_resolver.cc>`_, except the following operations:
 - ``assign_variable``, ``call once``, ``if``, ``read variable``, ``var_handle``, ``while``.
 Convolutional networks with int8 datatypes typically run at
 high speed. It is fine for some operations to execute as float32. As long
@@ -247,7 +246,8 @@ Several components are being used in this process:
     transformer simply produces an xcore-specific flatbuffer given a
     generic flatbuffer, using operators optimized for xcore.
 
-  * An *xcore.ai run time*. 
+  * An *xcore.ai compiler*. It takes a flatbuffer and compiler it to C++, which 
+    then be compiled to a binary to be executed on the xcore.
 
 The xcore transformer, compiler, and run-time support can all be installed
 with a single pip command: . They can be used
@@ -275,6 +275,8 @@ equivalent faster or more memory efficient operator:
 * AvgPool2D
 
 * Add
+
+* Mul
 
 * Concatenate
 

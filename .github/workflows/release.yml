@@ -62,7 +62,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -80,11 +80,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: xcore-archive
-          path: python/xmos_ai_tools/xinterpreters/device
+          path: python/xmos_ai_tools/runtime
       - name: Prepare release archive
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/device
+          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/runtime
           unzip release_archive.zip
           rm release_archive.zip
       - name: Build macOS wheels
@@ -98,7 +98,7 @@ jobs:
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
           make patch
           cd $GITHUB_WORKSPACE
-          make build
+          ./build.sh -T xinterpreter-nozip -b
                     
           cd $GITHUB_WORKSPACE/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
@@ -125,7 +125,7 @@ jobs:
     runs-on: macos-11
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -143,11 +143,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: xcore-archive
-          path: python/xmos_ai_tools/xinterpreters/device
+          path: python/xmos_ai_tools/runtime
       - name: Prepare release archive
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/device
+          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/runtime
           unzip release_archive.zip
           rm release_archive.zip
       - name: Build macOS arm wheels
@@ -162,7 +162,7 @@ jobs:
           cd $GITHUB_WORKSPACE/third_party/lib_tflite_micro
           make patch
           cd $GITHUB_WORKSPACE
-          make build
+          ./build.sh -T xinterpreter-nozip -b
                     
           cd $GITHUB_WORKSPACE/xformer
           if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
@@ -189,7 +189,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -207,11 +207,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: xcore-archive
-          path: python/xmos_ai_tools/xinterpreters/device
+          path: python/xmos_ai_tools/runtime
       - name: Prepare release archive
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/xinterpreters/device
+          cd $GITHUB_WORKSPACE/python/xmos_ai_tools/runtime
           unzip release_archive.zip
           rm release_archive.zip
       - name: Build manylinux2014 wheels
@@ -233,7 +233,7 @@ jobs:
             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
             -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
             -v ${PWD}:/ai_tools -w /ai_tools \
-            tensorflow/build:2.10-python${{ matrix.python-version }} \
+            tensorflow/build:2.15-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
@@ -257,7 +257,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -284,11 +284,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: xcore-archive
-          path: python/xmos_ai_tools/xinterpreters/device
+          path: python/xmos_ai_tools/runtime
       - name: Prepare release archive
         shell: cmd
         run: |
-          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/device
+          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/runtime
           7z x release_archive.zip
           del release_archive.zip
       - name: Build xcore-opt and xtflm-interpreter
@@ -300,9 +300,9 @@ jobs:
           
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           
-          cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
-          patch -p0 < ../../../patches/tflite-micro.patch
-          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters/host
+          cd %GITHUB_WORKSPACE%/third_party/lib_tflite_micro
+          make patch
+          cd %GITHUB_WORKSPACE%/python/xmos_ai_tools/xinterpreters
           mkdir -p build
           cd build
           cmake ..
@@ -310,7 +310,7 @@ jobs:
                               
           cd %GITHUB_WORKSPACE%/xformer
           set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC
-          bazelisk build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.8.10/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --//:disable_version_check
+          bazelisk --output_user_root c:\_bzl build //:xcore-opt --local_ram_resources=5120 --action_env PYTHON_BIN_PATH="C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe" --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --google_default_credentials --//:disable_version_check
       - name: Build windows wheels
         shell: cmd
         env:

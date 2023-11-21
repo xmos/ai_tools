@@ -76,12 +76,12 @@ class install_plat_lib(install):
 
 # add device lib and headers as package data
 device_files = {
-    root.replace(os.sep, "."): ["*.h", "*.a", "*.make", "*.cmake"]
-    for root, d, f in os.walk(os.path.join("xmos_ai_tools", "xinterpreters", "device"))
+    root.replace(os.sep, "."): ["*.h", "*.a", "*.lib", "*.make", "*.cmake"]
+    for root, d, f in os.walk(os.path.join("xmos_ai_tools", "runtime"))
 }
 
 # add host interpreter lib
-package_files = {"xmos_ai_tools.xinterpreters.host": XTFLM_INTERPRETER_LIBS}
+package_files = {"xmos_ai_tools.xinterpreters": XTFLM_INTERPRETER_LIBS}
 package_files.update(device_files)
 
 setup(
@@ -107,9 +107,8 @@ setup(
         "Intended Audience :: Science/Research",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -117,13 +116,12 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.9",
     packages=find_namespace_packages(),
     install_requires=REQUIRED_PACKAGES,
     package_data=package_files,
     data_files=[
-        ("Scripts" if platform.system() ==
-         "Windows" else "bin", [XCOREOPT_BINARY])
+        ("Scripts" if platform.system() == "Windows" else "bin", [XCOREOPT_BINARY])
     ],
     cmdclass={
         "bdist_wheel": bdist_wheel,

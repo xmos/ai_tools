@@ -84,7 +84,7 @@ set(DEFINTIONS
     "NN_USE_REF"
 )
 target_compile_definitions(xtflm_python PUBLIC ${DEFINTIONS})
-target_compile_features(xtflm_python PUBLIC cxx_std_14)
+target_compile_features(xtflm_python PUBLIC cxx_std_17)
 target_compile_options(xtflm_python PRIVATE ${BUILD_FLAGS})
 target_link_options(xtflm_python PRIVATE ${BUILD_FLAGS})
 

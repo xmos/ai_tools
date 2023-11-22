@@ -107,6 +107,7 @@ def createZip(String platform) {
                 sh "make create_zip -j4"
             }
         }
+        sh "ls -l third_party/lib_tflite_micro/build/*.zip"
     }
     stash name: "release_archive", includes: "third_party/lib_tflite_micro/build/*.zip"
 }

@@ -39,11 +39,13 @@ pipeline {
                 } }
                 stage("Build") { steps { withVenv {
                     // build runtime
-                    createZip("x86")
+                    createZip("linux")
                     dir("python/xmos_ai_tools/runtime") {
-                        unstash "release_archive" 
+                        sh "ls"
+                        unstash "release_archive_linux" 
                         sh "unzip release_archive.zip"
                         sh "rm release_archive.zip"
+                        sh "ls"
                     }
                     dir("python/xmos_ai_tools/xinterpreters/build") {
                         sh "cmake .."
@@ -101,11 +103,13 @@ def createZip(String platform) {
             dir("build") {
                 if (platform == "device") {
                     sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
-                } else {
-                    sh "cmake .. -DLIB_NAME=x86tflitemicro"
+                } else if (platform == "linux" || platform == "mac_x86" || platform == "mac_arm") {
+                    sh "cmake .. -DLIB_NAME=${platform}tflitemicro"
+                } else if (platform == "windows") {
+                    // Windows-specific cmake command
                 }
                 sh "make create_zip -j4"
-                stash name: "release_archive", includes: "release_archive.zip"
+                stash name: "release_archive_${platform}", includes: "release_archive.zip"
             }
         }
     }

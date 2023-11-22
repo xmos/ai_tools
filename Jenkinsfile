@@ -41,11 +41,13 @@ pipeline {
                     // build runtime
                     createZip("linux")
                     dir("python/xmos_ai_tools/runtime") {
-                        sh "ls"
                         unstash "release_archive_linux" 
-                        sh "unzip release_archive.zip"
-                        sh "rm release_archive.zip"
-                        sh "ls"
+                        sh """
+                            unzip release_archive.zip
+                            rm release_archive.zip
+                            ls lib
+                            ls include
+                        """
                     }
                     dir("python/xmos_ai_tools/xinterpreters/build") {
                         sh "cmake .."

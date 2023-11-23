@@ -58,16 +58,16 @@ pipeline {
                         stash name: "linux_wheel", includes: "dist/*"
                     }
                 } } }
-                stage("Build x86 Mac runtime") {
-                    agent { label "mac && !arm64" }
-                    steps {
-                        setupEnvironment()
-                        withVenv {
-                            createZip("mac_x86")
-                        }
-                    }
-                    post { cleanup { xcoreCleanSandbox() } }
-                }
+                // stage("Build x86 Mac runtime") {
+                //     agent { label "mac && !arm64" }
+                //     steps {
+                //         setupEnvironment()
+                //         withVenv {
+                //             createZip("mac_x86")
+                //         }
+                //     }
+                //     post { cleanup { xcoreCleanSandbox() } }
+                // }
                 stage("Build Arm Mac runtime") {
                     agent { label "mac && arm64" }
                     steps {
@@ -157,7 +157,9 @@ def extractRuntime() {
         dir("python/xmos_ai_tools/runtime") {
             sh "unzip release_archive.zip"
             sh "rm release_archive.zip"
+            sh "ls"
             unstash "release_archive"
+            sh "ls"
             sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
         }
     } else {

@@ -30,15 +30,13 @@ pipeline {
             artifactNumToKeepStr: env.BRANCH_NAME ==~ /develop/ ? '100' : ''
         ))
     }
+    agent { label "linux && 64 && !noAVX2" } 
     stages {
-        agent { label "linux && 64 && !noAVX2" } 
-        stage("Build device runtime") {
-            steps {
+        stage("Build device runtime") { steps {
                 setupEnvironment()
                 withVenv { createZip("device") }
                 stash name: "release_archive", includes: "third_party/lib_tflite_micro/build/release_archive.zip"
-            }
-        }
+        } }
         stage("Build host wheels") {
             parallel {
                 stage("Build linux runtime") { steps { withVenv {
@@ -105,8 +103,8 @@ pipeline {
                 post { cleanup { xcoreCleanSandbox() } }
             }
         } }
-        post { cleanup { xcoreCleanSandbox() } }
     }
+    post { cleanup { xcoreCleanSandbox() } }
 }
 
 

@@ -33,42 +33,60 @@ pipeline {
     stages {
         stage("Setup and build") { 
             agent { label "linux && 64 && !noAVX2" } 
-            stages {
-                stage("Setup") { steps {
+            stage("Build device runtime") {
+                steps {
                     setupEnvironment()
-                } }
-                stage("Build") { steps { withVenv {
-                    // build runtime
-                    createZip("linux")
-                    dir("python/xmos_ai_tools/runtime") {
-                        unstash "release_archive_linux" 
-                        sh """
-                            unzip release_archive.zip
-                            rm release_archive.zip
-                            ls lib
-                            ls include
-                        """
+                    withVenv { createZip("device") }
+                    stash name: "release_archive", includes: "third_party/lib_tflite_micro/build/release_archive.zip"
+                }
+            }
+            stage("Build host wheels") {
+                parallel {
+                    stage("Build linux runtime") {
+                        agent { label "linux && 64 && !noAVX2" } steps {
+                            setupEnvironment()
+                            withVenv {
+                                createZip("linux")
+                                extractRuntime()
+                                buildXinterpreter()
+                                // build xformer
+                                dir("xformer") {
+                                    sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
+                                    sh "chmod +x bazelisk-linux-amd64"
+                                    sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
+                                    // TODO: factor this out
+                                    // yes, this is a test, but might as well not download bazel again
+                                    sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+                                }
+                                // create wheel
+                                dir ("python") {
+                                    sh "python3 setup.py bdist_wheel"
+                                    sh "pip install dist/*"
+                                    stash name: "linux_wheel", includes: "dist/*"
+                                }
+                            }
+                        }
+                        post { cleanup { xcoreCleanSandbox() } }
                     }
-                    dir("python/xmos_ai_tools/xinterpreters/build") {
-                        sh "cmake .."
-                        sh "cmake --build . -t install --parallel 4 --config Release"
+                    stage("Build x86 Mac runtime") {
+                        agent { label "mac && x86_64" } steps {
+                            setupEnvironment()
+                            withVenv {
+                                createZip("mac_x86")
+                            }
+                        }
+                        post { cleanup { xcoreCleanSandbox() } }
                     }
-                    // build xformer
-                    dir("xformer") {
-                        sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
-                        sh "chmod +x bazelisk-linux-amd64"
-                        sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
-                        // TODO: factor this out
-                        // yes, this is a test, but might as well not download bazel again
-                        sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+                    stage("Build Arm Mac runtime") {
+                        agent { label "mac && arm64" } steps {
+                            setupEnvironment()
+                            withVenv {
+                                createZip("mac_arm")
+                            }
+                        }
+                        post { cleanup { xcoreCleanSandbox() } }
                     }
-                    // build python wheel with xformer and install into env
-                    dir ("python") {
-                        sh "python3 setup.py bdist_wheel"
-                        sh "pip install dist/*"
-                        stash name: "xmos_ai_tools_wheel", includes: "dist/*"
-                    }
-                } } }
+                }
             }
             post { cleanup { xcoreCleanSandbox() } }
         } 
@@ -106,12 +124,11 @@ def createZip(String platform) {
                 if (platform == "device") {
                     sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
                 } else if (platform == "linux" || platform == "mac_x86" || platform == "mac_arm") {
-                    sh "cmake .. -DLIB_NAME=${platform}tflitemicro"
+                    sh "cmake .. -DLIB_NAME=tflitemicro_${platform}"
                 } else if (platform == "windows") {
                     // Windows-specific cmake command
                 }
                 sh "make create_zip -j4"
-                stash name: "release_archive_${platform}", includes: "release_archive.zip"
             }
         }
     }
@@ -134,6 +151,33 @@ def setupEnvironment() {
 }
 
 
+def buildXinterpreter() {
+    dir("python/xmos_ai_tools/xinterpreters/build") {
+        sh "cmake .."
+        sh "cmake --build . -t install --parallel 4 --config Release"
+    }
+}
+
+
+def extractRuntime() {
+    if (isUnix()) {
+        sh "mv third_party/lib_tflite_micro/build/release_archive.zip python/xmos_ai_tools/runtime"
+        dir("python/xmos_ai_tools/runtime") {
+            sh "unzip release_archive.zip"
+            sh "rm release_archive.zip"
+            unstash "release_archive"
+            sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
+        }
+    } else {
+        bat "move third_party\\lib_tflite_micro\\build\\release_archive.zip python\\xmos_ai_tools\\runtime"
+        dir("python\\xmos_ai_tools\\runtime") {
+            bat "tar -xf release_archive.zip"
+            bat "del release_archive.zip"
+        }
+    }
+}
+
+
 def runTests(String platform) {
     script {
         println "Stage running on: ${env.NODE_NAME}"
@@ -143,7 +187,7 @@ def runTests(String platform) {
         withVenv {
             sh "pip install -r requirements.txt"
             dir ("python") {
-                unstash "xmos_ai_tools_wheel"
+                unstash "linux_wheel"
                 sh "pip install dist/*"
             }
             if (platform == "device") {

@@ -34,7 +34,9 @@ pipeline {
         stage("Build device runtime") { steps {
                 setupEnvironment()
                 withVenv { withTools(params.TOOLS_VERSION) { createZip("device") } }
-                stash name: "release_archive", includes: "third_party/lib_tflite_micro/build/release_archive.zip"
+                dir("third_party/lib_tflite_micro/build/") {
+                    stash name: "release_archive", includes: "release_archive.zip"
+                }
         } }
         stage("Build host wheels") {
             parallel {

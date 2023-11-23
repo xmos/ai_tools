@@ -31,68 +31,60 @@ pipeline {
         ))
     }
     stages {
-        stage("Setup and build") { 
-            agent { label "linux && 64 && !noAVX2" } 
-            stage("Build device runtime") {
-                steps {
-                    setupEnvironment()
-                    withVenv { createZip("device") }
-                    stash name: "release_archive", includes: "third_party/lib_tflite_micro/build/release_archive.zip"
+        agent { label "linux && 64 && !noAVX2" } 
+        stage("Build device runtime") {
+            steps {
+                setupEnvironment()
+                withVenv { createZip("device") }
+                stash name: "release_archive", includes: "third_party/lib_tflite_micro/build/release_archive.zip"
+            }
+        }
+        stage("Build host wheels") {
+            parallel {
+                stage("Build linux runtime") { steps { withVenv {
+                    createZip("linux")
+                    extractRuntime()
+                    buildXinterpreter()
+                    // build xformer
+                    dir("xformer") {
+                        sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
+                        sh "chmod +x bazelisk-linux-amd64"
+                        sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
+                        // TODO: factor this out
+                        // yes, this is a test, but might as well not download bazel again
+                        sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+                    }
+                    // create wheel
+                    dir ("python") {
+                        sh "python3 setup.py bdist_wheel"
+                        sh "pip install dist/*"
+                        stash name: "linux_wheel", includes: "dist/*"
+                    }
+                } } }
+                stage("Build x86 Mac runtime") {
+                    agent { label "mac && x86_64" }
+                    steps {
+                        setupEnvironment()
+                        withVenv {
+                            createZip("mac_x86")
+                        }
+                    }
+                    post { cleanup { xcoreCleanSandbox() } }
+                }
+                stage("Build Arm Mac runtime") {
+                    agent { label "mac && arm64" }
+                    steps {
+                        setupEnvironment()
+                        withVenv {
+                            createZip("mac_arm")
+                        }
+                    }
+                    post { cleanup { xcoreCleanSandbox() } }
                 }
             }
-            stage("Build host wheels") {
-                parallel {
-                    stage("Build linux runtime") {
-                        agent { label "linux && 64 && !noAVX2" } steps {
-                            setupEnvironment()
-                            withVenv {
-                                createZip("linux")
-                                extractRuntime()
-                                buildXinterpreter()
-                                // build xformer
-                                dir("xformer") {
-                                    sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
-                                    sh "chmod +x bazelisk-linux-amd64"
-                                    sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
-                                    // TODO: factor this out
-                                    // yes, this is a test, but might as well not download bazel again
-                                    sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
-                                }
-                                // create wheel
-                                dir ("python") {
-                                    sh "python3 setup.py bdist_wheel"
-                                    sh "pip install dist/*"
-                                    stash name: "linux_wheel", includes: "dist/*"
-                                }
-                            }
-                        }
-                        post { cleanup { xcoreCleanSandbox() } }
-                    }
-                    stage("Build x86 Mac runtime") {
-                        agent { label "mac && x86_64" } steps {
-                            setupEnvironment()
-                            withVenv {
-                                createZip("mac_x86")
-                            }
-                        }
-                        post { cleanup { xcoreCleanSandbox() } }
-                    }
-                    stage("Build Arm Mac runtime") {
-                        agent { label "mac && arm64" } steps {
-                            setupEnvironment()
-                            withVenv {
-                                createZip("mac_arm")
-                            }
-                        }
-                        post { cleanup { xcoreCleanSandbox() } }
-                    }
-                }
-            }
-            post { cleanup { xcoreCleanSandbox() } }
-        } 
+        }
         stage("Tests") { parallel {
             stage("Host Test") {
-                agent { label "linux && 64 && !noAVX2" }
                 stages {
                     stage("Integration Tests") { steps { runTests("host") } }
                     stage("Notebook Tests") { steps { withVenv {
@@ -103,14 +95,17 @@ pipeline {
                         // sh "pytest --nbmake ./docs/notebooks/*.ipynb"
                     } } }
                 }
-                post { cleanup { xcoreCleanSandbox() } }
             }
             stage("Device Test") {
                 agent { label "xcore.ai-explorer && lpddr && !macos" }
-                steps { runTests("device") }
+                steps {
+                    setupEnvironment()
+                    runTests("device")
+                }
                 post { cleanup { xcoreCleanSandbox() } }
             }
         } }
+        post { cleanup { xcoreCleanSandbox() } }
     }
 }
 
@@ -181,11 +176,7 @@ def extractRuntime() {
 def runTests(String platform) {
     script {
         println "Stage running on: ${env.NODE_NAME}"
-        checkout scm
-        sh "./build.sh -T init"
-        createVenv("requirements.txt")
         withVenv {
-            sh "pip install -r requirements.txt"
             dir ("python") {
                 unstash "linux_wheel"
                 sh "pip install dist/*"

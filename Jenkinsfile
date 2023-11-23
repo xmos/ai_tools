@@ -3,7 +3,7 @@
 getApproval()
 
 pipeline {
-    agent none
+    agent { label "linux && 64 && !noAVX2" } 
     environment {
         BAZEL_CACHE_URL = 'http://srv-bri-bld-cache:8080'
         BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
@@ -30,7 +30,6 @@ pipeline {
             artifactNumToKeepStr: env.BRANCH_NAME ==~ /develop/ ? '100' : ''
         ))
     }
-    agent { label "linux && 64 && !noAVX2" } 
     stages {
         stage("Build device runtime") { steps {
                 setupEnvironment()

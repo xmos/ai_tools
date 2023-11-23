@@ -39,7 +39,7 @@ pipeline {
         stage("Build host wheels") {
             parallel {
                 stage("Build linux runtime") { steps { withVenv {
-                    createZip("linux")
+                    withTools(params.TOOLS_VERSION) { createZip("linux") }
                     extractRuntime()
                     buildXinterpreter()
                     // build xformer
@@ -59,7 +59,7 @@ pipeline {
                     }
                 } } }
                 stage("Build x86 Mac runtime") {
-                    agent { label "mac && x86_64" }
+                    agent { label "mac && !arm64" }
                     steps {
                         setupEnvironment()
                         withVenv {

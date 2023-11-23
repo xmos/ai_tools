@@ -80,7 +80,7 @@ pipeline {
                             }
                             dir("python") {
                                 sh "python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64"
-                                stash name "mac_arm_wheel", includes: "dist/*"
+                                stash name: "mac_arm_wheel", includes: "dist/*"
                             }
                         }
                     }

@@ -8,8 +8,8 @@ pipeline {
         BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
         REBOOT_XTAG = '1'
     }
-    parameters { // Available to modify on the job page within Jenkins if starting a build
-        string( // use to try different tools versions
+    parameters {
+        string(
             name: 'TOOLS_VERSION',
             defaultValue: '15.2.1',
             description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
@@ -44,22 +44,19 @@ pipeline {
                     withTools(params.TOOLS_VERSION) { createZip("linux") }
                     extractRuntime()
                     buildXinterpreter()
-                    // build xformer
                     dir("xformer") {
                         sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
                         sh "chmod +x bazelisk-linux-amd64"
                         sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
-                        // TODO: factor this out
-                        // yes, this is a test, but might as well not download bazel again
-                        sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
                     }
-                    // create wheel
                     dir ("python") {
+                        // TODO: Make this with manylinux
                         sh "python3 setup.py bdist_wheel"
                         sh "pip install dist/*"
                         stash name: "linux_wheel", includes: "dist/*"
                     }
                 } } }
+                // TODO: Can't get access to x86 mac
                 // stage("Build x86 Mac runtime") {
                 //     agent { label "mac && !arm64" }
                 //     steps {
@@ -76,24 +73,46 @@ pipeline {
                         setupEnvironment()
                         withVenv {
                             createZip("mac_arm")
+                            extractRuntime()
+                            buildXinterpreter()
+                            dir("xformer") {
+                                // TODO: BUILD XFORMER
+                            }
+                            dir("python") {
+                                sh "python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64"
+                                stash name "mac_arm_wheel", includes: "dist/*"
+                            }
                         }
                     }
                     post { cleanup { xcoreCleanSandbox() } }
                 }
+                // TODO: Windows build
             }
         }
         stage("Tests") { parallel {
             stage("Host Test") {
                 stages {
+                    stage("Xformer Tests") { steps { withVenv {
+                        sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+                    } } }
                     stage("Integration Tests") { steps { runTests("host") } }
                     stage("Notebook Tests") { steps { withVenv {
                         sh "pip install pytest nbmake"
                         sh "pytest --nbmake ./docs/notebooks/*.ipynb"
+                        // TODO
                         // Test the pytorch to keras notebooks overnight? Need to manually install all requirements
                         // Also these train models so it takes a while
                         // sh "pytest --nbmake ./docs/notebooks/*.ipynb"
                     } } }
                 }
+            }
+            stage("Host Arm Mac Test") {
+                agent { label "mac && arm64" }
+                steps {
+                    setupEnvironment()
+                    runTests("mac_arm")
+                }
+                post { cleanup { xcoreCleanSandbox() } }
             }
             stage("Device Test") {
                 agent { label "xcore.ai-explorer && lpddr && !macos" }
@@ -105,6 +124,7 @@ pipeline {
             }
         } }
     }
+    // TODO: Publish to PyPI if TAG_VERSION is set
     post { cleanup { xcoreCleanSandbox() } }
 }
 
@@ -120,6 +140,7 @@ def createZip(String platform) {
                 } else if (platform == "linux" || platform == "mac_x86" || platform == "mac_arm") {
                     sh "cmake .. -DLIB_NAME=tflitemicro_${platform}"
                 } else if (platform == "windows") {
+                    // TODO
                     // Windows-specific cmake command
                 }
                 sh "make create_zip -j4"
@@ -139,6 +160,7 @@ def setupEnvironment() {
             createVenv("requirements.txt")
             withVenv { sh "pip install -r requirements.txt" }
         } else {
+            // TODO
             // Windows specific setup steps
         }
     }
@@ -165,6 +187,7 @@ def extractRuntime() {
             sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
         }
     } else {
+        // TODO: Add device runtime
         bat "move third_party\\lib_tflite_micro\\build\\release_archive.zip python\\xmos_ai_tools\\runtime"
         dir("python\\xmos_ai_tools\\runtime") {
             bat "tar -xf release_archive.zip"
@@ -179,7 +202,11 @@ def runTests(String platform) {
         println "Stage running on: ${env.NODE_NAME}"
         withVenv {
             dir ("python") {
-                unstash "linux_wheel"
+                if (platform == "linux" | platform == "device") {
+                    unstash "linux_wheel"
+                } else if (platform == "mac_arm") {
+                    unstash "mac_arm_wheel"
+                }
                 sh "pip install dist/*"
             }
             if (platform == "device") {
@@ -188,7 +215,7 @@ def runTests(String platform) {
                 sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_lstm -n 1"
                 // test a float32 layer
                 sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_detection_postprocess -n 1"
-            } else if (platform == "host") {
+            } else {
                 sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_junit.xml"
                 sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n 8 --junitxml=integration_tests/integration_bnns_junit.xml"
                 sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns --compiled -n 8 --junitxml=integration_compiled_non_bnns_junit.xml"

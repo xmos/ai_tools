@@ -77,6 +77,7 @@ pipeline {
                             buildXinterpreter()
                             dir("xformer") {
                                 // TODO: BUILD XFORMER
+                                sh "bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
                             }
                             dir("python") {
                                 sh "python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64"
@@ -90,7 +91,7 @@ pipeline {
             }
         }
         stage("Tests") { parallel {
-            stage("Host Test") {
+            stage("Linux Test") {
                 stages {
                     stage("Xformer Tests") { steps { withVenv {
                         sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"

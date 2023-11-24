@@ -45,12 +45,13 @@ pipeline {
                     extractRuntime()
                     buildXinterpreter()
                     dir("xformer") {
-                        sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
+                        sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                         sh "chmod +x bazelisk-linux-amd64"
                         sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
                     }
                     dir ("python") {
                         // TODO: Make this with manylinux
+                        sh "pip install auditwheel==5.2.0 --no-cache-dir"
                         sh "python3 setup.py bdist_wheel"
                         sh "pip install dist/*"
                         stash name: "linux_wheel", includes: "dist/*"
@@ -76,8 +77,10 @@ pipeline {
                             extractRuntime()
                             buildXinterpreter()
                             dir("xformer") {
-                                // TODO: BUILD XFORMER
-                                sh "bazelisk build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
+                                // TODO: Install bazelisk on mac via brew
+                                sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
+                                sh "chmod +x bazelisk-darwin-arm64"
+                                sh "./bazelisk-darwin-arm64 build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
                             }
                             dir("python") {
                                 sh "python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64"

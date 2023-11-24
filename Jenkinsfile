@@ -1,3 +1,7 @@
+// Things to optimise if this is too slow:
+// - build device runtime in parallel with host runtimes, use mutex before combining into wheel
+// - install bazelisk directly on the Jenkins machines: will save about 50MB of downloads per CI run
+
 @Library('xmos_jenkins_shared_library@v0.25.0') _
 
 getApproval()
@@ -194,9 +198,7 @@ def extractRuntime() {
         dir("python/xmos_ai_tools/runtime") {
             sh "unzip release_archive.zip"
             sh "rm release_archive.zip"
-            sh "ls"
             unstash "release_archive"
-            sh "ls"
             sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
         }
     } else {

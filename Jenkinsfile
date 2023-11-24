@@ -57,19 +57,29 @@ pipeline {
                         stash name: "linux_wheel", includes: "dist/*"
                     }
                 } } }
-                // TODO: Can't get access to x86 mac
-                // stage("Build x86 Mac runtime") {
-                //     agent { label "mac && !arm64" }
-                //     steps {
-                //         setupEnvironment()
-                //         withVenv {
-                //             createZip("mac_x86")
-                //         }
-                //     }
-                //     post { cleanup { xcoreCleanSandbox() } }
-                // }
+                stage("Build x86 Mac runtime") {
+                    agent { label "macos && !arm64" }
+                    steps {
+                        setupEnvironment()
+                        withVenv {
+                            createZip("mac_x86")
+                            extractRuntime()
+                            buildXinterpreter()
+                            dir("xformer") {
+                                sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-amd64"
+                                sh "chmod +x bazelisk-darwin-amd64"
+                                sh "./bazelisk-darwin-amd64 build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --//:disable_version_check"
+                            }
+                            dir("python") {
+                                sh "python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64"
+                                stash name: "mac_arm_wheel", includes: "dist/*"
+                            }
+                        }
+                    }
+                    post { cleanup { xcoreCleanSandbox() } }
+                }
                 stage("Build Arm Mac runtime") {
-                    agent { label "mac && arm64" }
+                    agent { label "macos && arm64" }
                     steps {
                         setupEnvironment()
                         withVenv {
@@ -77,8 +87,7 @@ pipeline {
                             extractRuntime()
                             buildXinterpreter()
                             dir("xformer") {
-                                // TODO: Install bazelisk on mac via brew
-                                sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
+                                sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
                                 sh "chmod +x bazelisk-darwin-arm64"
                                 sh "./bazelisk-darwin-arm64 build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
                             }

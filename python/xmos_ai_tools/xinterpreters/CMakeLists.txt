@@ -4,7 +4,12 @@ set(CMAKE_BUILD_TYPE "Release")
 project(xtflm_python VERSION 1.0.1)
 
 # This variable is ignored on platforms other than Apple
-set(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk)
+if(APPLE)
+    execute_process(COMMAND xcrun --show-sdk-path
+                    OUTPUT_VARIABLE CMAKE_OSX_SYSROOT
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+# set(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk)
 
 #**********************
 # Build flags

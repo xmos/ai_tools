@@ -102,6 +102,9 @@ build:asan --copt -fno-sanitize-recover=all
 build:asan --copt -gmlt
 build:asan --linkopt -fsanitize=address
 
+# Use UNIX toolchain on macos
+build:macos --crosstool_top=@bazel_tools//tools/cpp:toolchain
+
 # BAZEL DEBUG BUILD NOTES
 # Creating a debug build for Tensorflow is extremely taxing. Enabling debug for all of Tensorflow makes the build and link process take 3-4 hours. It finally doesn't work as the library is too large to be loaded. 
 # As a solution to this problem, the bazel option --per_file_copt is awesome as it allows just the files within a particular package to be built with different flags. 

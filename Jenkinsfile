@@ -74,7 +74,6 @@ pipeline {
                         withVenv {
                             createZip("mac_arm")
                             extractRuntime()
-                            sh "xcode-select --install"
                             buildXinterpreter()
                             dir("xformer") {
                                 // TODO: BUILD XFORMER

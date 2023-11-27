@@ -68,20 +68,18 @@ pipeline {
                         checkout scm
                         sh "git submodule update --init --recursive --jobs 4"
                         sh "make -C third_party/lib_tflite_micro patch"
-                        withVenv {
-                            createZip("mac_x86")
-                            extractRuntime()
-                            buildXinterpreter()
-                            dir("xformer") {
-                                sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-amd64"
-                                sh "chmod +x bazelisk-darwin-amd64"
-                                // TODO: Fix issue with XCode not being there
-                                sh "./bazelisk-darwin-amd64 build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --//:disable_version_check"
-                            }
-                            dir("python") {
-                                sh "python3 setup.py bdist_wheel --plat-name macosx_10_14_x86_64"
-                                stash name: "mac_x86_wheel", includes: "dist/*"
-                            }
+                        createZip("mac_x86")
+                        extractRuntime()
+                        buildXinterpreter()
+                        dir("xformer") {
+                            sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-amd64"
+                            sh "chmod +x bazelisk-darwin-amd64"
+                            // TODO: Fix issue with XCode not being there
+                            sh "./bazelisk-darwin-amd64 build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --//:disable_version_check"
+                        }
+                        dir("python") {
+                            sh "python3 setup.py bdist_wheel --plat-name macosx_10_14_x86_64"
+                            stash name: "mac_x86_wheel", includes: "dist/*"
                         }
                     }
                     post { cleanup { xcoreCleanSandbox() } }

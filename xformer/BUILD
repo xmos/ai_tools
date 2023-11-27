@@ -237,11 +237,19 @@ config_setting(
 
 cc_binary(
     name = "xcore-opt",
-    srcs = ["XCoreOptMain.cpp", "Version.h"],
+    srcs = ["XCoreOptMain.cpp",
+        "Version.h",
+        "@org_tensorflow//tensorflow/lite/kernels:padding.h",
+        "@org_tensorflow//tensorflow/lite/kernels/internal:reference/pooling.h",
+        "@org_tensorflow//tensorflow/lite/kernels/internal:reference/integer_ops/pooling.h",
+        "@org_tensorflow//tensorflow/lite/c:common.h",
+        "@org_tensorflow//tensorflow/lite/c:builtin_op_data.h",
+        "@org_tensorflow//tensorflow/lite/c:c_api_types.h",
+    ],
     deps = [
-        ":xcore_passes",
         "@lib_tflite_micro//:shared_headers",
         "@lib_tflmc//:tflmc_lib",
+        ":xcore_passes",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:QuantOps",

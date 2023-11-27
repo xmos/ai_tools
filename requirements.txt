@@ -3,8 +3,7 @@
 
 # Doesn't work on x86 macs: latest version is 2.11?
 tensorflow==2.14.0; sys_platform != 'darwin' and platform_machine != 'arm64'
-tensorflow-macos==2.14.0; sys_platform == 'darwin' # and platform_machine == 'arm64'
-# https://storage.googleapis.com/tensorflow/mac/cpu/tensorflow-2.14.0-cp311-cp311-macosx_10_15_x86_64.whl; sys_platform == 'darwin' and platform_machine != 'arm64'
+tensorflow-macos==2.14.0; sys_platform == 'darwin'
 numpy>=1.20
 pkgconfig==1.5.5
 protobuf>=3.20.3

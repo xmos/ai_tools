@@ -105,14 +105,12 @@ pipeline {
                             sh "chmod +x bazelisk-darwin-arm64"
                             sh "./bazelisk-darwin-arm64 build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
                         }
-                        dir("python") {
-                            sh "python -m venv venv"
-                            sh ". .venv/bin/activate"
+                        createVenv("requirements.txt")
+                        dir("python") { withVenv {
                             sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
                             sh "python setup.py bdist_wheel --plat-name macosx_11_0_arm64"
-                            sh "deactivate"
                             stash name: "mac_arm_wheel", includes: "dist/*"
-                        }
+                        } }
                     }
                     post { cleanup { xcoreCleanSandbox() } }
                 }

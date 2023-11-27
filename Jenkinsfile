@@ -52,7 +52,7 @@ pipeline {
                         extractRuntime()
                         buildXinterpreter() 
                     }
-                    docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools") {
+                    docker.image('tensorflow/build:2.14-python3.9').inside('-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools') {
                         dir("xformer") {
                             sh "bazel --version"
                             // sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"

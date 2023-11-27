@@ -46,23 +46,32 @@ pipeline {
         } }
         stage("Build host wheels") {
             parallel {
-                stage("Build linux runtime") { steps { withVenv {
-                    withTools(params.TOOLS_VERSION) { createZip("linux") }
-                    extractRuntime()
-                    buildXinterpreter()
-                    dir("xformer") {
-                        sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
-                        sh "chmod +x bazelisk-linux-amd64"
-                        sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
+                stage("Build linux runtime") { steps {
+                    withVenv {
+                        withTools(params.TOOLS_VERSION) { createZip("linux") }
+                        extractRuntime()
+                        buildXinterpreter() 
                     }
-                    dir ("python") {
+                    docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools") {
+                        dir("xformer") {
+                            sh "bazel --version"
+                            // sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
+                            // sh "chmod +x bazelisk-linux-amd64"
+                            // sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
+                            sh 'bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" --//:disable_version_check'
+                        }
+                        dir("python") {
+                            sh "python setup.py bdist_wheel"
+                        }
+                    }
+                    dir ("python") { withVenv {
                         // TODO: Make this with manylinux
                         sh "pip install auditwheel==5.2.0 --no-cache-dir"
                         sh "python3 setup.py bdist_wheel"
                         sh "pip install dist/*"
                         stash name: "linux_wheel", includes: "dist/*"
-                    }
-                } } }
+                    } }
+                } } 
                 stage("Build x86 Mac runtime") {
                     agent { label "macos_13 && !arm64" }
                     steps {

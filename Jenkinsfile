@@ -65,7 +65,9 @@ pipeline {
                     agent { label "macos && !arm64" }
                     steps {
                         // TODO: Fix tensorflow installation
-                        setupEnvironment()
+                        checkout scm
+                        sh "git submodule update --init --recursive --jobs 4"
+                        sh "make -C third_party/lib_tflite_micro patch"
                         withVenv {
                             createZip("mac_x86")
                             extractRuntime()

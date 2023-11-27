@@ -52,17 +52,19 @@ pipeline {
                         extractRuntime()
                         buildXinterpreter() 
                     }
-                    docker.image('tensorflow/build:2.14-python3.9').inside('-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools') {
-                        dir("xformer") {
-                            sh "bazel --version"
-                            // sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
-                            // sh "chmod +x bazelisk-linux-amd64"
-                            // sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
-                            sh 'bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" --//:disable_version_check'
-                        }
-                        dir("python") {
-                            sh "python setup.py bdist_wheel"
-                        }
+                    script {
+                        docker.image('tensorflow/build:2.14-python3.9').inside('-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools') {
+                            dir("xformer") {
+                                sh "bazel --version"
+                                // sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
+                                // sh "chmod +x bazelisk-linux-amd64"
+                                // sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
+                                sh 'bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" --//:disable_version_check'
+                            }
+                            dir("python") {
+                                sh "python setup.py bdist_wheel"
+                            }
+                        } 
                     }
                     dir ("python") { withVenv {
                         // TODO: Make this with manylinux
@@ -83,7 +85,6 @@ pipeline {
                         dir("xformer") {
                             sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-amd64"
                             sh "chmod +x bazelisk-darwin-amd64"
-                            // TODO: Fix issue with XCode not being there
                             sh "./bazelisk-darwin-amd64 build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --//:disable_version_check"
                         }
                         dir("python") {
@@ -103,7 +104,6 @@ pipeline {
                         dir("xformer") {
                             sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
                             sh "chmod +x bazelisk-darwin-arm64"
-                            // TODO: Fix issue with XCode not being there
                             sh "./bazelisk-darwin-arm64 build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
                         }
                         dir("python") {

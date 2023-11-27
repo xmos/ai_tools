@@ -64,7 +64,7 @@ pipeline {
                     }
                 } } }
                 stage("Build x86 Mac runtime") {
-                    agent { label "macos && !arm64" }
+                    agent { label "maco_13 && !arm64" }
                     steps {
                         // TODO: Fix tensorflow installation
                         setupRepo()
@@ -75,7 +75,7 @@ pipeline {
                             sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-amd64"
                             sh "chmod +x bazelisk-darwin-amd64"
                             // TODO: Fix issue with XCode not being there
-                            sh "BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 ./bazelisk-darwin-amd64 build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --//:disable_version_check"
+                            sh "./bazelisk-darwin-amd64 build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --//:disable_version_check"
                         }
                         dir("python") {
                             sh "python3 setup.py bdist_wheel --plat-name macosx_10_14_x86_64"
@@ -95,7 +95,7 @@ pipeline {
                             sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
                             sh "chmod +x bazelisk-darwin-arm64"
                             // TODO: Fix issue with XCode not being there
-                            sh "BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 ./bazelisk-darwin-arm64 build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
+                            sh "./bazelisk-darwin-arm64 build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
                         }
                         dir("python") {
                             sh "python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64"

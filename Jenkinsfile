@@ -64,7 +64,7 @@ pipeline {
                     }
                 } } }
                 stage("Build x86 Mac runtime") {
-                    agent { label "maco_13 && !arm64" }
+                    agent { label "macos_13 && !arm64" }
                     steps {
                         // TODO: Fix tensorflow installation
                         setupRepo()

@@ -47,7 +47,7 @@ pipeline {
         stage("Build host wheels") {
             parallel {
                 stage("Build linux runtime") { steps {
-                    createZip("linux")
+                    withTools(params.TOOLS_VERSION) { createZip("linux") }
                     extractRuntime()
                     buildXinterpreter() 
                     script {
@@ -106,8 +106,12 @@ pipeline {
                             sh "./bazelisk-darwin-arm64 build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
                         }
                         dir("python") {
-                            sh "python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64"
-                            stash name: "mac_arm_wheel", includes: "dist/*"
+                            createVenv("macos_setup")
+                            withVenv {
+                                sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
+                                sh "python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64"
+                                stash name: "mac_arm_wheel", includes: "dist/*"
+                            }
                         }
                     }
                     post { cleanup { xcoreCleanSandbox() } }

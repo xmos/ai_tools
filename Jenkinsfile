@@ -36,7 +36,9 @@ pipeline {
     agent { label "linux && 64 && !noAVX2" } 
     stages {
         stage("Build device runtime") { steps {
-                setupEnvironment()
+                setupRepo()
+                createVenv("requirements.txt")
+                withVenv { sh "pip install -r requirements.txt" }
                 withVenv { withTools(params.TOOLS_VERSION) { createZip("device") } }
                 dir("third_party/lib_tflite_micro/build/") {
                     stash name: "release_archive", includes: "release_archive.zip"
@@ -65,9 +67,7 @@ pipeline {
                     agent { label "macos && !arm64" }
                     steps {
                         // TODO: Fix tensorflow installation
-                        checkout scm
-                        sh "git submodule update --init --recursive --jobs 4"
-                        sh "make -C third_party/lib_tflite_micro patch"
+                        setupRepo()
                         createZip("mac_x86")
                         extractRuntime()
                         buildXinterpreter()
@@ -87,21 +87,19 @@ pipeline {
                 stage("Build Arm Mac runtime") {
                     agent { label "macos && arm64" }
                     steps {
-                        setupEnvironment()
-                        withVenv {
-                            createZip("mac_arm")
-                            extractRuntime()
-                            buildXinterpreter()
-                            dir("xformer") {
-                                sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
-                                sh "chmod +x bazelisk-darwin-arm64"
-                                // TODO: Fix issue with XCode not being there
-                                sh "./bazelisk-darwin-arm64 build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
-                            }
-                            dir("python") {
-                                sh "python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64"
-                                stash name: "mac_arm_wheel", includes: "dist/*"
-                            }
+                        setupRepo()
+                        createZip("mac_arm")
+                        extractRuntime()
+                        buildXinterpreter()
+                        dir("xformer") {
+                            sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
+                            sh "chmod +x bazelisk-darwin-arm64"
+                            // TODO: Fix issue with XCode not being there
+                            sh "./bazelisk-darwin-arm64 build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
+                        }
+                        dir("python") {
+                            sh "python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64"
+                            stash name: "mac_arm_wheel", includes: "dist/*"
                         }
                     }
                     post { cleanup { xcoreCleanSandbox() } }
@@ -129,7 +127,9 @@ pipeline {
             stage("Host Arm Mac Test") {
                 agent { label "mac && arm64" }
                 steps {
-                    setupEnvironment()
+                    setupRepo()
+                    createVenv("requirements.txt")
+                    withVenv { sh "pip install -r requirements.txt" }
                     runTests("mac_arm")
                 }
                 post { cleanup { xcoreCleanSandbox() } }
@@ -137,7 +137,9 @@ pipeline {
             stage("Device Test") {
                 agent { label "xcore.ai-explorer && lpddr && !macos" }
                 steps {
-                    setupEnvironment()
+                    setupRepo()
+                    createVenv("requirements.txt")
+                    withVenv { sh "pip install -r requirements.txt" }
                     runTests("device")
                 }
                 post { cleanup { xcoreCleanSandbox() } }
@@ -170,15 +172,13 @@ def createZip(String platform) {
 }
 
 
-def setupEnvironment() {
+def setupRepo() {
     script {
         println "Stage running on: ${env.NODE_NAME}"
         checkout scm
         if (isUnix()){
             sh "git submodule update --init --recursive --jobs 4"
             sh "make -C third_party/lib_tflite_micro patch"
-            createVenv("requirements.txt")
-            withVenv { sh "pip install -r requirements.txt" }
         } else {
             // TODO
             // Windows specific setup steps

@@ -246,6 +246,13 @@ cc_binary(
         "@org_tensorflow//tensorflow/lite/c:builtin_op_data.h",
         "@org_tensorflow//tensorflow/lite/c:c_api_types.h",
     ],
+    # Tensorflow and tflite-micro contain common tflite files in global namespace.
+    # Tell the compiler to allow multiple definitions when linking this.
+    linkopts = select({
+        "@org_tensorflow//tensorflow:macos": [],
+        "@org_tensorflow//tensorflow:windows": [],
+        "//conditions:default": ["-Wl,-z,muldefs"],
+    }),
     deps = [
         "@lib_tflite_micro//:shared_headers",
         "@lib_tflmc//:tflmc_lib",

@@ -51,7 +51,7 @@ pipeline {
                     extractRuntime()
                     buildXinterpreter() 
                     script {
-                        docker.image('tensorflow/build:2.14-python3.11').inside('-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools') {
+                        docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools") {
                             dir("xformer") {
                                 sh "bazel --version"
                                 // sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
@@ -109,7 +109,6 @@ pipeline {
                         // TODO
                         // Test the pytorch to keras notebooks overnight? Need to manually install all requirements
                         // Also these train models so it takes a while
-                        // sh "pytest --nbmake ./docs/notebooks/*.ipynb"
                     } } }
                 }
             }
@@ -199,6 +198,8 @@ def extractRuntime() {
         dir("python\\xmos_ai_tools\\runtime") {
             bat "tar -xf release_archive.zip"
             bat "del release_archive.zip"
+            unstash "release_archive"
+            bat "tar -xf release_archive.zip lib\\libxtflitemicro.a -C .\\"
         }
     }
 }

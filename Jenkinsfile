@@ -53,9 +53,9 @@ pipeline {
                     script {
                         docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools") {
                             dir("xformer") {
-                                sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
-                                sh "chmod +x bazelisk-linux-amd64"
-                                sh "./bazelisk-linux-amd64 build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top='@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain' --//:disable_version_check --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL}"
+                                // sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
+                                // sh "chmod +x bazelisk-linux-amd64"
+                                sh "bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top='@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain' --//:disable_version_check --output_user_root=ai_tools/.bazel build --remote_cache=${env.BAZEL_CACHE_URL}"
                             }
                             dir("python") {
                                 sh "pip install auditwheel==5.2.0 --no-cache-dir"
@@ -122,8 +122,9 @@ pipeline {
                     }
                     stage("Xformer Tests") {
                         steps {
-                            // TODO: Download bazelisk
-                            sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+                            sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
+                            sh "chmod +x bazelisk-darwin-arm64"
+                            sh "./bazelisk-darwin-arm64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
                         }
                     }
                     stage("Xinterpreter Tests") {

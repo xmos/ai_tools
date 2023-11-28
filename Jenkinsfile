@@ -56,7 +56,7 @@ pipeline {
                                 // sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                                 // sh "chmod +x bazelisk-linux-amd64"
                                 // sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
-                                sh 'bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" --//:disable_version_check --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL}'
+                                sh "bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top='@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain' --//:disable_version_check --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL}"
                             }
                             dir("python") {
                                 sh "pip install auditwheel==5.2.0 --no-cache-dir"

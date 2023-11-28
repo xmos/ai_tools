@@ -51,7 +51,7 @@ pipeline {
                     extractRuntime()
                     buildXinterpreter() 
                     script {
-                        docker.image('tensorflow/build:2.14-python3.9').inside('-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools') {
+                        docker.image('tensorflow/build:2.14-python3.11').inside('-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools') {
                             dir("xformer") {
                                 sh "bazel --version"
                                 // sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
@@ -72,27 +72,6 @@ pipeline {
                     }
                     stash name: "linux_wheel", includes: "dist/*"
                 } } 
-                // TODO: crossplatform build on mac
-                // stage("Build x86 Mac runtime") {
-                //     agent { label "macos_13 && !arm64" }
-                //     steps {
-                //         // TODO: Fix tensorflow installation
-                //         setupRepo()
-                //         createZip("mac_x86")
-                //         extractRuntime()
-                //         buildXinterpreter()
-                //         dir("xformer") {
-                //             sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-amd64"
-                //             sh "chmod +x bazelisk-darwin-amd64"
-                //             sh "./bazelisk-darwin-amd64 build //:xcore-opt --copt=-fvisibility=hidden --copt=-mavx --copt=-mmacosx-version-min=10.13 --linkopt=-mmacosx-version-min=10.13 --linkopt=-dead_strip --distinct_host_configuration=false --//:disable_version_check"
-                //         }
-                //         dir("python") {
-                //             sh "python3 setup.py bdist_wheel --plat-name macosx_10_14_x86_64"
-                //             stash name: "mac_x86_wheel", includes: "dist/*"
-                //         }
-                //     }
-                //     post { cleanup { xcoreCleanSandbox() } }
-                // }
                 stage("Build Arm Mac runtime") {
                     agent { label "macos && arm64 && xcode" }
                     steps {

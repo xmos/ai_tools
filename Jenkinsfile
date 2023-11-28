@@ -53,10 +53,9 @@ pipeline {
                     script {
                         docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools") {
                             dir("xformer") {
-                                // sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
-                                // sh "chmod +x bazelisk-linux-amd64"
-                                // sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
-                                sh "bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top='@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain' --//:disable_version_check --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL}"
+                                sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
+                                sh "chmod +x bazelisk-linux-amd64"
+                                sh "./bazelisk-linux-amd64 build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top='@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain' --//:disable_version_check --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL}"
                             }
                             dir("python") {
                                 sh "pip install auditwheel==5.2.0 --no-cache-dir"
@@ -113,11 +112,25 @@ pipeline {
             }
             stage("Host Arm Mac Test") {
                 agent { label "mac && arm64" }
+                stages {
+                    stage("Setup") {
+                        steps {
+                            setupRepo()
+                            createVenv("requirements.txt")
+                            withVenv { sh "pip install -r requirements.txt" }
+                        }
+                    }
+                    stage("Xformer Tests") {
+                        steps {
+                            // TODO: Download bazelisk
+                            sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+                        }
+                    }
+                    stage("Xinterpreter Tests") {
+                        steps { runTests("mac_arm") }
+                    }
+                }
                 steps {
-                    setupRepo()
-                    createVenv("requirements.txt")
-                    withVenv { sh "pip install -r requirements.txt" }
-                    runTests("mac_arm")
                 }
                 post { cleanup { xcoreCleanSandbox() } }
             }

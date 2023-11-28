@@ -151,7 +151,7 @@ def createZip(String platform) {
                     sh "cmake .. -DLIB_NAME=tflitemicro_${platform}"
                     sh "make create_zip -j4"
                 } else if (platform == "windows") {
-                    bat "cmake .. -DLIB_NAME=tflitemicro_${platform}
+                    bat "cmake .. -DLIB_NAME=tflitemicro_${platform}"
                     // TODO: Make?
                 }
             }

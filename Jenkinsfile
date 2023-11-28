@@ -130,8 +130,6 @@ pipeline {
                         steps { runTests("mac_arm") }
                     }
                 }
-                steps {
-                }
                 post { cleanup { xcoreCleanSandbox() } }
             }
             stage("Device Test") {

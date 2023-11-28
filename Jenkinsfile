@@ -50,10 +50,11 @@ pipeline {
                     withTools(params.TOOLS_VERSION) { createZip("linux") }
                     extractRuntime()
                     buildXinterpreter() 
+                    sh "mkdir -p .bazel-cache"
                     script {
-                        docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools") {
+                        docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -v .bazel-cache:/.cache -w /ai_tools") {
                             dir("xformer") {
-                                sh "bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top='@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain' --//:disable_version_check --output_user_root=ai_tools/.bazel build --remote_cache=${env.BAZEL_CACHE_URL} --disk_cache=/ai_tools/.cache/"
+                                sh "bazel build //:xcore-opt --verbose_failures --linkopt=-lrt --crosstool_top='@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain' --//:disable_version_check --output_user_root=ai_tools/.bazel build --remote_cache=${env.BAZEL_CACHE_URL} --disk_cache=/ai_tools/.bazel-cache/"
                             }
                             dir("python") {
                                 sh "pip install auditwheel==5.2.0 --no-cache-dir"

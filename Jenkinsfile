@@ -53,7 +53,6 @@ pipeline {
                     script {
                         docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools") {
                             dir("xformer") {
-                                sh "bazel --version"
                                 // sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                                 // sh "chmod +x bazelisk-linux-amd64"
                                 // sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} build --remote_cache=${env.BAZEL_CACHE_URL} //:xcore-opt --verbose_failures --//:disable_version_check"
@@ -147,13 +146,14 @@ def createZip(String platform) {
             dir("build") {
                 if (platform == "device") {
                     sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
+                    sh "make create_zip -j4"
                 } else if (platform == "linux" || platform == "mac_x86" || platform == "mac_arm") {
                     sh "cmake .. -DLIB_NAME=tflitemicro_${platform}"
+                    sh "make create_zip -j4"
                 } else if (platform == "windows") {
-                    // TODO
-                    // Windows-specific cmake command
+                    bat "cmake .. -DLIB_NAME=tflitemicro_${platform}
+                    // TODO: Make?
                 }
-                sh "make create_zip -j4"
             }
         }
     }
@@ -168,8 +168,14 @@ def setupRepo() {
             sh "git submodule update --init --recursive --jobs 4"
             sh "make -C third_party/lib_tflite_micro patch"
         } else {
-            // TODO
-            // Windows specific setup steps
+            // bat "git submodule update --init --recursive --jobs 4"
+            // dir("lib_tflite_micro/submodules/tflite-micro") {
+            //     bat "git reset --hard && git apply --directory tensorflow ..\\..\\..\\patches\\tflite-micro.patch"
+            // }
+            // bat "cd lib_tflite_micro\\submodules\\tflite-micro && git reset --hard && git apply --directory tensorflow ..\\..\\..\\patches\\tflite-micro.patch"
+            // bat "cd lib_tflite_micro && ..\\version_check.bat"
+            // bat "mkdir build || echo 'Build directory already exists'"
+            // bat "cd build && cmake .. && nmake /M:8"
         }
     }
 }

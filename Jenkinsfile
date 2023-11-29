@@ -49,10 +49,15 @@ pipeline {
                 stage("Build linux runtime") { steps {
                     withTools(params.TOOLS_VERSION) { createZip("linux") }
                     extractRuntime()
-                    buildXinterpreter() 
+                    // buildXinterpreter() 
                     sh "mkdir -p .bazel-cache"
                     script {
                         docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -v .bazel-cache:/.cache -w /ai_tools") {
+                            sh "pip install auditwheel==5.2.0 cmake --no-cache-dir"
+                            dir("python/xmos_ai_tools/xinterpreters/build") {
+                                sh "cmake .."
+                                sh "cmake --build . -t install --parallel 4 --config Release"
+                            }
                             dir("xformer") {
                                 sh "bazel build //:xcore-opt --verbose_failures --linkopt=-lrt  --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
                             }
@@ -64,7 +69,6 @@ pipeline {
                                 git describe --tags
                             """
                             dir("python") {
-                                sh "pip install auditwheel==5.2.0 --no-cache-dir"
                                 sh "python setup.py bdist_wheel"
                                 sh """
                                     for f in dist/*.whl; do

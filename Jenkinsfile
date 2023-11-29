@@ -56,6 +56,13 @@ pipeline {
                             dir("xformer") {
                                 sh "bazel build //:xcore-opt --verbose_failures --linkopt=-lrt  --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
                             }
+                            sh """
+                                git config --global --add safe.directory /ai_tools
+                                git config --global --add safe.directory /ai_tools/third_party/lib_nn
+                                git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro
+                                git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
+                                git describe --tags
+                            """
                             dir("python") {
                                 sh "pip install auditwheel==5.2.0 --no-cache-dir"
                                 sh "python setup.py bdist_wheel"

@@ -54,6 +54,7 @@ pipeline {
                     script {
                         docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -v .bazel-cache:/.cache -w /ai_tools") {
                             sh "pip install auditwheel==5.2.0 cmake --no-cache-dir"
+                            sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
                             dir("python/xmos_ai_tools/xinterpreters/build") {
                                 sh "cmake .."
                                 sh "cmake --build . -t install --parallel 4 --config Release"
@@ -204,6 +205,7 @@ def setupRepo() {
 
 
 def buildXinterpreter() {
+    sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
     dir("python/xmos_ai_tools/xinterpreters/build") {
         sh "cmake .."
         sh "cmake --build . -t install --parallel 4 --config Release"

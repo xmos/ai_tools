@@ -180,12 +180,6 @@ cc_library(
         "src/MemMap.h",
         "src/TypeToString.h",
         "src/xtflm_conf.h",
-        "@org_tensorflow//tensorflow/lite/kernels:padding.h",
-        "@org_tensorflow//tensorflow/lite/kernels/internal:reference/pooling.h",
-        "@org_tensorflow//tensorflow/lite/kernels/internal:reference/integer_ops/pooling.h",
-        "@org_tensorflow//tensorflow/lite/c:common.h",
-        "@org_tensorflow//tensorflow/lite/c:builtin_op_data.h",
-        "@org_tensorflow//tensorflow/lite/c:c_api_types.h",
     ],
     srcs = [
         "src/CodeWriter.cc",

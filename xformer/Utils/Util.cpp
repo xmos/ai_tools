@@ -12,9 +12,8 @@ namespace utils {
 
 int getShapedTypeSize(ShapedType t) {
   int sizeInBytes;
-  if (t.getElementType().isa<quant::QuantizedType>()) {
-    // we only support QI8
-    sizeInBytes = 1;
+  if (auto quantType = t.getElementType().dyn_cast<quant::QuantizedType>()) {
+    sizeInBytes = quantType.getStorageTypeIntegralWidth() / CHAR_BIT;
   } else {
     sizeInBytes = t.getElementType().getIntOrFloatBitWidth() / CHAR_BIT;
   }

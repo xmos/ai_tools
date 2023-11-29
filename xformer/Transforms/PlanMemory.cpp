@@ -33,7 +33,7 @@ void PlanMemory::runOnOperation() {
     bool unSupportedOpsInGraph = false;
     func.walk<WalkOrder::PreOrder>([&](Operation *op) {
       if (llvm::isa<TFL::UnidirectionalSequenceLSTMOp, TFL::WhileOp, TFL::IfOp,
-                    TFL::CallOnceOp>(op)) {
+                    TFL::CallOnceOp, quantfork::StatisticsOp>(op)) {
         unSupportedOpsInGraph = true;
       }
     });

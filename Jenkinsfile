@@ -102,7 +102,27 @@ pipeline {
                     }
                     post { cleanup { xcoreCleanSandbox() } }
                 }
-                // TODO: Windows build
+                stage("Build Windows runtime") {
+                    agent { label "windows" }
+                    steps {
+                        setupRepo()
+                        createZip("windows")
+                        extractRuntime()
+                        buildXinterpreter()
+                        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+                        bat "set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC"
+                        dir("xformer") {
+                            bat "bazelisk --output_user_root c:\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --//:disable_version_check"
+                        }
+                        createVenv("requirements.txt")
+                        dir("python") { withVenv {
+                            bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
+                            bat "python setup.py bdist_wheel"
+                            stash name: "windows_wheel", includes: "dist/*"
+                        } }
+                    }
+
+                }
             }
         }
         stage("Tests") { parallel {
@@ -175,7 +195,7 @@ def createZip(String platform) {
                     sh "make create_zip -j4"
                 } else if (platform == "windows") {
                     bat "cmake .. -DLIB_NAME=tflitemicro_${platform}"
-                    // TODO: Make?
+                    bat "nmake create_zip -j4"
                 }
             }
         }
@@ -191,24 +211,29 @@ def setupRepo() {
             sh "git submodule update --init --recursive --jobs 4"
             sh "make -C third_party/lib_tflite_micro patch"
         } else {
-            // bat "git submodule update --init --recursive --jobs 4"
-            // dir("lib_tflite_micro/submodules/tflite-micro") {
-            //     bat "git reset --hard && git apply --directory tensorflow ..\\..\\..\\patches\\tflite-micro.patch"
-            // }
-            // bat "cd lib_tflite_micro\\submodules\\tflite-micro && git reset --hard && git apply --directory tensorflow ..\\..\\..\\patches\\tflite-micro.patch"
-            // bat "cd lib_tflite_micro && ..\\version_check.bat"
-            // bat "mkdir build || echo 'Build directory already exists'"
-            // bat "cd build && cmake .. && nmake /M:8"
+            bat "git submodule update --init --recursive --jobs 4"
+            dir("lib_tflite_micro/submodules/tflite-micro") {
+                bat "git reset --hard"
+                bat "git apply --directory tensorflow ..\\..\\..\\patches\\tflite-micro.patch"
+            }
         }
     }
 }
 
 
 def buildXinterpreter() {
-    sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
-    dir("python/xmos_ai_tools/xinterpreters/build") {
-        sh "cmake .."
-        sh "cmake --build . -t install --parallel 4 --config Release"
+    if (isUnix()) {
+        sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
+        dir("python/xmos_ai_tools/xinterpreters/build") {
+            sh "cmake .."
+            sh "cmake --build . -t install --parallel 4 --config Release"
+        }
+    } else {
+        bat "if not exist python\\xmos_ai_tools\\xinterpreters\\build mkdir python\\xmos_ai_tools\\xinterpreters\\build"
+        dir("python\\xmos_ai_tools\\xinterpreters\\build") {
+            bat "cmake .."
+            bat "cmake --build . --target install --parallel 4 --config Release"
+        }
     }
 }
 
@@ -223,7 +248,6 @@ def extractRuntime() {
             sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
         }
     } else {
-        // TODO: Add device runtime
         bat "move third_party\\lib_tflite_micro\\build\\release_archive.zip python\\xmos_ai_tools\\runtime"
         dir("python\\xmos_ai_tools\\runtime") {
             bat "tar -xf release_archive.zip"

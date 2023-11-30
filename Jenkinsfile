@@ -212,7 +212,7 @@ def setupRepo() {
             sh "make -C third_party/lib_tflite_micro patch"
         } else {
             bat "git submodule update --init --recursive --jobs 4"
-            dir("lib_tflite_micro/submodules/tflite-micro") {
+            dir("third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro") {
                 bat "git reset --hard"
                 bat "git apply --directory tensorflow ..\\..\\..\\patches\\tflite-micro.patch"
             }

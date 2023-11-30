@@ -69,17 +69,17 @@ pipeline {
                     //     git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
                     //     git describe --tags
                     // """
-                    // dir("python") {
-                    //     sh "python setup.py bdist_wheel"
+                    dir("python") {
+                        sh "python setup.py bdist_wheel"
                     //     sh """
                     //         for f in dist/*.whl; do
                     //             auditwheel repair --plat manylinux2014_x86_64 $f
                     //         done
                     //     """
-                    // }
+                        stash name: "linux_wheel", includes: "dist/*"
+                    }
                     //     } 
                     // }
-                    stash name: "linux_wheel", includes: "dist/*"
                 } } 
                 stage("Build Arm Mac runtime") {
                     agent { label "macos && arm64 && xcode" }

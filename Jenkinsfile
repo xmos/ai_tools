@@ -121,7 +121,7 @@ pipeline {
                             stash name: "windows_wheel", includes: "dist/*"
                         } }
                     } }
-                    post { cleanup { xcoreCleanSandbox } }
+                    post { cleanup { xcoreCleanSandbox() } }
                 }
             }
         }

@@ -1,6 +1,5 @@
 // Things to optimise if this is too slow:
 // - build device runtime in parallel with host runtimes, use mutex before combining into wheel
-// - install bazelisk directly on the Jenkins machines: will save about 50MB of downloads per CI run
 
 @Library('xmos_jenkins_shared_library@v0.25.0') _
 
@@ -50,6 +49,7 @@ pipeline {
                     withTools(params.TOOLS_VERSION) { createZip("linux") }
                     extractRuntime()
                     buildXinterpreter() 
+                    // TODO: Docker!!!
                     // sh "mkdir -p .bazel-cache"
                     // script {
                     //     docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -v .bazel-cache:/.cache -w /ai_tools") {
@@ -112,7 +112,8 @@ pipeline {
                         extractRuntime()
                         buildXinterpreter()
                         dir("xformer") {
-                            bat "bazelisk --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --remote_cache=${env.BAZEL_CACHE_URL} --//:disable_version_check"
+                            bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"
+                            bat ".\\bazelisk-windows-amd64 --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --remote_cache=${env.BAZEL_CACHE_URL} --//:disable_version_check"
                         }
                         createVenv("requirements.txt")
                         dir("python") { withVenv {

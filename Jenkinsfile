@@ -109,10 +109,10 @@ pipeline {
                         createZip("windows")
                         extractRuntime()
                         buildXinterpreter()
-                        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-                        bat "set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC"
+                        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat"
+                        bat "set BAZEL_VC=C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC"
                         dir("xformer") {
-                            bat "bazelisk --output_user_root c:\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --remote_cache=${{ env.BAZEL_CACHE_URL }}/${{ runner.os }}-${{ runner.arch }}-python${{ matrix.python-version }} --//:disable_version_check"
+                            bat "bazelisk --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --remote_cache=${env.BAZEL_CACHE_URL} --//:disable_version_check"
                         }
                         createVenv("requirements.txt")
                         dir("python") { withVenv {

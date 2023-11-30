@@ -113,7 +113,7 @@ pipeline {
                         buildXinterpreter()
                         dir("xformer") {
                             bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"
-                            bat ".\\bazelisk-windows-amd64 --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --remote_cache=${env.BAZEL_CACHE_URL} --//:disable_version_check"
+                            bat ".\\bazelisk-windows-amd64 --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --//:disable_version_check" //--remote_cache=${env.BAZEL_CACHE_URL}
                         }
                         createVenv("requirements.txt")
                         dir("python") { withVenv {

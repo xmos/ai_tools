@@ -112,10 +112,7 @@ pipeline {
                         extractRuntime()
                         buildXinterpreter()
                         dir("xformer") {
-                            bat """
-                                set BAZEL_VC=%VC_INSTALL_DIR%
-                                bazelisk --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --remote_cache=${env.BAZEL_CACHE_URL} --//:disable_version_check
-                            """
+                            bat "bazelisk --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --remote_cache=${env.BAZEL_CACHE_URL} --//:disable_version_check"
                         }
                         createVenv("requirements.txt")
                         dir("python") { withVenv {
@@ -194,6 +191,7 @@ def createZip(String platform) {
                     sh "make create_zip -j4"
                 } else {
                     sh "cmake .. -DLIB_NAME=tflitemicro_${platform}"
+                    sh "cat Makefile"
                     sh "make create_zip -j4" 
                 }
             }

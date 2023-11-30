@@ -1,9 +1,8 @@
 # python_version 3.9
 # pip_version 22.*
 
-# Doesn't work on x86 macs: latest version is 2.11?
-tensorflow==2.14.0; sys_platform != 'darwin' and platform_machine != 'arm64'
-tensorflow-macos==2.14.0; sys_platform == 'darwin'
+tensorflow==2.15.0; platform_machine != 'arm64'
+tensorflow-macos==2.15.0; sys_platform == 'darwin' and platform_machine == 'arm64'
 numpy>=1.20
 pkgconfig==1.5.5
 protobuf>=3.20.3

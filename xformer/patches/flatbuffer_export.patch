@@ -1,8 +1,22 @@
 diff --git a/tensorflow/compiler/mlir/lite/flatbuffer_export.cc b/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
-index 1a55e517791..b330af083a3 100644
+index 1a55e517791..3b4284e09e2 100644
 --- a/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
 +++ b/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
-@@ -2577,10 +2577,13 @@ Translator::CreateMetadataVector() {
+@@ -2516,7 +2516,12 @@ std::optional<BufferOffset<tflite::SubGraph>> Translator::BuildSubGraph(
+     inputs.push_back(tensor_index_map[arg]);
+   }
+   for (auto result : bb.getTerminator()->getOperands()) {
+-    outputs.push_back(tensor_index_map[result]);
++    if (auto stats_op = llvm::dyn_cast_or_null<mlir::quantfork::StatisticsOp>(
++            result.getDefiningOp())) {
++      outputs.push_back(tensor_index_map[stats_op.getArg()]);
++    } else {
++      outputs.push_back(tensor_index_map[result]);
++    }
+   }
+   for (const auto& [from, to] : control_edges) {
+     for (int what : {from, to}) {
+@@ -2577,10 +2582,12 @@ Translator::CreateMetadataVector() {
    }
    for (const auto& kv : metadata_) {
      const std::string& val = kv.second;
@@ -10,13 +24,27 @@ index 1a55e517791..b330af083a3 100644
 -    const int count = std::min(kByteStringSize, val.length());
 -    std::string value = std::string(kByteStringSize, '\0')
 -                            .assign(val.begin(), val.begin() + count);
-+    if(val.length() % 16 != 0) {
-+      module_.emitError(
-+            "metadata string must be aligned to 16 bytes");
-+        return std::nullopt;
-+      }
++    if (val.length() % 16 != 0) {
++      module_.emitError("metadata string must be aligned to 16 bytes");
++      return std::nullopt;
++    }
 +    std::string value = std::string(val.length(), '\0')
 +                            .assign(val.begin(), val.begin() + val.length());
      metadata.push_back(BuildMetadata(kv.first, value));
    }
  
+@@ -2703,7 +2710,13 @@ std::vector<SignatureDefData> BuildSignaturedef(
+     // Fetch the name from the actual operand and not rely on names from
+     // outputs as deduping can make them invalid after conversion.
+     auto& operand = term->getOpOperand(i);
+-    auto unique_name = std::string(name_mapper.GetUniqueName(operand.get()));
++    std::string unique_name;
++    if (auto stats_op = llvm::dyn_cast_or_null<mlir::quantfork::StatisticsOp>(
++            operand.get().getDefiningOp())) {
++      unique_name = std::string(name_mapper.GetUniqueName(stats_op.getArg()));
++    } else {
++      unique_name = std::string(name_mapper.GetUniqueName(operand.get()));
++    }
+     result[0].outputs[sig_def_outputs[i]] = unique_name;
+   }
+   if (auto name_attr = exported_name[0].dyn_cast_or_null<StringAttr>())

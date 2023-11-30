@@ -60,7 +60,9 @@ pipeline {
                     //     sh "cmake --build . -t install --parallel 4 --config Release"
                     // }
                     dir("xformer") {
-                        sh "bazel build //:xcore-opt --verbose_failures --linkopt=-lrt  --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
+                        sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
+                        sh "chmod +x bazelisk-linux-amd64"
+                        sh "./bazelisk-linux-amd64 build //:xcore-opt --verbose_failures --linkopt=-lrt  --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
                     }
                     // sh """
                     //     git config --global --add safe.directory /ai_tools
@@ -104,15 +106,16 @@ pipeline {
                 }
                 stage("Build Windows runtime") {
                     agent { label "windows" }
-                    steps {
+                    steps { withVS() {
                         setupRepo()
                         createZip("windows")
                         extractRuntime()
                         buildXinterpreter()
-                        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat"
-                        bat "set BAZEL_VC=C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC"
                         dir("xformer") {
-                            bat "bazelisk --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --remote_cache=${env.BAZEL_CACHE_URL} --//:disable_version_check"
+                            bat """
+                                set BAZEL_VC=%VC_INSTALL_DIR%
+                                bazelisk --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --remote_cache=${env.BAZEL_CACHE_URL} --//:disable_version_check
+                            """
                         }
                         createVenv("requirements.txt")
                         dir("python") { withVenv {
@@ -120,8 +123,7 @@ pipeline {
                             bat "python setup.py bdist_wheel"
                             stash name: "windows_wheel", includes: "dist/*"
                         } }
-                    }
-
+                    } }
                 }
             }
         }
@@ -190,12 +192,9 @@ def createZip(String platform) {
                 if (platform == "device") {
                     sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
                     sh "make create_zip -j4"
-                } else if (platform == "linux" || platform == "mac_x86" || platform == "mac_arm") {
+                } else {
                     sh "cmake .. -DLIB_NAME=tflitemicro_${platform}"
-                    sh "make create_zip -j4"
-                } else if (platform == "windows") {
-                    bat "cmake .. -DLIB_NAME=tflitemicro_${platform}"
-                    bat "nmake create_zip -j4"
+                    sh "make create_zip -j4" 
                 }
             }
         }
@@ -207,54 +206,28 @@ def setupRepo() {
     script {
         println "Stage running on: ${env.NODE_NAME}"
         checkout scm
-        if (isUnix()){
-            sh "git submodule update --init --recursive --jobs 4"
-            sh "make -C third_party/lib_tflite_micro patch"
-        } else {
-            bat "git submodule update --init --recursive --jobs 4"
-            dir("third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro") {
-                bat "git reset --hard"
-                bat "git apply --directory tensorflow ..\\..\\..\\patches\\tflite-micro.patch"
-            }
-        }
+        sh "git submodule update --init --recursive --jobs 4"
+        sh "make -C third_party/lib_tflite_micro patch"
     }
 }
 
 
 def buildXinterpreter() {
-    if (isUnix()) {
-        sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
-        dir("python/xmos_ai_tools/xinterpreters/build") {
-            sh "cmake .."
-            sh "cmake --build . -t install --parallel 4 --config Release"
-        }
-    } else {
-        bat "if not exist python\\xmos_ai_tools\\xinterpreters\\build mkdir python\\xmos_ai_tools\\xinterpreters\\build"
-        dir("python\\xmos_ai_tools\\xinterpreters\\build") {
-            bat "cmake .."
-            bat "cmake --build . --target install --parallel 4 --config Release"
-        }
+    sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
+    dir("python/xmos_ai_tools/xinterpreters/build") {
+        sh "cmake .."
+        sh "cmake --build . -t install --parallel 4 --config Release"
     }
 }
 
 
 def extractRuntime() {
-    if (isUnix()) {
-        sh "mv third_party/lib_tflite_micro/build/release_archive.zip python/xmos_ai_tools/runtime"
-        dir("python/xmos_ai_tools/runtime") {
-            sh "unzip release_archive.zip"
-            sh "rm release_archive.zip"
-            unstash "release_archive"
-            sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
-        }
-    } else {
-        bat "move third_party\\lib_tflite_micro\\build\\release_archive.zip python\\xmos_ai_tools\\runtime"
-        dir("python\\xmos_ai_tools\\runtime") {
-            bat "tar -xf release_archive.zip"
-            bat "del release_archive.zip"
-            unstash "release_archive"
-            bat "tar -xf release_archive.zip lib\\libxtflitemicro.a -C .\\"
-        }
+    sh "mv third_party/lib_tflite_micro/build/release_archive.zip python/xmos_ai_tools/runtime"
+    dir("python/xmos_ai_tools/runtime") {
+        sh "unzip release_archive.zip"
+        sh "rm release_archive.zip"
+        unstash "release_archive"
+        sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
     }
 }
 

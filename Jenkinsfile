@@ -191,7 +191,7 @@ def createZip(String platform) {
                     sh "make create_zip -j4"
                 } else {
                     sh "cmake .. -DLIB_NAME=tflitemicro_${platform}"
-                    sh "cat Makefile"
+                    sh "ls"
                     sh "make create_zip -j4" 
                 }
             }

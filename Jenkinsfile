@@ -190,8 +190,7 @@ def createZip(String platform) {
                     sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
                     sh "make create_zip -j4"
                 } else {
-                    sh "cmake .. -DLIB_NAME=tflitemicro_${platform}"
-                    sh "ls"
+                    sh "cmake -G 'Unix Makefiles' .. -DLIB_NAME=tflitemicro_${platform}"
                     sh "make create_zip -j4" 
                 }
             }

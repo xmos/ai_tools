@@ -71,7 +71,7 @@ pipeline {
                     //     git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
                     //     git describe --tags
                     // """
-                    dir("python") {
+                    withVenv { dir("python") {
                         sh "python setup.py bdist_wheel"
                     //     sh """
                     //         for f in dist/*.whl; do
@@ -79,7 +79,7 @@ pipeline {
                     //         done
                     //     """
                         stash name: "linux_wheel", includes: "dist/*"
-                    }
+                    } }
                     //     } 
                     // }
                 } } 
@@ -121,6 +121,7 @@ pipeline {
                             stash name: "windows_wheel", includes: "dist/*"
                         } }
                     } }
+                    post { cleanup { xcoreCleanSandbox } }
                 }
             }
         }

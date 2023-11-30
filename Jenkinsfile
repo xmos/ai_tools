@@ -49,36 +49,36 @@ pipeline {
                 stage("Build linux runtime") { steps {
                     withTools(params.TOOLS_VERSION) { createZip("linux") }
                     extractRuntime()
-                    // buildXinterpreter() 
-                    sh "mkdir -p .bazel-cache"
-                    script {
-                        docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -v .bazel-cache:/.cache -w /ai_tools") {
-                            sh "pip install auditwheel==5.2.0 cmake --no-cache-dir"
-                            sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
-                            dir("python/xmos_ai_tools/xinterpreters/build") {
-                                sh "cmake .."
-                                sh "cmake --build . -t install --parallel 4 --config Release"
-                            }
-                            dir("xformer") {
-                                sh "bazel build //:xcore-opt --verbose_failures --linkopt=-lrt  --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
-                            }
-                            sh """
-                                git config --global --add safe.directory /ai_tools
-                                git config --global --add safe.directory /ai_tools/third_party/lib_nn
-                                git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro
-                                git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
-                                git describe --tags
-                            """
-                            dir("python") {
-                                sh "python setup.py bdist_wheel"
-                                sh """
-                                    for f in dist/*.whl; do
-                                        auditwheel repair --plat manylinux2014_x86_64 $f
-                                    done
-                                """
-                            }
-                        } 
+                    buildXinterpreter() 
+                    // sh "mkdir -p .bazel-cache"
+                    // script {
+                    //     docker.image('tensorflow/build:2.14-python3.9').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -v .bazel-cache:/.cache -w /ai_tools") {
+                    // sh "pip install auditwheel==5.2.0 cmake --no-cache-dir"
+                    // sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
+                    // dir("python/xmos_ai_tools/xinterpreters/build") {
+                    //     sh "cmake .."
+                    //     sh "cmake --build . -t install --parallel 4 --config Release"
+                    // }
+                    dir("xformer") {
+                        sh "bazel build //:xcore-opt --verbose_failures --linkopt=-lrt  --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
                     }
+                    // sh """
+                    //     git config --global --add safe.directory /ai_tools
+                    //     git config --global --add safe.directory /ai_tools/third_party/lib_nn
+                    //     git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro
+                    //     git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro
+                    //     git describe --tags
+                    // """
+                    // dir("python") {
+                    //     sh "python setup.py bdist_wheel"
+                    //     sh """
+                    //         for f in dist/*.whl; do
+                    //             auditwheel repair --plat manylinux2014_x86_64 $f
+                    //         done
+                    //     """
+                    // }
+                    //     } 
+                    // }
                     stash name: "linux_wheel", includes: "dist/*"
                 } } 
                 stage("Build Arm Mac runtime") {

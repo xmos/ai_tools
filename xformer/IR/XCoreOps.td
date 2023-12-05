@@ -223,9 +223,9 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
   let arguments = (ins
     // I32 input is for BNNs
     TensorOf<[QI8, I32]>:$input,
-
     TensorOf<[I8]>:$weights,
     TensorOf<[I16]>:$mulsbiases_or_thresholds,
+    //AnyTypeOf<[TensorOf<QI8>, NoneType]:$partial_output,
     StrAttr:$conv2d_kernel_type,
     StrAttr:$memcpy_fn_param,
     StrAttr:$aggregate_fn_param,
@@ -249,6 +249,7 @@ def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [Pure]> {
     TensorOf<[QI8]>:$input,
     TensorOf<[QI8]>:$filter,
     AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$bias,
+    //AnyTypeOf<[TensorOf<QI8>, NoneType]:$partial_output,
     I32Attr:$dilation_h_factor,
     I32Attr:$dilation_w_factor,
     StrAttr:$fused_activation_function,
@@ -256,7 +257,11 @@ def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [Pure]> {
     // For using explicit padding
     AnyTypeOf<[TensorOf<[I32,I64]>, NoneType]>:$padding_values,
     I32Attr:$stride_h,
-    I32Attr:$stride_w
+    I32Attr:$stride_w,
+    I32Attr:$abstract_kernel_sub_h,
+    I32Attr:$abstract_kernel_sub_w,
+    I32Attr:$abstract_kernel_stride_h,
+    I32Attr:$abstract_kernel_stride_w
   );
 
   let results = (outs TensorOf<[QI8]> : $output);

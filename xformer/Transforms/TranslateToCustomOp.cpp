@@ -131,6 +131,31 @@ std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> MaxPool2DOp::buildCustomOptions() {
+  // TODO: Is the alignement messed up?
+  flexbuffers::Builder fbb;
+  auto rootMap = fbb.StartMap();
+  fbb.String("mp", getMemcpyFnParam().str());
+  fbb.String("a", getAggregateFnParam().str());
+  fbb.String("o", getOutputTransformFnParam().str());
+  int threadCount = (int)getThreadCount();
+  auto akpVec = fbb.StartVector("p");
+  for (int i = 0; i < threadCount; ++i) {
+    fbb.String(getAbstractKernelParams()
+                   .cast<ArrayAttr>()[i]
+                   .cast<StringAttr>()
+                   .getValue()
+                   .str() +
+               "00");
+  }
+  fbb.EndVector(akpVec, false, false);
+  fbb.Int("s", (int32_t)getScratchBytes());
+
+  fbb.EndMap(rootMap);
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 namespace {
 /// This pass translates XCore ops to TFLite custom ops.
 struct TranslateToCustomOp
@@ -172,6 +197,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<AddOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Conv2DV2Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<MaxPool2DOp>>(ctx);
   patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
   patterns.insert<RewriteToCustomOp<LookupOp>>(ctx);
   patterns.insert<RewriteToCustomOp<MulOp>>(ctx);

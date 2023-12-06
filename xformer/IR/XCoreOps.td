@@ -197,6 +197,25 @@ def XC_Beta_FcF32Op : XC_Op<"beta_fcf32", [Pure]> {
   let results = (outs TensorOf<[F32]> : $output);
 }
 
+def XC_MaxPool2DOp : XC_Op<"maxpool2d", [Pure]> {
+  let summary = "MaxPool2D op";
+
+  let description = [{MaxPool2D op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+    StrAttr:$memcpy_fn_param,
+    StrAttr:$aggregate_fn_param,
+    StrAttr:$output_transform_fn_param,
+    StrAttr:$output_transform_type,
+    I32Attr:$scratch_bytes,
+    I32Attr:$thread_count,
+    StrArrayAttr:$abstract_kernel_params
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
   let summary = "Conv2D V2 op";
 

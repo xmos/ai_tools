@@ -90,6 +90,7 @@ struct ReplaceTransposeConvPattern
         tConvOp.getOutput().getType().template dyn_cast<RankedTensorType>();
     auto weightsType =
         tConvOp.getWeights().getType().template dyn_cast<RankedTensorType>();
+    auto inputWidth = inputType.getDimSize(2);
     auto inputDepth = inputType.getDimSize(3);
     auto outputDepth = outputType.getDimSize(3);
     auto weightsHeight = weightsType.getDimSize(1);
@@ -175,9 +176,18 @@ struct ReplaceTransposeConvPattern
     //
     //
     //
+
+    FakeConv2DOp prevOp = nullptr;
+    FakeConv2DOp currentOp = nullptr;
     for (ConvParams c : convParams) {
-      // apply each convolution, writing the result to the correct location in
-      // the output
+      // Calculate input offset
+      auto this_kernels_vertical_padding = c.kernelShape[1] - 1;
+      auto this_kernels_horizontal_padding = c.kernelShape[2] - 1;
+      auto inputOffset =
+          inputDepth * (horizontal_padding - this_kernels_horizontal_padding) +
+          (inputDepth * (vertical_padding - this_kernels_vertical_padding) *
+           (inputWidth + 2 * horizontal_padding));
+
       int64_t subWeightsShape[] = {c.kernelShape[0], c.kernelShape[1],
                                    c.kernelShape[2], c.kernelShape[3]};
       auto subWeightsResultType = RankedTensorType::get(
@@ -193,20 +203,35 @@ struct ReplaceTransposeConvPattern
       auto noneValue = rewriter.create<TFL::NoValueOp>(rewriter.getUnknownLoc(),
                                                        rewriter.getNoneType(),
                                                        rewriter.getUnitAttr());
-      // tConvOp.getStrideH(), tConvOp.getStrideW()
-      auto conv2DOp = rewriter.create<FakeConv2DOp>(
-          tConvOp.getLoc(), tConvOp.getType(), tConvOp.getInput(),
-          subWeightsQConstOp, tConvOp.getBias(),
-          /*dilation_h_factor=*/1,
-          /*dilation_w_factor=*/1,
-          /*fused_activation_function=*/tConvOp.getFusedActivationFunction(),
-          /*padding=*/tConvOp.getPadding(), noneValue,
-          /*stride_h=*/tConvOp.getStrideH(),
-          /*stride_w=*/tConvOp.getStrideW(), c.subH, c.subW,
-          tConvOp.getStrideH(), tConvOp.getStrideW());
-
-      rewriter.replaceOp(tConvOp, conv2DOp.getOutput());
+      // We want the input strides to be 1,1 and the output strides to be the
+      // transpose conv strides
+      if (!prevOp) {
+        currentOp = rewriter.create<FakeConv2DOp>(
+            tConvOp.getLoc(), tConvOp.getType(), tConvOp.getInput(),
+            subWeightsQConstOp, tConvOp.getBias(), noneValue,
+            /*dilation_h_factor=*/1,
+            /*dilation_w_factor=*/1,
+            /*fused_activation_function=*/tConvOp.getFusedActivationFunction(),
+            /*padding=*/tConvOp.getPadding(), noneValue,
+            /*stride_h=*/1,
+            /*stride_w=*/1, c.subH, c.subW, tConvOp.getStrideH(),
+            tConvOp.getStrideW(), inputOffset);
+      } else {
+        currentOp = rewriter.create<FakeConv2DOp>(
+            tConvOp.getLoc(), tConvOp.getType(), tConvOp.getInput(),
+            subWeightsQConstOp, tConvOp.getBias(), prevOp.getOutput(),
+            /*dilation_h_factor=*/1,
+            /*dilation_w_factor=*/1,
+            /*fused_activation_function=*/tConvOp.getFusedActivationFunction(),
+            /*padding=*/tConvOp.getPadding(), noneValue,
+            /*stride_h=*/1,
+            /*stride_w=*/1, c.subH, c.subW, tConvOp.getStrideH(),
+            tConvOp.getStrideW(), inputOffset);
+      }
+      prevOp = currentOp;
     }
+
+    rewriter.replaceOp(tConvOp, currentOp.getOutput());
 
     return success();
   }

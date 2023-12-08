@@ -252,13 +252,13 @@ private:
 static llvm::SmallVector<std::string> getAbstractKernelParamsForMultipleThreads(
     llvm::SmallVector<std::array<int, 4>> imageRegionSplits,
     const nn::ImageGeometry &Y, int subH = 0, int subW = 0, int strideH = 1,
-    int strideW = 1) {
+    int strideW = 1, int inputOffset = 0) {
   llvm::SmallVector<std::string> abstractKernelParams;
   for (auto &regionsplits : imageRegionSplits) {
     auto ir = nn::ImageRegion(regionsplits[0], regionsplits[1], 0,
                               regionsplits[2], regionsplits[3], Y.depth);
     nn::AbstractKernel ak(Y, ir, VPU_INT8_ACC_PERIOD, subH, subW, strideH,
-                          strideW);
+                          strideW, inputOffset);
     auto akParams = ak.getParams();
     std::string akpStr = std::string((char *)&akParams, sizeof(akParams));
     abstractKernelParams.push_back(akpStr);

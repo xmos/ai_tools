@@ -8,8 +8,8 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "IR/XCoreOps.td"
 
 // XC_FakeConv2D -> TFL_Conv2D()
-def : Pat<(XC_FakeConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $pv, $sh, $sw,
-           $aksbh, $aksbw, $aksh, $aksw),
+def : Pat<(XC_FakeConv2DOp $input, $f, $b, $po, $dh, $dw, $faf, $p, $pv, $sh,
+           $sw, $osbh, $osbw, $osh, $osw, $io),
           (TFL_Conv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw)>;
 
 // XC_FakeDepthwiseConv2D -> TFL_DepthwiseConv2D()

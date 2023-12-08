@@ -358,9 +358,9 @@ LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
 
   auto conv2DOp = dyn_cast<FakeConv2DOp>(args.convOp);
   abstractKernelParams = getAbstractKernelParamsForMultipleThreads(
-      args.imageRegionSplits, args.Y, conv2DOp.getAbstractKernelSubH(),
-      conv2DOp.getAbstractKernelSubW(), conv2DOp.getAbstractKernelStrideH(),
-      conv2DOp.getAbstractKernelStrideH());
+      args.imageRegionSplits, args.Y, conv2DOp.getOutputSubH(),
+      conv2DOp.getOutputSubW(), conv2DOp.getOutputStrideH(),
+      conv2DOp.getOutputStrideW(), conv2DOp.getInputOffset());
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;
@@ -392,9 +392,9 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
 
   auto conv2DOp = dyn_cast<FakeConv2DOp>(args.convOp);
   abstractKernelParams = getAbstractKernelParamsForMultipleThreads(
-      args.imageRegionSplits, args.Y, conv2DOp.getAbstractKernelSubH(),
-      conv2DOp.getAbstractKernelSubW(), conv2DOp.getAbstractKernelStrideH(),
-      conv2DOp.getAbstractKernelStrideH());
+      args.imageRegionSplits, args.Y, conv2DOp.getOutputSubH(),
+      conv2DOp.getOutputSubW(), conv2DOp.getOutputStrideH(),
+      conv2DOp.getOutputStrideW(), conv2DOp.getInputOffset());
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;
@@ -425,9 +425,9 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
 
   auto conv2DOp = dyn_cast<FakeConv2DOp>(args.convOp);
   abstractKernelParams = getAbstractKernelParamsForMultipleThreads(
-      args.imageRegionSplits, args.Y, conv2DOp.getAbstractKernelSubH(),
-      conv2DOp.getAbstractKernelSubW(), conv2DOp.getAbstractKernelStrideH(),
-      conv2DOp.getAbstractKernelStrideH());
+      args.imageRegionSplits, args.Y, conv2DOp.getOutputSubH(),
+      conv2DOp.getOutputSubW(), conv2DOp.getOutputStrideH(),
+      conv2DOp.getOutputStrideW(), conv2DOp.getInputOffset());
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;

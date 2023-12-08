@@ -122,19 +122,41 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   auto mulsBiasesOrThresholdsConstantOp = rewriter.create<arith::ConstantOp>(
       conv2DOp.getLoc(), mulsBiasesOrThresholdsAttr);
 
-  // Create the Conv2DV2 Op with the params and kernel type
-  auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
-      conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.getInput(),
-      weightsConstantOp, mulsBiasesOrThresholdsConstantOp,
-      rewriter.getStringAttr(kernelTypeEnumParam),
-      rewriter.getStringAttr(memcpyFnParam),
-      rewriter.getStringAttr(aggregateFnParam),
-      rewriter.getStringAttr(outputTransformFnParam),
-      rewriter.getStringAttr(otTypeEnumParam),
-      rewriter.getI32IntegerAttr(scratchByteParam),
-      rewriter.getI32IntegerAttr(actualThreadCount),
-      getStringArrayAttr(abstractKernelParams));
-  rewriter.replaceOp(conv2DOp, newConv2DV2Op.getOutput());
+  // If FakeConv2DOp, then we want to pass in the partial output tensor, in case
+  // it is being used If not, we use a no value op.
+  if (auto fakeConv2DOp = dyn_cast<FakeConv2DOp>(conv2DOp.getOperation())) {
+    // Create the Conv2DV2 Op with the params and kernel type
+    auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
+        conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.getInput(),
+        weightsConstantOp, mulsBiasesOrThresholdsConstantOp,
+        fakeConv2DOp.getPartialOutput(),
+        rewriter.getStringAttr(kernelTypeEnumParam),
+        rewriter.getStringAttr(memcpyFnParam),
+        rewriter.getStringAttr(aggregateFnParam),
+        rewriter.getStringAttr(outputTransformFnParam),
+        rewriter.getStringAttr(otTypeEnumParam),
+        rewriter.getI32IntegerAttr(scratchByteParam),
+        rewriter.getI32IntegerAttr(actualThreadCount),
+        getStringArrayAttr(abstractKernelParams));
+    rewriter.replaceOp(conv2DOp, newConv2DV2Op.getOutput());
+  } else {
+    auto noneValue = rewriter.create<TFL::NoValueOp>(rewriter.getUnknownLoc(),
+                                                     rewriter.getNoneType(),
+                                                     rewriter.getUnitAttr());
+    // Create the Conv2DV2 Op with the params and kernel type
+    auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
+        conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.getInput(),
+        weightsConstantOp, mulsBiasesOrThresholdsConstantOp, noneValue,
+        rewriter.getStringAttr(kernelTypeEnumParam),
+        rewriter.getStringAttr(memcpyFnParam),
+        rewriter.getStringAttr(aggregateFnParam),
+        rewriter.getStringAttr(outputTransformFnParam),
+        rewriter.getStringAttr(otTypeEnumParam),
+        rewriter.getI32IntegerAttr(scratchByteParam),
+        rewriter.getI32IntegerAttr(actualThreadCount),
+        getStringArrayAttr(abstractKernelParams));
+    rewriter.replaceOp(conv2DOp, newConv2DV2Op.getOutput());
+  }
 
   return success();
 }

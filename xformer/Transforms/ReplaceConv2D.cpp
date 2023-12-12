@@ -69,12 +69,11 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   std::vector<int16_t> mulsBiasesOrThresholdsData;
 
   // Obtain thread count from command-line option
-  const int threadCount = threadCountOption;
   llvm::SmallVector<std::string> strParams;
   int scratchBytes = 0;
   // Get image region splits for multiple threads
   args.imageRegionSplits = utils::getImageRegionThreadSplits(
-      threadCount, args.Y.height, args.Y.width);
+      threadCountOption, args.Y.height, args.Y.width);
 
   // Obtain serialized params and calculated tensors from lib_nn for the
   // conv2d kernel type

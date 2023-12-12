@@ -207,7 +207,6 @@ def XC_MaxPool2DOp : XC_Op<"maxpool2d", [Pure]> {
     StrAttr:$memcpy_fn_param,
     StrAttr:$aggregate_fn_param,
     StrAttr:$output_transform_fn_param,
-    StrAttr:$output_transform_type,
     I32Attr:$scratch_bytes,
     I32Attr:$thread_count,
     StrArrayAttr:$abstract_kernel_params

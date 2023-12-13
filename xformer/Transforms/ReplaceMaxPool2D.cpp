@@ -7,10 +7,13 @@
 #include "lib_nn/api/MemCpyFn.hpp"
 #include "lib_nn/api/OutputTransformFn.hpp"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 namespace mlir {
 namespace xcore {
+
+namespace {
 struct ReplaceMaxPool2D
     : public PassWrapper<ReplaceMaxPool2D, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReplaceMaxPool2D)
@@ -90,5 +93,20 @@ struct ReplaceMaxPool2DPattern : public OpRewritePattern<TFL::MaxPool2DOp> {
     return success();
   }
 };
+
+void ReplaceMaxPool2D::runOnOperation() {
+  auto *ctx = &getContext();
+  func::FuncOp func = getOperation();
+  RewritePatternSet patterns(ctx);
+  patterns.insert<ReplaceMaxPool2DPattern>(ctx);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+}
+} // namespace
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMaxPoolPass() {
+  return std::make_unique<ReplaceMaxPool2D>();
+}
+
+static PassRegistration<ReplaceMaxPool2D> pass;
+
 } // namespace xcore
 } // namespace mlir

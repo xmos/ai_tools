@@ -45,6 +45,7 @@ struct ReplaceMaxPool2DPattern : public OpRewritePattern<TFL::MaxPool2DOp> {
     auto splits = utils::getImageRegionThreadSplits(threadCountOption,
                                                     outputHeight, outputWidth);
 
+    auto actualThreadCount = splits.size();
     // Create a string array attr from a vector of strings
     auto getStringArrayAttr = [&](llvm::SmallVector<std::string> value) {
       auto attrs = llvm::to_vector<8>(
@@ -88,7 +89,7 @@ struct ReplaceMaxPool2DPattern : public OpRewritePattern<TFL::MaxPool2DOp> {
         rewriter.getStringAttr(mfStr), rewriter.getStringAttr(afStr),
         rewriter.getStringAttr(otStr),
         rewriter.getI32IntegerAttr(scratchByteParam),
-        rewriter.getI32IntegerAttr(threadCountOption), getStringArrayAttr(akp));
+        rewriter.getI32IntegerAttr(actualThreadCount), getStringArrayAttr(akp));
     rewriter.replaceOp(mPoolOp, xcMaxPool2DOp.getOutput());
     return success();
   }

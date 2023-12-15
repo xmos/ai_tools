@@ -150,7 +150,9 @@ jobs:
           python -m pip install auditwheel==5.2.0
           cd python
           for f in dist/*.whl; do
+            ls -l $f
             auditwheel repair --plat manylinux2014_x86_64 $f
+            ls -l $f
           done
       - name: Test linux wheels
         run: |

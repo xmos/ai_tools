@@ -13,8 +13,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   set(BUILD_FLAGS "/O2")
 else()
   set(BUILD_FLAGS
-              "-g"
-              "-O2")
+              # "-g"
+              "-O3")
 endif()
 
 

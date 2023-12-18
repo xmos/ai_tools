@@ -42,6 +42,8 @@ Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, 
               (IsConstOp $f),
               ]>;
 
+def getCompressedFloats : NativeCodeCall<"getCompressedFloats($_builder, $0)">;
+
 // Special case, we only optimize conv with filter width 3, filter height
 // 2, and stride height 2
 def Hasfw5fh2

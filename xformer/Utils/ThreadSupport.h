@@ -14,7 +14,9 @@ namespace utils {
 
 llvm::SmallVector<std::array<int, 4>>
 getImageRegionThreadSplits(const int &threadCount, const int &imageHeight,
-                           const int &imageWidth);
+                           const int &imageWidth, const int subH = 0,
+                           const int subW = 0, const int strideH = 1,
+                           const int strideW = 1);
 
 } // namespace utils
 } // namespace xcore

@@ -40,49 +40,39 @@ struct ReplaceTransposeConvPattern
                                 PatternRewriter &rewriter) const override {
 
     // Check for invalid types and return
-    // We don't currently handle the unusual case where both input shapes have
-    // to be broadcasted. Either both input shapes must match the output or one
-    // of the inputs has to be broadcasted.
-    // if (failed(utils::hasSameShape(
-    //         tConvOp.getRhs().getType().cast<ShapedType>(),
-    //         tConvOp.getOutput().getType().cast<ShapedType>())) &&
-    //     failed(utils::hasSameShape(
-    //         tConvOp.getLhs().getType().cast<ShapedType>(),
-    //         tConvOp.getOutput().getType().cast<ShapedType>()))) {
-    //   return failure();
-    // }
+    // Input type must be QI8
+    auto inputElementType =
+        tConvOp.getInput().getType().cast<ShapedType>().getElementType();
+    if (!(inputElementType.isa<quant::QuantizedType>() &&
+          inputElementType.cast<quant::QuantizedType>().isSigned() &&
+          inputElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
 
-    // auto lhsType =
-    // tConvOp.getLhs().getType().cast<ShapedType>().getElementType();
-    // // Lhs type must be QI8
-    // if (!(lhsType.isa<quant::QuantizedType>() &&
-    //       lhsType.cast<quant::QuantizedType>().isSigned() &&
-    //       lhsType.cast<quant::QuantizedType>().getStorageTypeIntegralWidth()
-    //       ==
-    //           8)) {
-    //   return failure();
-    // }
+    // Weights type must be
+    auto weightsElementType =
+        tConvOp.getWeights().getType().cast<ShapedType>().getElementType();
+    if (!(weightsElementType.isa<quant::QuantizedType>() &&
+          weightsElementType.cast<quant::QuantizedType>().isSigned() &&
+          weightsElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
 
-    // auto rhsType =
-    // tConvOp.getRhs().getType().cast<ShapedType>().getElementType();
-    // // Rhs type must be QI8
-    // if (!(rhsType.isa<quant::QuantizedType>() &&
-    //       rhsType.cast<quant::QuantizedType>().isSigned() &&
-    //       rhsType.cast<quant::QuantizedType>().getStorageTypeIntegralWidth()
-    //       ==
-    //           8)) {
-    //   return failure();
-    // }
+    // Output type must be QI8
+    auto outputElementType =
+        tConvOp.getOutput().getType().cast<ShapedType>().getElementType();
+    if (!(outputElementType.isa<quant::QuantizedType>() &&
+          outputElementType.cast<quant::QuantizedType>().isSigned() &&
+          outputElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
 
-    // auto outputType =
-    //     tConvOp.getOutput().getType().cast<ShapedType>().getElementType();
-    // // Output type must be QI8
-    // if (!(outputType.isa<quant::QuantizedType>() &&
-    //       outputType.cast<quant::QuantizedType>().isSigned() &&
-    //       outputType.cast<quant::QuantizedType>()
-    //               .getStorageTypeIntegralWidth() == 8)) {
-    //   return failure();
-    // }
+    if (tConvOp.getPadding() != "VALID") {
+      return failure();
+    }
 
     auto inputType =
         tConvOp.getInput().getType().template dyn_cast<RankedTensorType>();
@@ -95,6 +85,11 @@ struct ReplaceTransposeConvPattern
     auto outputDepth = outputType.getDimSize(3);
     auto weightsHeight = weightsType.getDimSize(1);
     auto weightsWidth = weightsType.getDimSize(2);
+
+    // Input and output depth must be multiple of four
+    if (inputDepth % 4 != 0 || outputDepth % 4 != 0) {
+      return failure();
+    }
 
     // Get weights values
     auto weightsQConstOp =

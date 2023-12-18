@@ -72,8 +72,17 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   llvm::SmallVector<std::string> strParams;
   int scratchBytes = 0;
   // Get image region splits for multiple threads
-  args.imageRegionSplits = utils::getImageRegionThreadSplits(
-      threadCountOption, args.Y.height, args.Y.width);
+  // When we multi-thread Transpose Conv, we have to take output strides into
+  // account
+  if (auto fakeConv2DOp = dyn_cast<FakeConv2DOp>(conv2DOp.getOperation())) {
+    args.imageRegionSplits = utils::getImageRegionThreadSplits(
+        threadCountOption, args.Y.height, args.Y.width, fakeConv2DOp.getOutputSubH(),
+        fakeConv2DOp.getOutputSubW(), fakeConv2DOp.getOutputStrideH(),
+        fakeConv2DOp.getOutputStrideW());
+  } else {
+    args.imageRegionSplits = utils::getImageRegionThreadSplits(
+        threadCountOption, args.Y.height, args.Y.width);
+  }
 
   // Obtain serialized params and calculated tensors from lib_nn for the
   // conv2d kernel type
@@ -177,6 +186,29 @@ struct ReplaceConv2D
   }
   void runOnOperation() override;
 };
+
+DenseElementsAttr getCompressedFloats(PatternRewriter &rewriter,
+                                      Value floatVal) {
+  auto constOp = dyn_cast<TFL::ConstOp>(floatVal.getDefiningOp());
+  auto floats = constOp.getValue().cast<DenseElementsAttr>();
+  std::vector<uint8_t> uint8Vector;
+  int k = 0;
+  for (auto &i : floats.getRawData()) {
+    if (k % 4 == 0) {
+      uint8Vector.push_back(0);
+    } else {
+      uint8Vector.push_back(i);
+    }
+    k++;
+  }
+
+  ShapedType compressedFloatsType =
+      RankedTensorType::get({static_cast<long long>(uint8Vector.size())},
+                            rewriter.getIntegerType(8, /*signed=*/false));
+  auto compressedFloatsAttr =
+      DenseElementsAttr::get<uint8_t>(compressedFloatsType, uint8Vector);
+  return compressedFloatsAttr;
+}
 
 bool isBetaFloatEnabled() { return enableBetaFloatOption; }
 

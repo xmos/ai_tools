@@ -163,7 +163,7 @@ def XC_Beta_ConvF32Op : XC_Op<"beta_convf32", [Pure]> {
 
   let arguments = (ins
     TensorOf<[F32]>:$input,
-    TensorOf<[F32]>:$kernels,
+    TensorOf<[F32, UI8]>:$kernels,
     TensorOf<[F32]>:$bias
   );
 
@@ -177,7 +177,7 @@ def XC_Beta_TransposeConvF32Op : XC_Op<"beta_transposeconvf32", [Pure]> {
 
   let arguments = (ins
     TensorOf<[F32]>:$input,
-    TensorOf<[F32]>:$kernels,
+    TensorOf<[F32, UI8]>:$kernels,
     TensorOf<[F32]>:$bias
   );
 
@@ -191,7 +191,7 @@ def XC_Beta_FcF32Op : XC_Op<"beta_fcf32", [Pure]> {
 
   let arguments = (ins
     TensorOf<[F32]>:$input,
-    TensorOf<[F32]>:$kernels
+    TensorOf<[F32, UI8]>:$kernels
   );
 
   let results = (outs TensorOf<[F32]> : $output);
@@ -225,7 +225,8 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
     TensorOf<[QI8, I32]>:$input,
     TensorOf<[I8]>:$weights,
     TensorOf<[I16]>:$mulsbiases_or_thresholds,
-    //AnyTypeOf<[TensorOf<QI8>, NoneType]:$partial_output,
+    // The partial output parameter is used when we chain convolutions
+    AnyTypeOf<[TensorOf<[QI8]>, NoneType]>:$partial_output,
     StrAttr:$conv2d_kernel_type,
     StrAttr:$memcpy_fn_param,
     StrAttr:$aggregate_fn_param,
@@ -249,7 +250,8 @@ def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [Pure]> {
     TensorOf<[QI8]>:$input,
     TensorOf<[QI8]>:$filter,
     AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$bias,
-    //AnyTypeOf<[TensorOf<QI8>, NoneType]:$partial_output,
+    // The partial output parameter is used when we chain convolutions
+    AnyTypeOf<[TensorOf<[QI8]>, NoneType]>:$partial_output,
     I32Attr:$dilation_h_factor,
     I32Attr:$dilation_w_factor,
     StrAttr:$fused_activation_function,
@@ -258,10 +260,13 @@ def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [Pure]> {
     AnyTypeOf<[TensorOf<[I32,I64]>, NoneType]>:$padding_values,
     I32Attr:$stride_h,
     I32Attr:$stride_w,
-    I32Attr:$abstract_kernel_sub_h,
-    I32Attr:$abstract_kernel_sub_w,
-    I32Attr:$abstract_kernel_stride_h,
-    I32Attr:$abstract_kernel_stride_w
+    // The following parameters are used when we chain convolutions
+    // so that we can read and write to the correct locations
+    I32Attr:$output_sub_h,
+    I32Attr:$output_sub_w,
+    I32Attr:$output_stride_h,
+    I32Attr:$output_stride_w,
+    I32Attr:$input_offset
   );
 
   let results = (outs TensorOf<[QI8]> : $output);

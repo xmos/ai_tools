@@ -76,9 +76,9 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   // account
   if (auto fakeConv2DOp = dyn_cast<FakeConv2DOp>(conv2DOp.getOperation())) {
     args.imageRegionSplits = utils::getImageRegionThreadSplits(
-        threadCountOption, args.Y.height, args.Y.width, fakeConv2DOp.getOutputSubH(),
-        fakeConv2DOp.getOutputSubW(), fakeConv2DOp.getOutputStrideH(),
-        fakeConv2DOp.getOutputStrideW());
+        threadCountOption, args.Y.height, args.Y.width,
+        fakeConv2DOp.getOutputSubH(), fakeConv2DOp.getOutputSubW(),
+        fakeConv2DOp.getOutputStrideH(), fakeConv2DOp.getOutputStrideW());
   } else {
     args.imageRegionSplits = utils::getImageRegionThreadSplits(
         threadCountOption, args.Y.height, args.Y.width);

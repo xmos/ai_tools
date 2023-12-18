@@ -774,7 +774,7 @@ void OptimizeConv2D::runOnOperation() {
 
   // To align Conv2D input to 4 channels, we insert a pad op to pad the input
   // channels and pad the conv filter channels
-  //patterns.insert<SameToValidTransposeConvPattern>(ctx);
+  // patterns.insert<SameToValidTransposeConvPattern>(ctx);
 
   // To align Conv2D input to 4 channels, we insert a pad op to pad the input
   // channels and pad the conv filter channels

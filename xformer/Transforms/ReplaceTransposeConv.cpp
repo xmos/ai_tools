@@ -3,15 +3,10 @@
 
 #include "IR/XCoreOps.h"
 
-#include "lib_nn/api/AbstractKernel.hpp"
-#include "lib_nn/api/AggregateFn.hpp"
-#include "lib_nn/api/MemCpyFn.hpp"
-#include "lib_nn/api/OutputTransformFn.hpp"
 #include "lib_nn/api/TransposeConv.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
-#include "tensorflow/core/framework/kernel_shape_util.h"
 
 namespace mlir {
 namespace xcore {

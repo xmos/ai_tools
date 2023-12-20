@@ -8,6 +8,7 @@
 #include "dsp.h"
 #include "log.h"
 #include "raised_cosine.h"
+#include "hypot.h"
 
 int dsp_time_to_freq(int64_t fft_output[], int data_to_be_processed[], fft_state_t *state) {
     static int input_frame[WINDOW_SIZE];    // State for overlap-add; first sample is oldest
@@ -71,18 +72,20 @@ void dsp_calculate_mels(int mels[], int64_t fft_input[], int gain, int mel_bins,
                         int *mel_coefficients, int *mel_bins_in_overlap) {
     int magnitudes[WINDOW_SIZE/2+1];
 
-    magnitudes[0            ] = log2_16(((int *)fft_input)[0]) + (gain << LOG2_16_Q_VALUE);
-    magnitudes[WINDOW_SIZE/2] = log2_16(((int *)fft_input)[1]) + (gain << LOG2_16_Q_VALUE);
-    for(int i = 2; i < WINDOW_SIZE; i+=2) {           // 82 us
-        int64_t mag = (((int *)fft_input)[i] * (int64_t) ((int *)fft_input)[i] +
-                       ((int *)fft_input)[i] * (int64_t) ((int *)fft_input)[i]);
-        magnitudes[i/2] = log2_16_64(mag) + (gain << (1+LOG2_16_Q_VALUE));
-    }
+    magnitudes[0            ] = abs(((int *)fft_input)[0]);
+    magnitudes[WINDOW_SIZE/2] = abs(((int *)fft_input)[1]);
 
+    for(int i = 2; i < WINDOW_SIZE; i+=2) {           // 82 us
+        magnitudes[i/2] = hypot_i(((int *)fft_input)[i], ((int *)fft_input)[i+1]);
+    }
+    
     mel_compress(mels, magnitudes,
                  mel_coefficients,
                  mel_bins_in_overlap,
                  WINDOW_SIZE/2+1, mel_bins);         // 47 us
+    for(int i = 0; i < mel_bins; i++) {
+        mels[i] = (((log2_16(mels[i]) + (gain << LOG2_16_Q_VALUE) - (20 << LOG2_16_Q_VALUE)) * 21) >> LOG2_16_Q_VALUE) - 128;
+    }
 }
 
 void dsp_apply_masks(int64_t fft_output[], int masks_mel[], int enabled, int mel_bins,
@@ -140,6 +143,12 @@ int main(void) {
         dsp_calculate_mels(mels, fft_data, gain, MEL_BINS,                mel_coefficients,
                mel_bins_in_overlap
 );
+        printf("\n");
+        for(int i = 0; i < 64; i++) {
+            printf("%d ", mels[i]);
+        }
+        printf("\n");
+
         asm volatile("gettime %0" : "=r" (t1));
         for(int i = 0; i < MEL_BINS; i++) {
             masks[i] = MEL_ONE_VALUE;

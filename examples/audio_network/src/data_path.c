@@ -106,6 +106,8 @@ void nn_data_transport_thread(chanend_t c_data, chanend_t c_children) {
     }
 }
 
+extern void nn_predict_masks(int *masks, int *mels);
+
 void nn_dsp_thread(uint32_t thread_number,
                    chanend_t c_parent,
                    chanend_t c_button_state) {
@@ -132,6 +134,7 @@ void nn_dsp_thread(uint32_t thread_number,
         int gain = dsp_time_to_freq(fft_data, (int *)data_to_be_processed, &fft_state);
         dsp_calculate_mels(mels, fft_data, gain, MEL_BINS,
                            mel_coefficients, mel_bins_in_overlap);
+        nn_predict_masks(masks, mels);
         dsp_apply_masks(fft_data, masks, button_state & 1, MEL_BINS,
                         mel_coefficients, mel_bins_in_overlap);
         dsp_freq_to_time((int *)data_processed, fft_data, &fft_state);

@@ -16,7 +16,7 @@ include ${XMOS_AITOOLSLIB_PATH}/buildfiles/aitoolslib.make
 USED_MODULES = lib_xua lib_i2c lib_src lib_xcore_math
 
 # Audio Class 2, Async, I2S Master, 8xInput, 8xOutput
-XCC_FLAGS= -fcomment-asm -O3 -report -lquadflash -g -DUSB_TILE=tile[0] -DADAT_TX_USE_SHARED_BUFF=1 -DQUAD_SPI_FLASH=1 -DMIXER=0 #  -fxscope
+XCC_FLAGS= -fcomment-asm -O3 -report -lquadflash -g -DUSB_TILE=tile[0] -DADAT_TX_USE_SHARED_BUFF=1 -DQUAD_SPI_FLASH=1 -DMIXER=0 -fxscope
 
 XCC_FLAGS += $(APP_FLAGS) $(XMOS_AITOOLSLIB_DEFINITIONS) $(XMOS_AITOOLSLIB_INCLUDES)
 XCC_CPP_FLAGS += $(APP_FLAGS) -std=c++14 $(XMOS_AITOOLSLIB_DEFINITIONS) $(XMOS_AITOOLSLIB_INCLUDES)

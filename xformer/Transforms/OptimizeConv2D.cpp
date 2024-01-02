@@ -440,6 +440,115 @@ createPaddedConvWithStridedSliceOp(int padSize, T convOp, Value paddedFilterOp,
   return stridedSliceOp;
 }
 
+struct SameToValidTransposeConvPattern
+    : public OpRewritePattern<TFL::TransposeConvOp> {
+  using OpRewritePattern<TFL::TransposeConvOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::TransposeConvOp tConvOp,
+                                PatternRewriter &rewriter) const override {
+    // Check for invalid types and return
+    // Input type must be QI8
+    auto inputElementType =
+        tConvOp.getInput().getType().cast<ShapedType>().getElementType();
+    if (!(inputElementType.isa<quant::QuantizedType>() &&
+          inputElementType.cast<quant::QuantizedType>().isSigned() &&
+          inputElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    // Filter type must be
+    auto filterElementType =
+        tConvOp.getWeights().getType().cast<ShapedType>().getElementType();
+    if (!(filterElementType.isa<quant::QuantizedType>() &&
+          filterElementType.cast<quant::QuantizedType>().isSigned() &&
+          filterElementType.cast<quant::QuantizedType>()
+                  .getStorageTypeIntegralWidth() == 8)) {
+      return failure();
+    }
+
+    if (tConvOp.getPadding() != "SAME") {
+      return failure();
+    }
+
+    tConvOp.setPadding("VALID");
+    auto tConvReplacement =
+        llvm::cast<TFL::TransposeConvOp>(rewriter.clone(*tConvOp));
+
+    // Calculate Transpose conv VALID output size
+    auto inputShape =
+        tConvOp.getInput().getType().cast<RankedTensorType>().getShape();
+    auto weightsShape =
+        tConvOp.getWeights().getType().cast<RankedTensorType>().getShape();
+    auto validHeight =
+        (inputShape[1] - 1) * tConvOp.getStrideH() + weightsShape[1];
+    auto validWidth =
+        (inputShape[2] - 1) * tConvOp.getStrideW() + weightsShape[2];
+
+    auto outputShape =
+        tConvOp.getOutput().getType().cast<RankedTensorType>().getShape();
+    int newOutputShapeAttr[4] = {
+        static_cast<int>(outputShape[0]), static_cast<int>(validHeight),
+        static_cast<int>(validWidth), static_cast<int>(outputShape[3])};
+
+    auto outputShapeConstantOp = rewriter.create<arith::ConstantOp>(
+        tConvReplacement.getLoc(),
+        rewriter.getI32TensorAttr(newOutputShapeAttr));
+    tConvReplacement->setOperand(0, outputShapeConstantOp);
+
+    RankedTensorType newtConvType = RankedTensorType::get(
+        {outputShape[0], validHeight, validWidth, outputShape[3]},
+        tConvOp.getOutput().getType().cast<ShapedType>().getElementType());
+    tConvReplacement->getResult(0).setType(newtConvType);
+
+    // TODO, have to fix formula for calculating SAME to VALID
+    // Ignoring height for now
+    auto diff = validWidth - outputShape[2];
+    int startWidth, endWidth;
+    if (diff == 3) {
+      startWidth = 1;
+      endWidth = validWidth - 2;
+    } else if (diff == 2) {
+      startWidth = 1;
+      endWidth = validWidth - 1;
+    } else if (diff == 1) {
+      startWidth = 1;
+      endWidth = validWidth;
+    } else {
+      // Same size, don't need to slice
+      return success();
+    }
+
+    // auto k = tConvOp.getOutputShape()[1];
+    // tConvOp.setOutputShape()
+
+    // Create strided slice op
+    int stridesAttr[4] = {1, 1, 1, 1};
+    auto stridesConstantOp = rewriter.create<arith::ConstantOp>(
+        tConvReplacement.getLoc(), rewriter.getI32TensorAttr(stridesAttr));
+
+    int beginAttr[4] = {0, 0, startWidth, 0};
+    auto beginConstantOp = rewriter.create<arith::ConstantOp>(
+        tConvReplacement.getLoc(), rewriter.getI32TensorAttr(beginAttr));
+
+    int endAttr[4] = {
+        static_cast<int32_t>(1), static_cast<int32_t>(outputShape[1]),
+        static_cast<int32_t>(endWidth), static_cast<int32_t>(outputShape[3])};
+    auto endConstantOp = rewriter.create<arith::ConstantOp>(
+        tConvReplacement.getLoc(), rewriter.getI32TensorAttr(endAttr));
+
+    auto stridedSliceOp = rewriter.create<TFL::StridedSliceOp>(
+        tConvOp.getLoc(), tConvOp.getOutput().getType(), tConvReplacement,
+        beginConstantOp, endConstantOp, stridesConstantOp, 0, 0, 0, 0, 0,
+        false);
+
+    // Replace op with strided slice op
+    rewriter.replaceOp(tConvOp, stridedSliceOp.getOutput());
+
+    return success();
+  }
+};
+
 struct PadTo4Conv2DInputPattern : public OpRewritePattern<TFL::Conv2DOp> {
   using OpRewritePattern<TFL::Conv2DOp>::OpRewritePattern;
 
@@ -662,6 +771,10 @@ void OptimizeConv2D::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
   RewritePatternSet patterns(ctx);
+
+  // To align Conv2D input to 4 channels, we insert a pad op to pad the input
+  // channels and pad the conv filter channels
+  // patterns.insert<SameToValidTransposeConvPattern>(ctx);
 
   // To align Conv2D input to 4 channels, we insert a pad op to pad the input
   // channels and pad the conv filter channels

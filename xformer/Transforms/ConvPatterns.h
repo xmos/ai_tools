@@ -23,6 +23,8 @@ struct TFLConvArgs {
   int outputHeight, outputWidth, outputDepth, outputZeroPoint;
   int inputHeight, inputWidth, inputDepth, inputZeroPoint;
   int filterHeight, filterWidth, filterDepth;
+  int abstract_kernel_subH, abstract_kernel_subW;
+  int abstract_kernel_strideH, abstract_kernel_strideW;
   std::vector<int8_t> filter;
   std::vector<int32_t> bias;
   std::vector<float> effectiveMultiplier;
@@ -249,12 +251,14 @@ private:
 
 static llvm::SmallVector<std::string> getAbstractKernelParamsForMultipleThreads(
     llvm::SmallVector<std::array<int, 4>> imageRegionSplits,
-    const nn::ImageGeometry &Y) {
+    const nn::ImageGeometry &Y, int subH = 0, int subW = 0, int strideH = 1,
+    int strideW = 1, int inputOffset = 0) {
   llvm::SmallVector<std::string> abstractKernelParams;
   for (auto &regionsplits : imageRegionSplits) {
     auto ir = nn::ImageRegion(regionsplits[0], regionsplits[1], 0,
                               regionsplits[2], regionsplits[3], Y.depth);
-    nn::AbstractKernel ak(Y, ir, VPU_INT8_ACC_PERIOD);
+    nn::AbstractKernel ak(Y, ir, VPU_INT8_ACC_PERIOD, subH, subW, strideH,
+                          strideW, inputOffset);
     auto akParams = ak.getParams();
     std::string akpStr = std::string((char *)&akParams, sizeof(akParams));
     abstractKernelParams.push_back(akpStr);

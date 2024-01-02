@@ -356,8 +356,11 @@ LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
       std::string((char *)&imToColParams, sizeof(imToColParams));
   std::string afStr = std::string((char *)&afParams, sizeof(afParams));
 
-  abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
+  auto conv2DOp = dyn_cast<FakeConv2DOp>(args.convOp);
+  abstractKernelParams = getAbstractKernelParamsForMultipleThreads(
+      args.imageRegionSplits, args.Y, conv2DOp.getOutputSubH(),
+      conv2DOp.getOutputSubW(), conv2DOp.getOutputStrideH(),
+      conv2DOp.getOutputStrideW(), conv2DOp.getInputOffset());
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;
@@ -387,8 +390,11 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
       std::string((char *)&imToColParams, sizeof(imToColParams));
   std::string afStr = std::string((char *)&afParams, sizeof(afParams));
 
-  abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
+  auto conv2DOp = dyn_cast<FakeConv2DOp>(args.convOp);
+  abstractKernelParams = getAbstractKernelParamsForMultipleThreads(
+      args.imageRegionSplits, args.Y, conv2DOp.getOutputSubH(),
+      conv2DOp.getOutputSubW(), conv2DOp.getOutputStrideH(),
+      conv2DOp.getOutputStrideW(), conv2DOp.getInputOffset());
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;
@@ -417,8 +423,11 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
       std::string((char *)&imToColParams, sizeof(imToColParams));
   std::string afStr = std::string((char *)&afParams, sizeof(afParams));
 
-  abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
+  auto conv2DOp = dyn_cast<FakeConv2DOp>(args.convOp);
+  abstractKernelParams = getAbstractKernelParamsForMultipleThreads(
+      args.imageRegionSplits, args.Y, conv2DOp.getOutputSubH(),
+      conv2DOp.getOutputSubW(), conv2DOp.getOutputStrideH(),
+      conv2DOp.getOutputStrideW(), conv2DOp.getInputOffset());
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;

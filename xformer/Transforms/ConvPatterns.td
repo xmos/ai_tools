@@ -26,7 +26,7 @@ def IsConstOp
 // TFL_Conv2D() -> XC_FakeConv2D()
 def :
 Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, $wf, $sh, $sw),
-          (XC_FakeConv2DOp $input, $f, $b, $dh, $dw, $faf, $wf, (CreateNoneValue $input), $sh, $sw),[
+          (XC_FakeConv2DOp $input, $f, $b, (CreateNoneValue $input), $dh, $dw, $faf, $wf, (CreateNoneValue $input), $sh, $sw, ConstantAttr<I32Attr, "0">, ConstantAttr<I32Attr, "0">, ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "0">),[
               (HasMultipleOfNBytesPerPixel<4> $input),
               (HasMultipleOfNBytesPerPixel<4> $output),
               (HasEqualChannels $input, $f),
@@ -41,6 +41,8 @@ Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, 
               (HasMultipleOfNBytesPerPixel<4> $output),
               (IsConstOp $f),
               ]>;
+
+def getCompressedFloats : NativeCodeCall<"getCompressedFloats($_builder, $0)">;
 
 // Special case, we only optimize conv with filter width 3, filter height
 // 2, and stride height 2

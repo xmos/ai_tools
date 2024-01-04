@@ -106,7 +106,7 @@ void nn_data_transport_thread(chanend_t c_data, chanend_t c_children) {
     }
 }
 
-extern void nn_predict_masks(int *masks, int *mels);
+extern void nn_predict_masks(int *masks, int button_state, int *mels);
 
 void nn_dsp_thread(uint32_t thread_number,
                    chanend_t c_parent,
@@ -116,13 +116,6 @@ void nn_dsp_thread(uint32_t thread_number,
     int masks[MEL_BINS];
     int mels[MEL_BINS];
     int button_state = 0xF;
-    for(int i = 0; i < MEL_BINS; i++) {
-        if (i < 20) {
-            masks[i] = MEL_ONE_VALUE * (int64_t) (20 - i) / 20;
-        } else {
-            masks[i] = 0;
-        }
-    }
     SELECT_RES(
         CASE_THEN(c_parent,        go),
         CASE_THEN(c_button_state,  buttons)
@@ -134,8 +127,8 @@ void nn_dsp_thread(uint32_t thread_number,
         int gain = dsp_time_to_freq(fft_data, (int *)data_to_be_processed, &fft_state);
         dsp_calculate_mels(mels, fft_data, gain, MEL_BINS,
                            mel_coefficients, mel_bins_in_overlap);
-        nn_predict_masks(masks, mels);
-        dsp_apply_masks(fft_data, masks, button_state & 1, MEL_BINS,
+        nn_predict_masks(masks, button_state, mels);
+        dsp_apply_masks(fft_data, masks, 1, MEL_BINS,
                         mel_coefficients, mel_bins_in_overlap);
         dsp_freq_to_time((int *)data_processed, fft_data, &fft_state);
         continue;      // TODO: CONTINUE_NO_RESET

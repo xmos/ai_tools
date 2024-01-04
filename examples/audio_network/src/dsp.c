@@ -23,8 +23,9 @@ int dsp_time_to_freq(int64_t fft_output[], int data_to_be_processed[], fft_state
     }
     
     // Use a raised cosing to window it, create two bits of headroom.
+    // Todo: divide the raised cosine table by 2
     for(int i = 0; i < WINDOW_SIZE; i++) {  // 42 us
-        ((int *)fft_output)[i] = (raised_cosine_512[i] * (int64_t)input_frame[i]) >> 32;
+        ((int *)fft_output)[i] = ((raised_cosine_512[i]>>1) * (int64_t)input_frame[i]) >> 32;
     }
 
     // 41 us

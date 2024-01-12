@@ -32,6 +32,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createApplyTFLPatternsPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceAddPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMulPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMaxPoolPass();
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceSoftmaxPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceStridedSlicePass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceTransposeConvPass();

@@ -23,6 +23,24 @@ def:
             $output)))>;
 }
 
+def getExpLookupF32
+    : NativeCodeCall<"getExpLookupF32($_builder, $0.getDefiningOp())">;
+
+// Softmax contraint: there must be only one segment, i.e. the input can be flattened
+def isSingleSegment
+    : Constraint<CPred<"$0.getType().cast<ShapedType>().getNumElements() == "
+                       "$0.getType().cast<ShapedType>().getDimSize($0.getType().cast<ShapedType>().getRank() - 1)">>;
+
+// Softmax contraint: beta must be 1.0
+def betaIsOne
+    : Constraint<CPred<"$0.getValue().convertToFloat() == 1.0">>;
+
+def:
+    Pat<(TFL_SoftmaxOp
+             : $output TensorOf<[F32]>:$input, $beta),
+            (XC_SoftmaxOp $input, (Arith_ConstantOp (getExpLookupF32
+            $output))), [(isSingleSegment $input), (betaIsOne $beta)]>;
+
 def getActivationType
     : NativeCodeCall<"getActivationType($_builder, $0.getDefiningOp())">;
 

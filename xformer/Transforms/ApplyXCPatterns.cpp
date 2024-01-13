@@ -115,7 +115,11 @@ DenseElementsAttr getExpLookupF32(PatternRewriter &rewriter, Operation *op) {
   assert(outputZeroPoint == 0 && outputScale == 1.0f / 256.0f &&
          "Output range must be 0-1");
   llvm::SmallVector<float, 256> resultVector;
-  generateExpLUT(inputZeroPoint, inputScale, resultVector.data());
+  // generateExpLUT(inputZeroPoint, inputScale, resultVector.data());
+  for (int i = 0; i < 256; i++) {
+    float x = (i - inputZeroPoint) * inputScale;
+    resultVector[i] = expf(x);
+  }
   ShapedType lookupTableType =
       RankedTensorType::get({256}, rewriter.getF32Type());
   auto lookupTableAttr =

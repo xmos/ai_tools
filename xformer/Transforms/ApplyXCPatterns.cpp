@@ -112,12 +112,13 @@ DenseElementsAttr getExpLookupF32(PatternRewriter &rewriter, Operation *op) {
       outputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
   double outputScale = outputQType.getScale();
   int64_t outputZeroPoint = outputQType.getZeroPoint();
-  assert(outputZeroPoint == 0 && outputScale == 1.0f / 256.0f &&
+  assert(outputZeroPoint == -128 && outputScale == 1.0f / 256.0f &&
          "Output range must be 0-1");
-  llvm::SmallVector<float, 256> resultVector;
+  llvm::SmallVector<float, 0> resultVector;
+  resultVector.resize(256);
   // generateExpLUT(inputZeroPoint, inputScale, resultVector.data());
   for (int i = 0; i < 256; i++) {
-    float x = (i - inputZeroPoint) * inputScale;
+    float x = ((i - 128) - inputZeroPoint) * inputScale;
     resultVector[i] = expf(x);
   }
   ShapedType lookupTableType =

@@ -28,8 +28,7 @@ def getExpLookupF32
 
 // Softmax constraint: batch size must be 1, number of dimensions must be 2 (batch, dim)
 def isSingleSegment
-    : Constraint<CPred<"$0.getType().cast<ShapedType>().getRank() == 1">>;
-// (isSingleSegment $input), 
+    : Constraint<CPred<"$0.getType().cast<ShapedType>().getRank() == 2">>;
 
 def betaIsOne
     : Constraint<CPred<"$0.getValue().convertToFloat() == 1.0">>;
@@ -38,7 +37,7 @@ def:
     Pat<(TFL_SoftmaxOp
              : $output TensorOf<[QI8]>:$input, $beta),
             (XC_SoftmaxOp $input, (Arith_ConstantOp (getExpLookupF32
-            $output))), [(betaIsOne $beta)]>;
+            $output))), [(betaIsOne $beta), (isSingleSegment $input)]>;
 
 def getActivationType
     : NativeCodeCall<"getActivationType($_builder, $0.getDefiningOp())">;

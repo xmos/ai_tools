@@ -29,6 +29,13 @@ def pytest_addoption(parser):
         required=True,
         help="path to the directory containing the models to be tested",
     )
+    parser.addoption(
+        "--tc",
+        action="store",
+        default=5,
+        type=int,
+        help="xcore-thread-count parameter for compilation",
+    )
 
 
 def pytest_generate_tests(metafunc):

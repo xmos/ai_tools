@@ -309,9 +309,9 @@ def XC_LookupOp : XC_Op<"lookup", [Pure]> {
 
   let description = [{Lookup table op.}];
 
-  let arguments = (ins TensorOf<[QI8]> : $input, TensorOf<[I8]> : $lut);
+  let arguments = (ins TensorOf<[QI8, QI16]> : $input, TensorOf<[UI8]> : $lut);
 
-  let results = (outs TensorOf<[QI8]> : $output);
+  let results = (outs TensorOf<[QI8, QI16]> : $output);
 }
 
 def XC_PadOp : XC_Op<"pad", [Pure]> {

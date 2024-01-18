@@ -6,6 +6,7 @@
 #include "Transforms/Options.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "lib_nn/api/nn_layers.h"
+#include "lib_nn/api/quadratic_approximation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
@@ -129,7 +130,56 @@ DenseElementsAttr getExpLookupF32(PatternRewriter &rewriter, Operation *op) {
   return lookupTableAttr;
 }
 
-DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
+DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter, Operation *op) {
+  // Get input scale and input zero point
+  RankedTensorType inputType =
+      op->getOperand(0).getType().dyn_cast<RankedTensorType>();
+  auto inputQType =
+      inputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
+  double inputScale = inputQType.getScale();
+  int64_t inputZeroPoint = inputQType.getZeroPoint();
+
+  // Get output scale and output zero point
+  RankedTensorType outputType =
+      op->getResult(0).getType().dyn_cast<RankedTensorType>();
+  auto outputQType =
+      outputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
+  double outputScale = outputQType.getScale();
+  assert(outputScale != 0 && "Output scale of zero is not supported!");
+  int64_t outputZeroPoint = outputQType.getZeroPoint();
+
+  float_function_t fn;
+
+  if (isa<TFL::TanhOp>(op)) {
+    fn = approximation_function_tanh;
+  } else if (isa<TFL::LogisticOp>(op)) {
+    fn = approximation_function_logistics;
+  } else if (isa<TFL::EluOp>(op)) {
+    fn = approximation_function_elu;
+  } else {
+    llvm_unreachable("Unsupported op!");
+  }
+
+  double square_error;
+  int max_error;
+  int chunks = 128;
+  quadratic_function_table_t table;
+  quadratic_approximation_generator(&table, fn, inputScale, outputScale, chunks,
+                                    &max_error, &square_error);
+  //printf("Max error %d sqerror %f\n", max_error, square_error);
+
+  auto length = quadratic_function_table_number_bytes(&table);
+  uint8_t *bytes = quadratic_function_table_bytes(&table);
+
+  ArrayRef<uint8_t> tableData = ArrayRef(bytes, length);
+  ShapedType lookupTableType = RankedTensorType::get(
+      {length}, rewriter.getIntegerType(8, /*signed=*/false));
+  auto lookupTableAttr =
+      DenseElementsAttr::get<uint8_t>(lookupTableType, tableData);
+  return lookupTableAttr;
+}
+
+DenseElementsAttr getLookupTableI8(PatternRewriter &rewriter, Operation *op) {
   llvm::SmallVector<int8_t, 0> inputVector;
   inputVector.resize(256);
 
@@ -186,20 +236,20 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
   }
 
   // Quantize to create the result vector
-  llvm::SmallVector<int8_t, 0> resultVector;
+  llvm::SmallVector<uint8_t, 0> resultVector;
   std::transform(
       dequantizedVector.begin(), dequantizedVector.end(),
       std::back_inserter(resultVector), [&](double n) {
         int32_t t =
             static_cast<int32_t>(round(n / outputScale)) + outputZeroPoint;
-        return static_cast<int8_t>(std::max(
+        return static_cast<uint8_t>(std::max(
             {std::min({(int32_t)t, (int32_t)INT8_MAX}), (int32_t)INT8_MIN}));
       });
 
-  ShapedType lookupTableType =
-      RankedTensorType::get({256}, rewriter.getIntegerType(8));
+  ShapedType lookupTableType = RankedTensorType::get(
+      {256}, rewriter.getIntegerType(8, /*signed=*/false));
   auto lookupTableAttr =
-      DenseElementsAttr::get<int8_t>(lookupTableType, resultVector);
+      DenseElementsAttr::get<uint8_t>(lookupTableType, resultVector);
   return lookupTableAttr;
 }
 

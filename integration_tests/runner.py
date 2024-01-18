@@ -254,7 +254,10 @@ def get_input_tensors(runner: AbstractRefRunner, parent_dir: Path) -> list:
         if f.is_file():
             ins.append(np.load(f))
         else:
-            ins.append(np.random.randint(-128, high=127, size=s, dtype=d))
+            if d == np.float32:
+                ins.append(np.random.rand(*s).astype(np.float32))
+            else:
+                ins.append(np.random.randint(-128, high=127, size=s, dtype=d))
     return ins
 
 

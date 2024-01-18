@@ -219,14 +219,14 @@ llvm::SmallVector<std::array<int, 4>> getImageRegionThreadSplits(
                   ? split - 1
                   : split;
       imageRegionSplits.push_back(
-          {topLeftRow + subH, topLeftColumn + subW, split, imageWidth});
+          {topLeftRow + subH, topLeftColumn, split, imageWidth});
       topLeftRow += split;
     } else {
       split = (topLeftColumn + subW + split > imageWidth && imageWidth % 2 == 1)
                   ? split - 1
                   : split;
       imageRegionSplits.push_back(
-          {topLeftRow + subH, topLeftColumn + subW, imageHeight, split});
+          {topLeftRow, topLeftColumn + subW, imageHeight, split});
       topLeftColumn += split;
     }
   }

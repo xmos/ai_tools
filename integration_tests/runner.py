@@ -22,7 +22,7 @@ tf.keras.utils.set_random_seed(42)
 
 MAX_ABS_ERROR = 1
 ABS_AVG_ERROR = 1.0 / 4
-AVG_ABS_ERROR = 0.28 #1.0 / 4
+AVG_ABS_ERROR = 0.28  # 1.0 / 4
 REQUIRED_OUTPUTS = 2048
 LOGGER = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class AbstractRefRunner(AbstractRunner):
 
 
 class AbstractXFRunner(AbstractRunner):
-    def __init__(self, model):
+    def __init__(self, model, thread_count=5):
         temp_dir = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
         self._temp_dir = temp_dir
         self._dir_path = Path(temp_dir.name)
@@ -76,7 +76,7 @@ class AbstractXFRunner(AbstractRunner):
         with open(input_file, "wb") as fd:
             fd.write(model)
         output_file = self._dir_path / "model.tflite"
-        hyper_params = {"xcore-thread-count": 5}
+        hyper_params = {"xcore-thread-count": thread_count}
         xformer.convert(input_file, output_file, hyper_params)
         with open(output_file, "rb") as fd:
             model = fd.read()
@@ -137,9 +137,9 @@ class TFLiteInterpreter(AbstractRefRunner):
 
 
 class XFHostRuntime(AbstractXFRunner):
-    def __init__(self, model_content):
+    def __init__(self, model_content, thread_count=5):
         path_var = os.path.dirname(rt.__file__)
-        super().__init__(model_content)
+        super().__init__(model_content, thread_count)
         self._model_exe_path = self._dir_path / "a.out"
         cmd = [
             CPP_COMPILER,
@@ -179,8 +179,8 @@ class XFHostRuntime(AbstractXFRunner):
 
 
 class XFDeviceRuntime(AbstractXFRunner):
-    def __init__(self, model_content):
-        super().__init__(model_content)
+    def __init__(self, model_content, thread_count=5):
+        super().__init__(model_content, thread_count)
         # compile model, two dirs because xmake
         dst_dir = self._dir_path / "device_test"
         # dst_dir = DEVICE_TEST_PATH
@@ -208,8 +208,8 @@ class XFDeviceRuntime(AbstractXFRunner):
 
 
 class XFHostInterpreter(AbstractXFRunner):
-    def __init__(self, model_content):
-        super().__init__(model_content)
+    def __init__(self, model_content, thread_count=5):
+        super().__init__(model_content, thread_count)
 
     def predict(self, inputs):
         self._interpreter.reset()
@@ -254,7 +254,10 @@ def get_input_tensors(runner: AbstractRefRunner, parent_dir: Path) -> list:
         if f.is_file():
             ins.append(np.load(f))
         else:
-            ins.append(np.random.randint(-128, high=127, size=s, dtype=d))
+            if d == np.float32:
+                ins.append(np.random.rand(*s).astype(np.float32))
+            else:
+                ins.append(np.random.randint(-128, high=127, size=s, dtype=d))
     return ins
 
 
@@ -262,7 +265,7 @@ def get_input_tensors(runner: AbstractRefRunner, parent_dir: Path) -> list:
 # compare the output with xformed model on XCore TFLM
 def test_model(request: FixtureRequest, filename: str) -> None:
     # for attaching a debugger
-    flags = ["bnn", "device", "compiled", "s"]
+    flags = ["bnn", "device", "compiled", "s", "tc"]
     opt_dict = {i: request.config.getoption(i) for i in flags}
     if opt_dict["s"]:
         time.sleep(5)
@@ -292,11 +295,11 @@ def test_model(request: FixtureRequest, filename: str) -> None:
 
     LOGGER.info("Invoking xformer to get xformed model...")
     if opt_dict["compiled"]:
-        xf_runner = XFHostRuntime(model_content)
+        xf_runner = XFHostRuntime(model_content, opt_dict["tc"])
     elif opt_dict["device"]:
-        xf_runner = XFDeviceRuntime(model_content)
+        xf_runner = XFDeviceRuntime(model_content, opt_dict["tc"])
     else:
-        xf_runner = XFHostInterpreter(model_content)
+        xf_runner = XFHostInterpreter(model_content, opt_dict["tc"])
 
     # Run tests
     num_fails = run_out_count = run_out_err = run_out_abs_err = test = max_abs_err = 0

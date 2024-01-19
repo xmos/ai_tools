@@ -124,8 +124,7 @@ def XC_MulOp : XC_Op<"mul", [Pure]> {
     TensorOf<[QI8]>:$input1,
     TensorOf<[QI8]>:$input2,
 
-    I32Attr:$B,
-    I32Attr:$S
+    StrAttr:$mul_params
   );
 
   let results = (outs TensorOf<[QI8]> : $output);

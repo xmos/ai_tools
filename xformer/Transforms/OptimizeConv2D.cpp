@@ -501,39 +501,28 @@ struct SameToValidTransposeConvPattern
         tConvOp.getOutput().getType().cast<ShapedType>().getElementType());
     tConvReplacement->getResult(0).setType(newtConvType);
 
-    // TODO, have to fix formula for calculating SAME to VALID
-    // Ignoring height for now
-    auto diff = validWidth - outputShape[2];
-    int startWidth, endWidth;
-    if (diff == 3) {
-      startWidth = 1;
-      endWidth = validWidth - 2;
-    } else if (diff == 2) {
-      startWidth = 1;
-      endWidth = validWidth - 1;
-    } else if (diff == 1) {
-      startWidth = 1;
-      endWidth = validWidth;
-    } else {
-      // Same size, don't need to slice
+    int sliceHeight = weightsShape[1] - tConvOp.getStrideH();
+    int sliceWidth = weightsShape[2] - tConvOp.getStrideW();
+    if (sliceHeight == 0 && sliceWidth == 0) {
+      rewriter.replaceOp(tConvOp, tConvReplacement->getResult(0));
       return success();
     }
-
-    // auto k = tConvOp.getOutputShape()[1];
-    // tConvOp.setOutputShape()
-
-    // Create strided slice op
+    int sliceHeightLeft = sliceHeight / 2;
+    int sliceWidthLeft = sliceWidth / 2;
     int stridesAttr[4] = {1, 1, 1, 1};
+    int beginAttr[4] = {0, sliceHeightLeft, sliceWidthLeft, 0};
+    int endAttr[4] = {static_cast<int32_t>(1),
+                      static_cast<int32_t>(outputShape[1] + sliceHeightLeft),
+                      static_cast<int32_t>(outputShape[2] + sliceWidthLeft),
+                      static_cast<int32_t>(outputShape[3])};
+    // create strided slice op
+
     auto stridesConstantOp = rewriter.create<arith::ConstantOp>(
         tConvReplacement.getLoc(), rewriter.getI32TensorAttr(stridesAttr));
 
-    int beginAttr[4] = {0, 0, startWidth, 0};
     auto beginConstantOp = rewriter.create<arith::ConstantOp>(
         tConvReplacement.getLoc(), rewriter.getI32TensorAttr(beginAttr));
 
-    int endAttr[4] = {
-        static_cast<int32_t>(1), static_cast<int32_t>(outputShape[1]),
-        static_cast<int32_t>(endWidth), static_cast<int32_t>(outputShape[3])};
     auto endConstantOp = rewriter.create<arith::ConstantOp>(
         tConvReplacement.getLoc(), rewriter.getI32TensorAttr(endAttr));
 
@@ -772,9 +761,8 @@ void OptimizeConv2D::runOnOperation() {
   func::FuncOp func = getOperation();
   RewritePatternSet patterns(ctx);
 
-  // To align Conv2D input to 4 channels, we insert a pad op to pad the input
-  // channels and pad the conv filter channels
-  // patterns.insert<SameToValidTransposeConvPattern>(ctx);
+  // Convert TransposeConv2D with SAME padding to VALID padding + StridedSlice
+  patterns.insert<SameToValidTransposeConvPattern>(ctx);
 
   // To align Conv2D input to 4 channels, we insert a pad op to pad the input
   // channels and pad the conv filter channels

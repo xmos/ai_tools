@@ -43,10 +43,7 @@ std::vector<uint8_t> AddOp::buildCustomOptions() {
 
 std::vector<uint8_t> MulOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
-  fbb.Map([&]() {
-    fbb.Int("B", (int32_t)getB());
-    fbb.Int("S", (int32_t)getS());
-  });
+  fbb.Map([&]() { fbb.String("mp", getMulParams().str()); });
   fbb.Finish();
   return fbb.GetBuffer();
 }

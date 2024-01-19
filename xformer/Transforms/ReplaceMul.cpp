@@ -4,7 +4,9 @@
 #include "IR/XCoreOps.h"
 #include "Utils/Util.h"
 
-#include "lib_nn/api/MemCpyFn.hpp"
+extern "C" {
+#include "lib_nn/api/nn_layers.h"
+}
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -89,20 +91,14 @@ struct ReplaceMulPattern : public OpRewritePattern<TFL::MulOp> {
     auto outputScale = outputQType.getScale();
     auto outputZeroPoint = outputQType.getZeroPoint();
 
-    // x2 = ((S * (-b1 * x0 + -b0 * x1 +  x0 * x1) + (1<<13) >> 14) + B ) +
-    // (1<<5) >> 6
-    // B =  (b0 * b1 * S + b2)
+    nn_mul_params_t mp;
+    mul_boggle(&mp, lhsScale, rhsScale, outputScale, lhsZeroPoint, rhsZeroPoint,
+               outputZeroPoint);
+    auto mpStr = std::string((char *)&mp, sizeof(nn_mul_params_t));
 
-    double scaleRatio = lhsScale * rhsScale / outputScale;
-    int S = round(scaleRatio * pow(2, 14 + 6));
-
-    double biasTerm =
-        lhsZeroPoint * rhsZeroPoint * scaleRatio + outputZeroPoint;
-    int B = round(biasTerm * pow(2, 6));
-
-    auto xcMulOp = rewriter.create<MulOp>(
-        mulOp.getLoc(), mulOp.getType(), mulOp.getLhs(), mulOp.getRhs(),
-        rewriter.getI32IntegerAttr(B), rewriter.getI32IntegerAttr(S));
+    auto xcMulOp =
+        rewriter.create<MulOp>(mulOp.getLoc(), mulOp.getType(), mulOp.getLhs(),
+                               mulOp.getRhs(), rewriter.getStringAttr(mpStr));
     rewriter.replaceOp(mulOp, xcMulOp.getOutput());
 
     return success();

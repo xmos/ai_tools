@@ -25,7 +25,7 @@ def IsConstOp
 
 // TFL_Conv2D() -> XC_FakeConv2D()
 def :
-Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, $wf, $sh, $sw),
+Pat<(TFL_Conv2DOp: $output TensorOf<[QI8, QI16]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, $wf, $sh, $sw),
           (XC_FakeConv2DOp $input, $f, $b, (CreateNoneValue $input), $dh, $dw, $faf, $wf, (CreateNoneValue $input), $sh, $sw, ConstantAttr<I32Attr, "0">, ConstantAttr<I32Attr, "0">, ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "0">),[
               (HasMultipleOfNBytesPerPixel<4> $input),
               (HasMultipleOfNBytesPerPixel<4> $output),

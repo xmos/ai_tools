@@ -214,6 +214,16 @@ def XC_MaxPool2DOp : XC_Op<"maxpool2d", [Pure]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_SoftmaxOp : XC_Op<"softmax", [Pure]> {
+  let summary = "Softmax op";
+
+  let description = [{Softmax op.}];
+
+  let arguments = (ins TensorOf<[QI8]> : $input, TensorOf<[F32]> : $lut);
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
   let summary = "Conv2D V2 op";
 

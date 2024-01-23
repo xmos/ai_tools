@@ -9,6 +9,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+#include "tensorflow/compiler/mlir/lite/utils/validators.h"
 #include <numeric>
 
 namespace mlir {
@@ -96,6 +97,36 @@ IntegerAttr getActivationType(PatternRewriter &rewriter, Operation *op) {
   } else {
     llvm_unreachable("Unsupported op!");
   }
+}
+
+DenseElementsAttr getExpLookupF32(PatternRewriter &rewriter, Operation *op) {
+  RankedTensorType inputType =
+      op->getOperand(0).getType().dyn_cast<RankedTensorType>();
+  auto inputQType =
+      inputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
+  double inputScale = inputQType.getScale();
+  int64_t inputZeroPoint = inputQType.getZeroPoint();
+
+  RankedTensorType outputType =
+      op->getResult(0).getType().dyn_cast<RankedTensorType>();
+  auto outputQType =
+      outputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
+  double outputScale = outputQType.getScale();
+  int64_t outputZeroPoint = outputQType.getZeroPoint();
+  assert(outputZeroPoint == -128 && outputScale == 1.0f / 256.0f &&
+         "Output range must be 0-1");
+  llvm::SmallVector<float, 0> resultVector;
+  resultVector.resize(256);
+  // generateExpLUT(inputZeroPoint, inputScale, resultVector.data());
+  for (int i = 0; i < 256; i++) {
+    float x = ((i - 128) - inputZeroPoint) * inputScale;
+    resultVector[i] = expf(x);
+  }
+  ShapedType lookupTableType =
+      RankedTensorType::get({256}, rewriter.getF32Type());
+  auto lookupTableAttr =
+      DenseElementsAttr::get<float>(lookupTableType, resultVector);
+  return lookupTableAttr;
 }
 
 DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {

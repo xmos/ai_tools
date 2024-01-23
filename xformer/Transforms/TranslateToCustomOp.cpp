@@ -28,6 +28,7 @@ std::vector<uint8_t> Beta_TransposeConvF32Op::buildCustomOptions() {
 }
 std::vector<uint8_t> Beta_FcF32Op::buildCustomOptions() { return {}; }
 std::vector<uint8_t> LookupOp::buildCustomOptions() { return {}; }
+std::vector<uint8_t> SoftmaxOp::buildCustomOptions() { return {}; }
 
 std::vector<uint8_t> AddOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
@@ -197,6 +198,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<MaxPool2DOp>>(ctx);
   patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
   patterns.insert<RewriteToCustomOp<LookupOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<SoftmaxOp>>(ctx);
   patterns.insert<RewriteToCustomOp<MulOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Pad3To4Op>>(ctx);

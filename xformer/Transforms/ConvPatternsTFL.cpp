@@ -200,10 +200,16 @@ template class ReplaceConv2DBase<ReplaceDepthwiseConv2DPattern,
 // Handle TFL Conv2D specific functions
 LogicalResult ReplaceConv2DPattern::getKernelType(const TFLConvArgs &args,
                                                   Conv2DType &kt) const {
-  if (args.isI16Conv && args.inputDepth % 16 == 0 &&
-      args.outputDepth % 16 == 0) {
-    kt = Conv2DType::ValidDirectI16;
-  } else if (args.toBePadded) {
+  if (args.isI16Conv) {
+    if (args.inputDepth % 16 == 0 && args.outputDepth % 16 == 0) {
+      kt = Conv2DType::ValidDirectI16;
+      return success();
+    } else {
+      return failure();
+    }
+  }
+
+  if (args.toBePadded) {
     kt = Conv2DType::PaddedIndirect;
   } else if (args.inputDepth % 32 == 0 && args.outputDepth % 16 == 0) {
     kt = Conv2DType::ValidDirect;

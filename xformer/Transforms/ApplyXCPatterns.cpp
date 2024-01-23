@@ -166,7 +166,7 @@ DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter, Operation *op) {
   quadratic_function_table_t table;
   quadratic_approximation_generator(&table, fn, inputScale, outputScale, chunks,
                                     &max_error, &square_error);
-  //printf("Max error %d sqerror %f\n", max_error, square_error);
+  // printf("Max error %d sqerror %f\n", max_error, square_error);
 
   auto length = quadratic_function_table_number_bytes(&table);
   uint8_t *bytes = quadratic_function_table_bytes(&table);

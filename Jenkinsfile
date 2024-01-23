@@ -38,8 +38,7 @@ pipeline {
                 } }
                 stage("Build") { steps { withVenv {
                     // build dll_interpreter for python interface
-                    sh "./build.sh -T runtime-host -b"
-                    sh "./build.sh -T xinterpreter-nozip -b"
+                    sh "./build.sh -T xinterpreter -b"
                     // build xformer
                     dir("xformer") {
                         sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"
@@ -97,12 +96,12 @@ def runTests(String platform) {
             sh "pip install dist/*"
         }
         if (platform == "device") {
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns -n 1 --junitxml=integration_tests/integration_device_1_junit.xml --tc 1"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns -n 1 --junitxml=integration_tests/integration_device_5_junit.xml"
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns -n 1 --junitxml=integration_tests/integration_device_1_junit.xml --tc 1 --device"
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns -n 1 --junitxml=integration_tests/integration_device_5_junit.xml --device"
             // lstms are always problematic
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_lstm -n 1"
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_lstm -n 1 --device"
             // test a float32 layer
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_detection_postprocess -n 1"
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_detection_postprocess -n 1 --device"
         } else if (platform == "host") {
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_1_junit.xml --tc 1"
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_5_junit.xml"

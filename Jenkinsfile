@@ -38,7 +38,9 @@ pipeline {
                 } }
                 stage("Build") { steps { withVenv {
                     // build dll_interpreter for python interface
-                    sh "./build.sh -T xinterpreter -b"
+                    withTools(params.TOOLS_VERSION) {
+                        sh "./build.sh -T xinterpreter -b"
+                    }
                     // build xformer
                     dir("xformer") {
                         sh "wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-amd64"

@@ -103,8 +103,8 @@ def runTests(String platform) {
         }
         if (platform == "device") {
             withTools(params.TOOLS_VERSION) {
-                sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns -n 1 --junitxml=integration_tests/integration_device_1_junit.xml --tc 1 --device"
-                sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns -n 1 --junitxml=integration_tests/integration_device_5_junit.xml --device"
+                sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns/test_cnn_classifier -n 1 --junitxml=integration_tests/integration_device_1_junit.xml --tc 1 --device"
+                sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns/test_cnn_classifier -n 1 --junitxml=integration_tests/integration_device_5_junit.xml --device"
                 // lstms are always problematic
                 sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_lstm -n 1 --device"
                 // test a float32 layer

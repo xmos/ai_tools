@@ -97,6 +97,10 @@ def runTests(String platform) {
             unstash "xmos_ai_tools_wheel"
             sh "pip install dist/*"
         }
+        script {
+            XMOS_AITOOLSLIB_PATH = sh(script: "python -c \"import xmos_ai_tools.runtime as rt; import os; print(os.path.dirname(rt.__file__))\"", returnStdout: true).trim()
+            env.XMOS_AITOOLSLIB_PATH = XMOS_AITOOLSLIB_PATH
+        }
         if (platform == "device") {
             withTools(params.TOOLS_VERSION) {
                 sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns -n 1 --junitxml=integration_tests/integration_device_1_junit.xml --tc 1 --device"

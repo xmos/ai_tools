@@ -14,6 +14,34 @@
 namespace mlir {
 namespace xcore {
 
+template <typename ConcreteType, typename ConvOpType, typename ArgsType,
+          typename MulsAndBiasType>
+static LogicalResult obtainSerializedParamsAndMulsAndBiasesOp(
+    const ConcreteType *builder, PatternRewriter &rewriter,
+    ConvOpType &conv2DOp, const ArgsType &args, const Conv2DType &kt,
+    OtType &otType, llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
+    std::vector<int8_t> &weightsData, int &scratchBytes,
+    arith::ConstantOp &mulsBiasesOrThresholdsConstantOp) {
+  std::vector<MulsAndBiasType> mulsBiasesOrThresholdsData;
+
+  // Obtain serialized params and calculated tensors from lib_nn for the
+  // conv2d kernel type
+  if (failed(builder->getSerializedParamsAndTensors(
+          args, kt, otType, strParams, abstractKernelParams, weightsData,
+          mulsBiasesOrThresholdsData, scratchBytes))) {
+    return failure();
+  }
+  ShapedType mulsBiasesOrThresholdsType = RankedTensorType::get(
+      {static_cast<long long>(mulsBiasesOrThresholdsData.size())},
+      rewriter.getIntegerType(sizeof(MulsAndBiasType) * CHAR_BIT));
+  auto mulsBiasesOrThresholdsAttr = DenseElementsAttr::get<MulsAndBiasType>(
+      mulsBiasesOrThresholdsType, mulsBiasesOrThresholdsData);
+  mulsBiasesOrThresholdsConstantOp = rewriter.create<arith::ConstantOp>(
+      conv2DOp.getLoc(), mulsBiasesOrThresholdsAttr);
+  return success();
+}
+
 // XC Conv2D Base class implementation
 // ConcreteType would be TFL Conv types or Larq BConv2D
 // Replaces them with XC Conv2D
@@ -90,37 +118,23 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   std::vector<int8_t> weightsData;
   arith::ConstantOp mulsBiasesOrThresholdsConstantOp;
 
-  auto obtainSerializedParamsAndMulsAndBiasesOp =
-      [&]<typename MulsAndBiasType>() {
-        std::vector<MulsAndBiasType> mulsBiasesOrThresholdsData;
-
-        // Obtain serialized params and calculated tensors from lib_nn for the
-        // conv2d kernel type
-        if (failed(builder->getSerializedParamsAndTensors(
-                args, kernelType, otType, strParams, abstractKernelParams,
-                weightsData, mulsBiasesOrThresholdsData, scratchBytes))) {
-          return failure();
-        }
-        ShapedType mulsBiasesOrThresholdsType = RankedTensorType::get(
-            {static_cast<long long>(mulsBiasesOrThresholdsData.size())},
-            rewriter.getIntegerType(sizeof(MulsAndBiasType) * CHAR_BIT));
-        auto mulsBiasesOrThresholdsAttr =
-            DenseElementsAttr::get<MulsAndBiasType>(mulsBiasesOrThresholdsType,
-                                                    mulsBiasesOrThresholdsData);
-        mulsBiasesOrThresholdsConstantOp = rewriter.create<arith::ConstantOp>(
-            conv2DOp.getLoc(), mulsBiasesOrThresholdsAttr);
-        return success();
-      };
-
   if (args.isI16Conv) {
     //
-    if (failed(obtainSerializedParamsAndMulsAndBiasesOp
-                   .template operator()<int32_t>())) {
+    if (failed(
+            obtainSerializedParamsAndMulsAndBiasesOp<ConcreteType, ConvOpType,
+                                                     ArgsType, int32_t>(
+                builder, rewriter, conv2DOp, args, kernelType, otType,
+                strParams, abstractKernelParams, weightsData, scratchBytes,
+                mulsBiasesOrThresholdsConstantOp))) {
       return failure();
     }
   } else {
-    if (failed(obtainSerializedParamsAndMulsAndBiasesOp
-                   .template operator()<int16_t>())) {
+    if (failed(
+            obtainSerializedParamsAndMulsAndBiasesOp<ConcreteType, ConvOpType,
+                                                     ArgsType, int16_t>(
+                builder, rewriter, conv2DOp, args, kernelType, otType,
+                strParams, abstractKernelParams, weightsData, scratchBytes,
+                mulsBiasesOrThresholdsConstantOp))) {
       return failure();
     }
   }

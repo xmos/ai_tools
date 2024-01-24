@@ -113,8 +113,8 @@ class TFLiteInterpreter(AbstractRefRunner):
         LOGGER.info("Creating TFLite interpreter")
         self._interpreter = tf.lite.Interpreter(
             model_content=model_content,
-            experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_REF,
-            experimental_preserve_all_tensors=True,
+            # experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_REF,
+            # experimental_preserve_all_tensors=True,
         )
         self._interpreter.allocate_tensors()
         dets = self._interpreter.get_input_details()

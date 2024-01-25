@@ -198,7 +198,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<MaxPool2DOp>>(ctx);
   patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
   patterns.insert<RewriteToCustomOp<LookupOp>>(ctx);
-  patterns.insert<RewriteToCustomOp<SoftmaxOp>>(ctx);
+  // patterns.insert<RewriteToCustomOp<SoftmaxOp>>(ctx);
   patterns.insert<RewriteToCustomOp<MulOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Pad3To4Op>>(ctx);

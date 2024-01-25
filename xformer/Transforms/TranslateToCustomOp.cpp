@@ -49,7 +49,7 @@ std::vector<uint8_t> MulOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
-std::vector<uint8_t> StridedSliceOp::buildCustomOptions() {
+std::vector<uint8_t> SliceOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
 
@@ -202,7 +202,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<MulOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Pad3To4Op>>(ctx);
-  patterns.insert<RewriteToCustomOp<StridedSliceOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<SliceOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ActivationF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ConcatF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ConvF32Op>>(ctx);

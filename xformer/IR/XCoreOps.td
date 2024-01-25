@@ -73,16 +73,16 @@ def XC_Conv2D_Channelwise : I32EnumAttrCase<"Channelwise", 1>;
 def XC_Conv2D_OTAttr : I32EnumAttr<"OtType", "output transform type enum",
                                    [XC_Conv2D_Group, XC_Conv2D_Channelwise]>;
 
-def XC_StridedSlice_SliceCpy : I32EnumAttrCase<"SliceCpy", 0>;
-def XC_StridedSlice_VpuCpy : I32EnumAttrCase<"VpuCpy", 1>;
-def XC_StridedSlice_MemCpy : I32EnumAttrCase<"MemCpy", 2>;
-def XC_StridedSlice_MemcpyTypeAttr : I32EnumAttr<"StridedSliceMemcpyType", "memcpy type enum",
-                                   [XC_StridedSlice_SliceCpy, XC_StridedSlice_VpuCpy, XC_StridedSlice_MemCpy]>;
+def XC_Slice_SliceCpy : I32EnumAttrCase<"SliceCpy", 0>;
+def XC_Slice_VpuCpy : I32EnumAttrCase<"VpuCpy", 1>;
+def XC_Slice_MemCpy : I32EnumAttrCase<"MemCpy", 2>;
+def XC_Slice_MemcpyTypeAttr : I32EnumAttr<"SliceMemcpyType", "memcpy type enum",
+                                   [XC_Slice_SliceCpy, XC_Slice_VpuCpy, XC_Slice_MemCpy]>;
 
-def XC_StridedSliceOp : XC_Op<"strided_slice", [Pure]> {
-  let summary = "Strided Slice op";
+def XC_SliceOp : XC_Op<"slice", [Pure]> {
+  let summary = "Slice op";
 
-  let description = [{Strided Slice op.}];
+  let description = [{Slice op.}];
 
   let arguments = (ins
     TensorOf<[QI8]>:$input,

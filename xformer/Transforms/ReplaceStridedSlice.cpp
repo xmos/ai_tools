@@ -64,6 +64,17 @@ struct ReplaceStridedSlicePattern
       return failure();
     }
 
+    DenseElementsAttr beginAttr;
+    matchPattern(stridedSliceOp.getBegin(), m_Constant(&beginAttr));
+    auto beginValues = beginAttr.getValues<int32_t>();
+
+    DenseElementsAttr endAttr;
+    matchPattern(stridedSliceOp.getEnd(), m_Constant(&endAttr));
+    auto endValues = endAttr.getValues<int32_t>();
+
+    DenseElementsAttr stridesAttr;
+    matchPattern(stridedSliceOp.getStrides(), m_Constant(&stridesAttr));
+
     // TODO: We don't support masks yet
     if (stridedSliceOp.getBeginMask() != 0 ||
         stridedSliceOp.getEndMask() != 0 ||
@@ -73,11 +84,26 @@ struct ReplaceStridedSlicePattern
       return failure();
     }
 
-    StridedSliceMemcpyType memcpyType;
+    // Check if strides are all 1
+    for (auto stride : stridesAttr.getValues<int32_t>()) {
+      if (stride != 1) {
+        return failure();
+      }
+    }
+
+    bool onlyLastDim = beginValues[3] == 0;
+    for (int i = 0; i < 3; i++) {
+      if (beginValues[i] != 0 || endValues[i] != inputType.getDimSize(i)) {
+        onlyLastDim = false;
+        break;
+      }
+    }
+
+    SliceMemcpyType memcpyType;
     if (inputType.getDimSize(2) == outputType.getDimSize(2) &&
         inputType.getDimSize(3) == outputType.getDimSize(3)) {
       // Single CPU memcpy
-      memcpyType = StridedSliceMemcpyType::SliceCpy;
+      memcpyType = SliceMemcpyType::SliceCpy;
       // } else if (inputType.getDimSize(2) % 4 == 0 &&
       //            outputType.getDimSize(2) == inputType.getDimSize(2)) {
       //   // If depth * output width is a multiple of four and the x,y location
@@ -87,47 +113,35 @@ struct ReplaceStridedSlicePattern
       //   // That is ((y * input depth + x) * depth) is a multiple of four.
       //   // We use a simple memcpy to do the copy in the runtime.
       //   // Input and output tensors must have the same width.
-      //   memcpyType = StridedSliceMemcpyType::VpuCpy;
+      //   memcpyType = SliceMemcpyType::VpuCpy;
     } else if (inputType.getDimSize(3) % 4 == 0 &&
                outputType.getDimSize(3) % 4 == 0) {
       // If not a slice copy, then if both depths are multiples of four, we can
       // do pixel by pixel VPU copy.
-      memcpyType = StridedSliceMemcpyType::VpuCpy;
-    } else {
+      memcpyType = SliceMemcpyType::VpuCpy;
+      // MemCpy only if we're slicing the end of the last dimension
+    } else if (onlyLastDim) {
       // Pixel by pixel CPU memcpy, when depth not a multiple of four
+      memcpyType = SliceMemcpyType::MemCpy;
+    } else {
       // TODO: Fix this.
       return failure();
-      // memcpyType = StridedSliceMemcpyType::MemCpy;
     }
 
-    // Extract args from the op
-    DenseElementsAttr beginAttr;
-    matchPattern(stridedSliceOp.getBegin(), m_Constant(&beginAttr));
+    int32_t inputHeight = inputType.getDimSize(1);
+    int32_t inputWidth = inputType.getDimSize(2);
+    int32_t inputDepth = inputType.getDimSize(3);
+    int32_t beginX = beginValues[2];
+    int32_t beginY = beginValues[1];
+    int32_t endX = endValues[2];
+    int32_t endY = endValues[1];
 
-    DenseElementsAttr endAttr;
-    matchPattern(stridedSliceOp.getEnd(), m_Constant(&endAttr));
-
-    DenseElementsAttr stridesAttr;
-    matchPattern(stridedSliceOp.getStrides(), m_Constant(&stridesAttr));
-
-    auto inputHeight = inputType.getDimSize(1);
-    auto inputWidth = inputType.getDimSize(2);
-    auto inputDepth = inputType.getDimSize(3);
-    auto beginX = beginAttr.getValues<int32_t>()[2];
-    auto beginY = beginAttr.getValues<int32_t>()[1];
-    auto endX = endAttr.getValues<int32_t>()[2];
-    auto endY = endAttr.getValues<int32_t>()[1];
-    auto strideX = stridesAttr.getValues<int32_t>()[2];
-    auto strideY = stridesAttr.getValues<int32_t>()[1];
-
-    auto image_geom = nn::ImageGeometry(inputHeight, inputWidth,
-                                        static_cast<int>(inputDepth));
+    auto image_geom = nn::ImageGeometry(inputHeight, inputWidth, inputDepth);
 
     int xDiff = endX - beginX;
     int yDiff = endY - beginY;
-    auto window_geom =
-        nn::WindowGeometry({yDiff, xDiff, static_cast<int>(inputDepth)},
-                           {beginY, beginX}, {1, 1, 1}, {strideY, strideX});
+    auto window_geom = nn::WindowGeometry({yDiff, xDiff, inputDepth},
+                                          {beginY, beginX}, {1, 1, 1}, {1, 1});
 
     nn::ImToColValid imToCol(image_geom, window_geom,
                              static_cast<int>(inputDepth),
@@ -135,12 +149,12 @@ struct ReplaceStridedSlicePattern
     auto imToColParams = imToCol.getParams();
     auto mfStr = std::string((char *)&imToColParams, sizeof(imToColParams));
 
-    auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceOp>(
+    auto binaryObjectSliceOp = rewriter.create<SliceOp>(
         stridedSliceOp.getLoc(), stridedSliceOp.getType(),
         stridedSliceOp.getInput(), rewriter.getI32IntegerAttr(beginX),
         rewriter.getI32IntegerAttr(beginY), rewriter.getStringAttr(mfStr),
         rewriter.getI32IntegerAttr((int32_t)memcpyType));
-    rewriter.replaceOp(stridedSliceOp, binaryObjectStridedSliceOp.getOutput());
+    rewriter.replaceOp(stridedSliceOp, binaryObjectSliceOp.getOutput());
 
     return success();
   }

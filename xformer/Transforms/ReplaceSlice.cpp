@@ -12,30 +12,28 @@ namespace mlir {
 namespace xcore {
 
 namespace {
-// Replace TFL StridedSlice with Slice for XCore.
-struct ReplaceStridedSlice
-    : public PassWrapper<ReplaceStridedSlice, OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReplaceStridedSlice)
+// Replace TFL Slice with Slice for XCore.
+struct ReplaceSlice
+    : public PassWrapper<ReplaceSlice, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReplaceSlice)
 
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
   }
-  StringRef getArgument() const final { return "xcore-replace-stridedslice"; }
+  StringRef getArgument() const final { return "xcore-replace-slice"; }
   StringRef getDescription() const final {
-    return "Replace TFL StridedSlice with Slice for XCore.";
+    return "Replace TFL Slice with Slice for XCore.";
   }
   void runOnOperation() override;
 };
 
-struct ReplaceStridedSlicePattern
-    : public OpRewritePattern<TFL::StridedSliceOp> {
-  using OpRewritePattern<TFL::StridedSliceOp>::OpRewritePattern;
+struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
+  using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSliceOp,
+  LogicalResult matchAndRewrite(TFL::SliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
 
-    auto inputType =
-        stridedSliceOp.getInput().getType().cast<RankedTensorType>();
+    auto inputType = sliceOp.getInput().getType().cast<RankedTensorType>();
     auto inputElementType = inputType.getElementType();
 
     // Check for invalid types and return
@@ -47,8 +45,7 @@ struct ReplaceStridedSlicePattern
       return failure();
     }
 
-    auto outputType =
-        stridedSliceOp.getOutput().getType().cast<RankedTensorType>();
+    auto outputType = sliceOp.getOutput().getType().cast<RankedTensorType>();
     auto outputElementType = outputType.getElementType();
 
     // Output type must be QI8
@@ -65,35 +62,16 @@ struct ReplaceStridedSlicePattern
     }
 
     DenseElementsAttr beginAttr;
-    matchPattern(stridedSliceOp.getBegin(), m_Constant(&beginAttr));
+    matchPattern(sliceOp.getBegin(), m_Constant(&beginAttr));
     auto beginValues = beginAttr.getValues<int32_t>();
 
-    DenseElementsAttr endAttr;
-    matchPattern(stridedSliceOp.getEnd(), m_Constant(&endAttr));
-    auto endValues = endAttr.getValues<int32_t>();
-
-    DenseElementsAttr stridesAttr;
-    matchPattern(stridedSliceOp.getStrides(), m_Constant(&stridesAttr));
-
-    // TODO: We don't support masks yet
-    if (stridedSliceOp.getBeginMask() != 0 ||
-        stridedSliceOp.getEndMask() != 0 ||
-        stridedSliceOp.getEllipsisMask() != 0 ||
-        stridedSliceOp.getNewAxisMask() != 0 ||
-        stridedSliceOp.getShrinkAxisMask() != 0) {
-      return failure();
-    }
-
-    // Check if strides are all 1
-    for (auto stride : stridesAttr.getValues<int32_t>()) {
-      if (stride != 1) {
-        return failure();
-      }
-    }
+    DenseElementsAttr sizeAttr;
+    matchPattern(sliceOp.getSize(), m_Constant(&sizeAttr));
+    auto sizeValues = sizeAttr.getValues<int32_t>();
 
     bool onlyLastDim = beginValues[3] == 0;
     for (int i = 0; i < 3; i++) {
-      if (beginValues[i] != 0 || endValues[i] != inputType.getDimSize(i)) {
+      if (beginValues[i] != 0 || sizeValues[i] != inputType.getDimSize(i)) {
         onlyLastDim = false;
         break;
       }
@@ -104,16 +82,6 @@ struct ReplaceStridedSlicePattern
         inputType.getDimSize(3) == outputType.getDimSize(3)) {
       // Single CPU memcpy
       memcpyType = SliceMemcpyType::SliceCpy;
-      // } else if (inputType.getDimSize(2) % 4 == 0 &&
-      //            outputType.getDimSize(2) == inputType.getDimSize(2)) {
-      //   // If depth * output width is a multiple of four and the x,y location
-      //   of
-      //   // the starting pixel is word-aligned, we can do a slice copy
-      //   instead.
-      //   // That is ((y * input depth + x) * depth) is a multiple of four.
-      //   // We use a simple memcpy to do the copy in the runtime.
-      //   // Input and output tensors must have the same width.
-      //   memcpyType = SliceMemcpyType::VpuCpy;
     } else if (inputType.getDimSize(3) % 4 == 0 &&
                outputType.getDimSize(3) % 4 == 0) {
       // If not a slice copy, then if both depths are multiples of four, we can
@@ -133,15 +101,11 @@ struct ReplaceStridedSlicePattern
     int32_t inputDepth = inputType.getDimSize(3);
     int32_t beginX = beginValues[2];
     int32_t beginY = beginValues[1];
-    int32_t endX = endValues[2];
-    int32_t endY = endValues[1];
 
     auto image_geom = nn::ImageGeometry(inputHeight, inputWidth, inputDepth);
-
-    int xDiff = endX - beginX;
-    int yDiff = endY - beginY;
-    auto window_geom = nn::WindowGeometry({yDiff, xDiff, inputDepth},
-                                          {beginY, beginX}, {1, 1, 1}, {1, 1});
+    auto window_geom =
+        nn::WindowGeometry({sizeValues[2], sizeValues[1], inputDepth},
+                           {beginY, beginX}, {1, 1, 1}, {1, 1});
 
     nn::ImToColValid imToCol(image_geom, window_geom,
                              static_cast<int>(inputDepth),
@@ -150,31 +114,31 @@ struct ReplaceStridedSlicePattern
     auto mfStr = std::string((char *)&imToColParams, sizeof(imToColParams));
 
     auto binaryObjectSliceOp = rewriter.create<SliceOp>(
-        stridedSliceOp.getLoc(), stridedSliceOp.getType(),
-        stridedSliceOp.getInput(), rewriter.getI32IntegerAttr(beginX),
-        rewriter.getI32IntegerAttr(beginY), rewriter.getStringAttr(mfStr),
+        sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput(),
+        rewriter.getI32IntegerAttr(beginX), rewriter.getI32IntegerAttr(beginY),
+        rewriter.getStringAttr(mfStr),
         rewriter.getI32IntegerAttr((int32_t)memcpyType));
-    rewriter.replaceOp(stridedSliceOp, binaryObjectSliceOp.getOutput());
+    rewriter.replaceOp(sliceOp, binaryObjectSliceOp.getOutput());
 
     return success();
   }
 };
 
-void ReplaceStridedSlice::runOnOperation() {
+void ReplaceSlice::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
   RewritePatternSet patterns(ctx);
-  patterns.insert<ReplaceStridedSlicePattern>(ctx);
+  patterns.insert<ReplaceSlicePattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 
-// Creates an instance of the ReplaceStridedSlice pass.
-std::unique_ptr<OperationPass<func::FuncOp>> createReplaceStridedSlicePass() {
-  return std::make_unique<ReplaceStridedSlice>();
+// Creates an instance of the ReplaceSlice pass.
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceSlicePass() {
+  return std::make_unique<ReplaceSlice>();
 }
 
-static PassRegistration<ReplaceStridedSlice> pass;
+static PassRegistration<ReplaceSlice> pass;
 
 } // namespace xcore
 } // namespace mlir

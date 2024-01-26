@@ -2,8 +2,8 @@
 
 // CHECK-LABEL: valid_strided_slice1
 func.func @valid_strided_slice1(%arg0: tensor<?x68x40x192x!quant.uniform<i8:f32, 0.0039215688593685627:-128>> {tf_saved_model.index_path = ["input_1"]}) -> (tensor<?x9216x!quant.uniform<i8:f32, 0.010765306651592255:-128>> {tf_saved_model.index_path = ["flatten"]}) attributes {tf.entry_function = {inputs = "serving_default_input_1:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
-  // CHECK: xc.strided_slice
-  // CHECK: xc.strided_slice
+  // CHECK: xc.slice
+  // CHECK: xc.slice
   // CHECK-NOT: tfl.strided_slice
 
   %0 = "tfl.pseudo_const"() {value = dense<0> : tensor<4xi32>} : () -> tensor<4xi32>
@@ -25,8 +25,8 @@ func.func @valid_strided_slice1(%arg0: tensor<?x68x40x192x!quant.uniform<i8:f32,
 
 // CHECK-LABEL: valid_strided_slice2
 func.func @valid_strided_slice2(%arg0: tensor<?x68x39x192x!quant.uniform<i8:f32, 0.0039215688593685627:-128>> {tf_saved_model.index_path = ["input_1"]}) -> (tensor<?x9216x!quant.uniform<i8:f32, 0.01205116044729948:-128>> {tf_saved_model.index_path = ["flatten"]}) attributes {tf.entry_function = {inputs = "serving_default_input_1:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
-  // CHECK: xc.strided_slice
-  // CHECK: xc.strided_slice
+  // CHECK: xc.slice
+  // CHECK: xc.slice
   // CHECK-NOT: tfl.strided_slice
   %cst = arith.constant dense<[1, 35, 39, 192]> : tensor<4xi32>
   %cst_0 = arith.constant dense<0> : tensor<4xi32>

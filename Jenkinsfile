@@ -27,7 +27,7 @@ pipeline {
     }
     stages {
         stage("Setup and build") { 
-            agent { label "linux && 64 && !noAVX2" } 
+            agent { label "linux && x86_64 && !noAVX2" } 
             stages {
                 stage("Setup") { steps {
                     println "Stage running on: ${env.NODE_NAME}"
@@ -62,7 +62,7 @@ pipeline {
         } 
         stage("Tests") { parallel {
             stage("Host Test") {
-                agent { label "linux && 64 && !noAVX2" }
+                agent { label "linux && x86_64 && !noAVX2" }
                 stages {
                     stage("Integration Tests") { steps { 
                         script { runTests("host") } 

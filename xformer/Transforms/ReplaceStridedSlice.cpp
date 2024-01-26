@@ -91,11 +91,12 @@ struct ReplaceStridedSlicePattern
       }
     }
 
-    bool onlyLastDim = beginValues[3] == 0;
+    if (beginValues[3] != 0) {
+      return failure();
+    }
     for (int i = 0; i < 3; i++) {
       if (beginValues[i] != 0 || endValues[i] != inputType.getDimSize(i)) {
-        onlyLastDim = false;
-        break;
+        return failure();
       }
     }
 
@@ -119,15 +120,10 @@ struct ReplaceStridedSlicePattern
       // If not a slice copy, then if both depths are multiples of four, we can
       // do pixel by pixel VPU copy.
       memcpyType = SliceMemcpyType::VpuCpy;
-      // MemCpy only if we're slicing the end of the last dimension
-    } else if (onlyLastDim) {
+    } else {
       // Pixel by pixel CPU memcpy, when depth not a multiple of four
       memcpyType = SliceMemcpyType::MemCpy;
-    } else {
-      // TODO: Fix this.
-      return failure();
     }
-
     int32_t inputHeight = inputType.getDimSize(1);
     int32_t inputWidth = inputType.getDimSize(2);
     int32_t inputDepth = inputType.getDimSize(3);

@@ -69,11 +69,12 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
     matchPattern(sliceOp.getSize(), m_Constant(&sizeAttr));
     auto sizeValues = sizeAttr.getValues<int32_t>();
 
-    bool onlyLastDim = beginValues[3] == 0;
+    if (beginValues[3] != 0) {
+      return failure();
+    }
     for (int i = 0; i < 3; i++) {
       if (beginValues[i] != 0 || sizeValues[i] != inputType.getDimSize(i)) {
-        onlyLastDim = false;
-        break;
+        return failure();
       }
     }
 
@@ -87,13 +88,9 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
       // If not a slice copy, then if both depths are multiples of four, we can
       // do pixel by pixel VPU copy.
       memcpyType = SliceMemcpyType::VpuCpy;
-      // MemCpy only if we're slicing the end of the last dimension
-    } else if (onlyLastDim) {
+    } else {
       // Pixel by pixel CPU memcpy, when depth not a multiple of four
       memcpyType = SliceMemcpyType::MemCpy;
-    } else {
-      // TODO: Fix this.
-      return failure();
     }
 
     int32_t inputHeight = inputType.getDimSize(1);

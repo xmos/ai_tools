@@ -95,7 +95,9 @@ struct ReplaceStridedSlicePattern
       memcpyType = StridedSliceMemcpyType::VpuCpy;
     } else {
       // Pixel by pixel CPU memcpy, when depth not a multiple of four
-      memcpyType = StridedSliceMemcpyType::MemCpy;
+      // TODO: Fix this.
+      return failure();
+      // memcpyType = StridedSliceMemcpyType::MemCpy;
     }
 
     // Extract args from the op

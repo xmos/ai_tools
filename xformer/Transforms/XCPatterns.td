@@ -33,11 +33,11 @@ def isSingleSegment
 def betaIsOne
     : Constraint<CPred<"$0.getValue().convertToFloat() == 1.0">>;
 
-def:
-    Pat<(TFL_SoftmaxOp
-             : $output TensorOf<[QI8]>:$input, $beta),
-            (XC_SoftmaxOp $input, (Arith_ConstantOp (getExpLookupF32
-            $output))), [(betaIsOne $beta), (isSingleSegment $input)]>;
+// def:
+//    Pat<(TFL_SoftmaxOp
+//             : $output TensorOf<[QI8]>:$input, $beta),
+//            (XC_SoftmaxOp $input, (Arith_ConstantOp (getExpLookupF32
+//            $output))), [(betaIsOne $beta), (isSingleSegment $input)]>;
 
 def getActivationType
     : NativeCodeCall<"getActivationType($_builder, $0.getDefiningOp())">;

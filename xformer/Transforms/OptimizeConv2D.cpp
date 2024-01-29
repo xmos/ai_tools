@@ -397,10 +397,9 @@ Value createPaddedBiasOp(int padSize, T convOp, PatternRewriter &rewriter) {
 }
 
 template <typename T>
-TFL::StridedSliceOp
-createPaddedConvWithStridedSliceOp(int padSize, T convOp, Value paddedFilterOp,
-                                   Value paddedBiasOp,
-                                   PatternRewriter &rewriter) {
+TFL::SliceOp
+createPaddedConvWithSliceOp(int padSize, T convOp, Value paddedFilterOp,
+                            Value paddedBiasOp, PatternRewriter &rewriter) {
   auto outputShape =
       convOp.getOutput().getType().template cast<RankedTensorType>().getShape();
   auto convReplacement = llvm::cast<T>(rewriter.clone(*convOp));
@@ -418,26 +417,21 @@ createPaddedConvWithStridedSliceOp(int padSize, T convOp, Value paddedFilterOp,
   convReplacement->getResult(0).setType(newConvType);
   convReplacement.setOperand(1, paddedFilterOp);
 
-  // Create strided slice op
-  int stridesAttr[4] = {1, 1, 1, 1};
-  auto stridesConstantOp = rewriter.create<arith::ConstantOp>(
-      convReplacement.getLoc(), rewriter.getI32TensorAttr(stridesAttr));
-
+  // Create slice op
   int beginAttr[4] = {0, 0, 0, 0};
   auto beginConstantOp = rewriter.create<arith::ConstantOp>(
       convReplacement.getLoc(), rewriter.getI32TensorAttr(beginAttr));
 
-  int endAttr[4] = {static_cast<int32_t>(1),
-                    static_cast<int32_t>(outputShape[1]),
-                    static_cast<int32_t>(outputShape[2]),
-                    static_cast<int32_t>(outputShape[3])};
-  auto endConstantOp = rewriter.create<arith::ConstantOp>(
-      convReplacement.getLoc(), rewriter.getI32TensorAttr(endAttr));
+  int sizeAttr[4] = {1, static_cast<int32_t>(outputShape[1]) - beginAttr[1],
+                     static_cast<int32_t>(outputShape[2]) - beginAttr[2],
+                     static_cast<int32_t>(outputShape[3]) - beginAttr[3]};
+  auto sizeConstantOp = rewriter.create<arith::ConstantOp>(
+      convReplacement.getLoc(), rewriter.getI32TensorAttr(sizeAttr));
 
-  auto stridedSliceOp = rewriter.create<TFL::StridedSliceOp>(
+  auto sliceOp = rewriter.create<TFL::SliceOp>(
       convOp.getLoc(), convOp.getOutput().getType(), convReplacement,
-      beginConstantOp, endConstantOp, stridesConstantOp, 0, 0, 0, 0, 0, false);
-  return stridedSliceOp;
+      beginConstantOp, sizeConstantOp);
+  return sliceOp;
 }
 
 struct SameToValidTransposeConvPattern
@@ -501,49 +495,33 @@ struct SameToValidTransposeConvPattern
         tConvOp.getOutput().getType().cast<ShapedType>().getElementType());
     tConvReplacement->getResult(0).setType(newtConvType);
 
-    // TODO, have to fix formula for calculating SAME to VALID
-    // Ignoring height for now
-    auto diff = validWidth - outputShape[2];
-    int startWidth, endWidth;
-    if (diff == 3) {
-      startWidth = 1;
-      endWidth = validWidth - 2;
-    } else if (diff == 2) {
-      startWidth = 1;
-      endWidth = validWidth - 1;
-    } else if (diff == 1) {
-      startWidth = 1;
-      endWidth = validWidth;
-    } else {
-      // Same size, don't need to slice
+    int sliceHeight = weightsShape[1] - tConvOp.getStrideH();
+    int sliceWidth = weightsShape[2] - tConvOp.getStrideW();
+    if (sliceHeight == 0 && sliceWidth == 0) {
+      rewriter.replaceOp(tConvOp, tConvReplacement->getResult(0));
       return success();
     }
+    int sliceHeightLeft = sliceHeight / 2;
+    int sliceWidthLeft = sliceWidth / 2;
+    int beginAttr[4] = {0, sliceHeightLeft, sliceWidthLeft, 0};
+    int sizeAttr[4] = {static_cast<int32_t>(1),
+                       static_cast<int32_t>(outputShape[1]),
+                       static_cast<int32_t>(outputShape[2]),
+                       static_cast<int32_t>(outputShape[3])};
+    // create slice op
 
-    // auto k = tConvOp.getOutputShape()[1];
-    // tConvOp.setOutputShape()
-
-    // Create strided slice op
-    int stridesAttr[4] = {1, 1, 1, 1};
-    auto stridesConstantOp = rewriter.create<arith::ConstantOp>(
-        tConvReplacement.getLoc(), rewriter.getI32TensorAttr(stridesAttr));
-
-    int beginAttr[4] = {0, 0, startWidth, 0};
     auto beginConstantOp = rewriter.create<arith::ConstantOp>(
         tConvReplacement.getLoc(), rewriter.getI32TensorAttr(beginAttr));
 
-    int endAttr[4] = {
-        static_cast<int32_t>(1), static_cast<int32_t>(outputShape[1]),
-        static_cast<int32_t>(endWidth), static_cast<int32_t>(outputShape[3])};
-    auto endConstantOp = rewriter.create<arith::ConstantOp>(
-        tConvReplacement.getLoc(), rewriter.getI32TensorAttr(endAttr));
+    auto sizeConstantOp = rewriter.create<arith::ConstantOp>(
+        tConvReplacement.getLoc(), rewriter.getI32TensorAttr(sizeAttr));
 
-    auto stridedSliceOp = rewriter.create<TFL::StridedSliceOp>(
+    auto sliceOp = rewriter.create<TFL::SliceOp>(
         tConvOp.getLoc(), tConvOp.getOutput().getType(), tConvReplacement,
-        beginConstantOp, endConstantOp, stridesConstantOp, 0, 0, 0, 0, 0,
-        false);
+        beginConstantOp, sizeConstantOp);
 
-    // Replace op with strided slice op
-    rewriter.replaceOp(tConvOp, stridedSliceOp.getOutput());
+    // Replace op with slice op
+    rewriter.replaceOp(tConvOp, sliceOp.getOutput());
 
     return success();
   }
@@ -675,13 +653,13 @@ struct PadTo4Conv2DOutputPattern : public OpRewritePattern<TFL::Conv2DOp> {
       paddedBiasOp = createPaddedBiasOp(padSize, conv2DOp, rewriter);
     }
 
-    // Create conv op with padded output size and Strided Slice to slice the
+    // Create conv op with padded output size and Slice to slice the
     // padded output
-    auto stridedSliceOp = createPaddedConvWithStridedSliceOp(
+    auto sliceOp = createPaddedConvWithSliceOp(
         padSize, conv2DOp, paddedFilterOp, paddedBiasOp, rewriter);
 
-    // Replace op with strided slice op
-    rewriter.replaceOp(conv2DOp, stridedSliceOp.getOutput());
+    // Replace op with slice op
+    rewriter.replaceOp(conv2DOp, sliceOp.getOutput());
 
     return success();
   }
@@ -755,13 +733,13 @@ struct PadTo4DepthwiseConv2DPattern
       paddedBiasOp = createPaddedBiasOp(padSize, dConv2DOp, rewriter);
     }
 
-    // Create conv op with padded output size and Strided Slice to slice the
+    // Create conv op with padded output size and slice to slice the
     // padded output
-    auto stridedSliceOp = createPaddedConvWithStridedSliceOp(
+    auto sliceOp = createPaddedConvWithSliceOp(
         padSize, dConv2DOp, paddedFilterOp, paddedBiasOp, rewriter);
 
-    // Replace op with strided slice op
-    rewriter.replaceOp(dConv2DOp, stridedSliceOp.getOutput());
+    // Replace op with slice op
+    rewriter.replaceOp(dConv2DOp, sliceOp.getOutput());
 
     return success();
   }
@@ -772,21 +750,20 @@ void OptimizeConv2D::runOnOperation() {
   func::FuncOp func = getOperation();
   RewritePatternSet patterns(ctx);
 
-  // To align Conv2D input to 4 channels, we insert a pad op to pad the input
-  // channels and pad the conv filter channels
-  // patterns.insert<SameToValidTransposeConvPattern>(ctx);
+  // Convert TransposeConv2D with SAME padding to VALID padding + slice
+  patterns.insert<SameToValidTransposeConvPattern>(ctx);
 
   // To align Conv2D input to 4 channels, we insert a pad op to pad the input
   // channels and pad the conv filter channels
   patterns.insert<PadTo4Conv2DInputPattern>(ctx);
   // To align Conv2D output to 4 channels, we pad the conv filter batch and
-  // bias, pad conv2d output channels, and add a strided slice to remove the
+  // bias, pad conv2d output channels, and add a slice to remove the
   // padded section
   patterns.insert<PadTo4Conv2DOutputPattern>(ctx);
   // For DepthwiseConv2D, input and output channels are the same.
   // To align DepthwiseConv2D input/output to 4 channels, we insert a pad op to
   // pad the input channels, pad the conv filter channels and bias, pad
-  // conv2d output channels, and add a strided slice to remove the padded
+  // conv2d output channels, and add a slice to remove the padded
   // section
   patterns.insert<PadTo4DepthwiseConv2DPattern>(ctx);
   // When the filter is too large, we channelwise split the conv2d output to

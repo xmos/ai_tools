@@ -26,9 +26,11 @@ pipeline {
             artifactNumToKeepStr: env.BRANCH_NAME ==~ /develop/ ? '100' : ''
         ))
     }
+    when {
+        branch pattern: "PR-.*", comparator: "REGEXP"
+    }
     stages {
         stage("Setup and build") { 
-            when { branch "PR-*" }
             agent { label "linux && x86_64 && !noAVX2" } 
             stages {
                 stage("Setup") { steps {
@@ -63,7 +65,6 @@ pipeline {
             post { cleanup { xcoreCleanSandbox() } }
         } 
         stage("Tests") { parallel {
-            when { branch "PR-*" }
             stage("Host Test") {
                 agent { label "linux && x86_64 && !noAVX2" }
                 stages {

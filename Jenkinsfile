@@ -5,6 +5,7 @@ getApproval()
 pipeline {
     agent none
     environment {
+        REPO = "ai_tools"
         BAZEL_CACHE_URL = 'http://srv-bri-bld-cache:8080'
         BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
         REBOOT_XTAG = '1'
@@ -27,7 +28,7 @@ pipeline {
     }
     stages {
         stage("Setup and build") { 
-            agent { label "linux && 64 && !noAVX2" } 
+            agent { label "linux && x86_64 && !noAVX2" } 
             stages {
                 stage("Setup") { steps {
                     println "Stage running on: ${env.NODE_NAME}"
@@ -62,7 +63,7 @@ pipeline {
         } 
         stage("Tests") { parallel {
             stage("Host Test") {
-                agent { label "linux && 64 && !noAVX2" }
+                agent { label "linux && x86_64 && !noAVX2" }
                 stages {
                     stage("Integration Tests") { steps { 
                         script { runTests("host") } 
@@ -86,6 +87,13 @@ pipeline {
     }
 }
 
+def runPytest(String test, String args, Integer timeout=10) {
+    timeout(time: timeout, unit: 'MINUTES') {
+        sh "xtagctl reset_all XCORE-AI-EXPLORER"
+        sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args}"
+    }
+}
+
 def runTests(String platform) {
     println "Stage running on: ${env.NODE_NAME}"
     checkout scm
@@ -102,15 +110,17 @@ def runTests(String platform) {
             env.XMOS_AITOOLSLIB_PATH = XMOS_AITOOLSLIB_PATH
         }
         if (platform == "device") {
+            sh "cd ${WORKSPACE} && git clone https://github0.xmos.com/xmos-int/xtagctl.git"
+            sh "pip install -e ${WORKSPACE}/xtagctl"
             withTools(params.TOOLS_VERSION) {
-                sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns/test_cnn_classifier -n 1 --junitxml=integration_tests/integration_device_1_junit.xml --tc 1 --device"
-                sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models/non-bnns/test_cnn_classifier -n 1 --junitxml=integration_tests/integration_device_5_junit.xml --device"
+                runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
+                runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --device --junitxml=integration_tests/integration_device_5_junit.xml")
                 // lstms are always problematic
-                sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_lstm -n 1 --tc 1 --device"
-                sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_lstm -n 1 --device"
-                sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_softmax -n 1 --device"
+                runPytest("non-bnns/test_lstm", "-n 1 --tc 1 --device")
+                runPytest("non-bnns/test_lstm", "-n 1 --device")
+                runPytest("non-bnns/test_softmax", "-n 1 --device")
                 // test a float32 layer
-                sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns/test_detection_postprocess -n 1 --device"
+                runPytest("non-bnns/test_detection_postprocess", "-n 1 --device")
             }
         } else if (platform == "host") {
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_1_junit.xml --tc 1"

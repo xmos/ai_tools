@@ -33,9 +33,6 @@ pipeline {
                 stage("Setup") { steps {
                     println "Stage running on: ${env.NODE_NAME}"
                     checkout scm
-                    timeout(time: 10, unit: 'MINUTES') {
-                        sh "echo TEST"
-                    }
                     sh "./build.sh -T init"
                     createVenv("requirements.txt")
                     withVenv { sh "pip install -r requirements.txt" }
@@ -93,7 +90,7 @@ pipeline {
 def runPytest(String test, String args) {
     timeout(time: 10, unit: 'MINUTES') {
         sh "xtagctl reset_all XCORE-AI-EXPLORER"
-        sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args}"
+        sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args} -s"
     }
 }
 

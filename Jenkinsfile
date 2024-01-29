@@ -26,11 +26,9 @@ pipeline {
             artifactNumToKeepStr: env.BRANCH_NAME ==~ /develop/ ? '100' : ''
         ))
     }
-    when {
-        branch pattern: "PR-.*", comparator: "REGEXP"
-    }
     stages {
         stage("Setup and build") { 
+            when { branch pattern: "PR-.*", comparator: "REGEXP" }
             agent { label "linux && x86_64 && !noAVX2" } 
             stages {
                 stage("Setup") { steps {
@@ -64,29 +62,32 @@ pipeline {
             }
             post { cleanup { xcoreCleanSandbox() } }
         } 
-        stage("Tests") { parallel {
-            stage("Host Test") {
-                agent { label "linux && x86_64 && !noAVX2" }
-                stages {
-                    stage("Integration Tests") { steps { 
-                        script { runTests("host") } 
-                    } }
-                    stage("Notebook Tests") { steps { withVenv {
-                        sh "pip install pytest nbmake"
-                        sh "pytest --nbmake ./docs/notebooks/*.ipynb"
-                        // Test the pytorch to keras notebooks overnight? Need to manually install all requirements
-                        // Also these train models so it takes a while
-                        // sh "pytest --nbmake ./docs/notebooks/*.ipynb"
-                    } } }
+        stage("Tests") {
+        when { branch pattern: "PR-.*", comparator: "REGEXP" }
+            parallel {
+                stage("Host Test") {
+                    agent { label "linux && x86_64 && !noAVX2" }
+                    stages {
+                        stage("Integration Tests") { steps { 
+                            script { runTests("host") } 
+                        } }
+                        stage("Notebook Tests") { steps { withVenv {
+                            sh "pip install pytest nbmake"
+                            sh "pytest --nbmake ./docs/notebooks/*.ipynb"
+                            // Test the pytorch to keras notebooks overnight? Need to manually install all requirements
+                            // Also these train models so it takes a while
+                            // sh "pytest --nbmake ./docs/notebooks/*.ipynb"
+                        } } }
+                    }
+                    post { cleanup { xcoreCleanSandbox() } }
                 }
-                post { cleanup { xcoreCleanSandbox() } }
+                stage("Device Test") {
+                    agent { label "xcore.ai-explorer && lpddr && !macos" }
+                    steps { script { runTests("device") } }
+                    post { cleanup { xcoreCleanSandbox() } }
+                }
             }
-            stage("Device Test") {
-                agent { label "xcore.ai-explorer && lpddr && !macos" }
-                steps { script { runTests("device") } }
-                post { cleanup { xcoreCleanSandbox() } }
-            }
-        } }
+        }
     }
 }
 

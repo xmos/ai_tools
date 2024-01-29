@@ -6,7 +6,6 @@ pipeline {
     agent none
     environment {
         REPO = "ai_tools"
-        VIEW = getViewName(REPO)
         BAZEL_CACHE_URL = 'http://srv-bri-bld-cache:8080'
         BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
         REBOOT_XTAG = '1'
@@ -111,19 +110,17 @@ def runTests(String platform) {
             env.XMOS_AITOOLSLIB_PATH = XMOS_AITOOLSLIB_PATH
         }
         if (platform == "device") {
-            xcorePrepareSandbox("${VIEW}", "${REPO}")
-            viewEnv {
-                sh "pip install -e ${WORKSPACE}/xtagctl"
-                withTools(params.TOOLS_VERSION) {
-                    runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
-                    runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --device --junitxml=integration_tests/integration_device_5_junit.xml")
-                    // lstms are always problematic
-                    runPytest("non-bnns/test_lstm", "-n 1 --tc 1 --device")
-                    runPytest("non-bnns/test_lstm", "-n 1 --device")
-                    runPytest("non-bnns/test_softmax", "-n 1 --device")
-                    // test a float32 layer
-                    runPytest("non-bnns/test_detection_postprocess", "-n 1 --device")
-                }
+            sh "cd ${WORKSPACE} && git clone https://github0.xmos.com/xmos-int/xtagctl.git"
+            sh "pip install -e ${WORKSPACE}/xtagctl"
+            withTools(params.TOOLS_VERSION) {
+                runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
+                runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --device --junitxml=integration_tests/integration_device_5_junit.xml")
+                // lstms are always problematic
+                runPytest("non-bnns/test_lstm", "-n 1 --tc 1 --device")
+                runPytest("non-bnns/test_lstm", "-n 1 --device")
+                runPytest("non-bnns/test_softmax", "-n 1 --device")
+                // test a float32 layer
+                runPytest("non-bnns/test_detection_postprocess", "-n 1 --device")
             }
         } else if (platform == "host") {
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_1_junit.xml --tc 1"

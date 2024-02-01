@@ -560,6 +560,10 @@ struct PadConv2DInputPattern : public OpRewritePattern<Conv2DOp> {
 
   LogicalResult matchAndRewrite(Conv2DOp conv2DOp,
                                 PatternRewriter &rewriter) const override {
+    // For Conv2D, input operand index is 0
+    // Strangely, for TransposeConv, input operand index is 2
+    int inputOperandIndex = 0;
+
     // Check for invalid types and return
     // Input type must be QI8 or QI16
     auto inputElementType = conv2DOp.getInput()
@@ -579,6 +583,7 @@ struct PadConv2DInputPattern : public OpRewritePattern<Conv2DOp> {
     Value filterVal;
     if (auto convOp = dyn_cast<TFL::TransposeConvOp>(conv2DOp.getOperation())) {
       filterVal = convOp.getWeights();
+      inputOperandIndex = 2;
     } else if (auto convOp = dyn_cast<TFL::Conv2DOp>(conv2DOp.getOperation())) {
       filterVal = convOp.getFilter();
     } else {
@@ -644,7 +649,7 @@ struct PadConv2DInputPattern : public OpRewritePattern<Conv2DOp> {
 
     // Pad the Conv2D input
     Value padOpOutput = createInputPadOp(padDepthSize, conv2DOp, rewriter);
-    conv2DOp.setOperand(0, padOpOutput);
+    conv2DOp.setOperand(inputOperandIndex, padOpOutput);
 
     // Pad the Conv2D filter
     // We need to do this at compile time instead of using a PadOp

@@ -77,8 +77,11 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   args.filterDepth = filterType.getDimSize(3);
   // Check if convolution is an int16 one
   args.isI16Conv = inputType.getElementType()
-                       .template cast<quant::QuantizedType>()
-                       .getStorageTypeIntegralWidth() == 16;
+                           .template cast<quant::QuantizedType>()
+                           .getStorageTypeIntegralWidth() == 16 &&
+                   outputType.getElementType()
+                           .template cast<quant::QuantizedType>()
+                           .getStorageTypeIntegralWidth() == 16;
 
   // Get op-type specific args
   if (failed(builder->getArgs(conv2DOp, args))) {

@@ -73,12 +73,6 @@ def XC_Conv2D_Channelwise : I32EnumAttrCase<"Channelwise", 1>;
 def XC_Conv2D_OTAttr : I32EnumAttr<"OtType", "output transform type enum",
                                    [XC_Conv2D_Group, XC_Conv2D_Channelwise]>;
 
-def XC_Slice_SliceCpy : I32EnumAttrCase<"SliceCpy", 0>;
-def XC_Slice_VpuCpy : I32EnumAttrCase<"VpuCpy", 1>;
-def XC_Slice_MemCpy : I32EnumAttrCase<"MemCpy", 2>;
-def XC_Slice_MemcpyTypeAttr : I32EnumAttr<"SliceMemcpyType", "memcpy type enum",
-                                   [XC_Slice_SliceCpy, XC_Slice_VpuCpy, XC_Slice_MemCpy]>;
-
 def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let summary = "Slice op";
 
@@ -87,10 +81,11 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let arguments = (ins
     TensorOf<[QI8]>:$input,
 
-    I32Attr:$begin_x,
-    I32Attr:$begin_y,
-    StrAttr:$memcpy_fn_param,
-    I32Attr:$memcpy_type
+    I32ArrayAttr:$begin,
+    I32ArrayAttr:$end,
+    I32ArrayAttr:$input_offset,
+    I32ArrayAttr:$output_offset,
+    BoolAttr:$is_vpu
   );
 
   let results = (outs TensorOf<[QI8]> : $output);

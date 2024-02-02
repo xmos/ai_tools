@@ -32,7 +32,6 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceAddPass());
   pm.addPass(createReplaceMaxPoolPass());
   pm.addPass(createReplaceMulPass());
-  pm.addPass(createReplaceStridedSlicePass());
   pm.addPass(createReplaceSlicePass());
   pm.addPass(createReplaceTransposeConvPass());
   pm.addPass(createReplaceConv2DPass());

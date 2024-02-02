@@ -34,7 +34,7 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
                                 PatternRewriter &rewriter) const override {
 
     auto inputType = sliceOp.getInput().getType().cast<RankedTensorType>();
-    auto inputElementType = inputType.getElementType();
+    Type inputElementType = inputType.getElementType();
 
     // Check for invalid types and return
     // Input type must be QI8
@@ -46,7 +46,7 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
     }
 
     auto outputType = sliceOp.getOutput().getType().cast<RankedTensorType>();
-    auto outputElementType = outputType.getElementType();
+    Type outputElementType = outputType.getElementType();
 
     // Output type must be QI8
     if (!(outputElementType.isa<quant::QuantizedType>() &&
@@ -55,12 +55,6 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
                   .getStorageTypeIntegralWidth() == 8)) {
       return failure();
     }
-
-    // Check if both input and output tensors have a rank of 4
-    if (inputType.getRank() != 4 || outputType.getRank() != 4) {
-      return failure();
-    }
-
     DenseElementsAttr beginAttr;
     matchPattern(sliceOp.getBegin(), m_Constant(&beginAttr));
     auto beginValues = beginAttr.getValues<int32_t>();
@@ -69,53 +63,64 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
     matchPattern(sliceOp.getSize(), m_Constant(&sizeAttr));
     auto sizeValues = sizeAttr.getValues<int32_t>();
 
-    if (beginValues[3] != 0) {
-      return failure();
-    }
-    for (int i = 0; i < 3; i++) {
-      if (beginValues[i] != 0 || sizeValues[i] != inputType.getDimSize(i)) {
-        return failure();
-      }
-    }
+    int begin[5], end[5], inShape[5], inOffsets[4], outOffsets[4];
 
-    SliceMemcpyType memcpyType;
-    if (inputType.getDimSize(2) == outputType.getDimSize(2) &&
-        inputType.getDimSize(3) == outputType.getDimSize(3)) {
-      // Single CPU memcpy
-      memcpyType = SliceMemcpyType::SliceCpy;
-    } else if (inputType.getDimSize(3) % 4 == 0 &&
-               outputType.getDimSize(3) % 4 == 0) {
-      // If not a slice copy, then if both depths are multiples of four, we can
-      // do pixel by pixel VPU copy.
-      memcpyType = SliceMemcpyType::VpuCpy;
-    } else {
-      // Pixel by pixel CPU memcpy, when depth not a multiple of four
-      memcpyType = SliceMemcpyType::MemCpy;
+    // TFLite supports up to 5 dimensions, if the input is less we pad
+    const int rank = inputType.getRank();
+    const int numPad = 5 - rank;
+    for (int i = 0; i < 5; i++) {
+      begin[i] = i > numPad ? beginValues[i - numPad] : 0;
+      end[i] = i > numPad ? begin[i] + sizeValues[i - numPad] : 1;
+      inShape[i] = i > numPad ? inputType.getShape()[i - numPad] : 1;
     }
 
-    int32_t inputHeight = inputType.getDimSize(1);
-    int32_t inputWidth = inputType.getDimSize(2);
-    int32_t inputDepth = inputType.getDimSize(3);
-    int32_t beginX = beginValues[2];
-    int32_t beginY = beginValues[1];
+    // Merge axes where possible in the end
+    while (begin[4] == 0 && end[4] == inShape[4]) {
+      int32_t last_begin = begin[3] * inShape[4];
+      int32_t last_end = end[3] * inShape[4];
+      int32_t last_dim = inShape[3] * inShape[4];
+      memcpy(begin + 1, begin, 3 * sizeof(int32_t));
+      memcpy(end + 1, end, 3 * sizeof(int32_t));
+      memcpy(inShape + 1, inShape, 3 * sizeof(int32_t));
+      begin[0] = 0;
+      end[0] = 1;
+      inShape[0] = 1;
+      begin[4] = last_begin;
+      end[4] = last_end;
+      inShape[4] = last_dim;
+    }
 
-    auto image_geom = nn::ImageGeometry(inputHeight, inputWidth, inputDepth);
-    auto window_geom =
-        nn::WindowGeometry({sizeValues[2], sizeValues[1], inputDepth},
-                           {beginY, beginX}, {1, 1, 1}, {1, 1});
+    // Initialise offsets
+    inOffsets[0] = inputType.getNumElements() / inShape[0];
+    outOffsets[0] = outputType.getNumElements() / (end[0] - begin[0]);
+    for (int i = 1; i < 4; i++) {
+      inOffsets[i] = inOffsets[i - 1] / inShape[i];
+      outOffsets[i] = outOffsets[i - 1] / (end[i] - begin[i]);
+    }
 
-    nn::ImToColValid imToCol(image_geom, window_geom,
-                             static_cast<int>(inputDepth),
-                             /*dont_zero_pad_at_the_end=*/true);
-    auto imToColParams = imToCol.getParams();
-    auto mfStr = std::string((char *)&imToColParams, sizeof(imToColParams));
+    // Treat dtype as an extra axis that we merge with the last axis, to use
+    // vpu_memcpy if possible
+    const int dtypeSize = inputElementType.cast<quant::QuantizedType>()
+                              .getStorageTypeIntegralWidth() /
+                          8;
+    inShape[4] *= dtypeSize;
+    begin[4] *= dtypeSize;
+    end[4] *= dtypeSize;
+    const bool isVpu =
+        inShape[4] % 4 == 0 && begin[4] % 4 == 0 && end[4] % 4 == 0;
 
+    // Convert begin, end, inOffsets and outOffsets to attributes
     auto binaryObjectSliceOp = rewriter.create<SliceOp>(
         sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput(),
-        rewriter.getI32IntegerAttr(beginX), rewriter.getI32IntegerAttr(beginY),
-        rewriter.getStringAttr(mfStr),
-        rewriter.getI32IntegerAttr((int32_t)memcpyType));
-    rewriter.replaceOp(sliceOp, binaryObjectSliceOp.getOutput());
+        rewriter.getI32ArrayAttr(begin), rewriter.getI32ArrayAttr(end),
+        rewriter.getI32ArrayAttr(inOffsets),
+        rewriter.getI32ArrayAttr(outOffsets), rewriter.getBoolAttr(isVpu));
+    // auto binaryObjectSliceOp = rewriter.create<SliceOp>(
+    //     sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput(),
+    //     rewriter.getI32IntegerAttr(beginX),
+    //     rewriter.getI32IntegerAttr(beginY), rewriter.getStringAttr(mfStr),
+    //     rewriter.getI32IntegerAttr((int32_t)memcpyType));
+    // rewriter.replaceOp(sliceOp, binaryObjectSliceOp.getOutput());
 
     return success();
   }

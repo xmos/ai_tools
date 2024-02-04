@@ -76,20 +76,21 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   args.filterWidth = filterType.getDimSize(2);
   args.filterDepth = filterType.getDimSize(3);
   // Check if convolution is an int16 one
+  args.isI16Conv = false;
   if ((inputType.getElementType().template isa<quant::QuantizedType>() &&
-       inputType.getElementType()
-           .template cast<quant::QuantizedType>()
-           .isSigned() &&
-       inputType.getElementType()
-               .template cast<quant::QuantizedType>()
-               .getStorageTypeIntegralWidth() == 16) &&
+      inputType.getElementType()
+          .template cast<quant::QuantizedType>()
+          .isSigned() &&
+      inputType.getElementType()
+              .template cast<quant::QuantizedType>()
+              .getStorageTypeIntegralWidth() == 16) &&
       (outputType.getElementType().template isa<quant::QuantizedType>() &&
-       outputType.getElementType()
-           .template cast<quant::QuantizedType>()
-           .isSigned() &&
-       outputType.getElementType()
-               .template cast<quant::QuantizedType>()
-               .getStorageTypeIntegralWidth() == 16)) {
+      outputType.getElementType()
+          .template cast<quant::QuantizedType>()
+          .isSigned() &&
+      outputType.getElementType()
+              .template cast<quant::QuantizedType>()
+              .getStorageTypeIntegralWidth() == 16)) {
     args.isI16Conv = true;
   }
 

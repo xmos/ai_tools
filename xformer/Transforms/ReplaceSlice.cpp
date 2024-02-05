@@ -81,8 +81,9 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
     end[4] *= dtypeSize;
 
     // Initialise offsets
-    inOffsets[0] = inputType.getNumElements() / inShape[0];
-    outOffsets[0] = outputType.getNumElements() / (end[0] - begin[0]);
+    inOffsets[0] = inputType.getNumElements() / inShape[0] * dtypeSize;
+    outOffsets[0] =
+        outputType.getNumElements() / (end[0] - begin[0]) * dtypeSize;
     for (int i = 1; i < 4; i++) {
       inOffsets[i] = inOffsets[i - 1] / inShape[i];
       outOffsets[i] = outOffsets[i - 1] / (end[i] - begin[i]);

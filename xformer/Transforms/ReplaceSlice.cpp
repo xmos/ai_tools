@@ -3,7 +3,6 @@
 
 #include "IR/XCoreOps.h"
 
-#include "lib_nn/api/MemCpyFn.hpp"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
@@ -34,27 +33,11 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
                                 PatternRewriter &rewriter) const override {
 
     auto inputType = sliceOp.getInput().getType().cast<RankedTensorType>();
+    assert(inputType.hasStaticShape() &&
+           "SliceOp: Input tensor must have static shape");
     Type inputElementType = inputType.getElementType();
-
-    // Check for invalid types and return
-    // Input type must be QI8
-    if (!(inputElementType.isa<quant::QuantizedType>() &&
-          inputElementType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
-
     auto outputType = sliceOp.getOutput().getType().cast<RankedTensorType>();
-    Type outputElementType = outputType.getElementType();
 
-    // Output type must be QI8
-    if (!(outputElementType.isa<quant::QuantizedType>() &&
-          outputElementType.cast<quant::QuantizedType>().isSigned() &&
-          outputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
     DenseElementsAttr beginAttr;
     matchPattern(sliceOp.getBegin(), m_Constant(&beginAttr));
     auto beginValues = beginAttr.getValues<int32_t>();
@@ -79,9 +62,9 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
       int32_t last_begin = begin[3] * inShape[4];
       int32_t last_end = end[3] * inShape[4];
       int32_t last_dim = inShape[3] * inShape[4];
-      memcpy(begin + 1, begin, 3 * sizeof(int32_t));
-      memcpy(end + 1, end, 3 * sizeof(int32_t));
-      memcpy(inShape + 1, inShape, 3 * sizeof(int32_t));
+      memmove(begin + 1, begin, 3 * sizeof(int32_t));
+      memmove(end + 1, end, 3 * sizeof(int32_t));
+      memmove(inShape + 1, inShape, 3 * sizeof(int32_t));
       begin[0] = 0;
       end[0] = 1;
       inShape[0] = 1;
@@ -89,6 +72,13 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
       end[4] = last_end;
       inShape[4] = last_dim;
     }
+
+    // Treat dtype as an extra axis that we merge with the last axis, to use
+    // vpu_memcpy if possible
+    auto dtypeSize = inputElementType.getIntOrFloatBitWidth() / 8;
+    inShape[4] *= dtypeSize;
+    begin[4] *= dtypeSize;
+    end[4] *= dtypeSize;
 
     // Initialise offsets
     inOffsets[0] = inputType.getNumElements() / inShape[0];
@@ -98,29 +88,16 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
       outOffsets[i] = outOffsets[i - 1] / (end[i] - begin[i]);
     }
 
-    // Treat dtype as an extra axis that we merge with the last axis, to use
-    // vpu_memcpy if possible
-    const int dtypeSize = inputElementType.cast<quant::QuantizedType>()
-                              .getStorageTypeIntegralWidth() /
-                          8;
-    inShape[4] *= dtypeSize;
-    begin[4] *= dtypeSize;
-    end[4] *= dtypeSize;
     const bool isVpu =
         inShape[4] % 4 == 0 && begin[4] % 4 == 0 && end[4] % 4 == 0;
 
-    // Convert begin, end, inOffsets and outOffsets to attributes
     auto binaryObjectSliceOp = rewriter.create<SliceOp>(
         sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput(),
         rewriter.getI32ArrayAttr(begin), rewriter.getI32ArrayAttr(end),
         rewriter.getI32ArrayAttr(inOffsets),
         rewriter.getI32ArrayAttr(outOffsets), rewriter.getBoolAttr(isVpu));
-    // auto binaryObjectSliceOp = rewriter.create<SliceOp>(
-    //     sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput(),
-    //     rewriter.getI32IntegerAttr(beginX),
-    //     rewriter.getI32IntegerAttr(beginY), rewriter.getStringAttr(mfStr),
-    //     rewriter.getI32IntegerAttr((int32_t)memcpyType));
-    // rewriter.replaceOp(sliceOp, binaryObjectSliceOp.getOutput());
+
+    rewriter.replaceOp(sliceOp, binaryObjectSliceOp.getOutput());
 
     return success();
   }

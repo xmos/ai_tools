@@ -23,8 +23,6 @@ struct TFLConvArgs {
   int outputHeight, outputWidth, outputDepth, outputZeroPoint;
   int inputHeight, inputWidth, inputDepth, inputZeroPoint;
   int filterHeight, filterWidth, filterDepth;
-  int abstract_kernel_subH, abstract_kernel_subW;
-  int abstract_kernel_strideH, abstract_kernel_strideW;
   std::vector<int8_t> filter;
   std::vector<int32_t> bias;
   std::vector<float> effectiveMultiplier;
@@ -37,6 +35,7 @@ struct TFLConvArgs {
   llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
   double quantErrorThreshold;
   bool quantErrorFullCheckEnabled;
+  bool isI16Conv;
 };
 
 struct BConvArgs {
@@ -55,6 +54,7 @@ struct BConvArgs {
   nn::ImageGeometry X;
   nn::WindowGeometry K;
   llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
+  bool isI16Conv;
 };
 
 // XC Conv2D Base class
@@ -94,6 +94,14 @@ public:
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData,
       std::vector<int16_t> &mulsBiasesOrThresholdsData,
+      int &scratchBytes) const;
+
+  LogicalResult getSerializedParamsAndTensors(
+      const BConvArgs &args, const Conv2DType &kt, OtType &otType,
+      llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
+      std::vector<int8_t> &weightsData,
+      std::vector<int32_t> &mulsBiasesOrThresholdsData,
       int &scratchBytes) const;
 
 private:
@@ -148,12 +156,13 @@ public:
     return success();
   }
 
+  template <typename MulsAndBiasType>
   LogicalResult getSerializedParamsAndTensors(
       const TFLConvArgs &args, const Conv2DType &kt, OtType &otType,
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
-      std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
-      int &scratchBytes) const {
+      std::vector<int8_t> &weightsData,
+      std::vector<MulsAndBiasType> &mulsBiasesData, int &scratchBytes) const {
     if (failed(static_cast<const ConcreteType *>(this)
                    ->getSerializedParamsAndTensors(
                        args, kt, otType, strParams, abstractKernelParams,
@@ -186,6 +195,13 @@ public:
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
       int &scratchBytes) const;
 
+  LogicalResult getSerializedParamsAndTensors(
+      const TFLConvArgs &args, const Conv2DType &kt, OtType &otType,
+      llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
+      std::vector<int8_t> &weightsData, std::vector<int32_t> &mulsBiasesData,
+      int &scratchBytes) const;
+
 private:
   LogicalResult getConv2DPaddedIndirectParams(
       const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
@@ -201,6 +217,12 @@ private:
       const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, int &scratchBytes) const;
+
+  LogicalResult getConv2DValidDirectI16Params(
+      const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
+      std::vector<int8_t> &weightsData, std::vector<int32_t> &mulsBiasesData,
+      int &scratchBytes) const;
 
   LogicalResult
   getOutputTransformParams(const TFLConvArgs &args, std::string &otStr,
@@ -230,6 +252,13 @@ public:
       llvm::SmallVector<std::string> &strParams,
       llvm::SmallVector<std::string> &abstractKernelParams,
       std::vector<int8_t> &weightsData, std::vector<int16_t> &mulsBiasesData,
+      int &scratchBytes) const;
+
+  LogicalResult getSerializedParamsAndTensors(
+      const TFLConvArgs &args, const Conv2DType &kt, OtType &otType,
+      llvm::SmallVector<std::string> &strParams,
+      llvm::SmallVector<std::string> &abstractKernelParams,
+      std::vector<int8_t> &weightsData, std::vector<int32_t> &mulsBiasesData,
       int &scratchBytes) const;
 
 private:

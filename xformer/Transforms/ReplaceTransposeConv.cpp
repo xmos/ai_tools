@@ -33,19 +33,20 @@ struct ReplaceTransposeConvPattern
 
   LogicalResult matchAndRewrite(TFL::TransposeConvOp tConvOp,
                                 PatternRewriter &rewriter) const override {
-
     // Check for invalid types and return
-    // Input type must be QI8
+    // Input type must be QI8 or QI16
     auto inputElementType =
         tConvOp.getInput().getType().cast<ShapedType>().getElementType();
     if (!(inputElementType.isa<quant::QuantizedType>() &&
           inputElementType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+          (inputElementType.cast<quant::QuantizedType>()
+                   .getStorageTypeIntegralWidth() == 8 ||
+           inputElementType.cast<quant::QuantizedType>()
+                   .getStorageTypeIntegralWidth() == 16))) {
       return failure();
     }
 
-    // Weights type must be
+    // Weights type must be QI8
     auto weightsElementType =
         tConvOp.getWeights().getType().cast<ShapedType>().getElementType();
     if (!(weightsElementType.isa<quant::QuantizedType>() &&
@@ -55,18 +56,28 @@ struct ReplaceTransposeConvPattern
       return failure();
     }
 
-    // Output type must be QI8
+    // Output type must be QI8 or QI16
     auto outputElementType =
         tConvOp.getOutput().getType().cast<ShapedType>().getElementType();
     if (!(outputElementType.isa<quant::QuantizedType>() &&
           outputElementType.cast<quant::QuantizedType>().isSigned() &&
-          outputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+          (outputElementType.cast<quant::QuantizedType>()
+                   .getStorageTypeIntegralWidth() == 8 ||
+           outputElementType.cast<quant::QuantizedType>()
+                   .getStorageTypeIntegralWidth() == 16))) {
       return failure();
     }
 
     if (tConvOp.getPadding() != "VALID") {
       return failure();
+    }
+
+    bool i16TransposeConv = false;
+    if (inputElementType.cast<quant::QuantizedType>()
+                .getStorageTypeIntegralWidth() == 16 &&
+        outputElementType.cast<quant::QuantizedType>()
+                .getStorageTypeIntegralWidth() == 16) {
+      i16TransposeConv = true;
     }
 
     auto inputType =
@@ -83,6 +94,11 @@ struct ReplaceTransposeConvPattern
 
     // Input and output depth must be multiple of four
     if (inputDepth % 4 != 0 || outputDepth % 4 != 0) {
+      return failure();
+    }
+
+    // If int16, then input and output depth must be multiple of sixteen
+    if (i16TransposeConv && (inputDepth % 16 != 0 || outputDepth % 16 != 0)) {
       return failure();
     }
 
@@ -177,6 +193,11 @@ struct ReplaceTransposeConvPattern
           inputDepth * (horizontal_padding - this_kernels_horizontal_padding) +
           (inputDepth * (vertical_padding - this_kernels_vertical_padding) *
            (inputWidth + 2 * horizontal_padding));
+
+      // inputOffset is in bytes.
+      // For int16, we have to multiply by two as the offset is double that of
+      // int8
+      inputOffset = i16TransposeConv ? inputOffset * 2 : inputOffset;
 
       int64_t subWeightsShape[] = {c.kernelShape[0], c.kernelShape[1],
                                    c.kernelShape[2], c.kernelShape[3]};

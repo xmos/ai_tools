@@ -14,6 +14,34 @@
 namespace mlir {
 namespace xcore {
 
+template <typename ConcreteType, typename ConvOpType, typename ArgsType,
+          typename MulsAndBiasType>
+static LogicalResult obtainSerializedParamsAndMulsAndBiasesOp(
+    const ConcreteType *builder, PatternRewriter &rewriter,
+    ConvOpType &conv2DOp, const ArgsType &args, const Conv2DType &kt,
+    OtType &otType, llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
+    std::vector<int8_t> &weightsData, int &scratchBytes,
+    arith::ConstantOp &mulsBiasesOrThresholdsConstantOp) {
+  std::vector<MulsAndBiasType> mulsBiasesOrThresholdsData;
+
+  // Obtain serialized params and calculated tensors from lib_nn for the
+  // conv2d kernel type
+  if (failed(builder->getSerializedParamsAndTensors(
+          args, kt, otType, strParams, abstractKernelParams, weightsData,
+          mulsBiasesOrThresholdsData, scratchBytes))) {
+    return failure();
+  }
+  ShapedType mulsBiasesOrThresholdsType = RankedTensorType::get(
+      {static_cast<long long>(mulsBiasesOrThresholdsData.size())},
+      rewriter.getIntegerType(sizeof(MulsAndBiasType) * CHAR_BIT));
+  auto mulsBiasesOrThresholdsAttr = DenseElementsAttr::get<MulsAndBiasType>(
+      mulsBiasesOrThresholdsType, mulsBiasesOrThresholdsData);
+  mulsBiasesOrThresholdsConstantOp = rewriter.create<arith::ConstantOp>(
+      conv2DOp.getLoc(), mulsBiasesOrThresholdsAttr);
+  return success();
+}
+
 // XC Conv2D Base class implementation
 // ConcreteType would be TFL Conv types or Larq BConv2D
 // Replaces them with XC Conv2D
@@ -47,6 +75,25 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   args.filterHeight = filterType.getDimSize(1);
   args.filterWidth = filterType.getDimSize(2);
   args.filterDepth = filterType.getDimSize(3);
+  // Check if convolution is an int16 one
+  args.isI16Conv = false;
+  if ((inputType.getElementType().template isa<quant::QuantizedType>() &&
+      inputType.getElementType()
+          .template cast<quant::QuantizedType>()
+          .isSigned() &&
+      inputType.getElementType()
+              .template cast<quant::QuantizedType>()
+              .getStorageTypeIntegralWidth() == 16) &&
+      (outputType.getElementType().template isa<quant::QuantizedType>() &&
+      outputType.getElementType()
+          .template cast<quant::QuantizedType>()
+          .isSigned() &&
+      outputType.getElementType()
+              .template cast<quant::QuantizedType>()
+              .getStorageTypeIntegralWidth() == 16)) {
+    args.isI16Conv = true;
+  }
+
   // Get op-type specific args
   if (failed(builder->getArgs(conv2DOp, args))) {
     return failure();
@@ -65,9 +112,6 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
 
   int32_t scratchByteParam;
 
-  std::vector<int8_t> weightsData;
-  std::vector<int16_t> mulsBiasesOrThresholdsData;
-
   // Obtain thread count from command-line option
   llvm::SmallVector<std::string> strParams;
   int scratchBytes = 0;
@@ -84,12 +128,29 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
         threadCountOption, args.Y.height, args.Y.width);
   }
 
-  // Obtain serialized params and calculated tensors from lib_nn for the
-  // conv2d kernel type
-  if (failed(builder->getSerializedParamsAndTensors(
-          args, kernelType, otType, strParams, abstractKernelParams,
-          weightsData, mulsBiasesOrThresholdsData, scratchBytes))) {
-    return failure();
+  //
+  std::vector<int8_t> weightsData;
+  arith::ConstantOp mulsBiasesOrThresholdsConstantOp;
+
+  if (args.isI16Conv) {
+    //
+    if (failed(
+            obtainSerializedParamsAndMulsAndBiasesOp<ConcreteType, ConvOpType,
+                                                     ArgsType, int32_t>(
+                builder, rewriter, conv2DOp, args, kernelType, otType,
+                strParams, abstractKernelParams, weightsData, scratchBytes,
+                mulsBiasesOrThresholdsConstantOp))) {
+      return failure();
+    }
+  } else {
+    if (failed(
+            obtainSerializedParamsAndMulsAndBiasesOp<ConcreteType, ConvOpType,
+                                                     ArgsType, int16_t>(
+                builder, rewriter, conv2DOp, args, kernelType, otType,
+                strParams, abstractKernelParams, weightsData, scratchBytes,
+                mulsBiasesOrThresholdsConstantOp))) {
+      return failure();
+    }
   }
 
   // The actual thread count might be less than the count specified on the
@@ -116,20 +177,12 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
     return rewriter.getArrayAttr(attrs);
   };
 
-  // Create the tensors for weights and multipliers_and_biases
+  // Create the tensors for weights
   ShapedType weightsType = RankedTensorType::get(
       {static_cast<long long>(weightsData.size())}, rewriter.getIntegerType(8));
   auto weightsAttr = DenseElementsAttr::get<int8_t>(weightsType, weightsData);
   auto weightsConstantOp =
       rewriter.create<arith::ConstantOp>(conv2DOp.getLoc(), weightsAttr);
-
-  ShapedType mulsBiasesOrThresholdsType = RankedTensorType::get(
-      {static_cast<long long>(mulsBiasesOrThresholdsData.size())},
-      rewriter.getIntegerType(16));
-  auto mulsBiasesOrThresholdsAttr = DenseElementsAttr::get<int16_t>(
-      mulsBiasesOrThresholdsType, mulsBiasesOrThresholdsData);
-  auto mulsBiasesOrThresholdsConstantOp = rewriter.create<arith::ConstantOp>(
-      conv2DOp.getLoc(), mulsBiasesOrThresholdsAttr);
 
   // If FakeConv2DOp, then we want to pass in the partial output tensor, in case
   // it is being used If not, we use a no value op.

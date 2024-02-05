@@ -276,6 +276,15 @@ LogicalResult ReplaceBConv2DPattern::getSerializedParamsAndTensors(
   return success();
 }
 
+LogicalResult ReplaceBConv2DPattern::getSerializedParamsAndTensors(
+    const BConvArgs &args, const Conv2DType &kt, OtType &otType,
+    llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
+    std::vector<int8_t> &weightsData, std::vector<int32_t> &thresholdsData,
+    int &scratchBytes) const {
+  return failure();
+}
+
 LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectBinaryParams(
     const BConvArgs &args, llvm::SmallVector<std::string> &strParams,
     llvm::SmallVector<std::string> &abstractKernelParams,

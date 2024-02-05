@@ -31,13 +31,15 @@ struct ReplaceFCWithConv2DPattern
   LogicalResult matchAndRewrite(TFL::FullyConnectedOp fcOp,
                                 PatternRewriter &rewriter) const override {
     // Check for invalid types and return
-    // Input type must be QI8
+    // Input type must be QI8 or QI16
     auto fcInputElementType =
         fcOp.getInput().getType().cast<ShapedType>().getElementType();
     if (!(fcInputElementType.isa<quant::QuantizedType>() &&
           fcInputElementType.cast<quant::QuantizedType>().isSigned() &&
-          fcInputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+          (fcInputElementType.cast<quant::QuantizedType>()
+                   .getStorageTypeIntegralWidth() == 8 ||
+           fcInputElementType.cast<quant::QuantizedType>()
+                   .getStorageTypeIntegralWidth() == 16))) {
       return failure();
     }
 

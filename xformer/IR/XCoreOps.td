@@ -59,12 +59,13 @@ def XC_BNN_Conv2D_ValidIndirect_Binary
 def XC_BNN_Conv2D_ValidDirect_Int8 : I32EnumAttrCase<"BNNValidDirectInt8", 7>;
 def XC_BNN_Conv2D_ValidIndirect_Int8
     : I32EnumAttrCase<"BNNValidIndirectInt8", 8>;
+def XC_Conv2D_ValidDirect_Int16 : I32EnumAttrCase<"ValidDirectI16", 9>;
 
 def XC_Conv2D_TypeAttr : I32EnumAttr<"Conv2DType", "conv2d type enum", [
   XC_Conv2D_ValidDirect, XC_Conv2D_ValidIndirect, XC_Conv2D_PaddedIndirect,
   XC_DW_Conv2D_ValidDirect, XC_DW_Conv2D_PaddedIndirect,
   XC_BNN_Conv2D_ValidDirect_Binary, XC_BNN_Conv2D_ValidIndirect_Binary,
-  XC_BNN_Conv2D_ValidDirect_Int8, XC_BNN_Conv2D_ValidIndirect_Int8
+  XC_BNN_Conv2D_ValidDirect_Int8, XC_BNN_Conv2D_ValidIndirect_Int8, XC_Conv2D_ValidDirect_Int16
 ]>;
 
 def XC_Conv2D_Group : I32EnumAttrCase<"Group", 0>;
@@ -231,11 +232,11 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
 
   let arguments = (ins
     // I32 input is for BNNs
-    TensorOf<[QI8, I32]>:$input,
+    TensorOf<[QI8, QI16, I32]>:$input,
     TensorOf<[I8]>:$weights,
-    TensorOf<[I16]>:$mulsbiases_or_thresholds,
+    TensorOf<[I16, I32]>:$mulsbiases_or_thresholds,
     // The partial output parameter is used when we chain convolutions
-    AnyTypeOf<[TensorOf<[QI8]>, NoneType]>:$partial_output,
+    AnyTypeOf<[TensorOf<[QI8, QI16]>, NoneType]>:$partial_output,
     StrAttr:$conv2d_kernel_type,
     StrAttr:$memcpy_fn_param,
     StrAttr:$aggregate_fn_param,
@@ -247,7 +248,7 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
   );
 
   // I32 output is for BNNs
-  let results = (outs TensorOf<[QI8, I32]> : $output);
+  let results = (outs TensorOf<[QI8, QI16, I32]> : $output);
 }
 
 def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [Pure]> {
@@ -256,11 +257,11 @@ def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [Pure]> {
   let description = [{Fake Conv2D op.}];
 
   let arguments = (ins
-    TensorOf<[QI8]>:$input,
+    TensorOf<[QI8, QI16]>:$input,
     TensorOf<[QI8]>:$filter,
     AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$bias,
     // The partial output parameter is used when we chain convolutions
-    AnyTypeOf<[TensorOf<[QI8]>, NoneType]>:$partial_output,
+    AnyTypeOf<[TensorOf<[QI8, QI16]>, NoneType]>:$partial_output,
     I32Attr:$dilation_h_factor,
     I32Attr:$dilation_w_factor,
     StrAttr:$fused_activation_function,
@@ -278,7 +279,7 @@ def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [Pure]> {
     I32Attr:$input_offset
   );
 
-  let results = (outs TensorOf<[QI8]> : $output);
+  let results = (outs TensorOf<[QI8, QI16]> : $output);
 }
 
 def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [Pure]> {
@@ -287,7 +288,7 @@ def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [Pure]> {
   let description = [{Fake Depthwise Conv2D op.}];
 
   let arguments = (ins
-    TensorOf<[QI8]>:$input,
+    TensorOf<[QI8, QI16]>:$input,
     TensorOf<[QI8]>:$filter,
     AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$bias,
     I32Attr:$dilation_h_factor,
@@ -301,7 +302,7 @@ def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [Pure]> {
     I32Attr:$depth_multiplier
   );
 
-  let results = (outs TensorOf<[QI8]> : $output);
+  let results = (outs TensorOf<[QI8, QI16]> : $output);
 }
 
 def XC_LookupOp : XC_Op<"lookup", [Pure]> {
@@ -309,9 +310,9 @@ def XC_LookupOp : XC_Op<"lookup", [Pure]> {
 
   let description = [{Lookup table op.}];
 
-  let arguments = (ins TensorOf<[QI8]> : $input, TensorOf<[I8]> : $lut);
+  let arguments = (ins TensorOf<[QI8, QI16]> : $input, TensorOf<[UI8]> : $lut);
 
-  let results = (outs TensorOf<[QI8]> : $output);
+  let results = (outs TensorOf<[QI8, QI16]> : $output);
 }
 
 def XC_PadOp : XC_Op<"pad", [Pure]> {

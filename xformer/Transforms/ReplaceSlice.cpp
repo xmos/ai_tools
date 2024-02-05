@@ -33,8 +33,8 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
                                 PatternRewriter &rewriter) const override {
 
     auto inputType = sliceOp.getInput().getType().cast<RankedTensorType>();
-    assert(inputType.hasStaticShape() &&
-           "SliceOp: Input tensor must have static shape");
+    if (!inputType.hasStaticShape())
+      return failure();
     Type inputElementType = inputType.getElementType();
     auto outputType = sliceOp.getOutput().getType().cast<RankedTensorType>();
 

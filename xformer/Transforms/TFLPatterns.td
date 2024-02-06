@@ -56,7 +56,7 @@ def GetDepthwiseConv2DPaddingValues
           2>;
 
 // TFL_Conv2D() with SAME padding -> TFL_Conv2D(Pad())
-def : Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, TFL_PAD_Same, $sh, $sw),
+def : Pat<(TFL_Conv2DOp: $output TensorOf<[QI8, QI16]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, TFL_PAD_Same, $sh, $sw),
           (TFL_Conv2DOp (TFL_PadOp $input,
                         (GetConv2DPaddingValues
                          : $ret__0 $output),

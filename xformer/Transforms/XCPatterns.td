@@ -11,27 +11,38 @@ include "IR/XCoreOps.td"
 include "Utils/Utils.td"
 
 // Activation lowering patterns
-def getLookupTable
-    : NativeCodeCall<"getLookupTable($_builder, $0.getDefiningOp())">;
+def getLookupTableI8
+    : NativeCodeCall<"getLookupTableI8($_builder, $0.getDefiningOp())">;
 
 foreach activationOp =
     [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp, TFL_HardSwishOp] in {
 def:
   Pat<(activationOp
             : $output TensorOf<[QI8]>:$input),
-            (XC_LookupOp $input, (Arith_ConstantOp (getLookupTable
+            (XC_LookupOp $input, (Arith_ConstantOp (getLookupTableI8
+            $output)))>;
+}
+
+def getLookupTableI16
+    : NativeCodeCall<"getLookupTableI16($_builder, $0.getDefiningOp())">;
+
+foreach activationOp = [TFL_LogisticOp, TFL_TanhOp] in {
+def:
+  Pat<(activationOp
+            : $output TensorOf<[QI16]>:$input),
+            (XC_LookupOp $input, (Arith_ConstantOp (getLookupTableI16
             $output)))>;
 }
 
 def getExpLookupF32
     : NativeCodeCall<"getExpLookupF32($_builder, $0.getDefiningOp())">;
 
-// Softmax constraint: batch size must be 1, number of dimensions must be 2 (batch, dim)
+// Softmax constraint: batch size must be 1, number of dimensions must be 2
+// (batch, dim)
 def isSingleSegment
     : Constraint<CPred<"$0.getType().cast<ShapedType>().getRank() == 2">>;
 
-def betaIsOne
-    : Constraint<CPred<"$0.getValue().convertToFloat() == 1.0">>;
+def betaIsOne : Constraint<CPred<"$0.getValue().convertToFloat() == 1.0">>;
 
 // def:
 //    Pat<(TFL_SoftmaxOp

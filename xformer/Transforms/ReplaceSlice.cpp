@@ -11,6 +11,20 @@ namespace mlir {
 namespace xcore {
 
 namespace {
+
+size_t getTypeSize(Type type) {
+  if (auto quantType = type.dyn_cast<UniformQuantizedType>()) {
+    return quantType.getStorageType().getIntOrFloatBitWidth() / 8;
+  } else if (auto floatType = type.dyn_cast<FloatType>()) {
+    return floatType.getWidth() / 8;
+  } else if (auto intType = type.dyn_cast<IntegerType>()) {
+    return intType.getWidth() / 8;
+  } else {
+    llvm_unreachable("Unsupported type");
+  }
+  return 0;
+}
+
 // Replace TFL Slice with Slice for XCore.
 struct ReplaceSlice
     : public PassWrapper<ReplaceSlice, OperationPass<func::FuncOp>> {
@@ -75,7 +89,7 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
 
     // Treat dtype as an extra axis that we merge with the last axis, to use
     // vpu_memcpy if possible
-    auto dtypeSize = inputElementType.getIntOrFloatBitWidth() / 8;
+    auto dtypeSize = getTypeSize(inputElementType);
     inShape[4] *= dtypeSize;
     begin[4] *= dtypeSize;
     end[4] *= dtypeSize;

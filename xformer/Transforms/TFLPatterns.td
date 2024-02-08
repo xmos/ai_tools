@@ -6,21 +6,26 @@ include "mlir/Dialect/Arith/IR/ArithOps.td"
 include "mlir/Dialect/Func/IR/FuncOps.td"
 include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
-
 include "Utils/Utils.td"
 
-// Casts $1 to a dequantized type and then casts that to a quantized type
-// using the quantization parameters from the type in $0
-// $0 = tensor<m x n x i8 x !quantization params 1>
-// $1 = tensor<x x y x i8 x !quantization params 2>
-// We create tensor<x x y x i8 x !quantization params 1>
-class UpdateShapeWithAxis<int i>
-    : NativeCodeCall<
-          "quant::CastQuantizedTypeAttrFromExpressedType($_builder, $0, "
-          "quant::QuantizedType::castToExpressedType($1.getType()), " #i #")">;
+// Convert the StridedSliceOp to a SliceOp when possible. This will enable other
+// optimizations on SliceOp to run.
+def OptimizeStridedSlice : Pat<
+  (TFL_StridedSliceOp $input,
+    (Arith_ConstantOp $begin),
+    (Arith_ConstantOp $end),
+    (Arith_ConstantOp $stride),
+    ZeroIntAttr:$_,
+    ZeroIntAttr:$_,
+    ZeroIntAttr:$_,
+    ZeroIntAttr:$_,
+    ZeroIntAttr:$_,
+    ConstBoolAttrFalse),
+  (TFL_SliceOp $input,
+    (Arith_ConstantOp $begin),
+    (Arith_ConstantOp (GetOffSet $begin, $end))),
+  [(IsAllOnesConstant $stride)]>;
 
-def IsQuantizedType : Constraint<CPred<"dyn_cast<QuantizedType>($0.getType()."
-                                       "cast<ShapedType>().getElementType())">>;
 
 // Convert Quantize(Reshape()) -> Reshape(Quantize())
 // This is to merge Quantize with Conv2D if possible
@@ -42,19 +47,6 @@ def : Pat<(TFL_QuantizeOp(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf,
           (TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw,
            $dm)>;
 
-// Get padding values and output type as two return values
-def GetConv2DPaddingValues
-    : NativeCodeCall<"getConv2DPaddingValues<TFL::Conv2DOp>($_builder, "
-                     "$0.getDefiningOp<TFL::Conv2DOp>())",
-                     2>;
-
-// Get padding values and output type as two return values
-def GetDepthwiseConv2DPaddingValues
-    : NativeCodeCall<
-          "getConv2DPaddingValues<TFL::DepthwiseConv2DOp>($_builder, "
-          "$0.getDefiningOp<TFL::DepthwiseConv2DOp>())",
-          2>;
-
 // TFL_Conv2D() with SAME padding -> TFL_Conv2D(Pad())
 def : Pat<(TFL_Conv2DOp: $output TensorOf<[QI8, QI16]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, TFL_PAD_Same, $sh, $sw),
           (TFL_Conv2DOp (TFL_PadOp $input,
@@ -69,16 +61,6 @@ def : Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]
                          : $ret__0 $output),
                         (returnType $ret__1)), $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw, $dm)>;
 
-// PyTorch remnant opt
-// Relu(Minimum(x, 127)) -> Relu(x)
-// We can ignore minimum of (x,127) as it doesn't do anything
-class IsSplatAndEqualTo<int n>
-    : Constraint<
-          CPred<"dyn_cast<TFL::QConstOp>($0.getDefiningOp()) && "
-                "dyn_cast<TFL::QConstOp>($0.getDefiningOp()).getValue()."
-                "cast<DenseElementsAttr>().isSplat() && "
-                "dyn_cast<TFL::QConstOp>($0.getDefiningOp()).getValue()."
-                "cast<DenseElementsAttr>().getSplatValue<int8_t>() == " #n>>;
 def : Pat<(TFL_ReluOp(TFL_MinimumOp $lhs, $rhs)), (TFL_ReluOp $lhs),
           [(IsSplatAndEqualTo<127> $rhs)]>;
 
@@ -86,51 +68,6 @@ def : Pat<(TFL_ReluOp(TFL_MinimumOp $lhs, $rhs)), (TFL_ReluOp $lhs),
 def : Pat<(TFL_ReluOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $p,
                       $sh, $sw)),
           (TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_Relu, $p, $sh, $sw)>;
-
-// Get the dimension size as integer attr.
-class GetDimAsI32<int n>
-    : NativeCodeCall<
-          "$_builder.getIntegerAttr($_builder.getIntegerType(32), "
-          "$0.getType().cast<RankedTensorType>().getDimSize(" #n #"))">;
-
-def getTypeOf1WithQParamsOf0
-    : NativeCodeCall<
-          "dyn_cast<mlir::quant::UniformQuantizedType>($0.getType().cast<"
-          "ShapedType>().getElementType()).castFromExpressedType(mlir::quant::"
-          "UniformQuantizedType::castToExpressedType($1.getType()))">;
-
-def getTypeAttrOf1WithQParamsOf0
-    : NativeCodeCall<
-          "mlir::TypeAttr::get(dyn_cast<mlir::quant::UniformQuantizedType>($0."
-          "getType().cast<ShapedType>().getElementType())."
-          "castFromExpressedType(mlir::quant::UniformQuantizedType::"
-          "castToExpressedType($1.getType())))">;
-
-def HasSpatialAxisForMean
-    : Constraint<CPred<
-          "$0.cast<DenseIntElementsAttr>().getNumElements() == 2 && "
-          "($0.cast<DenseIntElementsAttr>().getValues<int32_t>()[0] == 1 "
-          "&&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[1] == 2)">>;
-
-class HasRank<int n>
-    : Constraint<CPred<"$0.getType().cast<ShapedType>().getRank() == " #n>>;
-
-def getExpandedShape
-    : NativeCodeCall<"RankedTensorType::get({1, 1, "
-                     "$0.getType().cast<ShapedType>().isDynamicDim(0)?1:$0."
-                     "getType().cast<ShapedType>().getDimSize(0),"
-                     "$0.getType().cast<ShapedType>().getDimSize(1)}, "
-                     "$0.getType().cast<ShapedType>().getElementType())">;
-
-def getExpandedShapeAttr
-    : NativeCodeCall<
-          "DenseIntElementsAttr::get(RankedTensorType::get({2}, "
-          "rewriter.getI32Type()), "
-          "{static_cast<int32_t>($0.getType().cast<ShapedType>().isDynamicDim("
-          "0)?1: $0.getType().cast<ShapedType>().getDimSize(0)), "
-          "static_cast<int32_t>($0.getType().cast<ShapedType>()."
-          "getDimSize(1))})">;
 
 // If MeanOp with spatial axis and rank 2 output, expand output to rank 4, which
 // we later lower to AveragePool2D
@@ -155,39 +92,6 @@ def : Pat<(TFL_MeanOp
                (returnType(getTypeOf1WithQParamsOf0 $input, $output))),
            (getTypeAttrOf1WithQParamsOf0 $output, $output)),
           [(HasSpatialAxisForMean $axis), (HasRank<4> $output)]>;
-
-// class IsNotUsedBy<string op>
-//     : Constraint<CPred<
-//           "!$0.hasOneUse() || !llvm::isa<" #op
-//           #">(*$0.getUsers().begin())">>;
-
-// def CreateBias
-//     : NativeCodeCall<
-//           "DenseIntElementsAttr::get(RankedTensorType::get({$0.getType().cast<"
-//           "ShapedType>().getDimSize(3)}, rewriter.getI32Type()), "
-//           "std::vector<int32_t>($0.getType().cast<ShapedType>().getDimSize(3),
-//           " "0))">;
-
-// def HasRank4
-//     : Constraint<
-//           CPred<"$0.getType().cast<ShapedType>().getRank() == 4">>;
-
-// def : Pat<(TFL_MulOp
-//            : $output $in1, (TFL_ReshapeOp $in2, $shape), $faf),
-//           (TFL_DepthwiseConv2DOp $in1, $in2, (TFL_ConstOp (CreateBias
-//           $output)),
-//            ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">,
-//            TFL_AF_None, TFL_PAD_Valid, ConstantAttr<I32Attr, "1">,
-//            ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">),[(HasRank4
-//            $output)]>;
-
-def PadChannelOutputType
-    : NativeCodeCall<
-          "RankedTensorType::get({$0.getType().cast<ShapedType>().getDimSize(0)"
-          ", $0.getType().cast<ShapedType>().getDimSize(1), "
-          "$0.getType().cast<ShapedType>().getDimSize(2), "
-          "$1.getType().cast<ShapedType>().getDimSize(3)}, "
-          "$0.getType().cast<ShapedType>().getElementType())">;
 
 // PadChannel(PadSpatial) to PadSpatial(PadChannel)
 // Match cases where arith constant op and tfl constant op are both used
@@ -235,12 +139,6 @@ def : Pat<(TFL_PadOp
             (HasOnlySpatialPadding $padding_spatial_attr),
             (HasOnlyChannelPadding $padding_channel_attr),
           ]>;
-
-// Get padding values and output type as two return values
-def GetBConv2DPaddingValues
-    : NativeCodeCall<"getBConv2DPaddingValues($_builder, "
-                     "$0.getDefiningOp<lq::Bconv2dOp>())",
-                     2>;
 
 // Replace LQ_Bconv2DOp of SAME padding with a pad_value of one with
 // LQ_Bconv2DOp(TFL_Pad()) of VALID padding. We cannot do this when the

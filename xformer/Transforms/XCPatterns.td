@@ -60,8 +60,48 @@ def:
             (XC_Beta_ActivationF32Op $input, (getActivationType $output)), [(isBetaFloatEnabled)]>;
 }
 
+// ELU(Dequantize(int16)) -> Dequantize(XC_LookupOp())
+def getLookupTableI16WithInputOutput
+    : NativeCodeCall<"getLookupTableI16($_builder, $0.getDefiningOp(), "
+                     "$1.getDefiningOp(), $2.getDefiningOp())">;
+def:
+    Pat<(TFL_EluOp : $output2 (TFL_DequantizeOp : $output1
+    TensorOf<[QI16]>:$input)),
+            (TFL_DequantizeOp (XC_LookupOp $input, (Arith_ConstantOp
+            (getLookupTableI16WithInputOutput $output2, $output1, $input)),
+            (returnType $input))), []>;
+
 def : Pat<(TFL_ConcatenationOp $input, $axis, $faf),
           (XC_Beta_ConcatF32Op $input), [(isBetaFloatEnabled)]>;
+
+// Unary i16
+def getUnaryI16Blob
+    : NativeCodeCall<"getUnaryI16Blob($_builder, $0.getDefiningOp())">;
+// TFL Quantize(f32 to i16), Quantize(i16 to i16), Dequantize
+def: Pat<(TFL_QuantizeOp
+            : $output TensorOf<[F32]>:$input, $qtype),
+            (XC_UnaryI16Op $input, (Arith_ConstantOp (getUnaryI16Blob
+            $output)), XC_UnaryI16_Quantize)>;
+def: Pat<(TFL_QuantizeOp
+            : $output TensorOf<[QI16]>:$input, $qtype),
+            (XC_UnaryI16Op $input, (Arith_ConstantOp (getUnaryI16Blob
+            $output)), XC_UnaryI16_Requantize)>;
+def: Pat<(TFL_DequantizeOp
+            : $output TensorOf<[QI16]>:$input),
+            (XC_UnaryI16Op $input, (Arith_ConstantOp (getUnaryI16Blob
+            $output)), XC_UnaryI16_Dequantize)>;
+// Binary i16
+def getBinaryI16Blob
+    : NativeCodeCall<"getBinaryI16Blob($_builder, $0.getDefiningOp())">;
+// TFL Mul, Add
+def: Pat<(TFL_AddOp
+            : $output TensorOf<[QI16]>:$input1, TensorOf<[QI16]>:$input2,
+            TFL_AF_None), (XC_BinaryI16Op $input1, $input2, (Arith_ConstantOp
+            (getBinaryI16Blob $output)), XC_BinaryI16_Add)>;
+def: Pat<(TFL_MulOp
+            : $output TensorOf<[QI16]>:$input1, TensorOf<[QI16]>:$input2,
+            TFL_AF_None), (XC_BinaryI16Op $input1, $input2, (Arith_ConstantOp
+            (getBinaryI16Blob $output)), XC_BinaryI16_Mul)>;
 
 def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
 

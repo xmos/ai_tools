@@ -28,7 +28,8 @@ void XCoreDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult PadOp::fold(FoldAdaptor) {
-  if (succeeded(verifyCompatibleShapes(getInput().getType(), getOutput().getType())))
+  if (succeeded(
+          verifyCompatibleShapes(getInput().getType(), getOutput().getType())))
     return getInput();
 
   return {};

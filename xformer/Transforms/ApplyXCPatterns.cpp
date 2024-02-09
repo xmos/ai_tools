@@ -5,8 +5,12 @@
 
 #include "Transforms/Options.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
+#include "lib_nn/api/add_int16_transform.h"
+#include "lib_nn/api/dequantize_int16_transform.h"
+#include "lib_nn/api/multiply_int16_transform.h"
 #include "lib_nn/api/nn_layers.h"
 #include "lib_nn/api/quadratic_approximation.h"
+#include "lib_nn/api/quantize_int16_transform.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
@@ -130,10 +134,12 @@ DenseElementsAttr getExpLookupF32(PatternRewriter &rewriter, Operation *op) {
   return lookupTableAttr;
 }
 
-DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter, Operation *op) {
+DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter,
+                                    Operation *activationOp, Operation *inputOp,
+                                    Operation *outputOp) {
   // Get input scale and input zero point
   RankedTensorType inputType =
-      op->getOperand(0).getType().dyn_cast<RankedTensorType>();
+      inputOp->getOperand(0).getType().dyn_cast<RankedTensorType>();
   auto inputQType =
       inputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
   double inputScale = inputQType.getScale();
@@ -141,7 +147,7 @@ DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter, Operation *op) {
 
   // Get output scale and output zero point
   RankedTensorType outputType =
-      op->getResult(0).getType().dyn_cast<RankedTensorType>();
+      outputOp->getResult(0).getType().dyn_cast<RankedTensorType>();
   auto outputQType =
       outputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
   double outputScale = outputQType.getScale();
@@ -150,11 +156,11 @@ DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter, Operation *op) {
 
   float_function_t fn;
 
-  if (isa<TFL::TanhOp>(op)) {
+  if (isa<TFL::TanhOp>(activationOp)) {
     fn = approximation_function_tanh;
-  } else if (isa<TFL::LogisticOp>(op)) {
+  } else if (isa<TFL::LogisticOp>(activationOp)) {
     fn = approximation_function_logistics;
-  } else if (isa<TFL::EluOp>(op)) {
+  } else if (isa<TFL::EluOp>(activationOp)) {
     fn = approximation_function_elu;
   } else {
     llvm_unreachable("Unsupported op!");
@@ -177,6 +183,10 @@ DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter, Operation *op) {
   auto lookupTableAttr =
       DenseElementsAttr::get<uint8_t>(lookupTableType, tableData);
   return lookupTableAttr;
+}
+
+DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter, Operation *op) {
+  return getLookupTableI16(rewriter, op, op, op);
 }
 
 DenseElementsAttr getLookupTableI8(PatternRewriter &rewriter, Operation *op) {
@@ -251,6 +261,76 @@ DenseElementsAttr getLookupTableI8(PatternRewriter &rewriter, Operation *op) {
   auto lookupTableAttr =
       DenseElementsAttr::get<uint8_t>(lookupTableType, resultVector);
   return lookupTableAttr;
+}
+
+DenseElementsAttr getBinaryI16Blob(PatternRewriter &rewriter, Operation *op,
+                                   bool binaryInputs = true) {
+  // Get input scale
+  RankedTensorType inputType =
+      op->getOperand(0).getType().dyn_cast<RankedTensorType>();
+  double inputScale = 1;
+  if (auto inputQType = inputType.getElementType()
+                            .dyn_cast<mlir::quant::UniformQuantizedType>()) {
+    inputScale = inputQType.getScale();
+  }
+
+  double inputScale2 = 1;
+  if (binaryInputs) {
+    RankedTensorType inputType2 =
+        op->getOperand(1).getType().dyn_cast<RankedTensorType>();
+    if (auto inputQType2 = inputType2.getElementType()
+                               .dyn_cast<mlir::quant::UniformQuantizedType>()) {
+      inputScale2 = inputQType2.getScale();
+    }
+  }
+
+  // Get output scale
+  RankedTensorType outputType =
+      op->getResult(0).getType().dyn_cast<RankedTensorType>();
+  double outputScale = 1;
+  if (auto outputQType = outputType.getElementType()
+                             .dyn_cast<mlir::quant::UniformQuantizedType>()) {
+    outputScale = outputQType.getScale();
+  }
+  assert(outputScale != 0 && "Output scale of zero is not supported!");
+
+  int length;
+  std::vector<uint8_t> blob;
+  if (isa<TFL::QuantizeOp>(op) && inputType.getElementType().isF32()) {
+    length = QUANTIZE_INT16_TENSOR_BYTES();
+    blob.resize(length);
+    quantize_int16_tensor_blob((void *)blob.data(), outputScale);
+  } else if (isa<TFL::QuantizeOp>(op)) {
+    length = REQUANTIZE_INT16_TENSOR_BYTES();
+    blob.resize(length);
+    requantize_int16_tensor_blob((void *)blob.data(), inputScale, outputScale);
+  } else if (isa<TFL::DequantizeOp>(op)) {
+    length = DEQUANTIZE_INT16_TENSOR_BYTES();
+    blob.resize(length);
+    dequantize_int16_tensor_blob((void *)blob.data(), inputScale);
+  } else if (isa<TFL::AddOp>(op)) {
+    length = ADD_INT16_TENSOR_BYTES();
+    blob.resize(length);
+    add_int16_tensor_blob((void *)blob.data(), inputScale, inputScale2,
+                          outputScale);
+  } else if (isa<TFL::MulOp>(op)) {
+    length = MULTIPLY_INT16_TENSOR_BYTES();
+    blob.resize(length);
+    multiply_int16_tensor_blob((void *)blob.data(), inputScale, inputScale2,
+                               outputScale);
+  } else {
+    llvm_unreachable("Unsupported op!");
+  }
+
+  ArrayRef<uint8_t> blobData = ArrayRef(blob.data(), length);
+  ShapedType blobType = RankedTensorType::get(
+      {length}, rewriter.getIntegerType(8, /*signed=*/false));
+  auto blobAttr = DenseElementsAttr::get<uint8_t>(blobType, blobData);
+  return blobAttr;
+}
+
+DenseElementsAttr getUnaryI16Blob(PatternRewriter &rewriter, Operation *op) {
+  return getBinaryI16Blob(rewriter, op, /*binaryInputs=*/false);
 }
 
 #include "Transforms/GeneratedXCPatterns.inc"

@@ -16,6 +16,10 @@ def : Pat<(TFL_QuantizeOp(TFL_ReshapeOp $input, $shape), $qtype),
            $shape),
           [(IsQuantizedType $input)]>;
 
+// Fuse Quantize(Quantize()) -> Quantize()
+def : Pat<(TFL_QuantizeOp(TFL_QuantizeOp $input, $qtype1), $qtype2),
+          (TFL_QuantizeOp $input, $qtype2)>;
+
 // Fuse Quantize(Conv2D()) -> Conv2D()
 def : Pat<(TFL_QuantizeOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh,
                           $sw),

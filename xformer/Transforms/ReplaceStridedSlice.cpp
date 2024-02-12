@@ -45,7 +45,7 @@ bool canReplaceWithSlice(TFL::StridedSliceOp stridedSliceOp) {
       return false;
 
   if (stridedSliceOp.getEllipsisMask() != 0 ||
-      stridedSliceOp.getShrinkAxisMask() != 0) {
+      stridedSliceOp.getNewAxisMask() != 0) {
     return false;
   }
   return true;
@@ -78,11 +78,11 @@ struct ReplaceStridedSlicePattern
     for (int i = 0; i < rank; i++) {
       newBegin[i] = (stridedSliceOp.getBeginMask() & (1 << i)) ? 0 : begin[i];
       newSize[i] = (stridedSliceOp.getEndMask() & (1 << i))
-                       ? inputType.getShape()[i]
+                       ? inputType.getShape()[i] - newBegin[i]
                        : end[i] - newBegin[i];
     }
     int64_t shrinkMask = stridedSliceOp.getShrinkAxisMask();
-    std::vector<int64_t> newOutputShape;
+    std::vector<int32_t> newOutputShape;
     for (int i = 0; i < rank; ++i) {
       if (!(shrinkMask & (1 << i))) {         // Check if we should NOT shrink
         newOutputShape.push_back(newSize[i]); // Retain size
@@ -110,11 +110,16 @@ struct ReplaceStridedSlicePattern
 
     // add reshape if shrinkMask is not 0
     if (shrinkMask != 0) {
+      auto newShapeAttrType =
+          RankedTensorType::get({static_cast<int64_t>(newOutputShape.size())},
+                                rewriter.getIntegerType(32));
       auto shapeConstantOp = rewriter.create<arith::ConstantOp>(
-          stridedSliceOp.getLoc(), shapeAttrType,
-          DenseIntElementsAttr::get(shapeAttrType, newOutputShape));
+          stridedSliceOp.getLoc(), newShapeAttrType,
+          DenseIntElementsAttr::get(newShapeAttrType, newOutputShape));
+      std::vector<int64_t> newOutputShape64(newOutputShape.begin(),
+                                            newOutputShape.end());
       auto newOutputType = RankedTensorType::get(
-          newOutputShape, sliceOp.getType().getElementType());
+          newOutputShape64, sliceOp.getType().getElementType());
       auto reshape = rewriter.create<TFL::ReshapeOp>(
           stridedSliceOp.getLoc(), newOutputType, sliceOp, shapeConstantOp);
       rewriter.replaceOp(stridedSliceOp, reshape.getOutput());

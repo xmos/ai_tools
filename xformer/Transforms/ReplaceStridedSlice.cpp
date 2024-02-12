@@ -60,9 +60,12 @@ struct ReplaceStridedSlicePattern
 
     if (!canReplaceWithSlice(stridedSliceOp))
       return failure();
+
     auto inputType = stridedSliceOp.getInput().getType().dyn_cast<ShapedType>();
     auto rank =
         stridedSliceOp.getInput().getType().cast<ShapedType>().getRank();
+
+    // Get begin/end attributes
     DenseIntElementsAttr beginAttr;
     matchPattern(stridedSliceOp.getBegin(), m_Constant(&beginAttr));
     if (!beginAttr)
@@ -74,7 +77,15 @@ struct ReplaceStridedSlicePattern
     if (!beginAttr)
       return failure();
     auto end = endAttr.getValues<int32_t>();
+
     std::vector<int32_t> newBegin(rank), newSize(rank);
+
+    // If mask is set, set begin and end to 0 and input shape
+    // respectively
+    // If mask is not set, set begin and end to the actual values
+    // If the value is negative, it means size - value
+    // StridedSliceOp has an end attribute, SliceOp has size
+    // Size is end - begin.
     for (int i = 0; i < rank; i++) {
       if (stridedSliceOp.getBeginMask() & (1 << i))
         newBegin[i] = 0;
@@ -108,8 +119,10 @@ struct ReplaceStridedSlicePattern
         stridedSliceOp.getLoc(), shapeAttrType,
         DenseIntElementsAttr::get(shapeAttrType, newSize));
 
-    // create sliceOp
+    // RankedTensorType needs int64_t
     std::vector<int64_t> newSize64(newSize.begin(), newSize.end());
+
+    // create sliceOp
     auto sliceOp = rewriter.create<TFL::SliceOp>(
         stridedSliceOp.getLoc(),
         RankedTensorType::get(ArrayRef<int64_t>(newSize64),

@@ -92,7 +92,7 @@ pipeline {
 }
 
 def runPytest(String test, String args) {
-    timeout(time: 10, unit: 'MINUTES') {
+    timeout(time: 20, unit: 'MINUTES') {
         sh "xtagctl reset_all XCORE-AI-EXPLORER"
         sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args} -s"
     }

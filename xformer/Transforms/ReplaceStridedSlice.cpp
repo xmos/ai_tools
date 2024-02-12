@@ -76,10 +76,18 @@ struct ReplaceStridedSlicePattern
     auto end = endAttr.getValues<int32_t>();
     std::vector<int32_t> newBegin(rank), newSize(rank);
     for (int i = 0; i < rank; i++) {
-      newBegin[i] = (stridedSliceOp.getBeginMask() & (1 << i)) ? 0 : begin[i];
-      newSize[i] = (stridedSliceOp.getEndMask() & (1 << i))
-                       ? inputType.getShape()[i] - newBegin[i]
-                       : end[i] - newBegin[i];
+      if (stridedSliceOp.getBeginMask() & (1 << i))
+        newBegin[i] = 0;
+      else
+        newBegin[i] =
+            begin[i] < 0 ? inputType.getShape()[i] + begin[i] : begin[i];
+      if (stridedSliceOp.getEndMask() & (1 << i))
+        newSize[i] = inputType.getShape()[i] - newBegin[i];
+      else {
+        auto currentEnd =
+            end[i] < 0 ? inputType.getShape()[i] + end[i] : end[i];
+        newSize[i] = currentEnd - newBegin[i];
+      }
     }
     int64_t shrinkMask = stridedSliceOp.getShrinkAxisMask();
     std::vector<int32_t> newOutputShape;

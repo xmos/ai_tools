@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "IR/XCoreOps.h"
+#include "Utils/Util.h"
 
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/Pass/Pass.h"

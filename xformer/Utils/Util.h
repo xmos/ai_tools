@@ -4,7 +4,7 @@
 #ifndef XFORMER_UTILS_UTIL_H
 #define XFORMER_UTILS_UTIL_H
 
-#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 
 namespace mlir {
 namespace xcore {

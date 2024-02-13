@@ -27,6 +27,30 @@ struct ReplaceStridedSlice
   void runOnOperation() override;
 };
 
+// Utility to check if a StridedSliceOp can be replaced with a SliceOp
+bool canReplaceWithSlice(TFL::StridedSliceOp stridedSliceOp) {
+  // Check input shape is static
+  auto inputType = stridedSliceOp.getInput().getType().dyn_cast<ShapedType>();
+  if (!inputType || !inputType.hasStaticShape()) {
+    return false;
+  }
+
+  // Check all strides are 1
+  DenseIntElementsAttr stridesAttr;
+  matchPattern(stridedSliceOp.getStrides(), m_Constant(&stridesAttr));
+  if (!stridesAttr)
+    return false;
+  for (auto stride : stridesAttr)
+    if (!stride.isOne())
+      return false;
+
+  if (stridedSliceOp.getEllipsisMask() != 0 ||
+      stridedSliceOp.getNewAxisMask() != 0) {
+    return false;
+  }
+  return true;
+}
+
 struct ReplaceStridedSlicePattern
     : public OpRewritePattern<TFL::StridedSliceOp> {
   using OpRewritePattern<TFL::StridedSliceOp>::OpRewritePattern;
@@ -34,114 +58,95 @@ struct ReplaceStridedSlicePattern
   LogicalResult matchAndRewrite(TFL::StridedSliceOp stridedSliceOp,
                                 PatternRewriter &rewriter) const override {
 
-    auto inputType =
-        stridedSliceOp.getInput().getType().cast<RankedTensorType>();
-    auto inputElementType = inputType.getElementType();
-
-    // Check for invalid types and return
-    // Input type must be QI8
-    if (!(inputElementType.isa<quant::QuantizedType>() &&
-          inputElementType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+    if (!canReplaceWithSlice(stridedSliceOp))
       return failure();
-    }
 
-    auto outputType =
-        stridedSliceOp.getOutput().getType().cast<RankedTensorType>();
-    auto outputElementType = outputType.getElementType();
+    auto inputType = stridedSliceOp.getInput().getType().dyn_cast<ShapedType>();
+    auto rank =
+        stridedSliceOp.getInput().getType().cast<ShapedType>().getRank();
 
-    // Output type must be QI8
-    if (!(outputElementType.isa<quant::QuantizedType>() &&
-          outputElementType.cast<quant::QuantizedType>().isSigned() &&
-          outputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
-
-    // Check if both input and output tensors have a rank of 4
-    if (inputType.getRank() != 4 || outputType.getRank() != 4) {
-      return failure();
-    }
-
-    // TODO: We don't support masks yet
-    if (stridedSliceOp.getBeginMask() != 0 ||
-        stridedSliceOp.getEndMask() != 0 ||
-        stridedSliceOp.getEllipsisMask() != 0 ||
-        stridedSliceOp.getNewAxisMask() != 0 ||
-        stridedSliceOp.getShrinkAxisMask() != 0) {
-      return failure();
-    }
-
-    StridedSliceMemcpyType memcpyType;
-    if (inputType.getDimSize(2) == outputType.getDimSize(2) &&
-        inputType.getDimSize(3) == outputType.getDimSize(3)) {
-      // Single CPU memcpy
-      memcpyType = StridedSliceMemcpyType::SliceCpy;
-      // } else if (inputType.getDimSize(2) % 4 == 0 &&
-      //            outputType.getDimSize(2) == inputType.getDimSize(2)) {
-      //   // If depth * output width is a multiple of four and the x,y location
-      //   of
-      //   // the starting pixel is word-aligned, we can do a slice copy
-      //   instead.
-      //   // That is ((y * input depth + x) * depth) is a multiple of four.
-      //   // We use a simple memcpy to do the copy in the runtime.
-      //   // Input and output tensors must have the same width.
-      //   memcpyType = StridedSliceMemcpyType::VpuCpy;
-    } else if (inputType.getDimSize(3) % 4 == 0 &&
-               outputType.getDimSize(3) % 4 == 0) {
-      // If not a slice copy, then if both depths are multiples of four, we can
-      // do pixel by pixel VPU copy.
-      memcpyType = StridedSliceMemcpyType::VpuCpy;
-    } else {
-      // Pixel by pixel CPU memcpy, when depth not a multiple of four
-      // TODO: Fix this.
-      return failure();
-      // memcpyType = StridedSliceMemcpyType::MemCpy;
-    }
-
-    // Extract args from the op
-    DenseElementsAttr beginAttr;
+    // Get begin/end attributes
+    DenseIntElementsAttr beginAttr;
     matchPattern(stridedSliceOp.getBegin(), m_Constant(&beginAttr));
+    if (!beginAttr)
+      return failure();
+    auto begin = beginAttr.getValues<int32_t>();
 
-    DenseElementsAttr endAttr;
+    DenseIntElementsAttr endAttr;
     matchPattern(stridedSliceOp.getEnd(), m_Constant(&endAttr));
+    if (!beginAttr)
+      return failure();
+    auto end = endAttr.getValues<int32_t>();
 
-    DenseElementsAttr stridesAttr;
-    matchPattern(stridedSliceOp.getStrides(), m_Constant(&stridesAttr));
+    std::vector<int32_t> newBegin(rank), newSize(rank);
 
-    auto inputHeight = inputType.getDimSize(1);
-    auto inputWidth = inputType.getDimSize(2);
-    auto inputDepth = inputType.getDimSize(3);
-    auto beginX = beginAttr.getValues<int32_t>()[2];
-    auto beginY = beginAttr.getValues<int32_t>()[1];
-    auto endX = endAttr.getValues<int32_t>()[2];
-    auto endY = endAttr.getValues<int32_t>()[1];
-    auto strideX = stridesAttr.getValues<int32_t>()[2];
-    auto strideY = stridesAttr.getValues<int32_t>()[1];
+    // If mask is set, set begin and end to 0 and input shape
+    // respectively
+    // If mask is not set, set begin and end to the actual values
+    // If the value is negative, it means size - value
+    // StridedSliceOp has an end attribute, SliceOp has size
+    // Size is end - begin.
+    for (int i = 0; i < rank; i++) {
+      if (stridedSliceOp.getBeginMask() & (1 << i))
+        newBegin[i] = 0;
+      else
+        newBegin[i] =
+            begin[i] < 0 ? inputType.getShape()[i] + begin[i] : begin[i];
+      if (stridedSliceOp.getEndMask() & (1 << i))
+        newSize[i] = inputType.getShape()[i] - newBegin[i];
+      else {
+        auto currentEnd =
+            end[i] < 0 ? inputType.getShape()[i] + end[i] : end[i];
+        newSize[i] = currentEnd - newBegin[i];
+      }
+    }
+    int64_t shrinkMask = stridedSliceOp.getShrinkAxisMask();
+    std::vector<int32_t> newOutputShape;
+    for (int i = 0; i < rank; ++i) {
+      if (!(shrinkMask & (1 << i))) {         // Check if we should NOT shrink
+        newOutputShape.push_back(newSize[i]); // Retain size
+      }
+    }
 
-    auto image_geom = nn::ImageGeometry(inputHeight, inputWidth,
-                                        static_cast<int>(inputDepth));
+    auto shapeAttrType =
+        RankedTensorType::get({rank}, rewriter.getIntegerType(32));
 
-    int xDiff = endX - beginX;
-    int yDiff = endY - beginY;
-    auto window_geom =
-        nn::WindowGeometry({yDiff, xDiff, static_cast<int>(inputDepth)},
-                           {beginY, beginX}, {1, 1, 1}, {strideY, strideX});
+    // create constant ops for begin and size
+    auto beginConstantOp = rewriter.create<arith::ConstantOp>(
+        stridedSliceOp.getLoc(), shapeAttrType,
+        DenseIntElementsAttr::get(shapeAttrType, newBegin));
+    auto sizeConstantOp = rewriter.create<arith::ConstantOp>(
+        stridedSliceOp.getLoc(), shapeAttrType,
+        DenseIntElementsAttr::get(shapeAttrType, newSize));
 
-    nn::ImToColValid imToCol(image_geom, window_geom,
-                             static_cast<int>(inputDepth),
-                             /*dont_zero_pad_at_the_end=*/true);
-    auto imToColParams = imToCol.getParams();
-    auto mfStr = std::string((char *)&imToColParams, sizeof(imToColParams));
+    // RankedTensorType needs int64_t
+    std::vector<int64_t> newSize64(newSize.begin(), newSize.end());
 
-    auto binaryObjectStridedSliceOp = rewriter.create<StridedSliceOp>(
-        stridedSliceOp.getLoc(), stridedSliceOp.getType(),
-        stridedSliceOp.getInput(), rewriter.getI32IntegerAttr(beginX),
-        rewriter.getI32IntegerAttr(beginY), rewriter.getStringAttr(mfStr),
-        rewriter.getI32IntegerAttr((int32_t)memcpyType));
-    rewriter.replaceOp(stridedSliceOp, binaryObjectStridedSliceOp.getOutput());
+    // create sliceOp
+    auto sliceOp = rewriter.create<TFL::SliceOp>(
+        stridedSliceOp.getLoc(),
+        RankedTensorType::get(ArrayRef<int64_t>(newSize64),
+                              stridedSliceOp.getType().getElementType()),
+        stridedSliceOp.getInput(), beginConstantOp, sizeConstantOp);
 
+    // add reshape if shrinkMask is not 0
+    if (shrinkMask != 0) {
+      auto newShapeAttrType =
+          RankedTensorType::get({static_cast<int64_t>(newOutputShape.size())},
+                                rewriter.getIntegerType(32));
+      auto shapeConstantOp = rewriter.create<arith::ConstantOp>(
+          stridedSliceOp.getLoc(), newShapeAttrType,
+          DenseIntElementsAttr::get(newShapeAttrType, newOutputShape));
+      std::vector<int64_t> newOutputShape64(newOutputShape.begin(),
+                                            newOutputShape.end());
+      auto newOutputType = RankedTensorType::get(
+          newOutputShape64, sliceOp.getType().getElementType());
+      auto reshape = rewriter.create<TFL::ReshapeOp>(
+          stridedSliceOp.getLoc(), newOutputType, sliceOp, shapeConstantOp);
+      rewriter.replaceOp(stridedSliceOp, reshape.getOutput());
+    } else {
+      rewriter.replaceOp(stridedSliceOp, sliceOp.getOutput());
+    }
     return success();
   }
 };

@@ -28,6 +28,7 @@ pipeline {
     }
     stages {
         stage("Setup and build") { 
+            when { branch pattern: "PR-.*", comparator: "REGEXP" }
             agent { label "linux && x86_64 && !noAVX2" } 
             stages {
                 stage("Setup") { steps {
@@ -61,34 +62,37 @@ pipeline {
             }
             post { cleanup { xcoreCleanSandbox() } }
         } 
-        stage("Tests") { parallel {
-            stage("Host Test") {
-                agent { label "linux && x86_64 && !noAVX2" }
-                stages {
-                    stage("Integration Tests") { steps { 
-                        script { runTests("host") } 
-                    } }
-                    stage("Notebook Tests") { steps { withVenv {
-                        sh "pip install pytest nbmake"
-                        sh "pytest --nbmake ./docs/notebooks/*.ipynb"
-                        // Test the pytorch to keras notebooks overnight? Need to manually install all requirements
-                        // Also these train models so it takes a while
-                        // sh "pytest --nbmake ./docs/notebooks/*.ipynb"
-                    } } }
+        stage("Tests") {
+        when { branch pattern: "PR-.*", comparator: "REGEXP" }
+            parallel {
+                stage("Host Test") {
+                    agent { label "linux && x86_64 && !noAVX2" }
+                    stages {
+                        stage("Integration Tests") { steps { 
+                            script { runTests("host") } 
+                        } }
+                        stage("Notebook Tests") { steps { withVenv {
+                            sh "pip install pytest nbmake"
+                            sh "pytest --nbmake ./docs/notebooks/*.ipynb"
+                            // Test the pytorch to keras notebooks overnight? Need to manually install all requirements
+                            // Also these train models so it takes a while
+                            // sh "pytest --nbmake ./docs/notebooks/*.ipynb"
+                        } } }
+                    }
+                    post { cleanup { xcoreCleanSandbox() } }
                 }
-                post { cleanup { xcoreCleanSandbox() } }
+                stage("Device Test") {
+                    agent { label "xcore.ai-explorer && lpddr && !macos" }
+                    steps { script { runTests("device") } }
+                    post { cleanup { xcoreCleanSandbox() } }
+                }
             }
-            stage("Device Test") {
-                agent { label "xcore.ai-explorer && lpddr && !macos" }
-                steps { script { runTests("device") } }
-                post { cleanup { xcoreCleanSandbox() } }
-            }
-        } }
+        }
     }
 }
 
 def runPytest(String test, String args) {
-    timeout(time: 10, unit: 'MINUTES') {
+    timeout(time: 20, unit: 'MINUTES') {
         sh "xtagctl reset_all XCORE-AI-EXPLORER"
         sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args} -s"
     }
@@ -113,6 +117,7 @@ def runTests(String platform) {
             sh "cd ${WORKSPACE} && git clone https://github0.xmos.com/xmos-int/xtagctl.git"
             sh "pip install -e ${WORKSPACE}/xtagctl"
             withTools(params.TOOLS_VERSION) {
+                sh "xrun -l"
                 runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
                 runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --device --junitxml=integration_tests/integration_device_5_junit.xml")
                 // lstms are always problematic

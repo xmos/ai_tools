@@ -27,12 +27,12 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createOptimizeConv2DPass());
   pm.addPass(createApplyTFLPatternsPass());
+  pm.addPass(createReplaceStridedSlicePass());
 
   // XC passes
   pm.addPass(createReplaceAddPass());
   pm.addPass(createReplaceMaxPoolPass());
   pm.addPass(createReplaceMulPass());
-  pm.addPass(createReplaceStridedSlicePass());
   pm.addPass(createReplaceSlicePass());
   pm.addPass(createReplaceTransposeConvPass());
   pm.addPass(createReplaceConv2DPass());

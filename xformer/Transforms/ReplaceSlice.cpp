@@ -66,9 +66,9 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
     const int rank = inputType.getRank();
     const int numPad = 5 - rank;
     for (int i = 0; i < 5; i++) {
-      begin[i] = i > numPad ? beginValues[i - numPad] : 0;
-      end[i] = i > numPad ? begin[i] + sizeValues[i - numPad] : 1;
-      inShape[i] = i > numPad ? inputType.getShape()[i - numPad] : 1;
+      begin[i] = i >= numPad ? beginValues[i - numPad] : 0;
+      end[i] = i >= numPad ? begin[i] + sizeValues[i - numPad] : 1;
+      inShape[i] = i >= numPad ? inputType.getShape()[i - numPad] : 1;
     }
 
     // Merge axes where possible in the end

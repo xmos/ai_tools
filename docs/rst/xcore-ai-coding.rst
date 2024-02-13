@@ -132,8 +132,7 @@ as the very large convolutions use int8 encodings the model is typically
 executed efficiently. We do support dense layers, but the nature of dense
 layers means that every multiplication needs its own learned parameter
 which means that the execution speed of large dense layers may be limited
-by the speed of backing
-store where the parameters come from.
+by the speed of backing store where the parameters come from.
 
 In addition to the common types we support highly efficient execution of
 1-bit networks (also known as binarised neural networks or XNOR networks).
@@ -190,7 +189,7 @@ are various ways in which the model can be split over two or more
 processors. Examples of splits are:
 
 * A problem that requires more than one model, may execute one model on
-  each tile
+  each tile.
 
 * A model can be split in a first and second part, with each part running
   on a processor. It may be that the split is organised so that one part
@@ -212,7 +211,8 @@ network on an XCORE.AI chip is as follows:
   #. You train your network as normal, using for example Keras.
 
   #. You quantize your network to ``int8`` and convert it to TensorFlow
-     Lite. You can keep the occasional float operation in the network.
+     Lite. Partial support for ``16x8`` is also implemented.
+     You can keep the occasional float operation in the network.
 
   #. You optimize your network for XCORE.AI
 
@@ -246,7 +246,7 @@ Several components are being used in this process:
     transformer simply produces an xcore-specific flatbuffer given a
     generic flatbuffer, using operators optimized for xcore.
 
-  * An *xcore.ai compiler*. It takes a flatbuffer and compiler it to C++, which 
+  * An *xcore.ai compiler*. It takes a flatbuffer and compiles it to C++, which 
     then be compiled to a binary to be executed on the xcore.
 
 The xcore transformer, compiler, and run-time support can all be installed
@@ -272,6 +272,12 @@ equivalent faster or more memory efficient operator:
 
 * Conv2DDepthwise
 
+* Conv2DTranspose
+
+* FullyConnected
+
+* MaxPool2D
+
 * AvgPool2D
 
 * Add
@@ -282,7 +288,7 @@ equivalent faster or more memory efficient operator:
 
 * Pad
 
-* StridedSlice
+* Slice or StridedSlice with a stride of 1
 
 * Tanh, Sigmoid, Hardswish, Relu
 

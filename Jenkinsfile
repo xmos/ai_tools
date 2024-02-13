@@ -116,8 +116,8 @@ def runTests(String platform) {
         if (platform == "device") {
             sh "cd ${WORKSPACE} && git clone https://github0.xmos.com/xmos-int/xtagctl.git"
             sh "pip install -e ${WORKSPACE}/xtagctl"
-            sh "xrun -l"
             withTools(params.TOOLS_VERSION) {
+                sh "xrun -l"
                 runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
                 runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --device --junitxml=integration_tests/integration_device_5_junit.xml")
                 // lstms are always problematic

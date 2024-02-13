@@ -34,16 +34,6 @@ def HasOnlySpatialPadding
           "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 1}] == "
           "0)">>;
 
-// Constraint that values in list attribute are all ones.
-def IsAllOnesConstant : Constraint<CPred<"utils::IsAllOnesConstant($0)">>;
-
-// Utility function to get the offset between two dense attribute values.
-def GetOffSet : NativeCodeCall<"utils::GetOffSet($0, $1)">;
-
-// Attribute Constraint that checks if the attribute value is zero.
-def ZeroIntAttr
-  : AttrConstraint<CPred<"$_self.cast<::mlir::IntegerAttr>().getInt() == 0">>;
-
 // Casts $1 to a dequantized type and then casts that to a quantized type
 // using the quantization parameters from the type in $0
 // $0 = tensor<m x n x i8 x !quantization params 1>

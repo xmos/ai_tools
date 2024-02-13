@@ -8,25 +8,6 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "larq_compute_engine/mlir/ir/lce_ops.td"
 include "Utils/Utils.td"
 
-// Convert the StridedSliceOp to a SliceOp when possible. This will enable other
-// optimizations on SliceOp to run.
-def OptimizeStridedSlice : Pat<
-  (TFL_StridedSliceOp $input,
-    (Arith_ConstantOp $begin),
-    (Arith_ConstantOp $end),
-    (Arith_ConstantOp $stride),
-    ZeroIntAttr:$_,
-    ZeroIntAttr:$_,
-    ZeroIntAttr:$_,
-    ZeroIntAttr:$_,
-    ZeroIntAttr:$_,
-    ConstBoolAttrFalse),
-  (TFL_SliceOp $input,
-    (Arith_ConstantOp $begin),
-    (Arith_ConstantOp (GetOffSet $begin, $end))),
-  [(IsAllOnesConstant $stride)]>;
-
-
 // Convert Quantize(Reshape()) -> Reshape(Quantize())
 // This is to merge Quantize with Conv2D if possible
 def : Pat<(TFL_QuantizeOp(TFL_ReshapeOp $input, $shape), $qtype),

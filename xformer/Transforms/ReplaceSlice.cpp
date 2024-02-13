@@ -7,6 +7,10 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
+extern "C" {
+#include "lib_nn/api/nn_layers.h"
+}
+
 namespace mlir {
 namespace xcore {
 
@@ -60,57 +64,33 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
     matchPattern(sliceOp.getSize(), m_Constant(&sizeAttr));
     auto sizeValues = sizeAttr.getValues<int32_t>();
 
-    int begin[5], end[5], inShape[5], inOffsets[4], outOffsets[4];
+    int begin_dst[5], end_dst[5], in_offsets[4], out_offsets[4], shape_dst[5];
 
     // TFLite supports up to 5 dimensions, if the input is less we pad
     const int rank = inputType.getRank();
-    const int numPad = 5 - rank;
-    for (int i = 0; i < 5; i++) {
-      begin[i] = i > numPad ? beginValues[i - numPad] : 0;
-      end[i] = i > numPad ? begin[i] + sizeValues[i - numPad] : 1;
-      inShape[i] = i > numPad ? inputType.getShape()[i - numPad] : 1;
+    const size_t dtype_size = getTypeSize(inputElementType);
+
+    // Cast beginValues and sizeValues to int* for slice_memcpy_get_params
+    int begin[5], size[5];
+    for (int i = 0; i < rank; i++) {
+      begin[i] = beginValues[i];
+      size[i] = sizeValues[i];
     }
 
-    // Merge axes where possible in the end
-    while (begin[4] == 0 && end[4] == inShape[4]) {
-      int32_t last_begin = begin[3] * inShape[4];
-      int32_t last_end = end[3] * inShape[4];
-      int32_t last_dim = inShape[3] * inShape[4];
-      memmove(begin + 1, begin, 3 * sizeof(int32_t));
-      memmove(end + 1, end, 3 * sizeof(int32_t));
-      memmove(inShape + 1, inShape, 3 * sizeof(int32_t));
-      begin[0] = 0;
-      end[0] = 1;
-      inShape[0] = 1;
-      begin[4] = last_begin;
-      end[4] = last_end;
-      inShape[4] = last_dim;
+    int shape[5];
+    for (int i = 0; i < rank; i++) {
+      shape[i] = inputType.getShape()[i];
     }
-
-    // Treat dtype as an extra axis that we merge with the last axis, to use
-    // vpu_memcpy if possible
-    auto dtypeSize = getTypeSize(inputElementType);
-    inShape[4] *= dtypeSize;
-    begin[4] *= dtypeSize;
-    end[4] *= dtypeSize;
-
-    // Initialise offsets
-    inOffsets[0] = inputType.getNumElements() / inShape[0] * dtypeSize;
-    outOffsets[0] =
-        outputType.getNumElements() / (end[0] - begin[0]) * dtypeSize;
-    for (int i = 1; i < 4; i++) {
-      inOffsets[i] = inOffsets[i - 1] / inShape[i];
-      outOffsets[i] = outOffsets[i - 1] / (end[i] - begin[i]);
-    }
-
+    slice_memcpy_get_params(begin_dst, end_dst, in_offsets, out_offsets,
+                            shape_dst, begin, size, shape, dtype_size, rank);
     const bool isVpu =
-        inShape[4] % 4 == 0 && begin[4] % 4 == 0 && end[4] % 4 == 0;
+        shape_dst[4] % 4 == 0 && begin_dst[4] % 4 == 0 && end_dst[4] % 4 == 0;
 
     auto binaryObjectSliceOp = rewriter.create<SliceOp>(
         sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput(),
-        rewriter.getI32ArrayAttr(begin), rewriter.getI32ArrayAttr(end),
-        rewriter.getI32ArrayAttr(inOffsets),
-        rewriter.getI32ArrayAttr(outOffsets), rewriter.getBoolAttr(isVpu));
+        rewriter.getI32ArrayAttr(begin_dst), rewriter.getI32ArrayAttr(end_dst),
+        rewriter.getI32ArrayAttr(in_offsets),
+        rewriter.getI32ArrayAttr(out_offsets), rewriter.getBoolAttr(isVpu));
 
     rewriter.replaceOp(sliceOp, binaryObjectSliceOp.getOutput());
 

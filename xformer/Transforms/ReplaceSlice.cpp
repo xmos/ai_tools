@@ -46,7 +46,10 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
   LogicalResult matchAndRewrite(TFL::SliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
 
-    if (matchPattern(sliceOp.getInput(), m_Constant())) {
+    // If the input is a constant, LLVM's Canonicalizer will
+    // fold the slice into a constant later.
+    if (matchPattern(sliceOp.getInput(), m_Constant()) ||
+        matchPattern(sliceOp.getInput(), m_Op<TFL::ShapeOp>())) {
       return failure();
     }
 

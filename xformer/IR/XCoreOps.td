@@ -80,7 +80,7 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let description = [{Slice op.}];
 
   let arguments = (ins
-    TensorOf<[QI8, QI16, F32, I8]>:$input,
+    TensorOf<[QI8, QI16, F32, I8, I32]>:$input,
 
     I32ArrayAttr:$begin,
     I32ArrayAttr:$end,
@@ -89,7 +89,7 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
     BoolAttr:$is_vpu
   );
 
-  let results = (outs TensorOf<[QI8, QI16, F32, I8]> : $output);
+  let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
 def XC_AddOp : XC_Op<"add", [Pure]> {

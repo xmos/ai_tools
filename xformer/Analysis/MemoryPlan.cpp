@@ -175,16 +175,16 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
 
   if (overlapOps) {
     for (auto o : operations) {
-      if (llvm::isa<PadOp>(o)) {
-        auto in = o->getOperand(0);
-        if (in.hasOneUse()) {
-          auto out = o->getResult(0);
-          int offset = vInfo[out].size - vInfo[in].size;
-          outInVals[out] = {in, offset};
-          vInfo[in].size += offset;
-          vInfo[in].lastUsed = vInfo[out].lastUsed;
-        }
-      }
+      // if (llvm::isa<PadOp>(o)) {
+      //   auto in = o->getOperand(0);
+      //   if (in.hasOneUse()) {
+      //     auto out = o->getResult(0);
+      //     int offset = vInfo[out].size - vInfo[in].size;
+      //     outInVals[out] = {in, offset};
+      //     vInfo[in].size += offset;
+      //     vInfo[in].lastUsed = vInfo[out].lastUsed;
+      //   }
+      // }
 
       if (llvm::isa<Conv2DV2Op>(o)) {
         if (operationIds[o] == maxOpId) {

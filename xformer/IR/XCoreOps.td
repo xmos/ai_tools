@@ -92,6 +92,24 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
+def XC_PadOp : XC_Op<"pad", [Pure]> {
+  let summary = "Pad op";
+
+  let description = [{Pad op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8, QI16, F32, I8, I32]>:$input,
+
+    I32ArrayAttr:$begin,
+    I32ArrayAttr:$end,
+    I32ArrayAttr:$input_offset,
+    I32ArrayAttr:$output_offset,
+    BoolAttr:$is_vpu
+  );
+
+  let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
+}
+
 def XC_AddOp : XC_Op<"add", [Pure]> {
   let summary = "Add op";
 
@@ -308,22 +326,6 @@ def XC_LookupOp : XC_Op<"lookup", [Pure]> {
   let arguments = (ins TensorOf<[QI8, QI16]> : $input, TensorOf<[UI8]> : $lut);
 
   let results = (outs TensorOf<[QI8, QI16]> : $output);
-}
-
-def XC_PadOp : XC_Op<"pad", [Pure]> {
-  let summary = "Pad op";
-
-  let description = [{Pad op.}];
-
-  let arguments = (ins
-    TensorOf<[QI8]>:$input,
-    StrAttr:$padding_plan,
-    I32Attr:$pad_value
-    );
-
-  let results = (outs TensorOf<[QI8]> : $output);
-
-  let hasFolder = 1;
 }
 
 def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [Pure]> {

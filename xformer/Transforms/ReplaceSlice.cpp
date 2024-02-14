@@ -50,6 +50,13 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
   LogicalResult matchAndRewrite(TFL::SliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
 
+    // If the input is a constant, LLVM's Canonicalizer will
+    // fold the slice into a constant later.
+    if (matchPattern(sliceOp.getInput(), m_Constant()) ||
+        matchPattern(sliceOp.getInput(), m_Op<TFL::ShapeOp>())) {
+      return failure();
+    }
+
     auto inputType = sliceOp.getInput().getType().cast<RankedTensorType>();
     if (!inputType.hasStaticShape())
       return failure();
@@ -64,10 +71,24 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
     matchPattern(sliceOp.getSize(), m_Constant(&sizeAttr));
     auto sizeValues = sizeAttr.getValues<int32_t>();
 
+    const int rank = inputType.getRank();
+
+    // Check if the slice is a no-op
+    bool isNoOp = true;
+    for (int i = 0; i < rank; i++) {
+      if (beginValues[i] != 0 || sizeValues[i] != inputType.getShape()[i]) {
+        isNoOp = false;
+        break;
+      }
+    }
+    if (isNoOp) {
+      rewriter.replaceOp(sliceOp, sliceOp.getInput());
+      return success();
+    }
+
     int begin_dst[5], end_dst[5], in_offsets[4], out_offsets[4], shape_dst[5];
 
     // TFLite supports up to 5 dimensions, if the input is less we pad
-    const int rank = inputType.getRank();
     const size_t dtype_size = getTypeSize(inputElementType);
 
     // Cast beginValues and sizeValues to int* for slice_memcpy_get_params

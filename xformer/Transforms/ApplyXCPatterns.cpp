@@ -172,7 +172,11 @@ DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter,
   quadratic_function_table_t table;
   quadratic_approximation_generator(&table, fn, inputScale, outputScale, chunks,
                                     &max_error, &square_error);
-  // printf("Max error %d sqerror %f\n", max_error, square_error);
+  if (max_error >= 2) {
+    (void)rewriter.notifyMatchFailure(
+        activationOp->getLoc(), "Cannot calculate quadratic approximation!");
+    return {};
+  }
 
   auto length = quadratic_function_table_number_bytes(&table);
   uint8_t *bytes = quadratic_function_table_bytes(&table);
@@ -296,30 +300,37 @@ DenseElementsAttr getBinaryI16Blob(PatternRewriter &rewriter, Operation *op,
 
   int length;
   std::vector<uint8_t> blob;
+  int succeeded;
   if (isa<TFL::QuantizeOp>(op) && inputType.getElementType().isF32()) {
     length = QUANTIZE_INT16_TENSOR_BYTES();
     blob.resize(length);
-    quantize_int16_tensor_blob((void *)blob.data(), outputScale);
+    succeeded = quantize_int16_tensor_blob((void *)blob.data(), outputScale);
   } else if (isa<TFL::QuantizeOp>(op)) {
     length = REQUANTIZE_INT16_TENSOR_BYTES();
     blob.resize(length);
-    requantize_int16_tensor_blob((void *)blob.data(), inputScale, outputScale);
+    succeeded = requantize_int16_tensor_blob((void *)blob.data(), inputScale,
+                                             outputScale);
   } else if (isa<TFL::DequantizeOp>(op)) {
     length = DEQUANTIZE_INT16_TENSOR_BYTES();
     blob.resize(length);
-    dequantize_int16_tensor_blob((void *)blob.data(), inputScale);
+    succeeded = dequantize_int16_tensor_blob((void *)blob.data(), inputScale);
   } else if (isa<TFL::AddOp>(op)) {
     length = ADD_INT16_TENSOR_BYTES();
     blob.resize(length);
-    add_int16_tensor_blob((void *)blob.data(), inputScale, inputScale2,
-                          outputScale);
+    succeeded = add_int16_tensor_blob((void *)blob.data(), inputScale,
+                                      inputScale2, outputScale);
   } else if (isa<TFL::MulOp>(op)) {
     length = MULTIPLY_INT16_TENSOR_BYTES();
     blob.resize(length);
-    multiply_int16_tensor_blob((void *)blob.data(), inputScale, inputScale2,
-                               outputScale);
+    succeeded = multiply_int16_tensor_blob((void *)blob.data(), inputScale,
+                                           inputScale2, outputScale);
   } else {
     llvm_unreachable("Unsupported op!");
+  }
+
+  if (!succeeded) {
+    (void)rewriter.notifyMatchFailure(op->getLoc(), "Cannot obtain blob!");
+    return {};
   }
 
   ArrayRef<uint8_t> blobData = ArrayRef(blob.data(), length);

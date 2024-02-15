@@ -50,15 +50,18 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
   LogicalResult matchAndRewrite(TFL::PadOp padOp,
                                 PatternRewriter &rewriter) const override {
 
+    llvm::outs() << "ReplacePadPattern\n";
     // If the input is a constant, LLVM's Canonicalizer will
     // fold the pad into a constant later.
     if (matchPattern(padOp.getInput(), m_Constant()) ||
         matchPattern(padOp.getInput(), m_Op<TFL::ShapeOp>())) {
+      llvm::outs() << "PadOp with constant input\n";
       return failure();
     }
 
     auto inputType = padOp.getInput().getType().cast<RankedTensorType>();
     if (!inputType.hasStaticShape()) {
+      llvm::outs() << "PadOp with dynamic input shape\n";
       return failure();
     }
     Type inputElementType = inputType.getElementType();

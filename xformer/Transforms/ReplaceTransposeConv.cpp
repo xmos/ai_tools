@@ -8,8 +8,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Replace TFL TransposeConv with Conv for XCore.
@@ -264,5 +263,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplaceTransposeConvPass() {
 
 static PassRegistration<ReplaceTransposeConv> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

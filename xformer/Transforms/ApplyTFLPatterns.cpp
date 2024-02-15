@@ -10,8 +10,7 @@
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Apply generated TFL patterns.
@@ -175,5 +174,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createApplyTFLPatternsPass() {
 
 static PassRegistration<ApplyTFLPatterns> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

@@ -3,6 +3,7 @@
 
 #include "IR/XCoreOps.h"
 
+#include "Utils/Util.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
@@ -11,23 +12,9 @@ extern "C" {
 #include "lib_nn/api/nn_layers.h"
 }
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
-
-size_t getTypeSize(Type type) {
-  if (auto quantType = type.dyn_cast<UniformQuantizedType>()) {
-    return quantType.getStorageType().getIntOrFloatBitWidth() / 8;
-  } else if (auto floatType = type.dyn_cast<FloatType>()) {
-    return floatType.getWidth() / 8;
-  } else if (auto intType = type.dyn_cast<IntegerType>()) {
-    return intType.getWidth() / 8;
-  } else {
-    llvm_unreachable("Unsupported type");
-  }
-  return 0;
-}
 
 // Replace TFL Pad with Pad for XCore.
 struct ReplacePad
@@ -50,18 +37,15 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
   LogicalResult matchAndRewrite(TFL::PadOp padOp,
                                 PatternRewriter &rewriter) const override {
 
-    llvm::outs() << "ReplacePadPattern\n";
     // If the input is a constant, LLVM's Canonicalizer will
     // fold the pad into a constant later.
     if (matchPattern(padOp.getInput(), m_Constant()) ||
         matchPattern(padOp.getInput(), m_Op<TFL::ShapeOp>())) {
-      llvm::outs() << "PadOp with constant input\n";
       return failure();
     }
 
     auto inputType = padOp.getInput().getType().cast<RankedTensorType>();
     if (!inputType.hasStaticShape()) {
-      llvm::outs() << "PadOp with dynamic input shape\n";
       return failure();
     }
     Type inputElementType = inputType.getElementType();
@@ -78,15 +62,8 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
       beginValues[i] = paddingValues[i * 2];
       sizeValues[i] = inputType.getShape()[i];
     }
-    // Check if the pad is a no-op
-    bool isNoOp = true;
-    for (int i = 0; i < rank; i++) {
-      if (beginValues[i] != 0 || sizeValues[i] != outputType.getShape()[i]) {
-        isNoOp = false;
-        break;
-      }
-    }
-    if (isNoOp) {
+
+    if (utils::checkSliceNoOp(beginValues, sizeValues, inputType)) {
       rewriter.replaceOp(padOp, padOp.getInput());
       return success();
     }
@@ -94,19 +71,16 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
     int begin_dst[5], end_dst[5], in_offsets[4], out_offsets[4], shape_dst[5];
 
     // TFLite supports up to 5 dimensions, if the input is less we pad
-    const size_t dtype_size = getTypeSize(inputElementType);
+    const size_t dtype_size = utils::getTypeSize(inputElementType);
 
     // Cast beginValues and sizeValues to int* for slice_memcpy_get_params
-    int begin[5], size[5];
+    int begin[5], size[5], shape[5];
     for (int i = 0; i < rank; i++) {
       begin[i] = beginValues[i];
       size[i] = sizeValues[i];
-    }
-
-    int shape[5];
-    for (int i = 0; i < rank; i++) {
       shape[i] = outputType.getShape()[i];
     }
+
     slice_memcpy_get_params(begin_dst, end_dst, in_offsets, out_offsets,
                             shape_dst, begin, size, shape, dtype_size, rank);
     const bool isVpu =
@@ -140,5 +114,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplacePadPass() {
 
 static PassRegistration<ReplacePad> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

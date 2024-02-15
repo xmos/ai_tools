@@ -6,9 +6,20 @@
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "llvm/ADT/ArrayRef.h"
 
-namespace mlir {
-namespace xcore {
-namespace utils {
+namespace mlir::xcore::utils {
+
+size_t getTypeSize(Type type) {
+  if (auto quantType = type.dyn_cast<quant::UniformQuantizedType>()) {
+    return quantType.getStorageType().getIntOrFloatBitWidth() / 8;
+  } else if (auto floatType = type.dyn_cast<FloatType>()) {
+    return floatType.getWidth() / 8;
+  } else if (auto intType = type.dyn_cast<IntegerType>()) {
+    return intType.getWidth() / 8;
+  } else {
+    llvm_unreachable("Unsupported type");
+  }
+  return 0;
+}
 
 int getShapedTypeSize(ShapedType t) {
   int sizeInBytes;
@@ -47,6 +58,4 @@ LogicalResult hasSameShape(ShapedType type1, ShapedType type2) {
   return success();
 }
 
-} // namespace utils
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore::utils

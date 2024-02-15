@@ -3,8 +3,7 @@
 
 #include "Transforms/ConvPatterns.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 // Handle Larq BNN Conv2D
 LogicalResult
@@ -482,5 +481,4 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
   return success();
 }
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

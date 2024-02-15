@@ -13,8 +13,7 @@ extern "C" {
 
 #include <iomanip>
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 // TFL Conv2D Base class implementation
 // TFLConvOpType would be XC_FakeConv2D or XC_FakeDepthwiseConv2D
@@ -732,5 +731,4 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DPaddedIndirectParams(
   return success();
 }
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

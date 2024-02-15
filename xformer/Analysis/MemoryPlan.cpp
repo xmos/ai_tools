@@ -11,8 +11,7 @@
 
 #define DEBUG_TYPE "xcore-memory-plan"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 MemoryPlan::MemoryPlan(Operation *operation)
     : liveness(operation), op(operation) {
@@ -324,5 +323,4 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
   return offsets;
 }
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

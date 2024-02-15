@@ -13,8 +13,7 @@
 #include "tensorflow/compiler/mlir/lite/utils/validators.h"
 #include <numeric>
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Apply generated XC patterns.
@@ -243,5 +242,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createApplyXCPatternsPass() {
 
 static PassRegistration<ApplyXCPatterns> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

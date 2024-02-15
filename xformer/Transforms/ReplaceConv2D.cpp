@@ -11,8 +11,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 template <typename ConcreteType, typename ConvOpType, typename ArgsType,
           typename MulsAndBiasType>
@@ -78,19 +77,19 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   // Check if convolution is an int16 one
   args.isI16Conv = false;
   if ((inputType.getElementType().template isa<quant::QuantizedType>() &&
-      inputType.getElementType()
-          .template cast<quant::QuantizedType>()
-          .isSigned() &&
-      inputType.getElementType()
-              .template cast<quant::QuantizedType>()
-              .getStorageTypeIntegralWidth() == 16) &&
+       inputType.getElementType()
+           .template cast<quant::QuantizedType>()
+           .isSigned() &&
+       inputType.getElementType()
+               .template cast<quant::QuantizedType>()
+               .getStorageTypeIntegralWidth() == 16) &&
       (outputType.getElementType().template isa<quant::QuantizedType>() &&
-      outputType.getElementType()
-          .template cast<quant::QuantizedType>()
-          .isSigned() &&
-      outputType.getElementType()
-              .template cast<quant::QuantizedType>()
-              .getStorageTypeIntegralWidth() == 16)) {
+       outputType.getElementType()
+           .template cast<quant::QuantizedType>()
+           .isSigned() &&
+       outputType.getElementType()
+               .template cast<quant::QuantizedType>()
+               .getStorageTypeIntegralWidth() == 16)) {
     args.isI16Conv = true;
   }
 
@@ -307,5 +306,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplaceConv2DPass() {
 
 static PassRegistration<ReplaceConv2D> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

@@ -2,8 +2,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Replace TFL StridedSlice with TFL Slice wherever possible.
@@ -161,5 +160,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplaceStridedSlicePass() {
 
 static PassRegistration<ReplaceStridedSlice> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

@@ -9,8 +9,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
   // Run pass from LCE to convert Larq ops which are in TFL custom op format to
@@ -56,5 +55,4 @@ void registerXCorePassPipeline() {
       [](OpPassManager &passManager) { buildXCorePassPipeline(passManager); });
 }
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

@@ -13,8 +13,7 @@
 
 #include "mlir/IR/TypeUtilities.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 void XCoreDialect::initialize() {
   addOperations<
@@ -35,5 +34,4 @@ void XCoreDialect::initialize() {
 //   return {};
 // }
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

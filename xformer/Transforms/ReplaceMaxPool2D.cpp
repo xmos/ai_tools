@@ -10,8 +10,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 struct ReplaceMaxPool2D
@@ -109,5 +108,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMaxPoolPass() {
 
 static PassRegistration<ReplaceMaxPool2D> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

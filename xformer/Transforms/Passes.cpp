@@ -33,10 +33,10 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceAddPass());
   pm.addPass(createReplaceMaxPoolPass());
   pm.addPass(createReplaceMulPass());
-  pm.addPass(createReplaceSlicePass());
-  pm.addPass(createReplacePadPass());
   pm.addPass(createReplaceTransposeConvPass());
   pm.addPass(createReplaceConv2DPass());
+  pm.addPass(createReplacePadPass());
+  pm.addPass(createReplaceSlicePass());
   pm.addPass(createApplyXCPatternsPass());
   // Add to pipeline only if flash image file option is provided
   if (!weightsFilenameOption.empty()) {

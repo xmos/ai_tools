@@ -6,9 +6,7 @@
 
 #include <string>
 
-namespace mlir {
-namespace xcore {
-namespace utils {
+namespace mlir::xcore::mlir {
 
 template <typename T> std::string getMsgWithLocPrefix(T &op, std::string msg) {
   std::string message;
@@ -20,8 +18,6 @@ template <typename T> std::string getMsgWithLocPrefix(T &op, std::string msg) {
   return message;
 }
 
-} // namespace utils
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore::mlir
 
 #endif // XFORMER_UTILS_DIAGNOSTICS_H

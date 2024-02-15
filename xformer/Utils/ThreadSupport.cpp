@@ -4,7 +4,6 @@
 #include "Utils/ThreadSupport.h"
 
 #include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/PriorityQueue.h"
 
 #include <cmath>
 

@@ -10,8 +10,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
 
-#include <iomanip>
-
 namespace mlir::xcore::utils {
 
 LogicalResult writeDataToFile(const std::string &filename, std::string data) {

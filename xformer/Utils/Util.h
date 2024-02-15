@@ -8,9 +8,7 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 
-namespace mlir {
-namespace xcore {
-namespace utils {
+namespace mlir::xcore::utils {
 
 int getShapedTypeSize(ShapedType t);
 
@@ -37,8 +35,6 @@ template <int N = 8> bool hasNBitSignedQType(Type type) {
           type.template cast<quant::QuantizedType>()
                   .getStorageTypeIntegralWidth() == N);
 }
-} // namespace utils
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore::utils
 
 #endif // XFORMER_UTILS_UTIL_H

@@ -1,6 +1,4 @@
 #include "Utils/TileRamSupport.h"
-#include <stdint.h>
-#include <string.h>
 
 namespace mlir::xcore::utils {
 

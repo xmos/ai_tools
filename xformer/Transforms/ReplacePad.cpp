@@ -63,7 +63,7 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
       sizeValues[i] = inputType.getShape()[i];
     }
 
-    if (utils::checkSliceNoOp(beginValues, sizeValues, inputType)) {
+    if (utils::checkSliceNoOp(beginValues, sizeValues, outputType)) {
       rewriter.replaceOp(padOp, padOp.getInput());
       return success();
     }

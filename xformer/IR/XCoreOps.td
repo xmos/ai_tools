@@ -65,7 +65,8 @@ def XC_Conv2D_TypeAttr : I32EnumAttr<"Conv2DType", "conv2d type enum", [
   XC_Conv2D_ValidDirect, XC_Conv2D_ValidIndirect, XC_Conv2D_PaddedIndirect,
   XC_DW_Conv2D_ValidDirect, XC_DW_Conv2D_PaddedIndirect,
   XC_BNN_Conv2D_ValidDirect_Binary, XC_BNN_Conv2D_ValidIndirect_Binary,
-  XC_BNN_Conv2D_ValidDirect_Int8, XC_BNN_Conv2D_ValidIndirect_Int8, XC_Conv2D_ValidDirect_Int16
+  XC_BNN_Conv2D_ValidDirect_Int8, XC_BNN_Conv2D_ValidIndirect_Int8,
+  XC_Conv2D_ValidDirect_Int16
 ]>;
 
 def XC_Conv2D_Group : I32EnumAttrCase<"Group", 0>;
@@ -144,15 +145,55 @@ def XC_MulOp : XC_Op<"mul", [Pure]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_UnaryI16_Quantize : I32EnumAttrCase<"Quantize", 0>;
+def XC_UnaryI16_Requantize : I32EnumAttrCase<"Requantize", 1>;
+def XC_UnaryI16_Dequantize : I32EnumAttrCase<"Dequantize", 2>;
+def XC_UnaryI16_OpTypeAttr : I32EnumAttr<"UnaryI16OpType", "op type enum", [
+  XC_UnaryI16_Quantize, XC_UnaryI16_Requantize, XC_UnaryI16_Dequantize
+]>;
+
+def XC_UnaryI16Op : XC_Op<"unaryi16", [Pure]> {
+  let summary = "Unary I16 op";
+
+  let description = [{Unary I16 op.}];
+
+  let arguments = (ins
+    TensorOf<[QI16, F32]> : $input,
+    TensorOf<[UI8]> : $blob,
+
+    I32Attr:$op_type
+    );
+
+  let results = (outs TensorOf<[QI16, F32]> : $output);
+}
+
+def XC_BinaryI16_Add : I32EnumAttrCase<"Add", 0>;
+def XC_BinaryI16_Mul : I32EnumAttrCase<"Mul", 1>;
+def XC_BinaryI16_OpTypeAttr : I32EnumAttr<"BinaryI16OpType", "op type enum",
+                                          [XC_BinaryI16_Add, XC_BinaryI16_Mul]>;
+
+def XC_BinaryI16Op : XC_Op<"binaryi16", [Pure]> {
+  let summary = "Binary I16 op";
+
+  let description = [{Binary I16 op.}];
+
+  let arguments = (ins
+    TensorOf<[QI16]> : $input1,
+    TensorOf<[QI16]> : $input2,
+    TensorOf<[UI8]> : $blob,
+
+    I32Attr:$op_type
+    );
+
+  let results = (outs TensorOf<[QI16]> : $output);
+}
+
 def XC_Beta_ActivationF32Op : XC_Op<"beta_activationf32", [Pure]> {
   let summary = "Beta ActivationF32 op";
 
   let description = [{Beta ActivationF32 op.}];
 
-  let arguments = (ins
-    TensorOf<[F32]>:$input,
-    I32Attr:$type
-  );
+  let arguments = (ins TensorOf<[F32]> : $input, I32Attr : $type);
 
   let results = (outs TensorOf<[F32]> : $output);
 }
@@ -162,9 +203,7 @@ def XC_Beta_ConcatF32Op : XC_Op<"beta_concatf32", [Pure]> {
 
   let description = [{Beta ConcatF32 op.}];
 
-  let arguments = (ins
-    Variadic<TensorOf<[F32]>>:$input
-  );
+  let arguments = (ins Variadic<TensorOf<[F32]>> : $input);
 
   let results = (outs TensorOf<[F32]> : $output);
 }
@@ -333,10 +372,7 @@ def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [Pure]> {
 
   let description = [{Pad 3 to 4 op.}];
 
-  let arguments = (ins
-    TensorOf<[QI8]>:$input,
-    I32Attr:$pad_value
-    );
+  let arguments = (ins TensorOf<[QI8]> : $input, I32Attr : $pad_value);
 
   let results = (outs TensorOf<[QI8]> : $output);
 }

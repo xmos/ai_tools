@@ -14,6 +14,20 @@ namespace mlir::xcore {
 
 std::vector<uint8_t> Bsign8Op::buildCustomOptions() { return {}; }
 
+std::vector<uint8_t> UnaryI16Op::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("type", (int32_t)getOpType()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
+std::vector<uint8_t> BinaryI16Op::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("type", (int32_t)getOpType()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> Beta_ActivationF32Op::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() { fbb.Int("type", (int32_t)getType()); });
@@ -244,6 +258,8 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<Beta_ConvF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_TransposeConvF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_FcF32Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<UnaryI16Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<BinaryI16Op>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

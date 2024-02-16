@@ -44,6 +44,14 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
       return failure();
     }
 
+    // TODO: Remove this
+    // Currently QINT8 is handled by the original XC_PadOp
+    // because this doesn't support non zero zero points or
+    // the buffer re-use optimisation.
+    if (utils::hasNBitSignedQType(padOp.getInput().getType())) {
+      return failure();
+    }
+
     auto inputType = padOp.getInput().getType().cast<RankedTensorType>();
     if (!inputType.hasStaticShape()) {
       return failure();
@@ -86,7 +94,7 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
     const bool isVpu =
         shape_dst[4] % 4 == 0 && begin_dst[4] % 4 == 0 && end_dst[4] % 4 == 0;
 
-    auto binaryObjectPadOp = rewriter.create<PadOp>(
+    auto binaryObjectPadOp = rewriter.create<PadOpV2>(
         padOp.getLoc(), padOp.getType(), padOp.getInput(),
         rewriter.getI32ArrayAttr(begin_dst), rewriter.getI32ArrayAttr(end_dst),
         rewriter.getI32ArrayAttr(in_offsets),

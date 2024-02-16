@@ -26,12 +26,12 @@ void XCoreDialect::initialize() {
 // PadOp
 //===----------------------------------------------------------------------===//
 
-// OpFoldResult PadOp::fold(FoldAdaptor) {
-//   if (succeeded(verifyCompatibleShapes(getInput().getType(),
-//   getOutput().getType())))
-//     return getInput();
-//
-//   return {};
-// }
+OpFoldResult PadOp::fold(FoldAdaptor) {
+  if (succeeded(
+          verifyCompatibleShapes(getInput().getType(), getOutput().getType())))
+    return getInput();
+
+  return {};
+}
 
 } // namespace mlir::xcore

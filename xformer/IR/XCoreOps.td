@@ -93,10 +93,27 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
+
 def XC_PadOp : XC_Op<"pad", [Pure]> {
   let summary = "Pad op";
 
   let description = [{Pad op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+    StrAttr:$padding_plan,
+    I32Attr:$pad_value
+    );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+
+  let hasFolder = 1;
+}
+
+def XC_PadOpV2 : XC_Op<"pad v2", [Pure]> {
+  let summary = "Pad op v2";
+
+  let description = [{Pad op v2.}];
 
   let arguments = (ins
     TensorOf<[QI8, QI16, F32, I8, I32]>:$input,

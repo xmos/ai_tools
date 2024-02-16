@@ -82,11 +82,21 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
     const size_t dtype_size = utils::getTypeSize(inputElementType);
 
     // Cast beginValues and sizeValues to int* for slice_memcpy_get_params
+    size_t totalElements = dtype_size;
     int begin[5], size[5], shape[5];
     for (int i = 0; i < rank; i++) {
       begin[i] = beginValues[i];
       size[i] = sizeValues[i];
       shape[i] = outputType.getShape()[i];
+      totalElements *= shape[i];
+    }
+
+    // TODO: Fix this.
+    // For now we just use vpu_memset_32 to set everything to zero
+    // this means some memory would be left over if the output size
+    // is not a multiple of 4.
+    if (totalElements % 4) {
+      return failure();
     }
 
     slice_memcpy_get_params(begin_dst, end_dst, in_offsets, out_offsets,

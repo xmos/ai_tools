@@ -65,7 +65,7 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
 
     const int rank = inputType.getRank();
 
-    int beginValues[rank], sizeValues[rank];
+    int beginValues[5], sizeValues[5];
     for (int i = 0; i < rank; i++) {
       beginValues[i] = paddingValues[i * 2];
       sizeValues[i] = inputType.getShape()[i];

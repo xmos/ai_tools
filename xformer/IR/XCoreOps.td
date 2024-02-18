@@ -110,7 +110,7 @@ def XC_PadOp : XC_Op<"pad", [Pure]> {
   let hasFolder = 1;
 }
 
-def XC_PadOpV2 : XC_Op<"pad v2", [Pure]> {
+def XC_PadOpV2 : XC_Op<"pad_v2", [Pure]> {
   let summary = "Pad op v2";
 
   let description = [{Pad op v2.}];

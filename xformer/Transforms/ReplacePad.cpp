@@ -44,16 +44,18 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
       return failure();
     }
 
+    auto inputType = padOp.getInput().getType().cast<RankedTensorType>();
+    if (!inputType.hasStaticShape()) {
+      return failure();
+    }
+
     // TODO: Remove this
     // Currently QINT8 is handled by the original XC_PadOp
     // because this doesn't support non zero zero points or
     // the buffer re-use optimisation.
-    if (utils::hasNBitSignedQType(padOp.getInput().getType())) {
-      return failure();
-    }
-
-    auto inputType = padOp.getInput().getType().cast<RankedTensorType>();
-    if (!inputType.hasStaticShape()) {
+    if (utils::hasNBitSignedQType(
+            padOp.getInput().getType().cast<ShapedType>().getElementType()) &&
+        (inputType.getRank() == 4) && (inputType.getShape()[3] % 4 == 0)) {
       return failure();
     }
     Type inputElementType = inputType.getElementType();
@@ -78,7 +80,6 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
 
     int begin_dst[5], end_dst[5], in_offsets[4], out_offsets[4], shape_dst[5];
 
-    // TFLite supports up to 5 dimensions, if the input is less we pad
     const size_t dtype_size = utils::getTypeSize(inputElementType);
 
     // Cast beginValues and sizeValues to int* for slice_memcpy_get_params

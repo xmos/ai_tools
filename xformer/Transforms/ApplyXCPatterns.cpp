@@ -318,6 +318,11 @@ DenseElementsAttr getBinaryI16Blob(PatternRewriter &rewriter, Operation *op,
     blob.resize(length);
     succeeded = add_int16_tensor_blob((void *)blob.data(), inputScale,
                                       inputScale2, outputScale);
+  } else if (isa<TFL::SubOp>(op)) {
+    length = ADD_INT16_TENSOR_BYTES();
+    blob.resize(length);
+    succeeded = add_int16_tensor_blob((void *)blob.data(), inputScale,
+                                      -inputScale2, outputScale);
   } else if (isa<TFL::MulOp>(op)) {
     length = MULTIPLY_INT16_TENSOR_BYTES();
     blob.resize(length);

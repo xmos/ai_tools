@@ -113,6 +113,12 @@ def: Pat<(TFL_AddOp
             : $output TensorOf<[QI16]>:$input1, TensorOf<[QI16]>:$input2,
             TFL_AF_None), (XC_BinaryI16Op $input1, $input2, (Arith_ConstantOp
             (getBinaryI16BlobOrFail:$blob $output)), XC_BinaryI16_Add)>;
+
+def: Pat<(TFL_SubOp
+            : $output TensorOf<[QI16]>:$input1, TensorOf<[QI16]>:$input2,
+            TFL_AF_None), (XC_BinaryI16Op $input1, $input2, (Arith_ConstantOp
+            (getBinaryI16BlobOrFail:$blob $output)), XC_BinaryI16_Add)>;
+
 def: Pat<(TFL_MulOp
             : $output TensorOf<[QI16]>:$input1, TensorOf<[QI16]>:$input2,
             TFL_AF_None), (XC_BinaryI16Op $input1, $input2, (Arith_ConstantOp

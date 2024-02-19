@@ -202,9 +202,6 @@ class XFDeviceRuntime(AbstractXFRunner):
         self._interpreter.start_inference()
         return [self._interpreter.read_output_tensor(i) for i in range(len(self._dets))]
 
-    def __del__(self):
-        super().__del__()
-
 
 class XFHostInterpreter(AbstractXFRunner):
     def __init__(self, model_content, thread_count=5):

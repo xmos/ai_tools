@@ -71,8 +71,8 @@ class IOServer:
         return self.bytes_to_arr(data_read, tensor_num)
 
     def close(self):
-        if self._dev:
-            usb.util.dispose_resources(self._dev)
+        if self._dev is not None:
+            self._dev.reset()
             self._dev = None
 
     @handle_usb_error

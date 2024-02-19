@@ -49,15 +49,27 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
       return failure();
     }
 
+    Type elementType =
+        padOp.getInput().getType().cast<ShapedType>().getElementType();
+
     // TODO: Remove this
     // Currently QINT8 is handled by the original XC_PadOp
     // because this doesn't support non zero zero points or
     // the buffer re-use optimisation.
-    if (utils::hasNBitSignedQType(
-            padOp.getInput().getType().cast<ShapedType>().getElementType()) &&
-        (inputType.getRank() == 4) && (inputType.getShape()[3] % 4 == 0)) {
+    if (utils::hasNBitSignedQType(elementType) && (inputType.getRank() == 4) &&
+        (inputType.getShape()[3] % 4 == 0)) {
       return failure();
     }
+
+    // TODO: Remove this as well
+    if (elementType.isa<quant::QuantizedType>()) {
+      auto inputQType = elementType.dyn_cast<quant::UniformQuantizedType>();
+      int padValue = inputQType.getZeroPoint();
+      if (padValue != 0) {
+        return failure();
+      }
+    }
+
     Type inputElementType = inputType.getElementType();
     auto outputType = padOp.getOutput().getType().cast<RankedTensorType>();
 

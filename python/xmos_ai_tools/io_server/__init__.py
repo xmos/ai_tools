@@ -70,6 +70,11 @@ class IOServer:
         assert type(data_read) is bytearray
         return self.bytes_to_arr(data_read, tensor_num)
 
+    def close(self):
+        if self._dev is not None:
+            self._dev.reset()
+            self._dev = None
+
     @handle_usb_error
     def _download_data(self, cmd, data_bytes, tensor_num=0, model_num=0):
         # TODO rm this extra CMD packet

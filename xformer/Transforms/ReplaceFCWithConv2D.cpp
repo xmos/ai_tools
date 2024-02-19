@@ -5,8 +5,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Replace suitable TFL FullyConnected with TFL Conv2D for XCore.
@@ -191,5 +190,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplaceFCWithConv2DPass() {
 
 static PassRegistration<ReplaceFCWithConv2D> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

@@ -9,8 +9,7 @@
 
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 static constexpr char opSplitLabel[] = "opSplitLabel";
@@ -932,5 +931,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createOpSplitPass() {
 
 static PassRegistration<OpSplit> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

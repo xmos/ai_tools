@@ -190,7 +190,7 @@ class XFDeviceRuntime(AbstractXFRunner):
         shutil.copy(self._dir_path / "model.tflite.cpp", dst_dir / "src/")
         run_cmd(["xmake", "-j4"], working_dir=dst_dir)
         xe_path = dst_dir / "bin" / next((dst_dir / "bin").glob("*.xe")).name
-        self._p = subprocess.Popen(["xrun", "--xscope", "--id", "0", xe_path])
+        self._p = subprocess.Popen(["xrun", "--id", "0", xe_path])
         # overwriting _interpreter from super()
         dont_throw(self, "_interpreter", "close")
         self._interpreter = IOServer(output_details=self._dets)
@@ -201,10 +201,6 @@ class XFDeviceRuntime(AbstractXFRunner):
             self._interpreter.write_input_tensor(inp.tobytes(), tensor_num=i)
         self._interpreter.start_inference()
         return [self._interpreter.read_output_tensor(i) for i in range(len(self._dets))]
-
-    def __del__(self):
-        dont_throw(self, "_p", "terminate")
-        super().__del__()
 
 
 class XFHostInterpreter(AbstractXFRunner):

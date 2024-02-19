@@ -5,8 +5,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Replace TFL AveragePool2D with TFL DepthwiseConv2D.
@@ -138,5 +137,4 @@ createReplaceAvgPoolWithConv2DPass() {
 
 static PassRegistration<ReplaceAvgPoolWithConv2D> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

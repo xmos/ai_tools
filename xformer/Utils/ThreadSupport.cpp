@@ -4,13 +4,10 @@
 #include "Utils/ThreadSupport.h"
 
 #include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/PriorityQueue.h"
 
 #include <cmath>
 
-namespace mlir {
-namespace xcore {
-namespace utils {
+namespace mlir::xcore::utils {
 
 namespace {
 
@@ -234,6 +231,4 @@ llvm::SmallVector<std::array<int, 4>> getImageRegionThreadSplits(
   return imageRegionSplits;
 }
 
-} // namespace utils
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore::utils

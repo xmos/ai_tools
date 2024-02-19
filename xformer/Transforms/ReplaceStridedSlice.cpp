@@ -1,18 +1,11 @@
-// Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
-// XMOS Public License: Version 1
-
-#include "IR/XCoreOps.h"
-
-#include "lib_nn/api/MemCpyFn.hpp"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
-// Replace TFL StridedSlice with StridedSlice for XCore.
+// Replace TFL StridedSlice with TFL Slice wherever possible.
 struct ReplaceStridedSlice
     : public PassWrapper<ReplaceStridedSlice, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReplaceStridedSlice)
@@ -167,5 +160,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplaceStridedSlicePass() {
 
 static PassRegistration<ReplaceStridedSlice> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

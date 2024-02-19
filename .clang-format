@@ -1,2 +1,1 @@
-IncludeBlocks: Preserve
-SortIncludes: Never
+BasedOnStyle: LLVM

@@ -13,6 +13,7 @@ import tensorflow as tf
 import larq_compute_engine as lce
 from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 
+#from tflite_micro.python.tflite_micro import runtime
 
 def checksum_calc(data):
     res = np.uint8(0)
@@ -90,10 +91,14 @@ def test_inference(args):
     else:
         print("Creating TFLite interpreter...")
         # interpreter = tf.lite.Interpreter(
-        #     model_content=model_content,
-        #     experimental_op_resolver_type=tf.lite.experimental.
-        #     OpResolverType.BUILTIN_REF, experimental_preserve_all_tensors=True)
-        interpreter = tf.lite.Interpreter(model_content=model_content)
+        #     model_content=model_content)
+        interpreter = tf.lite.Interpreter(
+            model_content=model_content,
+            experimental_op_resolver_type=tf.lite.experimental.
+            OpResolverType.BUILTIN_REF, experimental_preserve_all_tensors=True)
+        # tflm_interpreter = runtime.Interpreter.from_bytes(model_content, arena_size=128 * 1024 * 1024)
+
+        # interpreter = tf.lite.Interpreter(model_content=model_content, experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES)
         interpreter.allocate_tensors()
         num_of_inputs = len(interpreter.get_input_details())
         input_tensor_type = []
@@ -145,14 +150,16 @@ def test_inference(args):
             print("Creating random input...")
             # print(k)
             # k = np.load("1.npy")
+
             for i in range(num_of_inputs):
                 k = []
-                n = -128
+                step = int((np.iinfo(input_tensor_type[i]).max * 2) / 85)
+                n = np.iinfo(input_tensor_type[i]).min
                 for j in range(0, np.prod(input_tensor_shape[i])):
-                    if n >= 128:
-                        n = -128
+                    if n >= np.iinfo(input_tensor_type[i]).max:
+                        n = np.iinfo(input_tensor_type[i]).min
                     k.append(n)
-                    n = n + 3
+                    n = n + step
                 # input_tensor.append(np.array(255 * np.random.random_sample(input_tensor_shape[i]) - 128, dtype=input_tensor_type[i]))
                 # input_tensor.append(np.array(1 * np.ones(input_tensor_shape[i]), dtype=input_tensor_type[i]))
                 input_tensor.append(
@@ -170,10 +177,14 @@ def test_inference(args):
             num_of_outputs = len(outputs)
         else:
             for i in range(num_of_inputs):
+                # tflm_interpreter.set_input(input_tensor[i], i)
+
                 interpreter.set_tensor(
                     interpreter.get_input_details()[i]["index"], input_tensor[i]
                 )
             print("Invoking TFLite interpreter...")
+            # tflm_interpreter.invoke()
+
             interpreter.invoke()
 
             num_of_outputs = len(interpreter.get_output_details())
@@ -181,6 +192,10 @@ def test_inference(args):
             output_scales = []
             output_zero_points = []
             for i in range(num_of_outputs):
+                # outputs.append(
+                #     tflm_interpreter.get_output(i)
+                # )
+
                 outputs.append(
                     interpreter.get_tensor(interpreter.get_output_details()[i]["index"])
                 )
@@ -206,6 +221,7 @@ def test_inference(args):
         for i in range(num_of_outputs):
             xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]["index"]))
 
+        np.set_printoptions(threshold=np.inf)
         # Compare outputs
         for i in range(num_of_outputs):
             print("Comparing output number " + str(i) + "...")
@@ -213,11 +229,11 @@ def test_inference(args):
                 print("xformer output")
                 print(xformer_outputs[i])
                 print("checksum")
-                print(checksum_calc(xformer_outputs[i].flatten()))
+                print(checksum_calc(xformer_outputs[i].flatten().tobytes()))
                 print("compared output")
                 print(outputs[i])
                 print("checksum")
-                print(checksum_calc(outputs[i].flatten()))
+                print(checksum_calc(outputs[i].flatten().tobytes()))
 
                 errors = np.array(
                     list(
@@ -229,7 +245,7 @@ def test_inference(args):
                         )
                     )
                 ).reshape(-1)
-                print(np.sum(errors))
+                print("Max error = ", np.max(np.abs(errors)))
                 # if quantized output, we dequantize it before comparing
                 if output_scales[i]:
                     outputs[i] = dequantize(

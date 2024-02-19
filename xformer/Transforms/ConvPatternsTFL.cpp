@@ -13,8 +13,7 @@ extern "C" {
 
 #include <iomanip>
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 // TFL Conv2D Base class implementation
 // TFLConvOpType would be XC_FakeConv2D or XC_FakeDepthwiseConv2D
@@ -25,9 +24,8 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   // Get output zero point
   auto outputType =
       conv2DOp.getOutput().getType().template dyn_cast<RankedTensorType>();
-  auto outputQType =
-      outputType.getElementType()
-          .template dyn_cast<mlir::quant::UniformQuantizedType>();
+  auto outputQType = outputType.getElementType()
+                         .template dyn_cast<quant::UniformQuantizedType>();
   auto outputScale = outputQType.getScale();
   auto outputZeroPoint = outputQType.getZeroPoint();
 
@@ -35,7 +33,7 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   auto inputType =
       conv2DOp.getInput().getType().template dyn_cast<RankedTensorType>();
   auto inputQType = inputType.getElementType()
-                        .template dyn_cast<mlir::quant::UniformQuantizedType>();
+                        .template dyn_cast<quant::UniformQuantizedType>();
   auto inputScale = inputQType.getScale();
   auto inputZeroPoint = inputQType.getZeroPoint();
 
@@ -79,12 +77,11 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   ArrayRef<double> filterScales;
   if (auto filterQType =
           filterQConstOpType.getElementType()
-              .template dyn_cast<mlir::quant::UniformQuantizedType>()) {
+              .template dyn_cast<quant::UniformQuantizedType>()) {
     filterScale = filterQType.getScale();
   } else if (auto filterQType =
                  filterQConstOpType.getElementType()
-                     .template dyn_cast<
-                         mlir::quant::UniformQuantizedPerAxisType>()) {
+                     .template dyn_cast<quant::UniformQuantizedPerAxisType>()) {
     isPerChannelQuantized = true;
     filterScales = filterQType.getScales();
   } else {
@@ -732,5 +729,4 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DPaddedIndirectParams(
   return success();
 }
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

@@ -9,8 +9,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Write flash image
@@ -68,5 +67,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createPlanMemoryPass() {
 
 static PassRegistration<PlanMemory> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

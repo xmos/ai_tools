@@ -12,8 +12,7 @@
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "llvm/Support/ToolOutputFile.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Write flash image
@@ -171,5 +170,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createWriteWeightsPass() {
 
 static PassRegistration<WriteWeights> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

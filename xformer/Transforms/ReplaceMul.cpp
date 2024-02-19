@@ -13,8 +13,7 @@ extern "C" {
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "tensorflow/compiler/mlir/lite/utils/validators.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Replace TFL Mul with Mul for XCore.
@@ -121,5 +120,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMulPass() {
 
 static PassRegistration<ReplaceMul> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

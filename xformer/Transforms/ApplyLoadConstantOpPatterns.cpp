@@ -8,8 +8,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Apply generated patterns.
@@ -83,5 +82,4 @@ createApplyLoadConstantOpPatternsPass() {
 
 static PassRegistration<ApplyLoadConstantOpPatterns> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

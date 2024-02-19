@@ -10,10 +10,23 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 std::vector<uint8_t> Bsign8Op::buildCustomOptions() { return {}; }
+
+std::vector<uint8_t> UnaryI16Op::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("type", (int32_t)getOpType()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
+std::vector<uint8_t> BinaryI16Op::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("type", (int32_t)getOpType()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
 
 std::vector<uint8_t> Beta_ActivationF32Op::buildCustomOptions() {
   flexbuffers::Builder fbb;
@@ -79,6 +92,46 @@ std::vector<uint8_t> SliceOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> PadOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() {
+    fbb.String("pp", getPaddingPlan().str());
+    fbb.Int("pv", (int32_t)getPadValue());
+  });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
+std::vector<uint8_t> PadOpV2::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  auto rootMap = fbb.StartMap();
+  auto beginVec = fbb.StartVector("b");
+  for (auto b : getBegin()) {
+    fbb.Int((int32_t)b.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(beginVec, false, false);
+  auto endVec = fbb.StartVector("e");
+  for (auto e : getEnd()) {
+    fbb.Int((int32_t)e.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(endVec, false, false);
+  auto inOffsetVec = fbb.StartVector("i");
+  for (auto i : getInputOffset()) {
+    fbb.Int((int32_t)i.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(inOffsetVec, false, false);
+  auto outOffsetVec = fbb.StartVector("o");
+  for (auto o : getOutputOffset()) {
+    fbb.Int((int32_t)o.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(outOffsetVec, false, false);
+  fbb.Bool("v", getIsVpu());
+
+  fbb.EndMap(rootMap);
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
@@ -89,16 +142,6 @@ std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
   }
   fbb.EndVector(sizesVec, false, false);
   fbb.EndMap(rootMap);
-  fbb.Finish();
-  return fbb.GetBuffer();
-}
-
-std::vector<uint8_t> PadOp::buildCustomOptions() {
-  flexbuffers::Builder fbb;
-  fbb.Map([&]() {
-    fbb.String("pp", getPaddingPlan().str());
-    fbb.Int("pv", (int32_t)getPadValue());
-  });
   fbb.Finish();
   return fbb.GetBuffer();
 }
@@ -216,14 +259,17 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<LookupOp>>(ctx);
   // patterns.insert<RewriteToCustomOp<SoftmaxOp>>(ctx);
   patterns.insert<RewriteToCustomOp<MulOp>>(ctx);
-  patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Pad3To4Op>>(ctx);
   patterns.insert<RewriteToCustomOp<SliceOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<PadOpV2>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ActivationF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ConcatF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ConvF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_TransposeConvF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_FcF32Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<UnaryI16Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<BinaryI16Op>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
@@ -237,5 +283,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createTranslateToCustomOpPass() {
 
 static PassRegistration<TranslateToCustomOp> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

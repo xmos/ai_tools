@@ -52,3 +52,5 @@ for dtype in dtypes:
     shape = (7, 9, 10, 3)
     generate_slice_model(shape, dtype, [0, 0, 0, 0], [7, 9, 10, 3])
     generate_slice_model(shape, dtype, [1, 5, 0, 0], [6, 3, 10, 3])
+    shape = (3, 11, 16, 5)
+    generate_slice_model(shape, dtype, [2, 2, 1, 0], [1, 8, 13, 5])

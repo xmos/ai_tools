@@ -118,11 +118,11 @@ def runTests(String platform) {
             sh "pip install -e ${WORKSPACE}/xtagctl"
             withTools(params.TOOLS_VERSION) {
                 sh "xrun -l"
-                runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
-                runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --device --junitxml=integration_tests/integration_device_5_junit.xml")
                 // lstms are always problematic
                 runPytest("non-bnns/test_lstm", "-n 1 --tc 1 --device")
                 runPytest("non-bnns/test_lstm", "-n 1 --device")
+                runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
+                runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --device --junitxml=integration_tests/integration_device_5_junit.xml")
                 runPytest("non-bnns/test_softmax", "-n 1 --device")
                 // test a float32 layer
                 runPytest("non-bnns/test_detection_postprocess", "-n 1 --device")

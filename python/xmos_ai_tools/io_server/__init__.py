@@ -7,6 +7,7 @@ import numpy as np
 IOSERVER_INVOKE = int(0x01)
 IOSERVER_TENSOR_SEND_OUTPUT = int(0x02)
 IOSERVER_TENSOR_RECV_INPUT = int(0x03)
+IOSERVER_EXIT = int(0x08)
 
 
 class IOServerError(Exception):
@@ -72,8 +73,8 @@ class IOServer:
 
     def close(self):
         if self._dev is not None:
-            print("Closing connection to XCORE_IO_SERVER")
-            usb.util.dispose_resources(self._dev)
+            self._dev.write(self._out_ep, bytes([IOSERVER_EXIT, 0, 0]), 1000)
+            # self._upload_data(IOSERVER_EXIT)
             self._dev.reset()
             self._dev = None
 

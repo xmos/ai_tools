@@ -56,6 +56,7 @@ td_library(
     includes = ["external/org_tensorflow", "external/lce"],
     deps = [
         ":xc_dialect_td",
+        ":utils_td",
         "@lce//larq_compute_engine/mlir:lce_ops_td_file",
         "@llvm-project//mlir:ArithOpsTdFiles",
     ],

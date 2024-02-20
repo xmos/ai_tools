@@ -38,12 +38,20 @@ int getShapedTypeSize(ShapedType t) {
   return sizeInBytes;
 }
 
-LogicalResult hasSameShape(ShapedType type1, ShapedType type2) {
+quant::UniformQuantizedType
+getQType(mlir::TypedValue<mlir::TensorType> tensor) {
+  return tensor.getType()
+      .cast<ShapedType>()
+      .getElementType()
+      .cast<quant::UniformQuantizedType>();
+}
+
+bool hasSameShape(ShapedType type1, ShapedType type2) {
   llvm::ArrayRef<int64_t> shape1 = type1.getShape();
   llvm::ArrayRef<int64_t> shape2 = type2.getShape();
 
   if (shape1.size() != shape2.size()) {
-    return failure();
+    return false;
   }
 
   // Handle dynamic shapes
@@ -51,11 +59,11 @@ LogicalResult hasSameShape(ShapedType type1, ShapedType type2) {
     int d1 = (ShapedType::isDynamic(shape1[i]) ? 1 : shape1[i]);
     int d2 = (ShapedType::isDynamic(shape2[i]) ? 1 : shape2[i]);
     if (d1 != d2) {
-      return failure();
+      return false;
     }
   }
 
-  return success();
+  return true;
 }
 
 } // namespace mlir::xcore::utils

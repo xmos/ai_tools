@@ -34,42 +34,20 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
   LogicalResult matchAndRewrite(TFL::AddOp addOp,
                                 PatternRewriter &rewriter) const override {
 
-    // Check for invalid types and return
-    // We don't currently handle the unusual case where both input shapes have
-    // to be broadcasted. Either both input shapes must match the output or one
-    // of the inputs has to be broadcasted.
-    // Confirm that RHS == Output shape or LHS == Output shape
-    if (failed(utils::hasSameShape(
-            addOp.getRhs().getType().cast<ShapedType>(),
-            addOp.getOutput().getType().cast<ShapedType>())) &&
-        failed(utils::hasSameShape(
-            addOp.getLhs().getType().cast<ShapedType>(),
-            addOp.getOutput().getType().cast<ShapedType>()))) {
+    if (!utils::checkBinaryCompatibility(addOp))
       return failure();
-    }
 
-    Type lhsType = addOp.getLhs().getType().cast<ShapedType>().getElementType();
-    Type rhsType = addOp.getRhs().getType().cast<ShapedType>().getElementType();
-    Type outputType =
-        addOp.getOutput().getType().cast<ShapedType>().getElementType();
+    auto lhsQType = utils::getQType(addOp.getLhs());
+    double lhsScale = lhsQType.getScale();
+    int64_t lhsZeroPoint = lhsQType.getZeroPoint();
 
-    if (!utils::hasNBitSignedQType(lhsType) ||
-        !utils::hasNBitSignedQType(rhsType) ||
-        !utils::hasNBitSignedQType(outputType)) {
-      return failure();
-    }
+    auto rhsQType = utils::getQType(addOp.getRhs());
+    double rhsScale = rhsQType.getScale();
+    int64_t rhsZeroPoint = rhsQType.getZeroPoint();
 
-    auto lhsQType = lhsType.dyn_cast<mlir::quant::UniformQuantizedType>();
-    auto lhsScale = lhsQType.getScale();
-    auto lhsZeroPoint = lhsQType.getZeroPoint();
-
-    auto rhsQType = rhsType.dyn_cast<mlir::quant::UniformQuantizedType>();
-    auto rhsScale = rhsQType.getScale();
-    auto rhsZeroPoint = rhsQType.getZeroPoint();
-
-    auto outputQType = outputType.dyn_cast<mlir::quant::UniformQuantizedType>();
-    auto outputScale = outputQType.getScale();
-    auto outputZeroPoint = outputQType.getZeroPoint();
+    auto outputQType = utils::getQType(addOp.getOutput());
+    double outputScale = outputQType.getScale();
+    int64_t outputZeroPoint = outputQType.getZeroPoint();
 
     double lhsRatio = lhsScale / outputScale;
     double rhsRatio = rhsScale / outputScale;

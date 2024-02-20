@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "Transforms/Options.h"
+#include "Utils/Util.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -50,13 +51,8 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
                                    .template cast<ShapedType>()
                                    .getElementType();
     // Output type must be QI8
-    if (!(outputElementalType.template isa<quant::QuantizedType>() &&
-          outputElementalType.template cast<quant::QuantizedType>()
-              .isSigned() &&
-          outputElementalType.template cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+    if (!utils::hasNBitSignedQType(outputElementalType))
       return failure();
-    }
 
     // Data from target op needed later
     auto targetOutput = targetOp.getOutput();

@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "IR/XCoreOps.h"
+#include "Utils/Util.h"
 
 #include "lib_nn/api/TransposeConv.h"
 #include "mlir/Pass/Pass.h"
@@ -36,36 +37,21 @@ struct ReplaceTransposeConvPattern
     // Input type must be QI8 or QI16
     auto inputElementType =
         tConvOp.getInput().getType().cast<ShapedType>().getElementType();
-    if (!(inputElementType.isa<quant::QuantizedType>() &&
-          inputElementType.cast<quant::QuantizedType>().isSigned() &&
-          (inputElementType.cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 8 ||
-           inputElementType.cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 16))) {
-      return failure();
-    }
-
-    // Weights type must be QI8
     auto weightsElementType =
         tConvOp.getWeights().getType().cast<ShapedType>().getElementType();
-    if (!(weightsElementType.isa<quant::QuantizedType>() &&
-          weightsElementType.cast<quant::QuantizedType>().isSigned() &&
-          weightsElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
-
-    // Output type must be QI8 or QI16
     auto outputElementType =
         tConvOp.getOutput().getType().cast<ShapedType>().getElementType();
-    if (!(outputElementType.isa<quant::QuantizedType>() &&
-          outputElementType.cast<quant::QuantizedType>().isSigned() &&
-          (outputElementType.cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 8 ||
-           outputElementType.cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 16))) {
+
+    if (!utils::hasNBitSignedQType(inputElementType) &&
+        !utils::hasNBitSignedQType<16>(inputElementType))
       return failure();
-    }
+
+    if (!utils::hasNBitSignedQType(weightsElementType))
+      return failure();
+
+    if (!utils::hasNBitSignedQType(outputElementType) &&
+        !utils::hasNBitSignedQType<16>(outputElementType))
+      return failure();
 
     if (tConvOp.getPadding() != "VALID") {
       return failure();

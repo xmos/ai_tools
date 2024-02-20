@@ -10,29 +10,11 @@ class HasMultipleOfNBytesPerPixel<int n>
     : Constraint<CPred<
           "$0.getType().cast<ShapedType>().getDimSize(3) % " #n #" == 0">>;
 
-// Only channel padding
 def HasOnlyChannelPadding
-    : Constraint<CPred<
-          "$0.cast<DenseIntElementsAttr>().getNumElements() == 8 && "
-          "($0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{0, 0}] == 0 "
-          "&&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{0, 1}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{1, 0}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{1, 1}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{2, 0}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{2, 1}] == "
-          "0)">>;
+    : Constraint<CPred<"utils::hasOnlyChannelPadding($0.cast<DenseIntElementsAttr>())">>;
 
-// Only spatial padding
 def HasOnlySpatialPadding
-    : Constraint<CPred<
-          "$0.cast<DenseIntElementsAttr>().getNumElements() == 8 && "
-          "($0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{0, 0}] == 0 "
-          "&&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{0, 1}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 0}] == 0 &&"
-          "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[{3, 1}] == "
-          "0)">>;
+    : Constraint<CPred<"utils::hasOnlySpatialPadding($0.cast<DenseIntElementsAttr>())">>;
 
 // Casts $1 to a dequantized type and then casts that to a quantized type
 // using the quantization parameters from the type in $0

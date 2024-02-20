@@ -66,4 +66,19 @@ bool hasSameShape(ShapedType type1, ShapedType type2) {
   return true;
 }
 
+bool hasOnlyChannelPadding(DenseIntElementsAttr attr) {
+  if (attr.getNumElements() != 8)
+    return false;
+  auto values = attr.getValues<int32_t>();
+  return values[{0, 0}] == 0 && values[{0, 1}] == 0 && values[{1, 0}] == 0 &&
+         values[{1, 1}] == 0 && values[{2, 0}] == 0 && values[{2, 1}] == 0;
+}
+
+bool hasOnlySpatialPadding(DenseIntElementsAttr attr) {
+  if (attr.getNumElements() != 8)
+    return false;
+  auto values = attr.getValues<int32_t>();
+  return values[{0, 0}] == 0 && values[{0, 1}] == 0 && values[{3, 0}] == 0 &&
+         values[{3, 1}] == 0;
+}
 } // namespace mlir::xcore::utils

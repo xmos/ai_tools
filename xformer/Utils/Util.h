@@ -11,13 +11,12 @@
 namespace mlir::xcore::utils {
 
 int getShapedTypeSize(ShapedType t);
-
 bool hasSameShape(ShapedType type1, ShapedType type2);
-
 size_t getTypeSize(Type type);
+bool hasOnlyChannelPadding(DenseIntElementsAttr attr);
+bool hasOnlySpatialPadding(DenseIntElementsAttr attr);
 
 quant::UniformQuantizedType getQType(mlir::TypedValue<mlir::TensorType> tensor);
-
 template <typename T>
 bool checkSliceNoOp(T beginValues, T sizeValues, RankedTensorType type) {
   const int rank = type.getRank();

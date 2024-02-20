@@ -87,8 +87,12 @@ class AbstractXFRunner(AbstractRunner):
 
     # Try/except in case we cancel operation before interpreter/dir initialised
     def __del__(self):
-        dont_throw(self, "_interpreter", "close")
-        dont_throw(self, "_temp_dir", "cleanup")
+        print("ATTEMPTING TO CLOSE DEVICE")
+        self._interpreter.close()
+        print("SUCCESS?")
+        self._temp_dir.cleanup()
+        # dont_throw(self, "_interpreter", "close")
+        # dont_throw(self, "_temp_dir", "cleanup")
 
 
 class BnnInterpreter(AbstractRefRunner):

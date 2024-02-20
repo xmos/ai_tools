@@ -72,6 +72,7 @@ class IOServer:
 
     def close(self):
         if self._dev is not None:
+            print("Closing connection to XCORE_IO_SERVER")
             self._dev.reset()
             self._dev = None
 

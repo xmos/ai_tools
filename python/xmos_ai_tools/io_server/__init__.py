@@ -73,6 +73,7 @@ class IOServer:
     def close(self):
         if self._dev is not None:
             print("Closing connection to XCORE_IO_SERVER")
+            usb.util.dispose_resources(self._dev)
             self._dev.reset()
             self._dev = None
 

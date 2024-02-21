@@ -74,8 +74,7 @@ class IOServer:
     def close(self):
         if self._dev is not None:
             self._dev.write(self._out_ep, bytes([IOSERVER_EXIT, 0, 0]), 1000)
-            # self._upload_data(IOSERVER_EXIT)
-            self._dev.reset()
+            usb.util.dispose_resources(self._dev)
             self._dev = None
 
     @handle_usb_error

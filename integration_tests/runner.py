@@ -194,9 +194,10 @@ class XFDeviceRuntime(AbstractXFRunner):
         shutil.copy(self._dir_path / "model.tflite.cpp", dst_dir / "src/")
         run_cmd(["xmake", "-j4"], working_dir=dst_dir)
         xe_path = dst_dir / "bin" / next((dst_dir / "bin").glob("*.xe")).name
-        self._p = subprocess.Popen(["xrun", "--id", "0", xe_path])
         # overwriting _interpreter from super()
         dont_throw(self, "_interpreter", "close")
+        subprocess.run(["xrun", "--id", "0", xe_path])
+        time.sleep(0.5)
         self._interpreter = IOServer(output_details=self._dets)
         self._interpreter.connect()
 

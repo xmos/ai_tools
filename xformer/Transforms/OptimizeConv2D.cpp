@@ -1,9 +1,9 @@
 // Copyright 2023 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include "IR/XCoreOps.h"
 #include "Transforms/Options.h"
 
+#include "Utils/Util.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
@@ -34,34 +34,18 @@ struct ChannelwiseSplitConv2DOutputPattern
     // Input type must be QI8
     auto inputElementType =
         op.getInput().getType().cast<ShapedType>().getElementType();
-    if (!(inputElementType.isa<quant::QuantizedType>() &&
-          inputElementType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
-
-    // Filter type must be
     auto filterElementType =
         op.getFilter().getType().cast<ShapedType>().getElementType();
-    if (!(filterElementType.isa<quant::QuantizedType>() &&
-          filterElementType.cast<quant::QuantizedType>().isSigned() &&
-          filterElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+
+    if (!utils::hasNBitSignedQType(inputElementType) ||
+        !utils::hasNBitSignedQType(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
-    if (!op.getBias().getType().isa<NoneType>()) {
-      auto biasElementType =
-          op.getBias().getType().cast<ShapedType>().getElementType();
-
-      if (!(biasElementType.isa<quant::QuantizedType>() &&
-            biasElementType.cast<quant::QuantizedType>().isSigned() &&
-            biasElementType.cast<quant::QuantizedType>()
-                    .getStorageTypeIntegralWidth() == 32)) {
+    if (auto biasType = op.getBias().getType().dyn_cast<ShapedType>()) {
+      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
         return failure();
-      }
     }
 
     // Lamdba to split filter or bias based on whether it is per channelwise
@@ -470,20 +454,11 @@ struct SameToValidTransposeConvPattern
     // Input type must be QI8
     auto inputElementType =
         tConvOp.getInput().getType().cast<ShapedType>().getElementType();
-    if (!(inputElementType.isa<quant::QuantizedType>() &&
-          inputElementType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
-
-    // Filter type must be
     auto filterElementType =
         tConvOp.getWeights().getType().cast<ShapedType>().getElementType();
-    if (!(filterElementType.isa<quant::QuantizedType>() &&
-          filterElementType.cast<quant::QuantizedType>().isSigned() &&
-          filterElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+
+    if (!utils::hasNBitSignedQType(inputElementType) ||
+        !utils::hasNBitSignedQType(filterElementType)) {
       return failure();
     }
 
@@ -569,12 +544,8 @@ struct PadConv2DInputPattern : public OpRewritePattern<Conv2DOp> {
                                 .getType()
                                 .template cast<ShapedType>()
                                 .getElementType();
-    if (!(inputElementType.template isa<quant::QuantizedType>() &&
-          inputElementType.template cast<quant::QuantizedType>().isSigned() &&
-          (inputElementType.template cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 8 ||
-           inputElementType.template cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 16))) {
+    if (!utils::hasNBitSignedQType(inputElementType) &&
+        !utils::hasNBitSignedQType<16>(inputElementType)) {
       return failure();
     }
 
@@ -590,26 +561,15 @@ struct PadConv2DInputPattern : public OpRewritePattern<Conv2DOp> {
     }
     auto filterElementType =
         filterVal.getType().template cast<ShapedType>().getElementType();
-    if (!(filterElementType.template isa<quant::QuantizedType>() &&
-          filterElementType.template cast<quant::QuantizedType>().isSigned() &&
-          filterElementType.template cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+    if (!utils::hasNBitSignedQType(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
-    if (!conv2DOp.getBias().getType().template isa<NoneType>()) {
-      auto biasElementType = conv2DOp.getBias()
-                                 .getType()
-                                 .template cast<ShapedType>()
-                                 .getElementType();
-
-      if (!(biasElementType.template isa<quant::QuantizedType>() &&
-            biasElementType.template cast<quant::QuantizedType>().isSigned() &&
-            biasElementType.template cast<quant::QuantizedType>()
-                    .getStorageTypeIntegralWidth() == 32)) {
+    if (auto biasType =
+            conv2DOp.getBias().getType().template dyn_cast<ShapedType>()) {
+      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
         return failure();
-      }
     }
 
     // Output type must be QI8 or QI16
@@ -617,15 +577,10 @@ struct PadConv2DInputPattern : public OpRewritePattern<Conv2DOp> {
                                  .getType()
                                  .template cast<ShapedType>()
                                  .getElementType();
-    if (!(outputElementType.template isa<quant::QuantizedType>() &&
-          outputElementType.template cast<quant::QuantizedType>().isSigned() &&
-          (outputElementType.template cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 8 ||
-           outputElementType.template cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 16))) {
+    if (!utils::hasNBitSignedQType(outputElementType) &&
+        !utils::hasNBitSignedQType<16>(outputElementType)) {
       return failure();
     }
-
     bool i16Conv = false;
     if (inputElementType.template cast<quant::QuantizedType>()
                 .getStorageTypeIntegralWidth() == 16 &&
@@ -675,12 +630,8 @@ struct PadConv2DOutputPattern : public OpRewritePattern<Conv2DOp> {
                                 .getType()
                                 .template cast<ShapedType>()
                                 .getElementType();
-    if (!(inputElementType.template isa<quant::QuantizedType>() &&
-          inputElementType.template cast<quant::QuantizedType>().isSigned() &&
-          (inputElementType.template cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 8 ||
-           inputElementType.template cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 16))) {
+    if (!utils::hasNBitSignedQType(inputElementType) &&
+        !utils::hasNBitSignedQType<16>(inputElementType)) {
       return failure();
     }
 
@@ -695,26 +646,15 @@ struct PadConv2DOutputPattern : public OpRewritePattern<Conv2DOp> {
     }
     auto filterElementType =
         filterVal.getType().template cast<ShapedType>().getElementType();
-    if (!(filterElementType.template isa<quant::QuantizedType>() &&
-          filterElementType.template cast<quant::QuantizedType>().isSigned() &&
-          filterElementType.template cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+    if (!utils::hasNBitSignedQType(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
-    if (!conv2DOp.getBias().getType().template isa<NoneType>()) {
-      auto biasElementType = conv2DOp.getBias()
-                                 .getType()
-                                 .template cast<ShapedType>()
-                                 .getElementType();
-
-      if (!(biasElementType.template isa<quant::QuantizedType>() &&
-            biasElementType.template cast<quant::QuantizedType>().isSigned() &&
-            biasElementType.template cast<quant::QuantizedType>()
-                    .getStorageTypeIntegralWidth() == 32)) {
+    if (auto biasType =
+            conv2DOp.getBias().getType().template dyn_cast<ShapedType>()) {
+      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
         return failure();
-      }
     }
 
     // Output type must be QI8 or QI16
@@ -722,15 +662,10 @@ struct PadConv2DOutputPattern : public OpRewritePattern<Conv2DOp> {
                                  .getType()
                                  .template cast<ShapedType>()
                                  .getElementType();
-    if (!(outputElementType.template isa<quant::QuantizedType>() &&
-          outputElementType.template cast<quant::QuantizedType>().isSigned() &&
-          (outputElementType.template cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 8 ||
-           outputElementType.template cast<quant::QuantizedType>()
-                   .getStorageTypeIntegralWidth() == 16))) {
+    if (!utils::hasNBitSignedQType(outputElementType) &&
+        !utils::hasNBitSignedQType<16>(outputElementType)) {
       return failure();
     }
-
     bool i16Conv = false;
     if (inputElementType.template cast<quant::QuantizedType>()
                 .getStorageTypeIntegralWidth() == 16 &&
@@ -786,34 +721,22 @@ struct PadTo4DepthwiseConv2DPattern
     // Input type must be QI8
     auto inputElementType =
         dConv2DOp.getInput().getType().cast<ShapedType>().getElementType();
-    if (!(inputElementType.isa<quant::QuantizedType>() &&
-          inputElementType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+    if (!utils::hasNBitSignedQType(inputElementType)) {
       return failure();
     }
 
     // Filter type must be
     auto filterElementType =
         dConv2DOp.getFilter().getType().cast<ShapedType>().getElementType();
-    if (!(filterElementType.isa<quant::QuantizedType>() &&
-          filterElementType.cast<quant::QuantizedType>().isSigned() &&
-          filterElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+    if (!utils::hasNBitSignedQType(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
-    if (!dConv2DOp.getBias().getType().isa<NoneType>()) {
-      auto biasElementType =
-          dConv2DOp.getBias().getType().cast<ShapedType>().getElementType();
-
-      if (!(biasElementType.isa<quant::QuantizedType>() &&
-            biasElementType.cast<quant::QuantizedType>().isSigned() &&
-            biasElementType.cast<quant::QuantizedType>()
-                    .getStorageTypeIntegralWidth() == 32)) {
+    if (auto biasType =
+            dConv2DOp.getBias().getType().template dyn_cast<ShapedType>()) {
+      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
         return failure();
-      }
     }
 
     // Align depth up to multiple of four

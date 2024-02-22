@@ -37,56 +37,18 @@ struct ReplaceMulPattern : public OpRewritePattern<TFL::MulOp> {
   LogicalResult matchAndRewrite(TFL::MulOp mulOp,
                                 PatternRewriter &rewriter) const override {
 
-    // Check for invalid types and return
-    // We don't currently handle the unusual case where both input shapes have
-    // to be broadcasted. Either both input shapes must match the output or one
-    // of the inputs has to be broadcasted.
-    if (failed(utils::hasSameShape(
-            mulOp.getRhs().getType().cast<ShapedType>(),
-            mulOp.getOutput().getType().cast<ShapedType>())) &&
-        failed(utils::hasSameShape(
-            mulOp.getLhs().getType().cast<ShapedType>(),
-            mulOp.getOutput().getType().cast<ShapedType>()))) {
+    if (!utils::checkBinaryCompatibility(mulOp))
       return failure();
-    }
 
-    auto lhsType = mulOp.getLhs().getType().cast<ShapedType>().getElementType();
-    // Lhs type must be QI8
-    if (!(lhsType.isa<quant::QuantizedType>() &&
-          lhsType.cast<quant::QuantizedType>().isSigned() &&
-          lhsType.cast<quant::QuantizedType>().getStorageTypeIntegralWidth() ==
-              8)) {
-      return failure();
-    }
-
-    auto rhsType = mulOp.getRhs().getType().cast<ShapedType>().getElementType();
-    // Rhs type must be QI8
-    if (!(rhsType.isa<quant::QuantizedType>() &&
-          rhsType.cast<quant::QuantizedType>().isSigned() &&
-          rhsType.cast<quant::QuantizedType>().getStorageTypeIntegralWidth() ==
-              8)) {
-      return failure();
-    }
-
-    auto outputType =
-        mulOp.getOutput().getType().cast<ShapedType>().getElementType();
-    // Output type must be QI8
-    if (!(outputType.isa<quant::QuantizedType>() &&
-          outputType.cast<quant::QuantizedType>().isSigned() &&
-          outputType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
-
-    auto lhsQType = lhsType.dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto lhsQType = utils::getQType(mulOp.getLhs());
     auto lhsScale = lhsQType.getScale();
     auto lhsZeroPoint = lhsQType.getZeroPoint();
 
-    auto rhsQType = rhsType.dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto rhsQType = utils::getQType(mulOp.getRhs());
     auto rhsScale = rhsQType.getScale();
     auto rhsZeroPoint = rhsQType.getZeroPoint();
 
-    auto outputQType = outputType.dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto outputQType = utils::getQType(mulOp.getOutput());
     auto outputScale = outputQType.getScale();
     auto outputZeroPoint = outputQType.getZeroPoint();
 

@@ -5,6 +5,7 @@
 #include "Transforms/ConvPatterns.h"
 #include "Transforms/Options.h"
 #include "Utils/ThreadSupport.h"
+#include "Utils/Util.h"
 
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "mlir/Pass/Pass.h"
@@ -15,7 +16,7 @@ namespace mlir::xcore {
 
 template <typename ConcreteType, typename ConvOpType, typename ArgsType,
           typename MulsAndBiasType>
-static LogicalResult obtainSerializedParamsAndMulsAndBiasesOp(
+static LogicalResult obtainSerializedParamsMulsBiasesOp(
     const ConcreteType *builder, PatternRewriter &rewriter,
     ConvOpType &conv2DOp, const ArgsType &args, const Conv2DType &kt,
     OtType &otType, llvm::SmallVector<std::string> &strParams,
@@ -75,23 +76,8 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   args.filterWidth = filterType.getDimSize(2);
   args.filterDepth = filterType.getDimSize(3);
   // Check if convolution is an int16 one
-  args.isI16Conv = false;
-  if ((inputType.getElementType().template isa<quant::QuantizedType>() &&
-       inputType.getElementType()
-           .template cast<quant::QuantizedType>()
-           .isSigned() &&
-       inputType.getElementType()
-               .template cast<quant::QuantizedType>()
-               .getStorageTypeIntegralWidth() == 16) &&
-      (outputType.getElementType().template isa<quant::QuantizedType>() &&
-       outputType.getElementType()
-           .template cast<quant::QuantizedType>()
-           .isSigned() &&
-       outputType.getElementType()
-               .template cast<quant::QuantizedType>()
-               .getStorageTypeIntegralWidth() == 16)) {
-    args.isI16Conv = true;
-  }
+  args.isI16Conv = (utils::hasNBitSignedQType<16>(inputType.getElementType()) &&
+                    utils::hasNBitSignedQType<16>(outputType.getElementType()));
 
   // Get op-type specific args
   if (failed(builder->getArgs(conv2DOp, args))) {
@@ -132,22 +118,19 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   arith::ConstantOp mulsBiasesOrThresholdsConstantOp;
 
   if (args.isI16Conv) {
-    //
-    if (failed(
-            obtainSerializedParamsAndMulsAndBiasesOp<ConcreteType, ConvOpType,
-                                                     ArgsType, int32_t>(
-                builder, rewriter, conv2DOp, args, kernelType, otType,
-                strParams, abstractKernelParams, weightsData, scratchBytes,
-                mulsBiasesOrThresholdsConstantOp))) {
+    if (failed(obtainSerializedParamsMulsBiasesOp<ConcreteType, ConvOpType,
+                                                  ArgsType, int32_t>(
+            builder, rewriter, conv2DOp, args, kernelType, otType, strParams,
+            abstractKernelParams, weightsData, scratchBytes,
+            mulsBiasesOrThresholdsConstantOp))) {
       return failure();
     }
   } else {
-    if (failed(
-            obtainSerializedParamsAndMulsAndBiasesOp<ConcreteType, ConvOpType,
-                                                     ArgsType, int16_t>(
-                builder, rewriter, conv2DOp, args, kernelType, otType,
-                strParams, abstractKernelParams, weightsData, scratchBytes,
-                mulsBiasesOrThresholdsConstantOp))) {
+    if (failed(obtainSerializedParamsMulsBiasesOp<ConcreteType, ConvOpType,
+                                                  ArgsType, int16_t>(
+            builder, rewriter, conv2DOp, args, kernelType, otType, strParams,
+            abstractKernelParams, weightsData, scratchBytes,
+            mulsBiasesOrThresholdsConstantOp))) {
       return failure();
     }
   }
@@ -185,39 +168,27 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
 
   // If FakeConv2DOp, then we want to pass in the partial output tensor, in case
   // it is being used If not, we use a no value op.
+  Value value;
   if (auto fakeConv2DOp = dyn_cast<FakeConv2DOp>(conv2DOp.getOperation())) {
-    // Create the Conv2DV2 Op with the params and kernel type
-    auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
-        conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.getInput(),
-        weightsConstantOp, mulsBiasesOrThresholdsConstantOp,
-        fakeConv2DOp.getPartialOutput(),
-        rewriter.getStringAttr(kernelTypeEnumParam),
-        rewriter.getStringAttr(memcpyFnParam),
-        rewriter.getStringAttr(aggregateFnParam),
-        rewriter.getStringAttr(outputTransformFnParam),
-        rewriter.getStringAttr(otTypeEnumParam),
-        rewriter.getI32IntegerAttr(scratchByteParam),
-        rewriter.getI32IntegerAttr(actualThreadCount),
-        getStringArrayAttr(abstractKernelParams));
-    rewriter.replaceOp(conv2DOp, newConv2DV2Op.getOutput());
+    value = fakeConv2DOp.getPartialOutput();
   } else {
-    auto noneValue = rewriter.create<TFL::NoValueOp>(rewriter.getUnknownLoc(),
-                                                     rewriter.getNoneType(),
-                                                     rewriter.getUnitAttr());
-    // Create the Conv2DV2 Op with the params and kernel type
-    auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
-        conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.getInput(),
-        weightsConstantOp, mulsBiasesOrThresholdsConstantOp, noneValue,
-        rewriter.getStringAttr(kernelTypeEnumParam),
-        rewriter.getStringAttr(memcpyFnParam),
-        rewriter.getStringAttr(aggregateFnParam),
-        rewriter.getStringAttr(outputTransformFnParam),
-        rewriter.getStringAttr(otTypeEnumParam),
-        rewriter.getI32IntegerAttr(scratchByteParam),
-        rewriter.getI32IntegerAttr(actualThreadCount),
-        getStringArrayAttr(abstractKernelParams));
-    rewriter.replaceOp(conv2DOp, newConv2DV2Op.getOutput());
+    value = rewriter.create<TFL::NoValueOp>(rewriter.getUnknownLoc(),
+                                            rewriter.getNoneType(),
+                                            rewriter.getUnitAttr());
   }
+  // Create the Conv2DV2 Op with the params and kernel type
+  auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
+      conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.getInput(),
+      weightsConstantOp, mulsBiasesOrThresholdsConstantOp, value,
+      rewriter.getStringAttr(kernelTypeEnumParam),
+      rewriter.getStringAttr(memcpyFnParam),
+      rewriter.getStringAttr(aggregateFnParam),
+      rewriter.getStringAttr(outputTransformFnParam),
+      rewriter.getStringAttr(otTypeEnumParam),
+      rewriter.getI32IntegerAttr(scratchByteParam),
+      rewriter.getI32IntegerAttr(actualThreadCount),
+      getStringArrayAttr(abstractKernelParams));
+  rewriter.replaceOp(conv2DOp, newConv2DV2Op.getOutput());
 
   return success();
 }

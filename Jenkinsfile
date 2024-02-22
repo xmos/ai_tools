@@ -130,10 +130,13 @@ def runTests(String platform) {
                 runPytest("16x8/", "-n 1 --tc 5 --device --junitxml=integration_tests/integration_device_1_junit.xml")
             }
         } else if (platform == "host") {
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_1_junit.xml --tc 1"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_5_junit.xml"
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/float32 -n 8 --tc 1 --junitxml=integration_tests/integration_float32_1_junit.xml"
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/16x8 -n 8 --tc 5 --junitxml=integration_tests/integration_16x8_5_junit.xml"
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models -n 8 --tc 1 --junitxml=integration_tests/integration_complex_5_junit.xml"
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/8x8 -n 8 --tc 1 --junitxml=integration_tests/integration_8x8_1_junit.xml"
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/8x8 -n 8 --junitxml=integration_tests/integration_8x8_5_junit.xml"
+            sh "pytest integration_tests/runner.py --models_path integration_tests/models/8x8 --compiled -n 8 --junitxml=integration_compiled_8x8_junit.xml"
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n 8 --junitxml=integration_tests/integration_bnns_junit.xml"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns --compiled -n 8 --junitxml=integration_compiled_non_bnns_junit.xml"
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn --compiled -n 8 --junitxml=integration_compiled_bnns_junit.xml"
             // notebook regression tests
         }

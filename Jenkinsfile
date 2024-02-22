@@ -119,18 +119,15 @@ def runTests(String platform) {
             withTools(params.TOOLS_VERSION) {
                 sh "xrun -l"
                 // lstms are always problematic
-                runPytest("non-bnns/test_lstm", "-n 1 --tc 1 --device")
-                runPytest("non-bnns/test_lstm", "-n 1 --device")
-                runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
-                runPytest("complex_models/non-bnns/test_cnn_classifier", "-n 1 --device --junitxml=integration_tests/integration_device_5_junit.xml")
-                runPytest("non-bnns/test_softmax", "-n 1 --device")
+                runPytest("8x8/test_lstm", "-n 1 --tc 1 --device")
+                runPytest("8x8/test_lstm", "-n 1 --device")
+                runPytest("complex_models/8x8/test_cnn_classifier", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
+                runPytest("complex_models/8x8/test_cnn_classifier", "-n 1 --device --junitxml=integration_tests/integration_device_5_junit.xml")
+                runPytest("8x8/test_softmax", "-n 1 --device")
                 // test a float32 layer
-                runPytest("non-bnns/test_detection_postprocess", "-n 1 --device")
+                runPytest("8x8/test_detection_postprocess", "-n 1 --device")
                 // test i16
-                runPytest("non-bnns/test_conv2d/i16", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
-                runPytest("non-bnns/test_transpose_conv/i16", "-n 1 --tc 5 --device --junitxml=integration_tests/integration_device_5_junit.xml")
-                runPytest("non-bnns/test_add/i16", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
-                runPytest("non-bnns/test_mul/i16", "-n 1 --tc 5 --device --junitxml=integration_tests/integration_device_5_junit.xml")
+                runPytest("16x8/", "-n 1 --tc 5 --device --junitxml=integration_tests/integration_device_1_junit.xml")
             }
         } else if (platform == "host") {
             sh "pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 8 --junitxml=integration_tests/integration_non_bnns_1_junit.xml --tc 1"

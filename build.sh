@@ -143,8 +143,10 @@ build_xinterpreter() {
 }
 
 xformer_integration_test() {
-	pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n $NUM_PROCS --junitxml=integration_tests/integration_non_bnns_junit.xml
-	pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n $NUM_PROCS --junitxml=integration_tests/integration_bnns_junit.xml
+	pytest integration_tests/runner.py --models_path integration_tests/models/8x8 -n $NUM_PROCS
+	pytest integration_tests/runner.py --models_path integration_tests/models/16x8 -n $NUM_PROCS
+	pytest integration_tests/runner.py --models_path integration_tests/models/float32 -n $NUM_PROCS
+	pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n $NUM_PROCS
 }
 
 clean_xinterpreter() {

@@ -5,7 +5,7 @@ Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 
 In order to compile and run this example follow these steps::
 
-  python obtain_and_build_mobilenetv2.py
+  python obtain_and_optimize_mobilenetv2.py
   xmake
   xflash --target XCORE-AI-EXPLORER --data xcore_flash_binary.out
   xrun --xscope bin/app_mobilenetv2.xe

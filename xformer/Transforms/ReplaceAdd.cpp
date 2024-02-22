@@ -38,16 +38,16 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
       return failure();
 
     auto lhsQType = utils::getQType(addOp.getLhs());
-    double lhsScale = lhsQType.getScale();
-    int64_t lhsZeroPoint = lhsQType.getZeroPoint();
+    auto lhsScale = lhsQType.getScale();
+    auto lhsZeroPoint = lhsQType.getZeroPoint();
 
     auto rhsQType = utils::getQType(addOp.getRhs());
-    double rhsScale = rhsQType.getScale();
-    int64_t rhsZeroPoint = rhsQType.getZeroPoint();
+    auto rhsScale = rhsQType.getScale();
+    auto rhsZeroPoint = rhsQType.getZeroPoint();
 
     auto outputQType = utils::getQType(addOp.getOutput());
-    double outputScale = outputQType.getScale();
-    int64_t outputZeroPoint = outputQType.getZeroPoint();
+    auto outputScale = outputQType.getScale();
+    auto outputZeroPoint = outputQType.getZeroPoint();
 
     double lhsRatio = lhsScale / outputScale;
     double rhsRatio = rhsScale / outputScale;

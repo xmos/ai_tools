@@ -41,16 +41,16 @@ struct ReplaceMulPattern : public OpRewritePattern<TFL::MulOp> {
       return failure();
 
     auto lhsQType = utils::getQType(mulOp.getLhs());
-    double lhsScale = lhsQType.getScale();
-    int64_t lhsZeroPoint = lhsQType.getZeroPoint();
+    auto lhsScale = lhsQType.getScale();
+    auto lhsZeroPoint = lhsQType.getZeroPoint();
 
     auto rhsQType = utils::getQType(mulOp.getRhs());
-    double rhsScale = rhsQType.getScale();
-    int64_t rhsZeroPoint = rhsQType.getZeroPoint();
+    auto rhsScale = rhsQType.getScale();
+    auto rhsZeroPoint = rhsQType.getZeroPoint();
 
     auto outputQType = utils::getQType(mulOp.getOutput());
-    double outputScale = outputQType.getScale();
-    int64_t outputZeroPoint = outputQType.getZeroPoint();
+    auto outputScale = outputQType.getScale();
+    auto outputZeroPoint = outputQType.getZeroPoint();
 
     nn_mul_params_t mp;
     mul_boggle(&mp, lhsScale, rhsScale, outputScale, lhsZeroPoint, rhsZeroPoint,

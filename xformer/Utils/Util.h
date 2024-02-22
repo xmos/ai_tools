@@ -46,7 +46,7 @@ template <typename T> bool checkBinaryCompatibility(T op) {
   // We don't currently handle the unusual case where both input shapes have
   // to be broadcasted. Either both input shapes must match the output or one
   // of the inputs has to be broadcasted.
-  if (!hasSameShape(lhsType, rhsType) || !hasSameShape(lhsType, outputType)) {
+  if (!hasSameShape(lhsType, rhsType) && !hasSameShape(lhsType, outputType)) {
     return false;
   }
   Type lhsElemType = lhsType.getElementType();

@@ -54,8 +54,8 @@ template <typename T> bool checkBinaryCompatibility(T op) {
   Type rhsElemType = rhsType.getElementType();
   Type outputElemType = outputType.getElementType();
 
-  if (!hasNBitSignedQType(lhsType) || !hasNBitSignedQType(rhsType) ||
-      !hasNBitSignedQType(outputType)) {
+  if (!hasNBitSignedQType(lhsElemType) || !hasNBitSignedQType(rhsElemType) ||
+      !hasNBitSignedQType(outputElemType)) {
     return false;
   }
   return true;

@@ -69,21 +69,18 @@ pipeline {
                     agent { label "linux && x86_64 && !noAVX2" }
                     stages {
                         stage("Integration Tests") { steps { 
-                            script { runTests("host") } 
+                            script { runTests("host", dailyHostTest) } 
                         } }
                         stage("Notebook Tests") { steps { withVenv {
                             sh "pip install pytest nbmake"
                             sh "pytest --nbmake ./docs/notebooks/*.ipynb"
-                            // Test the pytorch to keras notebooks overnight? Need to manually install all requirements
-                            // Also these train models so it takes a while
-                            // sh "pytest --nbmake ./docs/notebooks/*.ipynb"
                         } } }
                     }
                     post { cleanup { xcoreCleanSandbox() } }
                 }
                 stage("Device Test") {
                     agent { label "xcore.ai-explorer && lpddr && !macos" }
-                    steps { script { runTests("device") } }
+                    steps { script { runTests("device", dailyDeviceTest) } }
                     post { cleanup { xcoreCleanSandbox() } }
                 }
             }
@@ -91,14 +88,39 @@ pipeline {
     }
 }
 
-def runPytest(String test, String args) {
-    timeout(time: 20, unit: 'MINUTES') {
+def runPytestDevice(String test, String args, String junit) {
+    timeout(time: 60, unit: 'MINUTES') {
         sh "xtagctl reset_all XCORE-AI-EXPLORER"
-        sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args} -s"
+        sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args} --device --junitxml=integration_tests/integration_device_${junit}_junit.xml"
     }
 }
 
-def runTests(String platform) {
+def runPytestHost(String test, String args, String junit) {
+    sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args} --junitxml=integration_tests/integration_host_${junit}_junit.xml"
+}
+
+def dailyDeviceTest() {
+    runPytestDevice("8x8/test_lstm", "-n 1 --tc 1", "lstm_1")
+    runPytestDevice("8x8/test_lstm", "-n 1", "lstm_5")
+    runPytestDevice("complex_models/8x8/test_cnn_classifier", "-n 1 --tc 1", "cnn_classifier_1")
+    runPytestDevice("complex_models/8x8/test_cnn_classifier", "-n 1", "cnn_classifier_5")
+    runPytestDevice("8x8/test_softmax", "-n 1 --device", "softmax_5")
+    runPytestDevice("8x8/test_detection_postprocess", "-n 1", "detection_postprocess_5")
+    runPytestDevice("16x8/", "-n 1", "16x8_5")
+}
+
+def dailyHostTest() {
+    runPytestHost("float32", "-n 8 --tc 1", "float32_1")
+    runPytestHost("16x8", "-n 8 --tc 5", "16x8_5")
+    runPytestHost("complex_models", "-n 8 --tc 1", "complex_5")
+    runPytestHost("8x8", "-n 8 --tc 1", "8x8_1")
+    runPytestHost("8x8", "-n 8", "8x8_5")
+    runPytestHost("8x8", "--compiled -n 8", "compiled_8x8")
+    runPytestHost("bnns", "--bnn -n 8", "bnns")
+    runPytestHost("bnns", "--bnn --compiled -n 8", "compiled_bnns")
+}
+
+def runTests(String platform, Closure body = {}) {
     println "Stage running on: ${env.NODE_NAME}"
     checkout scm
     sh "./build.sh -T init"
@@ -117,28 +139,10 @@ def runTests(String platform) {
             sh "cd ${WORKSPACE} && git clone https://github0.xmos.com/xmos-int/xtagctl.git"
             sh "pip install -e ${WORKSPACE}/xtagctl"
             withTools(params.TOOLS_VERSION) {
-                sh "xrun -l"
-                // lstms are always problematic
-                runPytest("8x8/test_lstm", "-n 1 --tc 1 --device")
-                runPytest("8x8/test_lstm", "-n 1 --device")
-                runPytest("complex_models/8x8/test_cnn_classifier", "-n 1 --tc 1 --device --junitxml=integration_tests/integration_device_1_junit.xml")
-                runPytest("complex_models/8x8/test_cnn_classifier", "-n 1 --device --junitxml=integration_tests/integration_device_5_junit.xml")
-                runPytest("8x8/test_softmax", "-n 1 --device")
-                // test a float32 layer
-                runPytest("8x8/test_detection_postprocess", "-n 1 --device")
-                // test i16
-                runPytest("16x8/", "-n 1 --tc 5 --device --junitxml=integration_tests/integration_device_1_junit.xml")
+                body()
             }
         } else if (platform == "host") {
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/float32 -n 8 --tc 1 --junitxml=integration_tests/integration_float32_1_junit.xml"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/16x8 -n 8 --tc 5 --junitxml=integration_tests/integration_16x8_5_junit.xml"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/complex_models -n 8 --tc 1 --junitxml=integration_tests/integration_complex_5_junit.xml"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/8x8 -n 8 --tc 1 --junitxml=integration_tests/integration_8x8_1_junit.xml"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/8x8 -n 8 --junitxml=integration_tests/integration_8x8_5_junit.xml"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/8x8 --compiled -n 8 --junitxml=integration_compiled_8x8_junit.xml"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn -n 8 --junitxml=integration_tests/integration_bnns_junit.xml"
-            sh "pytest integration_tests/runner.py --models_path integration_tests/models/bnns --bnn --compiled -n 8 --junitxml=integration_compiled_bnns_junit.xml"
-            // notebook regression tests
+            body()
         }
         junit "**/*_junit.xml"
     }

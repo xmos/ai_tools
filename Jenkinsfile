@@ -99,7 +99,7 @@ def runPytestHost(String test, String args, String junit) {
     sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args} --junitxml=integration_tests/integration_host_${junit}_junit.xml"
 }
 
-def dailyDeviceTest() {
+def dailyDeviceTest = {
     runPytestDevice("8x8/test_lstm", "-n 1 --tc 1", "lstm_1")
     runPytestDevice("8x8/test_lstm", "-n 1", "lstm_5")
     runPytestDevice("complex_models/8x8/test_cnn_classifier", "-n 1 --tc 1", "cnn_classifier_1")
@@ -109,7 +109,7 @@ def dailyDeviceTest() {
     runPytestDevice("16x8/", "-n 1", "16x8_5")
 }
 
-def dailyHostTest() {
+def dailyHostTest = {
     runPytestHost("float32", "-n 8 --tc 1", "float32_1")
     runPytestHost("16x8", "-n 8 --tc 5", "16x8_5")
     runPytestHost("complex_models", "-n 8 --tc 1", "complex_5")

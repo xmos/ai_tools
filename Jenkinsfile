@@ -14,7 +14,7 @@ def runPytestHost(String test, String args, String junit) {
 }
 
 def dailyDeviceTest = {
-    timeout(time=20, unit: 'MINUTES') {
+    timeout(time: 20, unit: 'MINUTES') {
         sh "xtagctl reset_all XCORE-AI-EXPLORER"
         sh "pytest examples/app_mobilenetv2"
     }

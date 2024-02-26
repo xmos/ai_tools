@@ -81,14 +81,11 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
 
     slice_memcpy_get_params(begin_dst, end_dst, in_offsets, out_offsets,
                             shape_dst, begin, size, shape, dtype_size, rank);
-    const bool isVpu =
-        shape_dst[4] % 4 == 0 && begin_dst[4] % 4 == 0 && end_dst[4] % 4 == 0;
-
     auto binaryObjectSliceOp = rewriter.create<SliceOp>(
         sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput(),
         rewriter.getI32ArrayAttr(begin_dst), rewriter.getI32ArrayAttr(end_dst),
         rewriter.getI32ArrayAttr(in_offsets),
-        rewriter.getI32ArrayAttr(out_offsets), rewriter.getBoolAttr(isVpu));
+        rewriter.getI32ArrayAttr(out_offsets));
 
     rewriter.replaceOp(sliceOp, binaryObjectSliceOp.getOutput());
 

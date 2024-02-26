@@ -85,7 +85,6 @@ std::vector<uint8_t> SliceOp::buildCustomOptions() {
     fbb.Int((int32_t)o.cast<IntegerAttr>().getInt());
   }
   fbb.EndVector(outOffsetVec, false, false);
-  fbb.Bool("v", getIsVpu());
 
   fbb.EndMap(rootMap);
   fbb.Finish();
@@ -125,7 +124,6 @@ std::vector<uint8_t> PadOpV2::buildCustomOptions() {
     fbb.Int((int32_t)o.cast<IntegerAttr>().getInt());
   }
   fbb.EndVector(outOffsetVec, false, false);
-  fbb.Bool("v", getIsVpu());
 
   fbb.EndMap(rootMap);
   fbb.Finish();

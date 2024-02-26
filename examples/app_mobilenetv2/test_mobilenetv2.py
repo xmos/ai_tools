@@ -13,8 +13,8 @@ def build_and_run_example():
     arena_size = optimize_mobilenetv2()
     assert arena_size <= MAX_ARENA_SIZE, f"Optimized model size is too large: {arena_size} bytes"
     subprocess.run(["xmake"], check=True, cwd=TEST_DIR)
-    subprocess.run(["xflash", "--target", "XCORE-AI-EXPLORER", "--data", "xcore_flash_binary.out"], check=True, cwd=TEST_DIR)
-    result = subprocess.run(["xrun", "--xscope", "bin/app_mobilenetv2.xe"], check=True, cwd=TEST_DIR, stderr=subprocess.PIPE, text=True)
+    subprocess.run(["xflash", "--target", "XCORE-AI-EXPLORER", "--id", "0", "--data", "xcore_flash_binary.out"], check=True, cwd=TEST_DIR)
+    result = subprocess.run(["xrun", "--xscope", "--id", "0", "bin/app_mobilenetv2.xe"], check=True, cwd=TEST_DIR, stderr=subprocess.PIPE, text=True)
     return result.stderr
 
 def test_example_output(build_and_run_example):

@@ -148,7 +148,9 @@ pipeline {
                     agent { label "xcore.ai-explorer && lpddr && !macos" }
                     steps { script { runTests("device", dailyDeviceTest) } }
                     post {
-                        archiveArtifacts artifacts: 'examples/app_mobilenetv2/arena_sizes.csv', allowEmptyArchive: true
+                        always { 
+                            archiveArtifacts artifacts: 'examples/app_mobilenetv2/arena_sizes.csv', allowEmptyArchive: true
+                        }
                         cleanup { xcoreCleanSandbox() }
                     }
                 }

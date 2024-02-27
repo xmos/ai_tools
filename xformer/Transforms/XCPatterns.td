@@ -29,7 +29,7 @@ def getLookupTableI16OrFail
     : NativeCodeCall<"getLookupTableI16($_builder, $0.getDefiningOp()); "
                      "if(blob == nullptr){return failure();}">;
 
-foreach activationOp = [TFL_LogisticOp, TFL_TanhOp] in {
+foreach activationOp = [TFL_LogisticOp, TFL_TanhOp, TFL_ReluOp] in {
 def:
   Pat<(activationOp
             : $output TensorOf<[QI16]>:$input),
@@ -48,11 +48,12 @@ def isSingleSegment
 
 def betaIsOne : Constraint<CPred<"$0.getValue().convertToFloat() == 1.0">>;
 
-// def:
-//    Pat<(TFL_SoftmaxOp
-//             : $output TensorOf<[QI8]>:$input, $beta),
-//            (XC_SoftmaxOp $input, (Arith_ConstantOp (getExpLookupF32
-//            $output))), [(betaIsOne $beta), (isSingleSegment $input)]>;
+// Softmax -> XC_SoftmaxOp
+def:
+   Pat<(TFL_SoftmaxOp
+            : $output TensorOf<[QI8]>:$input, $beta),
+           (XC_SoftmaxOp $input, (Arith_ConstantOp (getExpLookupF32
+           $output))), [(betaIsOne $beta), (isSingleSegment $input)]>;
 
 // Beta float activation lookup
 def getActivationType
@@ -108,7 +109,7 @@ def: Pat<(TFL_DequantizeOp
 def getBinaryI16BlobOrFail
     : NativeCodeCall<"getBinaryI16Blob($_builder, $0.getDefiningOp()); if(blob "
                      "== nullptr){return failure();}">;
-// TFL Mul, Add
+// TFL Add, Sub, Mul
 def: Pat<(TFL_AddOp
             : $output TensorOf<[QI16]>:$input1, TensorOf<[QI16]>:$input2,
             TFL_AF_None), (XC_BinaryI16Op $input1, $input2, (Arith_ConstantOp

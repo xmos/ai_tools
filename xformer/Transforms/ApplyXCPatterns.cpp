@@ -162,6 +162,8 @@ DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter,
     fn = approximation_function_logistics;
   } else if (isa<TFL::EluOp>(activationOp)) {
     fn = approximation_function_elu;
+  } else if (isa<TFL::ReluOp>(activationOp)) {
+    fn = approximation_function_relu;
   } else {
     llvm_unreachable("Unsupported op!");
   }
@@ -172,7 +174,7 @@ DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter,
   quadratic_function_table_t table;
   quadratic_approximation_generator(&table, fn, inputScale, outputScale, chunks,
                                     &max_error, &square_error);
-  if (max_error >= 2) {
+  if (max_error > quadraticLookupErrorOption) {
     (void)rewriter.notifyMatchFailure(
         activationOp->getLoc(), "Cannot calculate quadratic approximation!");
     return {};

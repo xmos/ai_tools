@@ -250,11 +250,11 @@ def get_input_tensors(runner: AbstractRefRunner, parent_dir: Path) -> list:
         f = parent_dir.joinpath(f"in{i+1}.npy")
         if f.is_file():
             ins.append(np.load(f))
+        elif d == np.float32:
+            ins.append(np.random.rand(*s).astype(np.float32))
         else:
-            if d == np.float32:
-                ins.append(np.random.rand(*s).astype(np.float32))
-            else:
-                ins.append(np.random.randint(np.iinfo(d).min, high=np.iinfo(d).max, size=s, dtype=d))
+            mn, mx = np.iinfo(d).min, np.iinfo(d).max
+            ins.append(np.random.randint(mn, high=mx, size=s, dtype=d))
     return ins
 
 

@@ -114,14 +114,11 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
 
     slice_memcpy_get_params(begin_dst, end_dst, in_offsets, out_offsets,
                             shape_dst, begin, size, shape, dtype_size, rank);
-    const bool isVpu =
-        shape_dst[4] % 4 == 0 && begin_dst[4] % 4 == 0 && end_dst[4] % 4 == 0;
-
     auto binaryObjectPadOp = rewriter.create<PadOpV2>(
         padOp.getLoc(), padOp.getType(), padOp.getInput(),
         rewriter.getI32ArrayAttr(begin_dst), rewriter.getI32ArrayAttr(end_dst),
         rewriter.getI32ArrayAttr(in_offsets),
-        rewriter.getI32ArrayAttr(out_offsets), rewriter.getBoolAttr(isVpu));
+        rewriter.getI32ArrayAttr(out_offsets));
 
     rewriter.replaceOp(padOp, binaryObjectPadOp.getOutput());
 

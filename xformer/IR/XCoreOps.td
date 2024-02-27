@@ -86,8 +86,7 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
     I32ArrayAttr:$begin,
     I32ArrayAttr:$end,
     I32ArrayAttr:$input_offset,
-    I32ArrayAttr:$output_offset,
-    BoolAttr:$is_vpu
+    I32ArrayAttr:$output_offset
   );
 
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
@@ -121,8 +120,7 @@ def XC_PadOpV2 : XC_Op<"pad_v2", [Pure]> {
     I32ArrayAttr:$begin,
     I32ArrayAttr:$end,
     I32ArrayAttr:$input_offset,
-    I32ArrayAttr:$output_offset,
-    BoolAttr:$is_vpu
+    I32ArrayAttr:$output_offset
   );
 
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);

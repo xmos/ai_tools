@@ -54,6 +54,23 @@ def : Pat<(TFL_ReluOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $p,
                       $sh, $sw)),
           (TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_Relu, $p, $sh, $sw)>;
 
+// Unfuse activation functions from binary ops
+// TFL Add, Sub, Mul
+foreach binaryOp = [TFL_AddOp, TFL_SubOp, TFL_MulOp] in {
+  foreach activation = [
+    [TFL_AF_Relu, TFL_ReluOp],
+    [TFL_AF_Relu1, TFL_Relu1Op],
+    [TFL_AF_Relu6, TFL_Relu6Op],
+    [TFL_AF_Tanh, TFL_TanhOp],
+    [TFL_AF_Sign, TFL_SignOp],
+  ] in {
+  def:
+    Pat<(binaryOp
+            : $output TensorOf<[QI8, QI16]>:$input1, TensorOf<[QI8, QI16]>:$input2,
+            activation[0]), (activation[1] (binaryOp $input1, $input2, TFL_AF_None, (returnType $output)))>;
+  }
+}
+
 // If MeanOp with spatial axis and rank 2 output, expand output to rank 4, which
 // we later lower to AveragePool2D
 def : Pat<(TFL_MeanOp

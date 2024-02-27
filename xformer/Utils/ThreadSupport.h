@@ -8,16 +8,14 @@
 
 #include <array>
 
-namespace mlir {
-namespace xcore {
-namespace utils {
+namespace mlir::xcore::utils {
 
 llvm::SmallVector<std::array<int, 4>>
 getImageRegionThreadSplits(const int &threadCount, const int &imageHeight,
-                           const int &imageWidth);
+                           const int &imageWidth, const int subH = 0,
+                           const int subW = 0, const int strideH = 1,
+                           const int strideW = 1);
 
-} // namespace utils
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore::utils
 
 #endif // XFORMER_UTILS_THREADSUPPORT_H

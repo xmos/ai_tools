@@ -13,8 +13,7 @@
 
 #include "mlir/IR/TypeUtilities.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 void XCoreDialect::initialize() {
   addOperations<
@@ -28,11 +27,11 @@ void XCoreDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult PadOp::fold(FoldAdaptor) {
-  if (succeeded(verifyCompatibleShapes(getInput().getType(), getOutput().getType())))
+  if (succeeded(
+          verifyCompatibleShapes(getInput().getType(), getOutput().getType())))
     return getInput();
 
   return {};
 }
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

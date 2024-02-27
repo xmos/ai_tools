@@ -6,15 +6,25 @@
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "llvm/ADT/ArrayRef.h"
 
-namespace mlir {
-namespace xcore {
-namespace utils {
+namespace mlir::xcore::utils {
+
+size_t getTypeSize(Type type) {
+  if (auto quantType = type.dyn_cast<quant::UniformQuantizedType>()) {
+    return quantType.getStorageType().getIntOrFloatBitWidth() / 8;
+  } else if (auto floatType = type.dyn_cast<FloatType>()) {
+    return floatType.getWidth() / 8;
+  } else if (auto intType = type.dyn_cast<IntegerType>()) {
+    return intType.getWidth() / 8;
+  } else {
+    llvm_unreachable("Unsupported type");
+  }
+  return 0;
+}
 
 int getShapedTypeSize(ShapedType t) {
   int sizeInBytes;
-  if (t.getElementType().isa<quant::QuantizedType>()) {
-    // we only support QI8
-    sizeInBytes = 1;
+  if (auto quantType = t.getElementType().dyn_cast<quant::QuantizedType>()) {
+    sizeInBytes = quantType.getStorageTypeIntegralWidth() / CHAR_BIT;
   } else {
     sizeInBytes = t.getElementType().getIntOrFloatBitWidth() / CHAR_BIT;
   }
@@ -28,12 +38,20 @@ int getShapedTypeSize(ShapedType t) {
   return sizeInBytes;
 }
 
-LogicalResult hasSameShape(ShapedType type1, ShapedType type2) {
+quant::UniformQuantizedType
+getQType(mlir::TypedValue<mlir::TensorType> tensor) {
+  return tensor.getType()
+      .cast<ShapedType>()
+      .getElementType()
+      .cast<quant::UniformQuantizedType>();
+}
+
+bool hasSameShape(ShapedType type1, ShapedType type2) {
   llvm::ArrayRef<int64_t> shape1 = type1.getShape();
   llvm::ArrayRef<int64_t> shape2 = type2.getShape();
 
   if (shape1.size() != shape2.size()) {
-    return failure();
+    return false;
   }
 
   // Handle dynamic shapes
@@ -41,13 +59,26 @@ LogicalResult hasSameShape(ShapedType type1, ShapedType type2) {
     int d1 = (ShapedType::isDynamic(shape1[i]) ? 1 : shape1[i]);
     int d2 = (ShapedType::isDynamic(shape2[i]) ? 1 : shape2[i]);
     if (d1 != d2) {
-      return failure();
+      return false;
     }
   }
 
-  return success();
+  return true;
 }
 
-} // namespace utils
-} // namespace xcore
-} // namespace mlir
+bool hasOnlyChannelPadding(DenseIntElementsAttr attr) {
+  if (attr.getNumElements() != 8)
+    return false;
+  auto values = attr.getValues<int32_t>();
+  return values[{0, 0}] == 0 && values[{0, 1}] == 0 && values[{1, 0}] == 0 &&
+         values[{1, 1}] == 0 && values[{2, 0}] == 0 && values[{2, 1}] == 0;
+}
+
+bool hasOnlySpatialPadding(DenseIntElementsAttr attr) {
+  if (attr.getNumElements() != 8)
+    return false;
+  auto values = attr.getValues<int32_t>();
+  return values[{0, 0}] == 0 && values[{0, 1}] == 0 && values[{3, 0}] == 0 &&
+         values[{3, 1}] == 0;
+}
+} // namespace mlir::xcore::utils

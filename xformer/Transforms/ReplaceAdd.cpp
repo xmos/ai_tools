@@ -10,8 +10,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Replace TFL Add with Add for XCore.
@@ -35,57 +34,18 @@ struct ReplaceAddPattern : public OpRewritePattern<TFL::AddOp> {
   LogicalResult matchAndRewrite(TFL::AddOp addOp,
                                 PatternRewriter &rewriter) const override {
 
-    // Check for invalid types and return
-    // We don't currently handle the unusual case where both input shapes have
-    // to be broadcasted. Either both input shapes must match the output or one
-    // of the inputs has to be broadcasted.
-    // Confirm that RHS == Output shape or LHS == Output shape
-    if (failed(utils::hasSameShape(
-            addOp.getRhs().getType().cast<ShapedType>(),
-            addOp.getOutput().getType().cast<ShapedType>())) &&
-        failed(utils::hasSameShape(
-            addOp.getLhs().getType().cast<ShapedType>(),
-            addOp.getOutput().getType().cast<ShapedType>()))) {
+    if (!utils::checkBinaryCompatibility(addOp))
       return failure();
-    }
 
-    auto lhsType = addOp.getLhs().getType().cast<ShapedType>().getElementType();
-    // Lhs type must be QI8
-    if (!(lhsType.isa<quant::QuantizedType>() &&
-          lhsType.cast<quant::QuantizedType>().isSigned() &&
-          lhsType.cast<quant::QuantizedType>().getStorageTypeIntegralWidth() ==
-              8)) {
-      return failure();
-    }
-
-    auto rhsType = addOp.getRhs().getType().cast<ShapedType>().getElementType();
-    // Rhs type must be QI8
-    if (!(rhsType.isa<quant::QuantizedType>() &&
-          rhsType.cast<quant::QuantizedType>().isSigned() &&
-          rhsType.cast<quant::QuantizedType>().getStorageTypeIntegralWidth() ==
-              8)) {
-      return failure();
-    }
-
-    auto outputType =
-        addOp.getOutput().getType().cast<ShapedType>().getElementType();
-    // Output type must be QI8
-    if (!(outputType.isa<quant::QuantizedType>() &&
-          outputType.cast<quant::QuantizedType>().isSigned() &&
-          outputType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
-
-    auto lhsQType = lhsType.dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto lhsQType = utils::getQType(addOp.getLhs());
     auto lhsScale = lhsQType.getScale();
     auto lhsZeroPoint = lhsQType.getZeroPoint();
 
-    auto rhsQType = rhsType.dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto rhsQType = utils::getQType(addOp.getRhs());
     auto rhsScale = rhsQType.getScale();
     auto rhsZeroPoint = rhsQType.getZeroPoint();
 
-    auto outputQType = outputType.dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto outputQType = utils::getQType(addOp.getOutput());
     auto outputScale = outputQType.getScale();
     auto outputZeroPoint = outputQType.getZeroPoint();
 
@@ -132,5 +92,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplaceAddPass() {
 
 static PassRegistration<ReplaceAdd> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

@@ -5,11 +5,8 @@
 #define XFORMER_UTILS_FILEIO_H
 
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/Support/FileUtilities.h"
 
-namespace mlir {
-namespace xcore {
-namespace utils {
+namespace mlir::xcore::utils {
 
 LogicalResult writeDataToFile(const std::string &filename, std::string data);
 
@@ -28,8 +25,6 @@ mlir::OwningOpRef<mlir::ModuleOp>
 readFlatBufferFileToMLIR(const std::string &filename,
                          mlir::MLIRContext *context);
 
-} // namespace utils
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore::utils
 
 #endif // XFORMER_UTILS_FILEIO_H

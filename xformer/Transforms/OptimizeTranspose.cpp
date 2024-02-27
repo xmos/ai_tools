@@ -9,8 +9,7 @@
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops_layout_helper.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Optimize TFL Transpose.
@@ -196,5 +195,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createOptimizeTransposePass() {
 
 static PassRegistration<OptimizeTranspose> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

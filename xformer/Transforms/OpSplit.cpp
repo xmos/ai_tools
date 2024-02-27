@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "Transforms/Options.h"
+#include "Utils/Util.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -9,8 +10,7 @@
 
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 static constexpr char opSplitLabel[] = "opSplitLabel";
@@ -51,13 +51,8 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
                                    .template cast<ShapedType>()
                                    .getElementType();
     // Output type must be QI8
-    if (!(outputElementalType.template isa<quant::QuantizedType>() &&
-          outputElementalType.template cast<quant::QuantizedType>()
-              .isSigned() &&
-          outputElementalType.template cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+    if (!utils::hasNBitSignedQType(outputElementalType))
       return failure();
-    }
 
     // Data from target op needed later
     auto targetOutput = targetOp.getOutput();
@@ -932,5 +927,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createOpSplitPass() {
 
 static PassRegistration<OpSplit> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

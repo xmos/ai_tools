@@ -1,10 +1,6 @@
 #include "Utils/TileRamSupport.h"
-#include <stdint.h>
-#include <string.h>
 
-namespace mlir {
-namespace xcore {
-namespace utils {
+namespace mlir::xcore::utils {
 
 std::vector<char> tileRamHeader() {
   // TODO: Change flash_t struct to mem_server_header_t
@@ -22,6 +18,4 @@ std::vector<char> tileRamHeader() {
   return header;
 }
 
-} // namespace utils
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore::utils

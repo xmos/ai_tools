@@ -1,15 +1,14 @@
 // Copyright 2023 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include "IR/XCoreOps.h"
 #include "Transforms/Options.h"
 
+#include "Utils/Util.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Optimize TFL Conv2D.
@@ -35,34 +34,18 @@ struct ChannelwiseSplitConv2DOutputPattern
     // Input type must be QI8
     auto inputElementType =
         op.getInput().getType().cast<ShapedType>().getElementType();
-    if (!(inputElementType.isa<quant::QuantizedType>() &&
-          inputElementType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
-
-    // Filter type must be
     auto filterElementType =
         op.getFilter().getType().cast<ShapedType>().getElementType();
-    if (!(filterElementType.isa<quant::QuantizedType>() &&
-          filterElementType.cast<quant::QuantizedType>().isSigned() &&
-          filterElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+
+    if (!utils::hasNBitSignedQType(inputElementType) ||
+        !utils::hasNBitSignedQType(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
-    if (!op.getBias().getType().isa<NoneType>()) {
-      auto biasElementType =
-          op.getBias().getType().cast<ShapedType>().getElementType();
-
-      if (!(biasElementType.isa<quant::QuantizedType>() &&
-            biasElementType.cast<quant::QuantizedType>().isSigned() &&
-            biasElementType.cast<quant::QuantizedType>()
-                    .getStorageTypeIntegralWidth() == 32)) {
+    if (auto biasType = op.getBias().getType().dyn_cast<ShapedType>()) {
+      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
         return failure();
-      }
     }
 
     // Lamdba to split filter or bias based on whether it is per channelwise
@@ -283,15 +266,24 @@ template <typename T>
 Value createPaddedFilterOp(int padSize, int padDim, T convOp,
                            PatternRewriter &rewriter) {
   assert(padDim == 0 || padDim == 3 && "filter padDim must be 0 or 3!");
-  auto filterQConstOp =
-      dyn_cast<TFL::QConstOp>(convOp.getFilter().getDefiningOp());
+
+  Value filterVal;
+  if (auto cOp = dyn_cast<TFL::TransposeConvOp>(convOp.getOperation())) {
+    filterVal = cOp.getWeights();
+  } else if (auto cOp = dyn_cast<TFL::Conv2DOp>(convOp.getOperation())) {
+    filterVal = cOp.getFilter();
+  } else {
+    assert("Shouldn't be here!");
+  }
+
+  auto filterQConstOp = dyn_cast<TFL::QConstOp>(filterVal.getDefiningOp());
   auto filter = filterQConstOp.getValue().template cast<DenseElementsAttr>();
 
   auto filterVector =
       std::vector<int8_t>{filter.template getValues<int8_t>().begin(),
                           filter.template getValues<int8_t>().end()};
   auto filterShape =
-      convOp.getFilter().getType().template cast<RankedTensorType>().getShape();
+      filterVal.getType().template cast<RankedTensorType>().getShape();
   std::vector<int64_t> paddedShape(4, 0);
   for (int i = 0; i < 4; i++) {
     paddedShape[i] = filterShape[i];
@@ -327,15 +319,13 @@ Value createPaddedFilterOp(int padSize, int padDim, T convOp,
   if (convOp.GetQuantizationDimIndex() == padDim) {
     // If the pad dimension is the quantization dimension, then might have
     // to pad the quantization params
-    paddedFilterResultType = getPaddedResultType(
-        padSize, paddedFilterShape, filterQConstOp,
-        convOp.getFilter().getType().template cast<ShapedType>());
+    paddedFilterResultType =
+        getPaddedResultType(padSize, paddedFilterShape, filterQConstOp,
+                            filterVal.getType().template cast<ShapedType>());
   } else {
     paddedFilterResultType = RankedTensorType::get(
-        paddedFilterShape, convOp.getFilter()
-                               .getType()
-                               .template cast<ShapedType>()
-                               .getElementType());
+        paddedFilterShape,
+        filterVal.getType().template cast<ShapedType>().getElementType());
   }
 
   RankedTensorType paddedFilterValueType =
@@ -397,10 +387,9 @@ Value createPaddedBiasOp(int padSize, T convOp, PatternRewriter &rewriter) {
 }
 
 template <typename T>
-TFL::StridedSliceOp
-createPaddedConvWithStridedSliceOp(int padSize, T convOp, Value paddedFilterOp,
-                                   Value paddedBiasOp,
-                                   PatternRewriter &rewriter) {
+TFL::SliceOp
+createPaddedConvWithSliceOp(int padSize, T convOp, Value paddedFilterOp,
+                            Value paddedBiasOp, PatternRewriter &rewriter) {
   auto outputShape =
       convOp.getOutput().getType().template cast<RankedTensorType>().getShape();
   auto convReplacement = llvm::cast<T>(rewriter.clone(*convOp));
@@ -412,77 +401,201 @@ createPaddedConvWithStridedSliceOp(int padSize, T convOp, Value paddedFilterOp,
                                 .getType()
                                 .template cast<ShapedType>()
                                 .getElementType());
-  if (!convOp.getBias().getType().template isa<NoneType>()) {
-    convReplacement.setOperand(2, paddedBiasOp);
-  }
   convReplacement->getResult(0).setType(newConvType);
   convReplacement.setOperand(1, paddedFilterOp);
 
-  // Create strided slice op
-  int stridesAttr[4] = {1, 1, 1, 1};
-  auto stridesConstantOp = rewriter.create<arith::ConstantOp>(
-      convReplacement.getLoc(), rewriter.getI32TensorAttr(stridesAttr));
+  // For Conv2D and DepthwiseConv2D, bias operand index is 2
+  int biasOperandIndex = 2;
 
+  // For TransposeConv, we have to update the output shape operand
+  if (auto cOp =
+          dyn_cast<TFL::TransposeConvOp>(convReplacement.getOperation())) {
+    DenseElementsAttr attr;
+    matchPattern(cOp.getOutputShape(), m_Constant(&attr));
+    auto outputShape = std::vector<int32_t>{attr.getValues<int32_t>().begin(),
+                                            attr.getValues<int32_t>().end()};
+    outputShape[3] = outputShape[3] + padSize;
+    auto outputShapeOp = rewriter.create<arith::ConstantOp>(
+        cOp->getLoc(), cOp.getOutputShape().getType(),
+        DenseIntElementsAttr::get(cOp.getOutputShape().getType(), outputShape));
+    cOp.setOperand(0, outputShapeOp);
+    // For TransposeConv, bias operand index is 3
+    biasOperandIndex = 3;
+  }
+
+  if (!convReplacement.getBias().getType().template isa<NoneType>()) {
+    convReplacement.setOperand(biasOperandIndex, paddedBiasOp);
+  }
+
+  // Create slice op
   int beginAttr[4] = {0, 0, 0, 0};
   auto beginConstantOp = rewriter.create<arith::ConstantOp>(
       convReplacement.getLoc(), rewriter.getI32TensorAttr(beginAttr));
 
-  int endAttr[4] = {static_cast<int32_t>(1),
-                    static_cast<int32_t>(outputShape[1]),
-                    static_cast<int32_t>(outputShape[2]),
-                    static_cast<int32_t>(outputShape[3])};
-  auto endConstantOp = rewriter.create<arith::ConstantOp>(
-      convReplacement.getLoc(), rewriter.getI32TensorAttr(endAttr));
+  int sizeAttr[4] = {1, static_cast<int32_t>(outputShape[1]) - beginAttr[1],
+                     static_cast<int32_t>(outputShape[2]) - beginAttr[2],
+                     static_cast<int32_t>(outputShape[3]) - beginAttr[3]};
+  auto sizeConstantOp = rewriter.create<arith::ConstantOp>(
+      convReplacement.getLoc(), rewriter.getI32TensorAttr(sizeAttr));
 
-  auto stridedSliceOp = rewriter.create<TFL::StridedSliceOp>(
+  auto sliceOp = rewriter.create<TFL::SliceOp>(
       convOp.getLoc(), convOp.getOutput().getType(), convReplacement,
-      beginConstantOp, endConstantOp, stridesConstantOp, 0, 0, 0, 0, 0, false);
-  return stridedSliceOp;
+      beginConstantOp, sizeConstantOp);
+  return sliceOp;
 }
 
-struct PadTo4Conv2DInputPattern : public OpRewritePattern<TFL::Conv2DOp> {
-  using OpRewritePattern<TFL::Conv2DOp>::OpRewritePattern;
+struct SameToValidTransposeConvPattern
+    : public OpRewritePattern<TFL::TransposeConvOp> {
+  using OpRewritePattern<TFL::TransposeConvOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(TFL::Conv2DOp conv2DOp,
+  LogicalResult matchAndRewrite(TFL::TransposeConvOp tConvOp,
                                 PatternRewriter &rewriter) const override {
     // Check for invalid types and return
     // Input type must be QI8
     auto inputElementType =
-        conv2DOp.getInput().getType().cast<ShapedType>().getElementType();
-    if (!(inputElementType.isa<quant::QuantizedType>() &&
-          inputElementType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+        tConvOp.getInput().getType().cast<ShapedType>().getElementType();
+    auto filterElementType =
+        tConvOp.getWeights().getType().cast<ShapedType>().getElementType();
+
+    if (!utils::hasNBitSignedQType(inputElementType) ||
+        !utils::hasNBitSignedQType(filterElementType)) {
       return failure();
     }
 
-    // Filter type must be
+    if (tConvOp.getPadding() != "SAME") {
+      return failure();
+    }
+
+    tConvOp.setPadding("VALID");
+    auto tConvReplacement =
+        llvm::cast<TFL::TransposeConvOp>(rewriter.clone(*tConvOp));
+
+    // Calculate Transpose conv VALID output size
+    auto inputShape =
+        tConvOp.getInput().getType().cast<RankedTensorType>().getShape();
+    auto weightsShape =
+        tConvOp.getWeights().getType().cast<RankedTensorType>().getShape();
+    auto validHeight =
+        (inputShape[1] - 1) * tConvOp.getStrideH() + weightsShape[1];
+    auto validWidth =
+        (inputShape[2] - 1) * tConvOp.getStrideW() + weightsShape[2];
+
+    auto outputShape =
+        tConvOp.getOutput().getType().cast<RankedTensorType>().getShape();
+    int newOutputShapeAttr[4] = {
+        static_cast<int>(outputShape[0]), static_cast<int>(validHeight),
+        static_cast<int>(validWidth), static_cast<int>(outputShape[3])};
+
+    auto outputShapeConstantOp = rewriter.create<arith::ConstantOp>(
+        tConvReplacement.getLoc(),
+        rewriter.getI32TensorAttr(newOutputShapeAttr));
+    tConvReplacement->setOperand(0, outputShapeConstantOp);
+
+    RankedTensorType newtConvType = RankedTensorType::get(
+        {outputShape[0], validHeight, validWidth, outputShape[3]},
+        tConvOp.getOutput().getType().cast<ShapedType>().getElementType());
+    tConvReplacement->getResult(0).setType(newtConvType);
+
+    int sliceHeight = weightsShape[1] - tConvOp.getStrideH();
+    int sliceWidth = weightsShape[2] - tConvOp.getStrideW();
+    if (sliceHeight == 0 && sliceWidth == 0) {
+      rewriter.replaceOp(tConvOp, tConvReplacement->getResult(0));
+      return success();
+    }
+    int sliceHeightLeft = sliceHeight / 2;
+    int sliceWidthLeft = sliceWidth / 2;
+    int beginAttr[4] = {0, sliceHeightLeft, sliceWidthLeft, 0};
+    int sizeAttr[4] = {static_cast<int32_t>(1),
+                       static_cast<int32_t>(outputShape[1]),
+                       static_cast<int32_t>(outputShape[2]),
+                       static_cast<int32_t>(outputShape[3])};
+    // create slice op
+
+    auto beginConstantOp = rewriter.create<arith::ConstantOp>(
+        tConvReplacement.getLoc(), rewriter.getI32TensorAttr(beginAttr));
+
+    auto sizeConstantOp = rewriter.create<arith::ConstantOp>(
+        tConvReplacement.getLoc(), rewriter.getI32TensorAttr(sizeAttr));
+
+    auto sliceOp = rewriter.create<TFL::SliceOp>(
+        tConvOp.getLoc(), tConvOp.getOutput().getType(), tConvReplacement,
+        beginConstantOp, sizeConstantOp);
+
+    // Replace op with slice op
+    rewriter.replaceOp(tConvOp, sliceOp.getOutput());
+
+    return success();
+  }
+};
+
+template <typename Conv2DOp>
+struct PadConv2DInputPattern : public OpRewritePattern<Conv2DOp> {
+  using OpRewritePattern<Conv2DOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(Conv2DOp conv2DOp,
+                                PatternRewriter &rewriter) const override {
+    // For Conv2D, input operand index is 0
+    // Strangely, for TransposeConv, input operand index is 2
+    int inputOperandIndex = 0;
+
+    // Check for invalid types and return
+    // Input type must be QI8 or QI16
+    auto inputElementType = conv2DOp.getInput()
+                                .getType()
+                                .template cast<ShapedType>()
+                                .getElementType();
+    if (!utils::hasNBitSignedQType(inputElementType) &&
+        !utils::hasNBitSignedQType<16>(inputElementType)) {
+      return failure();
+    }
+
+    // Filter type must be QI8
+    Value filterVal;
+    if (auto convOp = dyn_cast<TFL::TransposeConvOp>(conv2DOp.getOperation())) {
+      filterVal = convOp.getWeights();
+      inputOperandIndex = 2;
+    } else if (auto convOp = dyn_cast<TFL::Conv2DOp>(conv2DOp.getOperation())) {
+      filterVal = convOp.getFilter();
+    } else {
+      return failure();
+    }
     auto filterElementType =
-        conv2DOp.getFilter().getType().cast<ShapedType>().getElementType();
-    if (!(filterElementType.isa<quant::QuantizedType>() &&
-          filterElementType.cast<quant::QuantizedType>().isSigned() &&
-          filterElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+        filterVal.getType().template cast<ShapedType>().getElementType();
+    if (!utils::hasNBitSignedQType(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
-    if (!conv2DOp.getBias().getType().isa<NoneType>()) {
-      auto biasElementType =
-          conv2DOp.getBias().getType().cast<ShapedType>().getElementType();
-
-      if (!(biasElementType.isa<quant::QuantizedType>() &&
-            biasElementType.cast<quant::QuantizedType>().isSigned() &&
-            biasElementType.cast<quant::QuantizedType>()
-                    .getStorageTypeIntegralWidth() == 32)) {
+    if (auto biasType =
+            conv2DOp.getBias().getType().template dyn_cast<ShapedType>()) {
+      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
         return failure();
-      }
     }
 
-    // Align depth up to multiple of four
+    // Output type must be QI8 or QI16
+    auto outputElementType = conv2DOp.getOutput()
+                                 .getType()
+                                 .template cast<ShapedType>()
+                                 .getElementType();
+    if (!utils::hasNBitSignedQType(outputElementType) &&
+        !utils::hasNBitSignedQType<16>(outputElementType)) {
+      return failure();
+    }
+    bool i16Conv = false;
+    if (inputElementType.template cast<quant::QuantizedType>()
+                .getStorageTypeIntegralWidth() == 16 &&
+        outputElementType.template cast<quant::QuantizedType>()
+                .getStorageTypeIntegralWidth() == 16) {
+      i16Conv = true;
+    }
+
+    // Align depth up to multiple of four for int8 and sixteen for int16
     auto inputDepth =
-        conv2DOp.getInput().getType().cast<ShapedType>().getDimSize(3);
-    int padDepthSize = (((inputDepth + 3) / 4) * 4) - inputDepth;
+        conv2DOp.getInput().getType().template cast<ShapedType>().getDimSize(3);
+    int alignedDepth = i16Conv ? 16 : 4;
+    int padDepthSize =
+        (((inputDepth + alignedDepth - 1) / alignedDepth) * alignedDepth) -
+        inputDepth;
 
     if (padDepthSize == 0) {
       return failure();
@@ -490,7 +603,7 @@ struct PadTo4Conv2DInputPattern : public OpRewritePattern<TFL::Conv2DOp> {
 
     // Pad the Conv2D input
     Value padOpOutput = createInputPadOp(padDepthSize, conv2DOp, rewriter);
-    conv2DOp.setOperand(0, padOpOutput);
+    conv2DOp.setOperand(inputOperandIndex, padOpOutput);
 
     // Pad the Conv2D filter
     // We need to do this at compile time instead of using a PadOp
@@ -505,51 +618,71 @@ struct PadTo4Conv2DInputPattern : public OpRewritePattern<TFL::Conv2DOp> {
   }
 };
 
-struct PadTo4Conv2DOutputPattern : public OpRewritePattern<TFL::Conv2DOp> {
-  using OpRewritePattern<TFL::Conv2DOp>::OpRewritePattern;
+template <typename Conv2DOp>
+struct PadConv2DOutputPattern : public OpRewritePattern<Conv2DOp> {
+  using OpRewritePattern<Conv2DOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(TFL::Conv2DOp conv2DOp,
+  LogicalResult matchAndRewrite(Conv2DOp conv2DOp,
                                 PatternRewriter &rewriter) const override {
     // Check for invalid types and return
-    // Input type must be QI8
-    auto inputElementType =
-        conv2DOp.getInput().getType().cast<ShapedType>().getElementType();
-    if (!(inputElementType.isa<quant::QuantizedType>() &&
-          inputElementType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+    // Input type must be QI8 or QI16
+    auto inputElementType = conv2DOp.getInput()
+                                .getType()
+                                .template cast<ShapedType>()
+                                .getElementType();
+    if (!utils::hasNBitSignedQType(inputElementType) &&
+        !utils::hasNBitSignedQType<16>(inputElementType)) {
       return failure();
     }
 
-    // Filter type must be
+    // Filter type must be QI8
+    Value filterVal;
+    if (auto convOp = dyn_cast<TFL::TransposeConvOp>(conv2DOp.getOperation())) {
+      filterVal = convOp.getWeights();
+    } else if (auto convOp = dyn_cast<TFL::Conv2DOp>(conv2DOp.getOperation())) {
+      filterVal = convOp.getFilter();
+    } else {
+      return failure();
+    }
     auto filterElementType =
-        conv2DOp.getFilter().getType().cast<ShapedType>().getElementType();
-    if (!(filterElementType.isa<quant::QuantizedType>() &&
-          filterElementType.cast<quant::QuantizedType>().isSigned() &&
-          filterElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+        filterVal.getType().template cast<ShapedType>().getElementType();
+    if (!utils::hasNBitSignedQType(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
-    if (!conv2DOp.getBias().getType().isa<NoneType>()) {
-      auto biasElementType =
-          conv2DOp.getBias().getType().cast<ShapedType>().getElementType();
-
-      if (!(biasElementType.isa<quant::QuantizedType>() &&
-            biasElementType.cast<quant::QuantizedType>().isSigned() &&
-            biasElementType.cast<quant::QuantizedType>()
-                    .getStorageTypeIntegralWidth() == 32)) {
+    if (auto biasType =
+            conv2DOp.getBias().getType().template dyn_cast<ShapedType>()) {
+      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
         return failure();
-      }
     }
 
-    // Align depth up to multiple of four
+    // Output type must be QI8 or QI16
+    auto outputElementType = conv2DOp.getOutput()
+                                 .getType()
+                                 .template cast<ShapedType>()
+                                 .getElementType();
+    if (!utils::hasNBitSignedQType(outputElementType) &&
+        !utils::hasNBitSignedQType<16>(outputElementType)) {
+      return failure();
+    }
+    bool i16Conv = false;
+    if (inputElementType.template cast<quant::QuantizedType>()
+                .getStorageTypeIntegralWidth() == 16 &&
+        outputElementType.template cast<quant::QuantizedType>()
+                .getStorageTypeIntegralWidth() == 16) {
+      i16Conv = true;
+    }
+
+    // Align depth up to multiple of four for int8 and sixteen for int16
     auto outputShape = conv2DOp.getOutput()
                            .getType()
                            .template cast<RankedTensorType>()
                            .getShape();
-    int padSize = (((outputShape[3] + 3) / 4) * 4) - outputShape[3];
+    int alignedDepth = i16Conv ? 16 : 4;
+    int padSize =
+        (((outputShape[3] + alignedDepth - 1) / alignedDepth) * alignedDepth) -
+        outputShape[3];
 
     if (padSize == 0) {
       return failure();
@@ -566,13 +699,13 @@ struct PadTo4Conv2DOutputPattern : public OpRewritePattern<TFL::Conv2DOp> {
       paddedBiasOp = createPaddedBiasOp(padSize, conv2DOp, rewriter);
     }
 
-    // Create conv op with padded output size and Strided Slice to slice the
+    // Create conv op with padded output size and Slice to slice the
     // padded output
-    auto stridedSliceOp = createPaddedConvWithStridedSliceOp(
+    auto sliceOp = createPaddedConvWithSliceOp(
         padSize, conv2DOp, paddedFilterOp, paddedBiasOp, rewriter);
 
-    // Replace op with strided slice op
-    rewriter.replaceOp(conv2DOp, stridedSliceOp.getOutput());
+    // Replace op with slice op
+    rewriter.replaceOp(conv2DOp, sliceOp.getOutput());
 
     return success();
   }
@@ -588,34 +721,22 @@ struct PadTo4DepthwiseConv2DPattern
     // Input type must be QI8
     auto inputElementType =
         dConv2DOp.getInput().getType().cast<ShapedType>().getElementType();
-    if (!(inputElementType.isa<quant::QuantizedType>() &&
-          inputElementType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+    if (!utils::hasNBitSignedQType(inputElementType)) {
       return failure();
     }
 
     // Filter type must be
     auto filterElementType =
         dConv2DOp.getFilter().getType().cast<ShapedType>().getElementType();
-    if (!(filterElementType.isa<quant::QuantizedType>() &&
-          filterElementType.cast<quant::QuantizedType>().isSigned() &&
-          filterElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+    if (!utils::hasNBitSignedQType(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
-    if (!dConv2DOp.getBias().getType().isa<NoneType>()) {
-      auto biasElementType =
-          dConv2DOp.getBias().getType().cast<ShapedType>().getElementType();
-
-      if (!(biasElementType.isa<quant::QuantizedType>() &&
-            biasElementType.cast<quant::QuantizedType>().isSigned() &&
-            biasElementType.cast<quant::QuantizedType>()
-                    .getStorageTypeIntegralWidth() == 32)) {
+    if (auto biasType =
+            dConv2DOp.getBias().getType().template dyn_cast<ShapedType>()) {
+      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
         return failure();
-      }
     }
 
     // Align depth up to multiple of four
@@ -646,13 +767,13 @@ struct PadTo4DepthwiseConv2DPattern
       paddedBiasOp = createPaddedBiasOp(padSize, dConv2DOp, rewriter);
     }
 
-    // Create conv op with padded output size and Strided Slice to slice the
+    // Create conv op with padded output size and slice to slice the
     // padded output
-    auto stridedSliceOp = createPaddedConvWithStridedSliceOp(
+    auto sliceOp = createPaddedConvWithSliceOp(
         padSize, dConv2DOp, paddedFilterOp, paddedBiasOp, rewriter);
 
-    // Replace op with strided slice op
-    rewriter.replaceOp(dConv2DOp, stridedSliceOp.getOutput());
+    // Replace op with slice op
+    rewriter.replaceOp(dConv2DOp, sliceOp.getOutput());
 
     return success();
   }
@@ -663,17 +784,26 @@ void OptimizeConv2D::runOnOperation() {
   func::FuncOp func = getOperation();
   RewritePatternSet patterns(ctx);
 
-  // To align Conv2D input to 4 channels, we insert a pad op to pad the input
+  // Convert TransposeConv2D with SAME padding to VALID padding + slice
+  patterns.insert<SameToValidTransposeConvPattern>(ctx);
+
+  // For int8, we pad to 4 channels
+  // For int16, we pad to 16 channels
+  // To align Conv2D input, we insert a pad op to pad the input
   // channels and pad the conv filter channels
-  patterns.insert<PadTo4Conv2DInputPattern>(ctx);
-  // To align Conv2D output to 4 channels, we pad the conv filter batch and
-  // bias, pad conv2d output channels, and add a strided slice to remove the
+  patterns.insert<PadConv2DInputPattern<TFL::Conv2DOp>>(ctx);
+  patterns.insert<PadConv2DInputPattern<TFL::TransposeConvOp>>(ctx);
+  // For int8, we pad to 4 channels
+  // For int16, we pad to 16 channels
+  // To align Conv2D output, we pad the conv filter batch and
+  // bias, pad conv2d output channels, and add a slice to remove the
   // padded section
-  patterns.insert<PadTo4Conv2DOutputPattern>(ctx);
+  patterns.insert<PadConv2DOutputPattern<TFL::Conv2DOp>>(ctx);
+  patterns.insert<PadConv2DOutputPattern<TFL::TransposeConvOp>>(ctx);
   // For DepthwiseConv2D, input and output channels are the same.
   // To align DepthwiseConv2D input/output to 4 channels, we insert a pad op to
   // pad the input channels, pad the conv filter channels and bias, pad
-  // conv2d output channels, and add a strided slice to remove the padded
+  // conv2d output channels, and add a slice to remove the padded
   // section
   patterns.insert<PadTo4DepthwiseConv2DPattern>(ctx);
   // When the filter is too large, we channelwise split the conv2d output to
@@ -692,5 +822,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createOptimizeConv2DPass() {
 
 static PassRegistration<OptimizeConv2D> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

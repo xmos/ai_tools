@@ -7,6 +7,7 @@ import numpy as np
 IOSERVER_INVOKE = int(0x01)
 IOSERVER_TENSOR_SEND_OUTPUT = int(0x02)
 IOSERVER_TENSOR_RECV_INPUT = int(0x03)
+IOSERVER_EXIT = int(0x08)
 
 
 class IOServerError(Exception):
@@ -69,6 +70,12 @@ class IOServer:
         )
         assert type(data_read) is bytearray
         return self.bytes_to_arr(data_read, tensor_num)
+
+    def close(self):
+        if self._dev is not None:
+            self._dev.write(self._out_ep, bytes([IOSERVER_EXIT, 0, 0]), 1000)
+            usb.util.dispose_resources(self._dev)
+            self._dev = None
 
     @handle_usb_error
     def _download_data(self, cmd, data_bytes, tensor_num=0, model_num=0):

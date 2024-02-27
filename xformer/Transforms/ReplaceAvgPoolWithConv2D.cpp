@@ -1,12 +1,12 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
+#include "Utils/Util.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Replace TFL AveragePool2D with TFL DepthwiseConv2D.
@@ -37,23 +37,13 @@ struct ReplaceAvgPoolWithConv2DPattern
     auto inputElementalType =
         avgPoolOp.getInput().getType().cast<ShapedType>().getElementType();
 
-    // Check for invalid types and return
-    // Input type must be QI8
-    if (!(inputElementalType.isa<quant::QuantizedType>() &&
-          inputElementalType.cast<quant::QuantizedType>().isSigned() &&
-          inputElementalType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
-
     auto outputElementalType =
         avgPoolOp.getOutput().getType().cast<ShapedType>().getElementType();
 
-    // Output type must be QI8
-    if (!(outputElementalType.isa<quant::QuantizedType>() &&
-          outputElementalType.cast<quant::QuantizedType>().isSigned() &&
-          outputElementalType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+    // Check for invalid types and return
+    // Input type must be QI8
+    if (!utils::hasNBitSignedQType(inputElementalType) ||
+        !utils::hasNBitSignedQType(outputElementalType)) {
       return failure();
     }
 
@@ -138,5 +128,4 @@ createReplaceAvgPoolWithConv2DPass() {
 
 static PassRegistration<ReplaceAvgPoolWithConv2D> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

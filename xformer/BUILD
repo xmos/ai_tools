@@ -27,6 +27,13 @@ td_library(
 )
 
 td_library(
+    name = "utils_td",
+    srcs = [
+        "Utils/Utils.td",
+    ],
+)
+
+td_library(
     name = "tfl_patterns_td",
     srcs = [
         "Transforms/TFLPatterns.td",
@@ -37,6 +44,7 @@ td_library(
         "@llvm-project//mlir:FuncTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        ":utils_td",
     ],
 )
 
@@ -48,6 +56,7 @@ td_library(
     includes = ["external/org_tensorflow", "external/lce"],
     deps = [
         ":xc_dialect_td",
+        ":utils_td",
         "@lce//larq_compute_engine/mlir:lce_ops_td_file",
         "@llvm-project//mlir:ArithOpsTdFiles",
     ],
@@ -237,11 +246,26 @@ config_setting(
 
 cc_binary(
     name = "xcore-opt",
-    srcs = ["XCoreOptMain.cpp", "Version.h"],
+    srcs = ["XCoreOptMain.cpp",
+        "Version.h",
+        "@org_tensorflow//tensorflow/lite/kernels:padding.h",
+        "@org_tensorflow//tensorflow/lite/kernels/internal:reference/pooling.h",
+        "@org_tensorflow//tensorflow/lite/kernels/internal:reference/integer_ops/pooling.h",
+        "@org_tensorflow//tensorflow/lite/c:common.h",
+        "@org_tensorflow//tensorflow/lite/c:builtin_op_data.h",
+        "@org_tensorflow//tensorflow/lite/c:c_api_types.h",
+    ],
+    # Tensorflow and tflite-micro contain common tflite files in global namespace.
+    # Tell the compiler to allow multiple definitions when linking this.
+    linkopts = select({
+        "@org_tensorflow//tensorflow:macos": [],
+        "@org_tensorflow//tensorflow:windows": [],
+        "//conditions:default": ["-Wl,-z,muldefs"],
+    }),
     deps = [
-        ":xcore_passes",
         "@lib_tflite_micro//:shared_headers",
         "@lib_tflmc//:tflmc_lib",
+        ":xcore_passes",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:QuantOps",

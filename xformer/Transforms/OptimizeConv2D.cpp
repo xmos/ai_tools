@@ -454,11 +454,15 @@ struct SameToValidTransposeConvPattern
     // Input type must be QI8
     auto inputElementType =
         tConvOp.getInput().getType().cast<ShapedType>().getElementType();
+    if (!utils::hasNBitSignedQType(inputElementType) &&
+        !utils::hasNBitSignedQType<16>(inputElementType)) {
+      return failure();
+    }
+
     auto filterElementType =
         tConvOp.getWeights().getType().cast<ShapedType>().getElementType();
-
-    if (!utils::hasNBitSignedQType(inputElementType) ||
-        !utils::hasNBitSignedQType(filterElementType)) {
+    if (!utils::hasNBitSignedQType(filterElementType) &&
+        !utils::hasNBitSignedQType<16>(filterElementType)) {
       return failure();
     }
 

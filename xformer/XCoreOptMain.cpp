@@ -34,6 +34,14 @@ namespace mlir::xcore {
 // and -help) will be hidden.
 static cl::OptionCategory XformerCategory("Xformer options");
 
+cl::opt<unsigned>
+    quadraticLookupErrorOption("xcore-quadratic-lookup-error",
+                               cl::desc("Used only for int16. Defaults to TFL "
+                                        "ops if quadratic lookup error is more "
+                                        "than provided "
+                                        "(default = 1)."),
+                               cl::init(1), cl::cat(XformerCategory));
+
 cl::opt<bool> enableBetaFloatOption("xcore-enable-beta-float",
                                     cl::desc("Enable beta float support."),
                                     cl::init(false), cl::cat(XformerCategory));

@@ -27,10 +27,10 @@ void RemoveDynamicShape::runOnOperation() {
   auto *ctx = &getContext();
 
   // Lambda for getting a new type with dynamic changed to static
-  auto getNewTensorType = [&](RankedTensorType tensorType) {
-    RankedTensorType newType = tensorType;
+  auto getNewTensorType = [&](TensorType tensorType) {
+    TensorType newType = tensorType;
     // If batch dim is dynamic, make it of size one
-    if (tensorType.getRank() > 1 &&
+    if (tensorType.hasRank() && tensorType.getRank() > 1 &&
         tensorType.getDimSize(0) == ShapedType::kDynamic) {
       llvm::ArrayRef<int64_t> shape = tensorType.getShape();
       std::vector<int64_t> newShape;
@@ -51,14 +51,14 @@ void RemoveDynamicShape::runOnOperation() {
   newFuncOutputTypes.resize(func.getNumResults());
 
   for (BlockArgument argument : func.getArguments()) {
-    auto tensorType = argument.getType().dyn_cast<RankedTensorType>();
+    auto tensorType = argument.getType().dyn_cast<TensorType>();
     auto newType = getNewTensorType(tensorType);
     newFuncInputTypes[argument.getArgNumber()] = newType;
     argument.setType(newType);
   }
 
   for (int i = 0; i < func.getNumResults(); ++i) {
-    auto tensorType = func.getResultTypes()[i].dyn_cast<RankedTensorType>();
+    auto tensorType = func.getResultTypes()[i].dyn_cast<TensorType>();
     newFuncOutputTypes[i] = getNewTensorType(tensorType);
   }
   FunctionType funcType = func.getFunctionType();
@@ -76,7 +76,7 @@ void RemoveDynamicShape::runOnOperation() {
       if (result.getType().isa<NoneType>()) {
         continue;
       }
-      auto tensorType = result.getType().dyn_cast<RankedTensorType>();
+      auto tensorType = result.getType().dyn_cast<TensorType>();
       result.setType(getNewTensorType(tensorType));
     }
   });

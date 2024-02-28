@@ -11,10 +11,12 @@ class HasMultipleOfNBytesPerPixel<int n>
           "$0.getType().cast<ShapedType>().getDimSize(3) % " #n #" == 0">>;
 
 def HasOnlyChannelPadding
-    : Constraint<CPred<"utils::hasOnlyChannelPadding($0.cast<DenseIntElementsAttr>())">>;
+    : Constraint<CPred<
+          "utils::hasOnlyChannelPadding($0.cast<DenseIntElementsAttr>())">>;
 
 def HasOnlySpatialPadding
-    : Constraint<CPred<"utils::hasOnlySpatialPadding($0.cast<DenseIntElementsAttr>())">>;
+    : Constraint<CPred<
+          "utils::hasOnlySpatialPadding($0.cast<DenseIntElementsAttr>())">>;
 
 // Casts $1 to a dequantized type and then casts that to a quantized type
 // using the quantization parameters from the type in $0

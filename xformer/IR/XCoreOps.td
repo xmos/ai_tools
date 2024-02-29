@@ -92,7 +92,6 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
-
 def XC_PadOp : XC_Op<"pad", [Pure]> {
   let summary = "Pad op";
 

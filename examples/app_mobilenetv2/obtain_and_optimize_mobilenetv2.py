@@ -61,6 +61,8 @@ if __name__ == "__main__":
     #######################################################################
     # Running the model on xcore host interpreter with sample input image #
     #######################################################################
+    get_mobilenetv2()
+    optimize_mobilenetv2()
 
     # Sample image of a lion (ImageNet class 291)
     with open("lion.bin", "rb") as f:

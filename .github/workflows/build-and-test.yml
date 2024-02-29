@@ -30,11 +30,11 @@ jobs:
           submodules: recursive
           fetch-depth: 0
           ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      - uses: google-github-actions/auth@v1
+      - uses: google-github-actions/auth@v2
         continue-on-error: true
         with:
           create_credentials_file: true
@@ -113,11 +113,11 @@ jobs:
           large-packages: false
           docker-images: false
           swap-storage: false
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      - uses: google-github-actions/auth@v1
+      - uses: google-github-actions/auth@v2
         continue-on-error: true
         with:
           create_credentials_file: true
@@ -175,11 +175,11 @@ jobs:
           submodules: recursive
           fetch-depth: 0
           ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      - uses: google-github-actions/auth@v1
+      - uses: google-github-actions/auth@v2
         continue-on-error: true
         with:
           create_credentials_file: true

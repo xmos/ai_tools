@@ -15,6 +15,8 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   // Run pass from LCE to convert Larq ops which are in TFL custom op format to
   // Larq dialect
   pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
+  // Convert dynamic shapes in batch dimension to static
+  pm.addPass(createRemoveDynamicShapePass());
   // TFL passes
   pm.addPass(createOptimizeTransposePass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());

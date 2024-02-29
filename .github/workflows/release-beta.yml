@@ -16,7 +16,7 @@ jobs:
     name: Build release archive
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -40,7 +40,7 @@ jobs:
           cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
           make create_zip -j4
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: xcore-archive
           path: third_party/lib_tflite_micro/build/*.zip
@@ -57,18 +57,18 @@ jobs:
         python-version: [3.9]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: google-github-actions/auth@v1
+      - uses: google-github-actions/auth@v2
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: xcore-archive
           path: python/xmos_ai_tools/runtime
@@ -101,7 +101,7 @@ jobs:
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat macosx_10_14_x86_64
           
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }}-wheels
           path: python/dist
@@ -118,18 +118,18 @@ jobs:
         python-version: [3.9]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: google-github-actions/auth@v1
+      - uses: google-github-actions/auth@v2
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: xcore-archive
           path: python/xmos_ai_tools/runtime
@@ -164,7 +164,7 @@ jobs:
           cd $GITHUB_WORKSPACE/python
           python setup.py bdist_wheel --plat-name macosx_11_0_arm64
           
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }}-arm-wheels
           path: python/dist
@@ -181,18 +181,32 @@ jobs:
         python-version: [3.9]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-      - uses: actions/setup-python@v4
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+          # all of these default to true, but feel free to set to
+          # "false" if necessary for your workflow
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          docker-images: false
+          swap-storage: false
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: google-github-actions/auth@v1
+      - uses: google-github-actions/auth@v2
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: xcore-archive
           path: python/xmos_ai_tools/runtime
@@ -228,7 +242,7 @@ jobs:
             auditwheel repair --plat manylinux2014_x86_64 $f
           done
           
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }}-wheels
           # auditwheel creates the output wheel in the wheelhouse folder
@@ -246,14 +260,14 @@ jobs:
         python-version: [3.9]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: google-github-actions/auth@v1
+      - uses: google-github-actions/auth@v2
         continue-on-error: true
         with:
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
@@ -266,7 +280,7 @@ jobs:
         shell: pwsh
         run: |
           (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: xcore-archive
           path: python/xmos_ai_tools/runtime
@@ -301,7 +315,7 @@ jobs:
         run: |
           cd python
           python setup.py bdist_wheel
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }}-wheels
           path: python/dist
@@ -314,22 +328,22 @@ jobs:
     needs: [macos-release-wheel, macos-arm-release-wheel, manylinux-release-wheel, windows-release-wheel]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: macOS-wheels
           path: macOS-wheels
         if: ${{ needs.macos-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: macOS-arm-wheels
           path: macOS-arm-wheels
         if: ${{ needs.macos-arm-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: Linux-wheels
           path: Linux-wheels
         if: ${{ needs.manylinux-release-wheel.result == 'success' }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: Windows-wheels
           path: Windows-wheels

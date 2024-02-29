@@ -89,11 +89,11 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
     // to keep them about the same size
     int32_t sliceHeightRemainder = outputHeight % numSplits;
 
-    // For loop uses end index of previous strided slice created
+    // For loop uses end index of previous slice created
     // needs to initalized to zero for first slice
     int32_t prevEndIndex = 0;
 
-    // Loops creates strided slices with correct params
+    // Loops creates slices with correct params
     for (size_t i = 0; i < numSplits; i++) {
       // Distributes remainder between slices
       int32_t currentSliceHeight = sliceHeight;
@@ -108,7 +108,7 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
 
       prevEndIndex += currentSliceHeight;
 
-      // Store created strided slice op to use as input to concat
+      // Store created slice op to use as input to concat
       sliceOps.push_back(sliceOp.getResult());
     }
 
@@ -133,7 +133,7 @@ struct RaiseSliceHorizontalAddPattern : public OpRewritePattern<TFL::SliceOp> {
     if (!((slice->hasAttr(opSplitLabel))))
       return failure();
 
-    // If strided slice does not have a defining op, return failure
+    // If slice does not have a defining op, return failure
     if (!(slice.getInput().getDefiningOp())) {
       return failure();
     }
@@ -150,14 +150,14 @@ struct RaiseSliceHorizontalAddPattern : public OpRewritePattern<TFL::SliceOp> {
 
     auto sliceOutShape = utils::getValShape(slice.getOutput());
 
-    // Create new strided slice for above add
+    // Create new slice for above add
     auto sliceLHS = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
     sliceLHS.setOperand(0, addOriginal.getLhs());
     RankedTensorType sliceLHSType = RankedTensorType::get(
         sliceOutShape, utils::getValElementType(addOriginal.getLhs()));
     sliceLHS->getResult(0).setType(sliceLHSType);
 
-    // Create new strided slice for above add
+    // Create new slice for above add
     auto sliceRHS = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
     sliceRHS.setOperand(0, addOriginal.getRhs());
     RankedTensorType sliceRHSType = RankedTensorType::get(
@@ -171,7 +171,7 @@ struct RaiseSliceHorizontalAddPattern : public OpRewritePattern<TFL::SliceOp> {
     addReplacement.setOperand(0, sliceLHS);
     addReplacement.setOperand(1, sliceRHS);
 
-    // replace strided slice with new strided slice -> new add
+    // replace slice with new slice -> new add
     rewriter.replaceOp(slice, addReplacement.getOutput());
 
     return success();
@@ -188,7 +188,7 @@ struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
     if (!(slice->hasAttr(opSplitLabel)))
       return failure();
 
-    // If strided slice does not have a defining op, return failure
+    // If slice does not have a defining op, return failure
     if (!(slice.getInput().getDefiningOp())) {
       return failure();
     }
@@ -197,10 +197,10 @@ struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
       return failure();
     }
 
-    // Get data from conv needed to raise strided slice
+    // Get data from conv needed to raise slice
     auto convOriginal = llvm::cast<ConvOp>(slice.getInput().getDefiningOp());
 
-    // Do not raise strided slice if op does not have op split label
+    // Do not raise slice if op does not have op split label
     if (!(convOriginal->hasAttr(opSplitLabel)))
       return failure();
 
@@ -346,10 +346,10 @@ struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
         utils::getValElementType(convOriginal.getOutput()));
     convReplacement->getResult(0).setType(newConvType);
 
-    // if valid padding no need for pad op, connect to strided slice
+    // if valid padding no need for pad op, connect to slice
     // else connect to pad op
     if (convOriginal.getPadding() == "VALID") {
-      // Connect new conv's input to new strided slice
+      // Connect new conv's input to new slice
       convReplacement.setOperand(0, sliceReplacement);
 
     } else if (convOriginal.getPadding() == "SAME") {
@@ -361,8 +361,8 @@ struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
       convReplacement->setAttr("padding", rewriter.getStringAttr("VALID"));
     }
 
-    // replace strided slice with new strided slice -> new conv
-    // or new strided slice -> pad -> new conv
+    // replace slice with new slice -> new conv
+    // or new slice -> pad -> new conv
     rewriter.replaceOp(slice, convReplacement.getOutput());
 
     return success();
@@ -378,7 +378,7 @@ struct RaiseSliceHorizontalPadPattern : public OpRewritePattern<TFL::SliceOp> {
     if (!(slice->hasAttr(opSplitLabel)))
       return failure();
 
-    // If strided slice does not have a defining op, return failure
+    // If slice does not have a defining op, return failure
     if (!(slice.getInput().getDefiningOp())) {
       return failure();
     }
@@ -389,11 +389,11 @@ struct RaiseSliceHorizontalPadPattern : public OpRewritePattern<TFL::SliceOp> {
 
     auto padOriginal = llvm::cast<TFL::PadOp>(slice.getInput().getDefiningOp());
 
-    // Do not raise strided slice if op does not have op split label
+    // Do not raise slice if op does not have op split label
     if (!(padOriginal->hasAttr(opSplitLabel)))
       return failure();
 
-    // Get data from pad needed to raise strided slice
+    // Get data from pad needed to raise slice
     auto padOriginalInput =
         padOriginal.getInput().getType().template cast<RankedTensorType>();
     auto inputHeight = padOriginalInput.getDimSize(1);
@@ -422,7 +422,7 @@ struct RaiseSliceHorizontalPadPattern : public OpRewritePattern<TFL::SliceOp> {
     auto sliceOutputHeight = sliceOutput.getDimSize(1);
     auto sliceOutputWidth = sliceOutput.getDimSize(2);
 
-    // get end index of strided slice
+    // get end index of slice
     DenseElementsAttr attr;
     if (!matchPattern(slice.getSize(), m_Constant(&attr))) {
       return failure();
@@ -499,7 +499,7 @@ struct RaiseSliceHorizontalPadPattern : public OpRewritePattern<TFL::SliceOp> {
     auto padReplacement = rewriter.create<TFL::PadOp>(
         slice.getLoc(), paddedResultType, sliceReplacement, paddings);
 
-    // replace strided slice with new strided slice -> new pad
+    // replace slice with new slice -> new pad
     rewriter.replaceOp(slice, padReplacement.getOutput());
 
     return success();
@@ -714,13 +714,13 @@ void OpSplit::runOnOperation() {
           !llvm::isa<TFL::NoValueOp, TFL::QConstOp, TFL::ConstOp,
                      arith::ConstantOp>(op)) {
         if (k == startOps[i]) {
-          // If op is strided slice, just raise it, do not split it
+          // If op is slice, just raise it, do not split it
           if (isa<TFL::SliceOp>(op)) {
             op->setAttr(opSplitLabel, builder.getUnitAttr());
             auto sliceOp = llvm::cast<TFL::SliceOp>(op);
             sliceOp.getInput().getDefiningOp()->setAttr(opSplitLabel,
                                                         builder.getUnitAttr());
-          } else { // add label to insert strided slice under op later
+          } else { // add label to insert slice under op later
             op->setAttr(opSplitLabelNumSplits,
                         builder.getI32IntegerAttr(numSplits[i]));
           }

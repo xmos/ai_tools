@@ -69,7 +69,6 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
 
     // Apply label, so that the same op is not rewritten a second time.
     targetReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
-    targetReplacement->setAttr("OpHorizontalSplit", rewriter.getUnitAttr());
 
     // Will hold strided slice op to insert after target op
     SmallVector<Value> sliceOps;
@@ -112,27 +111,8 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
           targetReplacement.getLoc(), sliceOutputType, targetReplacement,
           beginConstantOp, sizeConstantOp);
 
-      // check created slice has size[1] == currentSliceHeight
-      if (sliceOp.getOutput()
-              .getType()
-              .template cast<RankedTensorType>()
-              .getDimSize(1) != currentSliceHeight) {
-        llvm::outs() << "In OpSplitHorizontalPattern\n";
-        llvm::outs() << "sliceOp.getOutput().getType().getDimSize(1) != "
-                        "currentSliceHeight\n";
-        llvm::outs() << "sliceOp.getOutput().getType().getDimSize(1): "
-                     << sliceOp.getOutput()
-                            .getType()
-                            .template cast<RankedTensorType>()
-                            .getDimSize(1)
-                     << "\n";
-        llvm::outs() << "currentSliceHeight: " << currentSliceHeight << "\n";
-        assert(false);
-      }
-
       // Add label, for safety when raising slice later
       sliceOp->setAttr(opSplitLabel, rewriter.getUnitAttr());
-      sliceOp->setAttr("OpHorizontalSplit 2", rewriter.getUnitAttr());
 
       // Store created strided slice op to use as input to concat
       sliceOps.push_back(sliceOp.getResult());
@@ -201,23 +181,6 @@ struct RaiseSliceHorizontalAddPattern : public OpRewritePattern<TFL::SliceOp> {
             .template cast<ShapedType>()
             .getElementType());
     sliceLHS->getResult(0).setType(sliceLHSType);
-    // check created slice has size[1] == output shape[1]
-    if (sliceLHS.getOutput()
-            .getType()
-            .template cast<RankedTensorType>()
-            .getDimSize(1) != sliceOutputHeight) {
-      llvm::outs() << "In raiseSliceHorizontalAddPattern\n";
-      llvm::outs() << "sliceLHS.getOutput().getType().getDimSize(1) != "
-                      "sliceOutputHeight\n";
-      llvm::outs() << "sliceLHS.getOutput().getType().getDimSize(1): "
-                   << sliceLHS.getOutput()
-                          .getType()
-                          .template cast<RankedTensorType>()
-                          .getDimSize(1)
-                   << "\n";
-      llvm::outs() << "sliceOutputHeight: " << sliceOutputHeight << "\n";
-      assert(false);
-    }
 
     // Create new strided slice for above add
     auto sliceRHS = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
@@ -229,23 +192,6 @@ struct RaiseSliceHorizontalAddPattern : public OpRewritePattern<TFL::SliceOp> {
             .template cast<ShapedType>()
             .getElementType());
     sliceRHS->getResult(0).setType(sliceRHSType);
-    // check created slice has size[1] == output shape[1]
-    if (sliceRHS.getOutput()
-            .getType()
-            .template cast<RankedTensorType>()
-            .getDimSize(1) != sliceOutputHeight) {
-      llvm::outs() << "In raiseSliceHorizontalAddPattern\n";
-      llvm::outs() << "sliceRHS.getOutput().getType().getDimSize(1) != "
-                      "sliceOutputHeight\n";
-      llvm::outs() << "sliceRHS.getOutput().getType().getDimSize(1): "
-                   << sliceRHS.getOutput()
-                          .getType()
-                          .template cast<RankedTensorType>()
-                          .getDimSize(1)
-                   << "\n";
-      llvm::outs() << "sliceOutputHeight: " << sliceOutputHeight << "\n";
-      assert(false);
-    }
 
     auto addReplacement = llvm::cast<TFL::AddOp>(rewriter.clone(*addOriginal));
     RankedTensorType addReplacementType = RankedTensorType::get(
@@ -312,12 +258,10 @@ struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
     auto strideWidth = convOriginal.getStrideW();
 
     DenseElementsAttr attr;
-    // Get begin index for slice
     if (!matchPattern(slice.getBegin(), m_Constant(&attr))) {
       return failure();
     }
     auto beginIndex = attr.getValues<int32_t>()[1];
-    // get end index of strided slice
     if (!matchPattern(slice.getSize(), m_Constant(&attr))) {
       return failure();
     }
@@ -327,15 +271,6 @@ struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
     // Get original slice's output height
     auto sliceOutput = slice.getOutput().getType().cast<RankedTensorType>();
     auto sliceOutputHeight = sliceOutput.getDimSize(1);
-
-    if (sliceOutputHeight != sizeIndex) {
-      llvm::outs() << slice << "\n";
-      llvm::outs() << "In raiseSliceHorizontalPattern\n";
-      llvm::outs() << "sliceOutputHeight != sizeIndex\n";
-      llvm::outs() << "sliceOutputHeight: " << sliceOutputHeight << "\n";
-      llvm::outs() << "sizeIndex: " << sizeIndex << "\n";
-      assert(false);
-    }
 
     int32_t newEndIndex;
     int32_t newOutputHeight;
@@ -419,11 +354,11 @@ struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
         slice.getLoc(), rewriter.getI32TensorAttr(beginAttr));
 
     // Set end tensor for slice to be above conv with new end index
-    int32_t endAttr[4] = {1, static_cast<int32_t>(newOutputHeight),
-                          static_cast<int32_t>(inputWidth),
-                          static_cast<int32_t>(inputChannels)};
-    auto endConstantOp = rewriter.create<arith::ConstantOp>(
-        slice.getLoc(), rewriter.getI32TensorAttr(endAttr));
+    int32_t sizeAttr[4] = {1, static_cast<int32_t>(newOutputHeight),
+                           static_cast<int32_t>(inputWidth),
+                           static_cast<int32_t>(inputChannels)};
+    auto sizeConstantOp = rewriter.create<arith::ConstantOp>(
+        slice.getLoc(), rewriter.getI32TensorAttr(sizeAttr));
 
     // New strided slice output shape is conv input shape except height
     // The new calculated output height is used for height
@@ -437,9 +372,8 @@ struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
     // Create new strided slice for above conv
     auto sliceReplacement = rewriter.create<TFL::SliceOp>(
         slice.getLoc(), newSliceType, convOriginal.getInput(), beginConstantOp,
-        endConstantOp);
+        sizeConstantOp);
     sliceReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
-    sliceReplacement->setAttr("OpHorizontalSplit 3", rewriter.getUnitAttr());
 
     // Adjust shape for padding
     // For valid conv the shapes will not change since pad values are zero
@@ -634,7 +568,6 @@ struct RaiseSliceHorizontalPadPattern : public OpRewritePattern<TFL::SliceOp> {
         slice.getLoc(), newSliceType, padOriginal.getInput(), beginConstantOp,
         endConstantOp);
     sliceReplacement->setAttr(opSplitLabel, rewriter.getUnitAttr());
-    sliceReplacement->setAttr("OpHorizontalSplit 4", rewriter.getUnitAttr());
 
     // Adjust shape for padding
     auto paddedHeight = newOutputHeight + padTop + padBottom;
@@ -891,7 +824,6 @@ void OpSplit::runOnOperation() {
           // If op is strided slice, just raise it, do not split it
           if (isa<TFL::SliceOp>(op)) {
             op->setAttr(opSplitLabel, builder.getUnitAttr());
-            op->setAttr("OpHorizontalSplit 5", builder.getUnitAttr());
             auto sliceOp = llvm::cast<TFL::SliceOp>(op);
             sliceOp.getInput().getDefiningOp()->setAttr(opSplitLabel,
                                                         builder.getUnitAttr());
@@ -901,7 +833,6 @@ void OpSplit::runOnOperation() {
           }
         } else if (k < startOps[i] && k >= endOps[i]) {
           op->setAttr(opSplitLabel, builder.getUnitAttr());
-          op->setAttr("OpHorizontalSplit 6", builder.getUnitAttr());
         }
         k++;
       }

@@ -37,6 +37,19 @@ template <int N = 8> bool hasNBitSignedQType(Type type) {
                   .getStorageTypeIntegralWidth() == N);
 }
 
+Type getValElementType(Value tensor);
+
+ArrayRef<int64_t> getValShape(Value tensor);
+
+template <typename To, typename From>
+ArrayRef<To> castArrayRef(ArrayRef<From> ref) {
+  std::vector<To> output;
+  for (auto val : ref) {
+    output.push_back(static_cast<To>(val));
+  }
+  return ArrayRef<To>(output);
+}
+
 template <typename T> bool checkBinaryCompatibility(T op) {
   auto lhsType = op.getLhs().getType().template cast<ShapedType>();
   auto rhsType = op.getRhs().getType().template cast<ShapedType>();

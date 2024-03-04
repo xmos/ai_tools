@@ -81,4 +81,12 @@ bool hasOnlySpatialPadding(DenseIntElementsAttr attr) {
   return values[{0, 0}] == 0 && values[{0, 1}] == 0 && values[{3, 0}] == 0 &&
          values[{3, 1}] == 0;
 }
+
+Type getValElementType(Value tensor) {
+  return tensor.getType().template cast<RankedTensorType>().getElementType();
+}
+
+ArrayRef<int64_t> getValShape(Value tensor) {
+  return tensor.getType().template cast<RankedTensorType>().getShape();
+}
 } // namespace mlir::xcore::utils

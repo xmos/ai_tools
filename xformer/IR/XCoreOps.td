@@ -463,4 +463,18 @@ def XC_Bsign8Op : XC_Op<"bsign_8", [Pure]> {
   let results = (outs TensorOf<[I32]> : $output);
 }
 
+def XC_Blob_UnaryI16Op : XC_Op<"blob_unaryi16", [Pure]> {
+  let summary = "Blob UnaryI16 op";
+
+  let description = [{Blob UnaryI16 op.}];
+
+  let arguments = (ins
+    TensorOf<[UI8]> : $op_blob,
+    TensorOf<[UI8]> : $thread_blob,
+    TensorOf<[QI16, F32]> : $input
+    );
+
+  let results = (outs TensorOf<[QI16, F32]> : $output);
+}
+
 #endif // XCORE_DIALECT

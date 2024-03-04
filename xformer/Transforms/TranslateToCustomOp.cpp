@@ -15,6 +15,8 @@ namespace mlir::xcore {
 std::vector<uint8_t> FakeScratchBufferOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Bsign8Op::buildCustomOptions() { return {}; }
 
+std::vector<uint8_t> Blob_UnaryI16Op::buildCustomOptions() { return {}; }
+
 std::vector<uint8_t> UnaryI16Op::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() { fbb.Int("type", (int32_t)getOpType()); });
@@ -259,6 +261,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<Beta_FcF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<UnaryI16Op>>(ctx);
   patterns.insert<RewriteToCustomOp<BinaryI16Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<Blob_UnaryI16Op>>(ctx);
   patterns.insert<RewriteToCustomOp<FakeScratchBufferOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));

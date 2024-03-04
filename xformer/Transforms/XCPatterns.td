@@ -98,10 +98,19 @@ def: Pat<(TFL_QuantizeOp
             : $output TensorOf<[QI16]>:$input, $qtype),
             (XC_UnaryI16Op $input, (Arith_ConstantOp (getUnaryI16BlobOrFail:$blob
             $output)), XC_UnaryI16_Requantize)>;
+// def: Pat<(TFL_DequantizeOp
+//             : $output TensorOf<[QI16]>:$input),
+//             (XC_UnaryI16Op $input, (Arith_ConstantOp
+//             (getUnaryI16BlobOrFail:$blob $output)), XC_UnaryI16_Dequantize)>;
+
+// Get op blob and thread blob as two return values
+def getBlobsForBlobUnaryI16
+    : NativeCodeCall<"getBlobsForBlobUnaryI16($_builder, $0.getDefiningOp())",
+                     2>;
+
 def: Pat<(TFL_DequantizeOp
             : $output TensorOf<[QI16]>:$input),
-            (XC_UnaryI16Op $input, (Arith_ConstantOp (getUnaryI16BlobOrFail:$blob
-            $output)), XC_UnaryI16_Dequantize)>;
+            (XC_Blob_UnaryI16Op (getBlobsForBlobUnaryI16: $ret__0 $output), $ret__1, $input)>;
 
 // Binary i16
 // If we cannot obtain the blob, we want the pattern to fail.

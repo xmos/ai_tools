@@ -337,6 +337,104 @@ DenseElementsAttr getUnaryI16Blob(PatternRewriter &rewriter, Operation *op) {
   return getBinaryI16Blob(rewriter, op, /*binaryInputs=*/false);
 }
 
+void calculateThreadSplit(int &tc, int split_size, int split_start[],
+                          int split_end[]) {
+  split_start[0] = 0;
+
+  // Alignment is to four
+  // Figure out min number of threads needed while keeping alignment
+  // By dividing split_size by four and ceil that
+  tc = std::min(tc, (split_size + 3) >> 2);
+
+  for (int i = 0; i < tc; i++) {
+    auto split = (split_size + (tc - i) - 1) / (tc - i);
+    split_size -= split;
+    if (split > 0) {
+      split_end[i] = split_start[i] + split;
+      if (i != tc - 1)
+        split_start[i + 1] = split_end[i];
+    } else {
+      break;
+    }
+  }
+
+  // Align up or down split_starts to word length = 4 bytes,
+  // so that each thread begins work at an aligned address
+  // The last thread handles remaining items, so don't modify the end
+  for (int i = 1; i < tc; i++) {
+    if ((split_start[i] & 3) >= 3) {
+      // Align up
+      split_start[i] = (split_start[i] + 3) & ~3;
+    } else {
+      // Align down
+      split_start[i] = split_start[i] & ~3;
+    }
+    split_end[i - 1] = split_start[i];
+  }
+}
+
+SmallVector<Value, 2> getBlobsForBlobUnaryI16(PatternRewriter &rewriter,
+                                              Operation *op) {
+
+  // TensorBlob, OperatorBlob, ThreadBlob, Input1, Input2, ...
+  // Output1, Output2, ...
+
+  // getUnaryI16InputTensorsSize
+  // getUnaryI16OutputTensorsSize
+  // getUnaryI16OperatorBlob
+
+  // Get input scale
+  RankedTensorType inputType =
+      op->getOperand(0).getType().dyn_cast<RankedTensorType>();
+  double inputScale = 1;
+  if (auto inputQType = inputType.getElementType()
+                            .dyn_cast<mlir::quant::UniformQuantizedType>()) {
+    inputScale = inputQType.getScale();
+  }
+
+  std::vector<uint8_t> blob;
+  // Adding op type to the beginning
+  int opBlobSize = DEQUANTIZE_INT16_TENSOR_BYTES() + 1;
+  blob.resize(opBlobSize);
+  blob[0] = 2;
+  dequantize_int16_tensor_blob((void *)((uint8_t*)blob.data() + 1), inputScale);
+
+  RankedTensorType type = RankedTensorType::get(
+      {opBlobSize}, rewriter.getIntegerType(8, /*signed=*/false));
+  auto attr = DenseIntElementsAttr::get(type, blob);
+  auto opBlob = rewriter.create<arith::ConstantOp>(op->getLoc(), type, attr);
+
+  // Upto 11 integers for five threads
+  // First integer for number of threads used
+  // Then start1, start2, ..., count1, count2, ...
+  std::vector<int> thBlob;
+  int s[5], e[5];
+  int actualthreadCount = threadCountOption;
+  calculateThreadSplit(actualthreadCount,
+                       utils::getShapedTypeSize(inputType) /
+                           utils::getTypeSize(inputType.getElementType()),
+                       s, e);
+  int threadBlobSize = actualthreadCount * 2 + 1;
+  thBlob.resize(threadBlobSize);
+  int thIndex = 0;
+  thBlob[thIndex++] = actualthreadCount;
+  for (int i = 0; i < actualthreadCount; i = i + 1) {
+    thBlob[thIndex++] = s[i];
+  }
+  for (int i = 0; i < actualthreadCount; i = i + 1) {
+    thBlob[thIndex++] = e[i] - s[i];
+  }
+
+  auto thType = RankedTensorType::get(
+      {threadBlobSize * 4}, rewriter.getIntegerType(8, /*signed=*/false));
+  auto thAttr = DenseElementsAttr::get<uint8_t>(
+      thType, ArrayRef((uint8_t *)thBlob.data(), threadBlobSize * 4));
+  auto threadBlob =
+      rewriter.create<arith::ConstantOp>(op->getLoc(), thType, thAttr);
+
+  return SmallVector<Value, 2>({opBlob, threadBlob});
+}
+
 #include "Transforms/GeneratedXCPatterns.inc"
 
 void ApplyXCPatterns::runOnOperation() {

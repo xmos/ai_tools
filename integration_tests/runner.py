@@ -198,6 +198,7 @@ class XFDeviceRuntime(AbstractXFRunner):
         self._interpreter.connect()
 
     def predict(self, inputs):
+        self._interpreter.reset()
         for i, inp in enumerate(inputs):
             self._interpreter.write_input_tensor(inp.tobytes(), tensor_num=i)
         self._interpreter.start_inference()

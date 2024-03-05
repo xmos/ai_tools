@@ -7,6 +7,7 @@ import numpy as np
 IOSERVER_INVOKE = int(0x01)
 IOSERVER_TENSOR_SEND_OUTPUT = int(0x02)
 IOSERVER_TENSOR_RECV_INPUT = int(0x03)
+IOSERVER_RESET = int(0x07)
 IOSERVER_EXIT = int(0x08)
 
 
@@ -138,6 +139,13 @@ class IOServer:
     def start_inference(self):
         # Send cmd
         self._out_ep.write(bytes([IOSERVER_INVOKE, 0, 0]), 1000)
+
+        # Send out a 0 length packet
+        self._out_ep.write(bytes([]), 1000)
+
+    def reset(self):
+        # Send cmd
+        self._out_ep.write(bytes([IOSERVER_RESET, 0, 0]), 1000)
 
         # Send out a 0 length packet
         self._out_ep.write(bytes([]), 1000)

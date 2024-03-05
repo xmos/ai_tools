@@ -1,5 +1,5 @@
 // This file is generated. Do not edit.
-// Generated on: 19.12.2023 15:59:48
+// Generated on: 05.03.2024 09:04:34
 
 #ifndef model_GEN_H
 #define model_GEN_H
@@ -8,9 +8,9 @@
 
 #ifdef SHARED_TENSOR_ARENA
   #ifndef LARGEST_TENSOR_ARENA_SIZE
-    #define LARGEST_TENSOR_ARENA_SIZE 13064
-  #elif LARGEST_TENSOR_ARENA_SIZE < 13064
-    #define LARGEST_TENSOR_ARENA_SIZE 13064
+    #define LARGEST_TENSOR_ARENA_SIZE 50608
+  #elif LARGEST_TENSOR_ARENA_SIZE < 50608
+    #define LARGEST_TENSOR_ARENA_SIZE 50608
   #endif
 #endif
 

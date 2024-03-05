@@ -1,7 +1,9 @@
 #include <string.h>
 #include <print.h>
+#include <math.h>
+#include <stdio.h>
 
-#include "model_audio.tflite.h"
+#include "model_audioi16.tflite.h"
 
 #define MEL_BINS 64
 #define MEL_Q_VALUE       30
@@ -100,25 +102,31 @@ extern "C" {
             496,501,505,510,515,520,525,530,535,540,545,550,556,561,566,571,
         }
     };
-int8_t state[64];
+    float state[64] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+                       0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+                       0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+                       0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+                       0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+                       0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+                       0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+                       0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
             
     int cnt = 0;
     int skip = 10000;
     int inputs_saved[16][64];
     int outputs_saved[16][64];
-    
-void nn_predict_masks(int *masks, int button_state, int *mels) {
+
+// TODO: replace all FLOAT with int16_t
+
+void nn_predict_masks(int *masks, int button_state, float *mels) {
     model_init(NULL);
-    int8_t *inputs = (int8_t *)model_input_ptr(0);
-    int8_t *state_inputs = (int8_t *)model_input_ptr(1);
-    int8_t *state_outputs = (int8_t *)model_output_ptr(0);
-    int8_t *outputs = (int8_t *)model_output_ptr(1);
-    memcpy(state_inputs, state, 64);
+    float *inputs = (float *)model_input_ptr(0);
+    float *state_inputs = (float *)model_input_ptr(1);
+    float *state_outputs = (float *)model_output_ptr(0);
+    float *outputs = (float *)model_output_ptr(1);
+    memcpy(state_inputs, state, sizeof(state));
     for(int i = 0; i < MEL_BINS; i++) {
-        int x = mels[i];
-        if (x < -128) x = -128;
-        if (x >  127) x = 127;
-        inputs[i] = x;
+        inputs[i] = mels[i];
     }
 #if 0
     if (skip == 0) {
@@ -130,7 +138,8 @@ void nn_predict_masks(int *masks, int button_state, int *mels) {
     model_invoke();
     int table = button_lookup[button_state & 0x7];
     for(int i = 0; i < MEL_BINS; i++) {
-        masks[i] = output_lookup[table][outputs[i]+128] << (MEL_Q_VALUE-8);
+        int converted_output = outputs[i] * 255.0;
+        masks[i] = output_lookup[table][converted_output] << (MEL_Q_VALUE-8);
     }
 #if 0
     if (skip == 0) {
@@ -160,7 +169,7 @@ void nn_predict_masks(int *masks, int button_state, int *mels) {
         skip--;
     }
 #endif
-    memcpy(state, state_outputs, 64);
+    memcpy(state, state_outputs, sizeof(state));
 }
 
 };

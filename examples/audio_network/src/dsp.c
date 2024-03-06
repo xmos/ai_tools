@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <print.h>
 #include "xmath/xmath.h"
@@ -69,10 +70,12 @@ void dsp_freq_to_time(int data_processed[], int64_t fft_input[], fft_state_t *st
 
 #include "mel.h"
 
-void dsp_calculate_mels(int mels[], int64_t fft_input[], int gain, int mel_bins,
+void dsp_calculate_mels(float mels[], int64_t fft_input[], int gain, int mel_bins,
                         int *mel_coefficients, int *mel_bins_in_overlap) {
+    int mels_int[WINDOW_SIZE/2];
     int magnitudes[WINDOW_SIZE/2+1];
-
+    float multiplier = 0.6931471806 / (1 << LOG2_16_Q_VALUE); // log2 -> ln conversion
+                                                              // Fixed point -> float conversion
     magnitudes[0            ] = abs(((int *)fft_input)[0]);
     magnitudes[WINDOW_SIZE/2] = abs(((int *)fft_input)[1]);
 
@@ -80,12 +83,12 @@ void dsp_calculate_mels(int mels[], int64_t fft_input[], int gain, int mel_bins,
         magnitudes[i/2] = hypot_i(((int *)fft_input)[i], ((int *)fft_input)[i+1]);
     }
     
-    mel_compress(mels, magnitudes,
+    mel_compress(mels_int, magnitudes,
                  mel_coefficients,
                  mel_bins_in_overlap,
                  WINDOW_SIZE/2+1, mel_bins);         // 47 us
     for(int i = 0; i < mel_bins; i++) {
-        mels[i] = (((log2_16(mels[i]) + (gain << LOG2_16_Q_VALUE) - (20 << LOG2_16_Q_VALUE)) * 21) >> LOG2_16_Q_VALUE) - 128;
+        mels[i] = (log2_16(mels_int[i]) + (gain << LOG2_16_Q_VALUE) - (20 << LOG2_16_Q_VALUE)) * multiplier;
     }
 }
 

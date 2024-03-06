@@ -106,7 +106,7 @@ void nn_data_transport_thread(chanend_t c_data, chanend_t c_children) {
     }
 }
 
-extern void nn_predict_masks(int *masks, int button_state, int *mels);
+extern void nn_predict_masks(int *masks, int button_state, float *mels);
 
 void nn_dsp_thread(uint32_t thread_number,
                    chanend_t c_parent,
@@ -114,7 +114,7 @@ void nn_dsp_thread(uint32_t thread_number,
     fft_state_t fft_state;
     int64_t fft_data[WINDOW_SIZE/2];
     int masks[MEL_BINS];
-    int mels[MEL_BINS];
+    float mels[MEL_BINS];
     int button_state = 0xF;
     SELECT_RES(
         CASE_THEN(c_parent,        go),

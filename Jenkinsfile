@@ -248,16 +248,16 @@ pipeline {
                 }
                 stage("Test") {
                     parallel {
-                        stage("Linux Test") {
-                            stage("Xformer Tests") { steps { withVenv {
+                        stage("Linux Test") { steps { script {
+                            withVenv {
                                 sh "bazel --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
-                            } } }
-                            stage("Integration Tests") { steps { runTests("host", dailyHostTest) } }
-                            stage("Notebook Tests") { steps { withVenv {
+                            }
+                            runTests("host", dailyHostTest)
+                            withVenv {
                                 sh "pip install pytest nbmake"
                                 sh "pytest --nbmake ./docs/notebooks/*.ipynb"
-                            } } }
-                        }
+                            }
+                        } } } 
                         stage("Device Test") {
                             agent { label "xcore.ai-explorer && lpddr && !macos" }
                             steps { script { runTests("device", dailyDeviceTest) } }

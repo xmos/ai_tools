@@ -211,7 +211,30 @@ pipeline {
                                 dir("xformer") {
                                     sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
                                     sh "chmod +x bazelisk-darwin-arm64"
-                                    sh "./bazelisk-darwin-arm64 build //:xcore-opt --cpu=darwin_arm64 --copt=-fvisibility=hidden --copt=-mmacosx-version-min=11.0 --linkopt=-mmacosx-version-min=11.0 --linkopt=-dead_strip --//:disable_version_check"
+                                    def compileAndRename = { arch ->
+                                        def cpuFlag = arch == 'arm64' ? 'darwin_arm64' : 'darwin_x86_64'
+                                        def outputName = "xcore-opt-${arch}"
+                                        sh """
+                                            ./bazelisk-darwin-arm64 build //:xcore-opt \\
+                                                --cpu=${cpuFlag} \\
+                                                --copt=-fvisibility=hidden \\
+                                                --copt=-mmacosx-version-min=11.0 \\
+                                                --linkopt=-mmacosx-version-min=11.0 \\
+                                                --linkopt=-dead_strip \\
+                                                --//:disable_version_check
+                                            mv bazel-bin/xcore-opt bazel-bin/${outputName}
+                                        """
+                                    }
+                                    
+                                    // Compile for both architectures and rename
+                                    compileAndRename('arm64')
+                                    compileAndRename('x86_64')
+                                    sh """
+                                        lipo -create \\
+                                            bazel-bin/xcore-opt-arm64 \\
+                                            bazel-bin/xcore-opt-x86_64 \\
+                                            -output bazel-bin/xcore-opt
+                                    """
                                 }
                                 createVenv("requirements.txt")
                                 dir("python") { withVenv {
@@ -231,6 +254,7 @@ pipeline {
                                 buildXinterpreter()
                                 createVenv("requirements.txt")
                                 withVenv { 
+                                    bat "python3 --version"
                                     dir("xformer") {
                                         bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"
                                         bat "bazelisk-windows-amd64.exe --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"

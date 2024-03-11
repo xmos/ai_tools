@@ -8,6 +8,8 @@ if(APPLE)
     execute_process(COMMAND xcrun --show-sdk-path
                     OUTPUT_VARIABLE CMAKE_OSX_SYSROOT
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build architectures for Mac OS X" FORCE)
 endif()
 # set(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk)
 

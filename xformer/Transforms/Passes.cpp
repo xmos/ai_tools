@@ -9,13 +9,14 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
   // Run pass from LCE to convert Larq ops which are in TFL custom op format to
   // Larq dialect
   pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
+  // Convert dynamic shapes in batch dimension to static
+  pm.addPass(createRemoveDynamicShapePass());
   // TFL passes
   pm.addPass(createOptimizeTransposePass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
@@ -27,12 +28,16 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createOptimizeConv2DPass());
   pm.addPass(createApplyTFLPatternsPass());
+  pm.addPass(createReplaceStridedSlicePass());
 
   // XC passes
   pm.addPass(createReplaceAddPass());
+  pm.addPass(createReplaceMaxPoolPass());
   pm.addPass(createReplaceMulPass());
-  pm.addPass(createReplaceStridedSlicePass());
+  pm.addPass(createReplaceTransposeConvPass());
   pm.addPass(createReplaceConv2DPass());
+  pm.addPass(createReplacePadPass());
+  pm.addPass(createReplaceSlicePass());
   pm.addPass(createApplyXCPatternsPass());
   // Add to pipeline only if flash image file option is provided
   if (!weightsFilenameOption.empty()) {
@@ -52,5 +57,4 @@ void registerXCorePassPipeline() {
       [](OpPassManager &passManager) { buildXCorePassPipeline(passManager); });
 }
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

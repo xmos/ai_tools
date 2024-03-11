@@ -27,6 +27,13 @@ td_library(
 )
 
 td_library(
+    name = "utils_td",
+    srcs = [
+        "Utils/Utils.td",
+    ],
+)
+
+td_library(
     name = "tfl_patterns_td",
     srcs = [
         "Transforms/TFLPatterns.td",
@@ -37,6 +44,7 @@ td_library(
         "@llvm-project//mlir:FuncTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        ":utils_td",
     ],
 )
 
@@ -48,6 +56,7 @@ td_library(
     includes = ["external/org_tensorflow", "external/lce"],
     deps = [
         ":xc_dialect_td",
+        ":utils_td",
         "@lce//larq_compute_engine/mlir:lce_ops_td_file",
         "@llvm-project//mlir:ArithOpsTdFiles",
     ],

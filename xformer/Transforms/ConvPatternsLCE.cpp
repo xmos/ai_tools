@@ -2,9 +2,9 @@
 // XMOS Public License: Version 1
 
 #include "Transforms/ConvPatterns.h"
+#include "Utils/Util.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 // Handle Larq BNN Conv2D
 LogicalResult
@@ -24,39 +24,19 @@ ReplaceBConv2DPattern::checkIfValid(lq::Bconv2dOp conv2DOp) const {
   }
 
   // Check output is I32 or QI8
-  if (!(conv2DOp.getOutput()
-            .getType()
-            .template cast<ShapedType>()
-            .getElementType()
-            .template isa<quant::QuantizedType>() &&
-        conv2DOp.getOutput()
-            .getType()
-            .template cast<ShapedType>()
-            .getElementType()
-            .template cast<quant::QuantizedType>()
-            .isSigned() &&
-        conv2DOp.getOutput()
-                .getType()
-                .template cast<ShapedType>()
-                .getElementType()
-                .template cast<quant::QuantizedType>()
-                .getStorageTypeIntegralWidth() == 8) &&
-      !(conv2DOp.getOutput()
-            .getType()
-            .template cast<ShapedType>()
-            .getElementType()
-            .isInteger(32))) {
+  auto outputElementType = conv2DOp.getOutput()
+                               .getType()
+                               .template cast<ShapedType>()
+                               .getElementType();
+  if (!utils::hasNBitSignedQType(outputElementType) &&
+      !outputElementType.isInteger(32)) {
     conv2DOp.emitError(
         "Output type must be int32(packed binary) or int8 for BConv2D!");
     return failure();
   }
 
   // If we have QI8 output, check activation function is RELU
-  if (conv2DOp.getOutput()
-          .getType()
-          .template cast<ShapedType>()
-          .getElementType()
-          .template isa<quant::QuantizedType>() &&
+  if (outputElementType.template isa<quant::QuantizedType>() &&
       !(conv2DOp.getFusedActivationFunction() == "RELU")) {
     conv2DOp.emitError("Activation function must be RELU for BConv2D int8!");
     return failure();
@@ -79,11 +59,7 @@ ReplaceBConv2DPattern::checkIfValid(lq::Bconv2dOp conv2DOp) const {
       conv2DOp.getOutput().getType().template dyn_cast<RankedTensorType>();
   auto outputDepth = outputType.getDimSize(3);
   // If we have QI8 output, check output depth is a multiple of four
-  if (conv2DOp.getOutput()
-          .getType()
-          .template cast<ShapedType>()
-          .getElementType()
-          .template isa<quant::QuantizedType>() &&
+  if (outputElementType.template isa<quant::QuantizedType>() &&
       (outputDepth % 4 != 0)) {
     conv2DOp.emitError(
         "Output depth must be a multiple of four for BConv2D int8!");
@@ -274,6 +250,15 @@ LogicalResult ReplaceBConv2DPattern::getSerializedParamsAndTensors(
     return failure();
   }
   return success();
+}
+
+LogicalResult ReplaceBConv2DPattern::getSerializedParamsAndTensors(
+    const BConvArgs &args, const Conv2DType &kt, OtType &otType,
+    llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
+    std::vector<int8_t> &weightsData, std::vector<int32_t> &thresholdsData,
+    int &scratchBytes) const {
+  return failure();
 }
 
 LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectBinaryParams(
@@ -473,5 +458,4 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
   return success();
 }
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

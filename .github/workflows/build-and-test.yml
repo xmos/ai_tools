@@ -25,16 +25,16 @@ jobs:
         python-version: [3.9]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
           ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      - uses: google-github-actions/auth@v0
+      - uses: google-github-actions/auth@v2
         continue-on-error: true
         with:
           create_credentials_file: true
@@ -94,7 +94,7 @@ jobs:
         python-version: [3.9]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -113,11 +113,11 @@ jobs:
           large-packages: false
           docker-images: false
           swap-storage: false
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      - uses: google-github-actions/auth@v0
+      - uses: google-github-actions/auth@v2
         continue-on-error: true
         with:
           create_credentials_file: true
@@ -170,22 +170,22 @@ jobs:
         python-version: [3.9]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
           ref: ${{ env.TAG_VERSION }}
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      - uses: google-github-actions/auth@v0
+      - uses: google-github-actions/auth@v2
         continue-on-error: true
         with:
           create_credentials_file: true
           credentials_json: ${{ secrets.BAZEL_REMOTE_CACHE_JSON_KEY }}
       - name: Configure pagefile
-        uses: al-cheb/configure-pagefile-action@v1.2
+        uses: al-cheb/configure-pagefile-action@v1.4
         with:
           minimum-size: 10GB
           maximum-size: 20GB

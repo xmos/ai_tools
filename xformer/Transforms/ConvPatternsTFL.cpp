@@ -4,13 +4,16 @@
 #include "Transforms/ConvPatterns.h"
 #include "Transforms/Options.h"
 #include "Utils/Diagnostics.h"
+extern "C" {
+#include "lib_nn/api/output_transform_fn_int16.h"
+#include "lib_nn/api/output_transform_fn_int16_kernel_transform.h"
+}
 
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
 #include <iomanip>
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 // TFL Conv2D Base class implementation
 // TFLConvOpType would be XC_FakeConv2D or XC_FakeDepthwiseConv2D
@@ -21,9 +24,8 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   // Get output zero point
   auto outputType =
       conv2DOp.getOutput().getType().template dyn_cast<RankedTensorType>();
-  auto outputQType =
-      outputType.getElementType()
-          .template dyn_cast<mlir::quant::UniformQuantizedType>();
+  auto outputQType = outputType.getElementType()
+                         .template dyn_cast<quant::UniformQuantizedType>();
   auto outputScale = outputQType.getScale();
   auto outputZeroPoint = outputQType.getZeroPoint();
 
@@ -31,7 +33,7 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   auto inputType =
       conv2DOp.getInput().getType().template dyn_cast<RankedTensorType>();
   auto inputQType = inputType.getElementType()
-                        .template dyn_cast<mlir::quant::UniformQuantizedType>();
+                        .template dyn_cast<quant::UniformQuantizedType>();
   auto inputScale = inputQType.getScale();
   auto inputZeroPoint = inputQType.getZeroPoint();
 
@@ -75,12 +77,11 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   ArrayRef<double> filterScales;
   if (auto filterQType =
           filterQConstOpType.getElementType()
-              .template dyn_cast<mlir::quant::UniformQuantizedType>()) {
+              .template dyn_cast<quant::UniformQuantizedType>()) {
     filterScale = filterQType.getScale();
   } else if (auto filterQType =
                  filterQConstOpType.getElementType()
-                     .template dyn_cast<
-                         mlir::quant::UniformQuantizedPerAxisType>()) {
+                     .template dyn_cast<quant::UniformQuantizedPerAxisType>()) {
     isPerChannelQuantized = true;
     filterScales = filterQType.getScales();
   } else {
@@ -163,9 +164,10 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
 
   // Init lib_nn structs
   args.Y =
-      nn::ImageGeometry(args.outputHeight, args.outputWidth, args.outputDepth);
-  args.X =
-      nn::ImageGeometry(args.inputHeight, args.inputWidth, args.inputDepth);
+      nn::ImageGeometry(args.outputHeight, args.outputWidth, args.outputDepth,
+                        /*elementBits=*/args.isI16Conv ? 16 : 8);
+  args.X = nn::ImageGeometry(args.inputHeight, args.inputWidth, args.inputDepth,
+                             /*elementBits=*/args.isI16Conv ? 16 : 8);
   args.K = nn::WindowGeometry(
       args.filterHeight, args.filterWidth, args.filterDepth, -args.padding.top,
       -args.padding.left, conv2DOp.getStrideH(), conv2DOp.getStrideW(), 1,
@@ -180,7 +182,6 @@ LogicalResult ReplaceConv2DBase<ConcreteType, TFLConvOpType>::getArgs(
   // Obtain quant error threshold from command-line option
   args.quantErrorThreshold = convQuantErrorThresholdOption;
   args.quantErrorFullCheckEnabled = convForceErrorCheckOption;
-
   return success();
 }
 
@@ -196,6 +197,15 @@ template class ReplaceConv2DBase<ReplaceDepthwiseConv2DPattern,
 // Handle TFL Conv2D specific functions
 LogicalResult ReplaceConv2DPattern::getKernelType(const TFLConvArgs &args,
                                                   Conv2DType &kt) const {
+  if (args.isI16Conv) {
+    if (args.inputDepth % 16 == 0 && args.outputDepth % 16 == 0) {
+      kt = Conv2DType::ValidDirectI16;
+      return success();
+    } else {
+      return failure();
+    }
+  }
+
   if (args.toBePadded) {
     kt = Conv2DType::PaddedIndirect;
   } else if (args.inputDepth % 32 == 0 && args.outputDepth % 16 == 0) {
@@ -245,6 +255,29 @@ LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
     return failure();
   }
   strParams.push_back(otStr);
+
+  return success();
+}
+
+//
+LogicalResult ReplaceConv2DPattern::getSerializedParamsAndTensors(
+    const TFLConvArgs &args, const Conv2DType &kt, OtType &otType,
+    llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
+    std::vector<int8_t> &weightsData, std::vector<int32_t> &mulsBiasesData,
+    int &scratchBytes) const {
+
+  assert(kt == Conv2DType::ValidDirectI16);
+  otType = OtType::Group;
+  //
+  if (failed(getConv2DValidDirectI16Params(args, strParams,
+                                           abstractKernelParams, weightsData,
+                                           mulsBiasesData, scratchBytes))) {
+    //
+    assert(strParams.size() == 3 && "strParams should contain memcpyFn params, "
+                                    "aggregateFn params, and otFn params!");
+    return failure();
+  }
 
   return success();
 }
@@ -356,8 +389,11 @@ LogicalResult ReplaceConv2DPattern::getConv2DPaddedIndirectParams(
       std::string((char *)&imToColParams, sizeof(imToColParams));
   std::string afStr = std::string((char *)&afParams, sizeof(afParams));
 
-  abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
+  auto conv2DOp = dyn_cast<FakeConv2DOp>(args.convOp);
+  abstractKernelParams = getAbstractKernelParamsForMultipleThreads(
+      args.imageRegionSplits, args.Y, conv2DOp.getOutputSubH(),
+      conv2DOp.getOutputSubW(), conv2DOp.getOutputStrideH(),
+      conv2DOp.getOutputStrideW(), conv2DOp.getInputOffset());
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;
@@ -387,8 +423,11 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidIndirectParams(
       std::string((char *)&imToColParams, sizeof(imToColParams));
   std::string afStr = std::string((char *)&afParams, sizeof(afParams));
 
-  abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
+  auto conv2DOp = dyn_cast<FakeConv2DOp>(args.convOp);
+  abstractKernelParams = getAbstractKernelParamsForMultipleThreads(
+      args.imageRegionSplits, args.Y, conv2DOp.getOutputSubH(),
+      conv2DOp.getOutputSubW(), conv2DOp.getOutputStrideH(),
+      conv2DOp.getOutputStrideW(), conv2DOp.getInputOffset());
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;
@@ -417,11 +456,64 @@ LogicalResult ReplaceConv2DPattern::getConv2DValidDirectParams(
       std::string((char *)&imToColParams, sizeof(imToColParams));
   std::string afStr = std::string((char *)&afParams, sizeof(afParams));
 
-  abstractKernelParams =
-      getAbstractKernelParamsForMultipleThreads(args.imageRegionSplits, args.Y);
+  auto conv2DOp = dyn_cast<FakeConv2DOp>(args.convOp);
+  abstractKernelParams = getAbstractKernelParamsForMultipleThreads(
+      args.imageRegionSplits, args.Y, conv2DOp.getOutputSubH(),
+      conv2DOp.getOutputSubW(), conv2DOp.getOutputStrideH(),
+      conv2DOp.getOutputStrideW(), conv2DOp.getInputOffset());
   strParams.push_back(mfStr);
   strParams.push_back(afStr);
   weightsData = rw.weights;
+  scratchBytes = 0;
+
+  return success();
+}
+
+LogicalResult ReplaceConv2DPattern::getConv2DValidDirectI16Params(
+    const TFLConvArgs &args, llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
+    std::vector<int8_t> &weightsData, std::vector<int32_t> &mulsBiasesData,
+    int &scratchBytes) const {
+
+  nn::DerefInputFn imToCol(args.X, args.K);
+  auto imToColParams = imToCol.getParams();
+
+  nn::MatMulDirectFn af(args.X, args.K, args.inputDepth);
+  auto afParams = af.getParams();
+
+  std::array<int, 4> filterShape = {args.outputDepth, args.filterHeight,
+                                    args.filterWidth, args.inputDepth};
+  nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
+      (int8_t *)args.filter.data(), filterShape, 8, args.padValue,
+      /*isI16Conv=*/true);
+
+  auto numInputCoefficients =
+      args.filterHeight * args.filterWidth * args.inputDepth;
+  std::vector<int8_t> filterOut(args.filter.size());
+  std::vector<int32_t> mulsAndBiasOut(args.bias.size() * 2);
+  output_transform_fn_int16_kernel_transform(
+      args.filter.data(), args.effectiveMultiplier.data(), args.bias.data(),
+      filterOut.data(), mulsAndBiasOut.data(), numInputCoefficients,
+      args.outputDepth);
+  otfn_int16_params_t otParams = {(int32_t)args.outputDepth};
+
+  std::string mfStr =
+      std::string((char *)&imToColParams, sizeof(imToColParams));
+  std::string afStr = std::string((char *)&afParams, sizeof(afParams));
+  std::string otStr = std::string((char *)&otParams, sizeof(otParams));
+
+  auto conv2DOp = dyn_cast<FakeConv2DOp>(args.convOp);
+  abstractKernelParams = getAbstractKernelParamsForMultipleThreads(
+      args.imageRegionSplits, args.Y, conv2DOp.getOutputSubH(),
+      conv2DOp.getOutputSubW(), conv2DOp.getOutputStrideH(),
+      conv2DOp.getOutputStrideW(), conv2DOp.getInputOffset());
+
+  strParams.push_back(mfStr);
+  strParams.push_back(afStr);
+  strParams.push_back(otStr);
+
+  weightsData = rw.weights;
+  mulsBiasesData = mulsAndBiasOut;
   scratchBytes = 0;
 
   return success();
@@ -478,6 +570,15 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
   strParams.push_back(otStr);
 
   return success();
+}
+
+LogicalResult ReplaceDepthwiseConv2DPattern::getSerializedParamsAndTensors(
+    const TFLConvArgs &args, const Conv2DType &kt, OtType &otType,
+    llvm::SmallVector<std::string> &strParams,
+    llvm::SmallVector<std::string> &abstractKernelParams,
+    std::vector<int8_t> &weightsData, std::vector<int32_t> &mulsBiasesData,
+    int &scratchBytes) const {
+  return failure();
 }
 
 LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
@@ -628,5 +729,4 @@ ReplaceDepthwiseConv2DPattern::getDepthwiseConv2DPaddedIndirectParams(
   return success();
 }
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

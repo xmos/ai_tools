@@ -10,11 +10,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
 
-#include <iomanip>
-
-namespace mlir {
-namespace xcore {
-namespace utils {
+namespace mlir::xcore::utils {
 
 LogicalResult writeDataToFile(const std::string &filename, std::string data) {
   auto outputFile = openOutputFile(filename);
@@ -121,6 +117,4 @@ readFlatBufferFileToMLIR(const std::string &filename,
   return mod;
 }
 
-} // namespace utils
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore::utils

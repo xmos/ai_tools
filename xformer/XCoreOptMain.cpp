@@ -14,6 +14,7 @@
 #include "mlir/IR/AsmState.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/FileUtilities.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -27,13 +28,19 @@
 using namespace llvm;
 using namespace mlir;
 
-// TODO:
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 // Mark all our options with this category, everything else (except for -version
 // and -help) will be hidden.
 static cl::OptionCategory XformerCategory("Xformer options");
+
+cl::opt<unsigned>
+    quadraticLookupErrorOption("xcore-quadratic-lookup-error",
+                               cl::desc("Used only for int16. Defaults to TFL "
+                                        "ops if quadratic lookup error is more "
+                                        "than provided "
+                                        "(default = 1)."),
+                               cl::init(1), cl::cat(XformerCategory));
 
 cl::opt<bool> enableBetaFloatOption("xcore-enable-beta-float",
                                     cl::desc("Enable beta float support."),
@@ -155,8 +162,7 @@ cl::opt<unsigned> convChannelwiseSplitSizeOption(
         "Specify channelwise split size for convolutions (default = 100000)."),
     cl::init(100000), cl::cat(XformerCategory), cl::Hidden);
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore
 
 static LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
                                      const OwningOpRef<ModuleOp> &mod,
@@ -349,7 +355,7 @@ int main(int argc, char **argv) {
   if (mlirIOEnabled) {
     // Parse the MLIR input file.
     std::string errorMessage;
-    auto file = openInputFile(inputFilename, &errorMessage);
+    auto file = mlir::openInputFile(inputFilename, &errorMessage);
     if (!file) {
       return failedMessage(errorMessage);
     }
@@ -384,7 +390,7 @@ int main(int argc, char **argv) {
   if (mlirIOEnabled) {
     // Print the MLIR output to stdout
     std::string errorMessage;
-    auto output = openOutputFile("-", &errorMessage);
+    auto output = mlir::openOutputFile("-", &errorMessage);
     if (!output) {
       return failedMessage(errorMessage);
     }

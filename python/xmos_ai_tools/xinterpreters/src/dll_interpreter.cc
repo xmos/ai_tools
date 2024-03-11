@@ -35,11 +35,11 @@ void add_lib_vision_ops(
   resolver->AddResizeNearestNeighbor();
   resolver->AddRound();
   resolver->AddStridedSlice();
+  resolver->AddSlice();
   resolver->AddSub();
   resolver->AddGather();
   resolver->AddFullyConnected();
   resolver->AddTranspose();
-  resolver->AddSlice();
   resolver->AddSplit();
   resolver->AddPack();
   resolver->AddUnpack();

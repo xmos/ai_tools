@@ -9,6 +9,7 @@
 namespace mlir {
 namespace xcore {
 
+extern llvm::cl::opt<unsigned> quadraticLookupErrorOption;
 extern llvm::cl::opt<bool> enableBetaFloatOption;
 extern llvm::cl::opt<unsigned> threadCountOption;
 extern llvm::cl::opt<std::string> weightsFilenameOption;

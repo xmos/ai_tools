@@ -1,12 +1,13 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
+#include "Utils/Util.h"
+
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Replace suitable TFL FullyConnected with TFL Conv2D for XCore.
@@ -30,38 +31,24 @@ struct ReplaceFCWithConv2DPattern
 
   LogicalResult matchAndRewrite(TFL::FullyConnectedOp fcOp,
                                 PatternRewriter &rewriter) const override {
-    // Check for invalid types and return
-    // Input type must be QI8
     auto fcInputElementType =
         fcOp.getInput().getType().cast<ShapedType>().getElementType();
-    if (!(fcInputElementType.isa<quant::QuantizedType>() &&
-          fcInputElementType.cast<quant::QuantizedType>().isSigned() &&
-          fcInputElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
-
-    // Filter type must be
     auto fcFilterElementType =
         fcOp.getFilter().getType().cast<ShapedType>().getElementType();
-    if (!(fcFilterElementType.isa<quant::QuantizedType>() &&
-          fcFilterElementType.cast<quant::QuantizedType>().isSigned() &&
-          fcFilterElementType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
+
+    // Check for invalid types and return
+    // Input type must be QI8 or QI16
+    if (!utils::hasNBitSignedQType<8>(fcInputElementType) &&
+        !utils::hasNBitSignedQType<16>(fcInputElementType))
       return failure();
-    }
+
+    if (!utils::hasNBitSignedQType(fcFilterElementType))
+      return failure();
 
     // If bias exists, it must be QI32
-    if (!fcOp.getBias().getType().isa<NoneType>()) {
-      auto fcBiasElementType =
-          fcOp.getBias().getType().cast<ShapedType>().getElementType();
-
-      if (!(fcBiasElementType.isa<quant::QuantizedType>() &&
-            fcBiasElementType.cast<quant::QuantizedType>().isSigned() &&
-            fcBiasElementType.cast<quant::QuantizedType>()
-                    .getStorageTypeIntegralWidth() == 32)) {
+    if (auto biasType = fcOp.getBias().getType().dyn_cast<ShapedType>()) {
+      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
         return failure();
-      }
     }
 
     if (fcOp.getWeightsFormat() != "DEFAULT") {
@@ -189,5 +176,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplaceFCWithConv2DPass() {
 
 static PassRegistration<ReplaceFCWithConv2D> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

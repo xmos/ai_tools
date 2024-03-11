@@ -144,11 +144,11 @@ struct {int adder, multiplier; } xxx[] = {
 
 int log2_16(uint32_t x) {
     int base;
-    int lookup;
+    uint32_t lookup;
     asm("clz %0, %1" : "=r" (base) : "r" (x));
     asm("shl %0, %1, %2" : "=r" (lookup) : "r" (x), "r" (base-25));
     asm("shl %0, %1, %2" : "=r" (x) : "r" (x), "r" (base-16));
-    asm("zext %0, 6" : "+r" (lookup));
+    asm("{zext %0, 6;zext %1, 16}" : "+r" (lookup), "+r" (x));
     int log_multiplier = xxx[lookup].multiplier;
     int log_adder = xxx[lookup].adder;
     return log_adder + ((log_multiplier * x) >> 16) + ((31-base)<<10);
@@ -175,17 +175,20 @@ int log2_16_64(uint64_t x) {
         return log2_16((uint32_t)x);
     }
     asm("lextract %0, %1, %2, %3, 32" : "=r" (y) : "r" ((int32_t)(x >> 32)), "r" ((uint32_t)x), "r" (base));
-    return log2_16(y) + base;
+    return log2_16(y) + (base<<10);
 }
 
 #ifdef LOCAL_LOG_MAIN
 
 int main(void) {
+    for(int i = 0; i < 64; i = i +1) {
+        printf("%d: %d %f\n", i, log2_16(i), log((float)i)/log(2.0)*8*128);
+    }
     for(int i = 1000; i < 0*(1<<30); i = i * 2 + 834) {
         printf("%d: %d %f\n", i, log2_8(i), log((float)i)/log(2.0)*8);
     }
-    for(int i = 1000; i < (1<<30); i = i * 2 + 834) {
-        printf("%d: %d %f\n", i, log2_16(i), log((float)i)/log(2.0)*8*128);
+    for(int64_t i = 100000000; i < (1LL<<60); i = i * 2 + 834) {
+        printf("%lld: %d %f\n", i, log2_16_64(i), log((float)i)/log(2.0)*8*128);
     }
 }
 

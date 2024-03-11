@@ -19,7 +19,7 @@ typedef struct {
 int dsp_time_to_freq(int64_t fft_output[], int data_to_be_processed[], fft_state_t *state);
 void dsp_freq_to_time(int data_processed[], int64_t fft_input[], fft_state_t *state);
 
-void dsp_calculate_mels(int mels[], int64_t fft_input[], int gain, int mel_bins,
+void dsp_calculate_mels(float mels_float[], int64_t fft_input[], int gain, int mel_bins,
                         int *mel_coefficients, int *mel_bins_in_overlap);
 void dsp_apply_masks(int64_t fft_output[], int masks_mel[], int enabled, int mel_bins,
                         int *mel_coefficients, int *mel_bins_in_overlap);

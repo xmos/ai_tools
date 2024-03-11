@@ -286,6 +286,8 @@ class TFLMHostInterpreter:
         tensorSize: int
         if tensorType == TensorType.INT8:
             tensorSize = 1  # int8 is 1 byte
+        elif tensorType == TensorType.INT16:
+            tensorSize = 2  # int16 is 2 bytes
         elif tensorType == TensorType.INT32:
             tensorSize = 4  # int32 is 4 bytes
         elif tensorType == TensorType.FLOAT32:
@@ -325,6 +327,8 @@ class TFLMHostInterpreter:
         tensorSize: int
         if tensorType == TensorType.INT8:
             tensorSize = 1  # int8 is 1 byte
+        elif tensorType == TensorType.INT16:
+            tensorSize = 2  # int16 is 2 bytes
         elif tensorType == TensorType.INT32:
             tensorSize = 4  # int32 is 4 bytes
         elif tensorType == TensorType.FLOAT32:
@@ -357,6 +361,8 @@ class TFLMHostInterpreter:
         tensorType = modelBuf.Subgraphs(0).Tensors(tensor_index).Type()
         if tensorType == TensorType.INT8:
             tensorSize = 1  # int8 is 1 byte
+        elif tensorType == TensorType.INT16:
+            tensorSize = 2  # int16 is 2 bytes
         elif tensorType == TensorType.INT32:
             tensorSize = 4  # int32 is 4 bytes
         elif tensorType == TensorType.FLOAT32:
@@ -393,6 +399,8 @@ class TFLMHostInterpreter:
             dtype: Union[Type[Any]]
             if modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT8:
                 dtype = np.int8
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT16:
+                dtype = np.int16
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
             elif (
@@ -463,6 +471,8 @@ class TFLMHostInterpreter:
             # Generate dictionary of tensor details
             if modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT8:
                 dtype = np.int8
+            elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT16:
+                dtype = np.int16
             elif modelBuf.Subgraphs(0).Tensors(tensorIndex).Type() == TensorType.INT32:
                 dtype = np.int32
             elif (

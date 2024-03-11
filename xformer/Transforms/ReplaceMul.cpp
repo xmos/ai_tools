@@ -4,15 +4,16 @@
 #include "IR/XCoreOps.h"
 #include "Utils/Util.h"
 
-#include "lib_nn/api/MemCpyFn.hpp"
+extern "C" {
+#include "lib_nn/api/nn_layers.h"
+}
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "tensorflow/compiler/mlir/lite/utils/validators.h"
 
-namespace mlir {
-namespace xcore {
+namespace mlir::xcore {
 
 namespace {
 // Replace TFL Mul with Mul for XCore.
@@ -36,73 +37,29 @@ struct ReplaceMulPattern : public OpRewritePattern<TFL::MulOp> {
   LogicalResult matchAndRewrite(TFL::MulOp mulOp,
                                 PatternRewriter &rewriter) const override {
 
-    // Check for invalid types and return
-    // We don't currently handle the unusual case where both input shapes have
-    // to be broadcasted. Either both input shapes must match the output or one
-    // of the inputs has to be broadcasted.
-    if (failed(utils::hasSameShape(
-            mulOp.getRhs().getType().cast<ShapedType>(),
-            mulOp.getOutput().getType().cast<ShapedType>())) &&
-        failed(utils::hasSameShape(
-            mulOp.getLhs().getType().cast<ShapedType>(),
-            mulOp.getOutput().getType().cast<ShapedType>()))) {
+    if (!utils::checkBinaryCompatibility(mulOp))
       return failure();
-    }
 
-    auto lhsType = mulOp.getLhs().getType().cast<ShapedType>().getElementType();
-    // Lhs type must be QI8
-    if (!(lhsType.isa<quant::QuantizedType>() &&
-          lhsType.cast<quant::QuantizedType>().isSigned() &&
-          lhsType.cast<quant::QuantizedType>().getStorageTypeIntegralWidth() ==
-              8)) {
-      return failure();
-    }
-
-    auto rhsType = mulOp.getRhs().getType().cast<ShapedType>().getElementType();
-    // Rhs type must be QI8
-    if (!(rhsType.isa<quant::QuantizedType>() &&
-          rhsType.cast<quant::QuantizedType>().isSigned() &&
-          rhsType.cast<quant::QuantizedType>().getStorageTypeIntegralWidth() ==
-              8)) {
-      return failure();
-    }
-
-    auto outputType =
-        mulOp.getOutput().getType().cast<ShapedType>().getElementType();
-    // Output type must be QI8
-    if (!(outputType.isa<quant::QuantizedType>() &&
-          outputType.cast<quant::QuantizedType>().isSigned() &&
-          outputType.cast<quant::QuantizedType>()
-                  .getStorageTypeIntegralWidth() == 8)) {
-      return failure();
-    }
-
-    auto lhsQType = lhsType.dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto lhsQType = utils::getQType(mulOp.getLhs());
     auto lhsScale = lhsQType.getScale();
     auto lhsZeroPoint = lhsQType.getZeroPoint();
 
-    auto rhsQType = rhsType.dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto rhsQType = utils::getQType(mulOp.getRhs());
     auto rhsScale = rhsQType.getScale();
     auto rhsZeroPoint = rhsQType.getZeroPoint();
 
-    auto outputQType = outputType.dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto outputQType = utils::getQType(mulOp.getOutput());
     auto outputScale = outputQType.getScale();
     auto outputZeroPoint = outputQType.getZeroPoint();
 
-    // x2 = ((S * (-b1 * x0 + -b0 * x1 +  x0 * x1) + (1<<13) >> 14) + B ) +
-    // (1<<5) >> 6
-    // B =  (b0 * b1 * S + b2)
+    nn_mul_params_t mp;
+    mul_boggle(&mp, lhsScale, rhsScale, outputScale, lhsZeroPoint, rhsZeroPoint,
+               outputZeroPoint);
+    auto mpStr = std::string((char *)&mp, sizeof(nn_mul_params_t));
 
-    double scaleRatio = lhsScale * rhsScale / outputScale;
-    int S = round(scaleRatio * pow(2, 14 + 6));
-
-    double biasTerm =
-        lhsZeroPoint * rhsZeroPoint * scaleRatio + outputZeroPoint;
-    int B = round(biasTerm * pow(2, 6));
-
-    auto xcMulOp = rewriter.create<MulOp>(
-        mulOp.getLoc(), mulOp.getType(), mulOp.getLhs(), mulOp.getRhs(),
-        rewriter.getI32IntegerAttr(B), rewriter.getI32IntegerAttr(S));
+    auto xcMulOp =
+        rewriter.create<MulOp>(mulOp.getLoc(), mulOp.getType(), mulOp.getLhs(),
+                               mulOp.getRhs(), rewriter.getStringAttr(mpStr));
     rewriter.replaceOp(mulOp, xcMulOp.getOutput());
 
     return success();
@@ -125,5 +82,4 @@ std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMulPass() {
 
 static PassRegistration<ReplaceMul> pass;
 
-} // namespace xcore
-} // namespace mlir
+} // namespace mlir::xcore

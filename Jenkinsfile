@@ -282,13 +282,13 @@ pipeline {
                             }
                         } } } 
                         stage("Mac arm64 Test") {
-                            agent { label "macos && arm64 && xcode" }
+                            agent { label "macos && arm64" }
                             steps { script {
                                 runTests("mac", dailyHostTest)
                             } }
                         }
                         stage("Mac x86_64 Test") {
-                            agent { label "macos && x86_64 && xcode" }
+                            agent { label "macos && x86_64" }
                             steps { script {
                                 runTests("mac", dailyHostTest)
                             } }

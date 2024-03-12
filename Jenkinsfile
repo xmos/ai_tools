@@ -236,7 +236,7 @@ pipeline {
                                 createVenv("requirements.txt")
                                 dir("python") { withVenv {
                                     sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
-                                    sh "python setup.py bdist_wheel --plat-name universal2"
+                                    sh "python setup.py bdist_wheel --plat-name macosx_11_0_universal2"
                                     stash name: "mac_wheel", includes: "dist/*"
                                 } }
                             }
@@ -271,7 +271,9 @@ pipeline {
                     parallel {
                         stage("Linux Test") { steps { script {
                             withVenv {
-                                sh "bazel --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+                                sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
+                                sh "chmod +x bazelisk-linux-amd64"
+                                sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
                             }
                             runTests("host", dailyHostTest)
                             withVenv {

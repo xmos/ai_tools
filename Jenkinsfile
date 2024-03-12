@@ -223,7 +223,7 @@ pipeline {
                                                     --linkopt=-mmacosx-version-min=11.0 \\
                                                     --linkopt=-dead_strip \\
                                                     --//:disable_version_check
-                                                mv bazel-bin/xcore-opt bazel-bin/${outputName}
+                                                mv bazel-bin/xcore-opt ${outputName}
                                             """
                                         }
                                         
@@ -231,12 +231,7 @@ pipeline {
                                         compileAndRename('arm64')
                                         compileAndRename('x86_64')
                                     }
-                                    sh """
-                                        lipo -create \\
-                                            bazel-bin/xcore-opt-arm64 \\
-                                            bazel-bin/xcore-opt-x86_64 \\
-                                            -output bazel-bin/xcore-opt
-                                    """
+                                    sh "lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt"
                                 }
                                 createVenv("requirements.txt")
                                 dir("python") { withVenv {

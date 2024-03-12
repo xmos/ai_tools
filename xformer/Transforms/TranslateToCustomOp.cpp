@@ -130,6 +130,55 @@ std::vector<uint8_t> PadOpV2::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> ConcatOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  auto rootMap = fbb.StartMap();
+  auto beginVec1 = fbb.StartVector("b1");
+  for (auto b : getBegin1()) {
+    fbb.Int((int32_t)b.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(beginVec1, false, false);
+  auto endVec1 = fbb.StartVector("e1");
+  for (auto e : getEnd1()) {
+    fbb.Int((int32_t)e.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(endVec1, false, false);
+  auto inOffsetVec1 = fbb.StartVector("i1");
+  for (auto i : getInputOffset1()) {
+    fbb.Int((int32_t)i.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(inOffsetVec1, false, false);
+  auto outOffsetVec1 = fbb.StartVector("o1");
+  for (auto o : getOutputOffset1()) {
+    fbb.Int((int32_t)o.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(outOffsetVec1, false, false);
+
+  auto beginVec2 = fbb.StartVector("b2");
+  for (auto b : getBegin2()) {
+    fbb.Int((int32_t)b.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(beginVec2, false, false);
+  auto endVec2 = fbb.StartVector("e2");
+  for (auto e : getEnd2()) {
+    fbb.Int((int32_t)e.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(endVec2, false, false);
+  auto inOffsetVec2 = fbb.StartVector("i2");
+  for (auto i : getInputOffset2()) {
+    fbb.Int((int32_t)i.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(inOffsetVec2, false, false);
+  auto outOffsetVec2 = fbb.StartVector("o2");
+  for (auto o : getOutputOffset2()) {
+    fbb.Int((int32_t)o.cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(outOffsetVec2, false, false);
+  fbb.EndMap(rootMap);
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
@@ -261,6 +310,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<SliceOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOpV2>>(ctx);
+  patterns.insert<RewriteToCustomOp<ConcatOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ActivationF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ConcatF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ConvF32Op>>(ctx);

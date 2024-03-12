@@ -243,7 +243,7 @@ pipeline {
                             post { cleanup { xcoreCleanSandbox() } }
                         }
                         stage("Build Windows runtime") {
-                            agent { label "windows" }
+                            agent { label "ai && windows10" }
                             steps { withVS() {
                                 setupRepo()
                                 createZip("windows")

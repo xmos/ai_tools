@@ -270,11 +270,11 @@ pipeline {
                 stage("Test") {
                     parallel {
                         stage("Linux Test") { steps { script {
-                            withVenv {
+                            withVenv { dir("xformer") {
                                 sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                                 sh "chmod +x bazelisk-linux-amd64"
                                 sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
-                            }
+                            } }
                             runTests("host", dailyHostTest)
                             withVenv {
                                 sh "pip install pytest nbmake"

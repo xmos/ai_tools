@@ -98,8 +98,8 @@ def runTests(String platform, Closure body) {
         dir ("python") {
             if (platform == "linux" | platform == "device") {
                 unstash "linux_wheel"
-            } else if (platform == "mac_arm") {
-                unstash "mac_arm_wheel"
+            } else if (platform == "mac") {
+                unstash "mac_wheel"
             }
             sh "pip install dist/*"
         }
@@ -236,35 +236,35 @@ pipeline {
                                 createVenv("requirements.txt")
                                 dir("python") { withVenv {
                                     sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
-                                    sh "python setup.py bdist_wheel --plat-name macosx_11_0_arm64"
-                                    stash name: "mac_arm_wheel", includes: "dist/*"
+                                    sh "python setup.py bdist_wheel --plat-name universal2"
+                                    stash name: "mac_wheel", includes: "dist/*"
                                 } }
                             }
                             post { cleanup { xcoreCleanSandbox() } }
                         }
-                        stage("Build Windows runtime") {
-                            agent { label "ai && windows10" }
-                            steps { withVS() {
-                                setupRepo()
-                                createZip("windows")
-                                extractRuntime()
-                                buildXinterpreter()
-                                createVenv("requirements.txt")
-                                withVenv { 
-                                    bat "python3 --version"
-                                    dir("xformer") {
-                                        bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"
-                                        bat "bazelisk-windows-amd64.exe --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
-                                    }
-                                    dir("python") { 
-                                        bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
-                                        bat "python setup.py bdist_wheel"
-                                        stash name: "windows_wheel", includes: "dist/*"
-                                    } 
-                                }
-                            } }
-                            post { cleanup { xcoreCleanSandbox() } }
-                        }
+                        // stage("Build Windows runtime") {
+                        //     agent { label "ai && windows10" }
+                        //     steps { withVS() {
+                        //         setupRepo()
+                        //         createZip("windows")
+                        //         extractRuntime()
+                        //         buildXinterpreter()
+                        //         createVenv("requirements.txt")
+                        //         withVenv { 
+                        //             bat "python3 --version"
+                        //             dir("xformer") {
+                        //                 bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"
+                        //                 bat "bazelisk-windows-amd64.exe --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
+                        //             }
+                        //             dir("python") { 
+                        //                 bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
+                        //                 bat "python setup.py bdist_wheel"
+                        //                 stash name: "windows_wheel", includes: "dist/*"
+                        //             } 
+                        //         }
+                        //     } }
+                        //     post { cleanup { xcoreCleanSandbox() } }
+                        // }
                     }
                 }
                 stage("Test") {
@@ -279,6 +279,18 @@ pipeline {
                                 sh "pytest --nbmake ./docs/notebooks/*.ipynb"
                             }
                         } } } 
+                        stage("Mac arm64 Test") {
+                            agent { label "macos && arm64 && xcode" }
+                            steps { script {
+                                runTests("mac", dailyHostTest)
+                            } }
+                        }
+                        stage("Mac x86_64 Test") {
+                            agent { label "macos && x86_64 && xcode" }
+                            steps { script {
+                                runTests("mac", dailyHostTest)
+                            } }
+                        }
                         stage("Device Test") {
                             agent { label "xcore.ai-explorer && lpddr && !macos" }
                             steps { script { runTests("device", dailyDeviceTest) } }

@@ -219,8 +219,8 @@ pipeline {
                                                 ./bazelisk-darwin-arm64 build //:xcore-opt \\
                                                     --cpu=${cpuFlag} \\
                                                     --copt=-fvisibility=hidden \\
-                                                    --copt=-mmacosx-version-min=10.14 \\
-                                                    --linkopt=-mmacosx-version-min=10.14 \\
+                                                    --copt=-mmacosx-version-min=10.15 \\
+                                                    --linkopt=-mmacosx-version-min=10.15 \\
                                                     --linkopt=-dead_strip \\
                                                     --//:disable_version_check
                                                 mv bazel-bin/xcore-opt ${outputName}
@@ -236,7 +236,7 @@ pipeline {
                                 createVenv("requirements.txt")
                                 dir("python") { withVenv {
                                     sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
-                                    sh "python setup.py bdist_wheel --plat macosx_10_14_universal2"
+                                    sh "python setup.py bdist_wheel --plat macosx_10_15_universal2"
                                     stash name: "mac_wheel", includes: "dist/*"
                                 } }
                             }
@@ -282,13 +282,13 @@ pipeline {
                             }
                         } } } 
                         stage("Mac arm64 Test") {
-                            agent { label "macos && arm64" }
+                            agent { label "macos && arm64 && !macos_10_14" }
                             steps { script {
                                 runTests("mac", dailyHostTest)
                             } }
                         }
                         stage("Mac x86_64 Test") {
-                            agent { label "macos && x86_64" }
+                            agent { label "macos && x86_64 && !macos_10_14" }
                             steps { script {
                                 runTests("mac", dailyHostTest)
                             } }

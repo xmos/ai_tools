@@ -113,7 +113,7 @@ def runTests(String platform, Closure body) {
             withTools(params.TOOLS_VERSION) {
                 body()
             }
-        } else if (platform == "host") {
+        } else if (platform == "linux" | platform == "mac") {
             body()
         }
         junit "**/*_junit.xml"

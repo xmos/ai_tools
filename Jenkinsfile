@@ -211,24 +211,26 @@ pipeline {
                                 dir("xformer") {
                                     sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
                                     sh "chmod +x bazelisk-darwin-arm64"
-                                    def compileAndRename = { arch ->
-                                        def cpuFlag = arch == 'arm64' ? 'darwin_arm64' : 'darwin_x86_64'
-                                        def outputName = "xcore-opt-${arch}"
-                                        sh """
-                                            ./bazelisk-darwin-arm64 build //:xcore-opt \\
-                                                --cpu=${cpuFlag} \\
-                                                --copt=-fvisibility=hidden \\
-                                                --copt=-mmacosx-version-min=11.0 \\
-                                                --linkopt=-mmacosx-version-min=11.0 \\
-                                                --linkopt=-dead_strip \\
-                                                --//:disable_version_check
-                                            mv bazel-bin/xcore-opt bazel-bin/${outputName}
-                                        """
+                                    script {
+                                        def compileAndRename = { arch ->
+                                            def cpuFlag = arch == 'arm64' ? 'darwin_arm64' : 'darwin_x86_64'
+                                            def outputName = "xcore-opt-${arch}"
+                                            sh """
+                                                ./bazelisk-darwin-arm64 build //:xcore-opt \\
+                                                    --cpu=${cpuFlag} \\
+                                                    --copt=-fvisibility=hidden \\
+                                                    --copt=-mmacosx-version-min=11.0 \\
+                                                    --linkopt=-mmacosx-version-min=11.0 \\
+                                                    --linkopt=-dead_strip \\
+                                                    --//:disable_version_check
+                                                mv bazel-bin/xcore-opt bazel-bin/${outputName}
+                                            """
+                                        }
+                                        
+                                        // Compile for both architectures and rename
+                                        compileAndRename('arm64')
+                                        compileAndRename('x86_64')
                                     }
-                                    
-                                    // Compile for both architectures and rename
-                                    compileAndRename('arm64')
-                                    compileAndRename('x86_64')
                                     sh """
                                         lipo -create \\
                                             bazel-bin/xcore-opt-arm64 \\

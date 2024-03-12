@@ -36,7 +36,7 @@ def buildXinterpreter() {
     sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
     dir("python/xmos_ai_tools/xinterpreters/build") {
         sh "cmake .."
-        sh "cmake --build . -t install --parallel 4 --config Release"
+        sh "cmake --build . -t install --parallel 8 --config Release"
     }
 }
 
@@ -286,12 +286,14 @@ pipeline {
                             steps { script {
                                 runTests("mac", dailyHostTest)
                             } }
+                            post { cleanup {xcoreCleanSandbox() } }
                         }
                         stage("Mac x86_64 Test") {
                             agent { label "macos && x86_64 && !macos_10_14" }
                             steps { script {
                                 runTests("mac", dailyHostTest)
                             } }
+                            post { cleanup {xcoreCleanSandbox() } }
                         }
                         stage("Device Test") {
                             agent { label "xcore.ai-explorer && lpddr && !macos" }

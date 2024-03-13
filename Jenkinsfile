@@ -169,7 +169,7 @@ pipeline {
             extractRuntime()
             buildXinterpreter() 
             script {
-              docker.image('tensorflow/build:2.15-python3.10').inside('-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools') {
+              docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools") {
                 dir("xformer") {
                   sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                   sh "chmod +x bazelisk-linux-amd64"

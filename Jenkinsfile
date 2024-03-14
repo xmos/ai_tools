@@ -124,7 +124,7 @@ pipeline {
   agent none
   environment {
     REPO = "ai_tools"
-    BAZEL_CACHE_URL = 'http://srv-bri-bld-cache:8080'
+    BAZEL_CACHE_URL = 'http://srv-bri-bld-cache.xmos.local:8080'
     BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
     REBOOT_XTAG = '1'
   }
@@ -182,7 +182,6 @@ pipeline {
                         --verbose_failures \\
                         --linkopt=-lrt \\
                         --//:disable_version_check \\
-                        --repository_cache=/ai_tools/.cache \\
                         --jobs 8
                     """
                   } 

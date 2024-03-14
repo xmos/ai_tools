@@ -187,13 +187,14 @@ pipeline {
                     """
                   } 
                 }
-                withVenv { dir("python") {
-                  sh "pip install auditwheel==5.2.0 --no-cache-dir"
-                  sh "python setup.py bdist_wheel"
-                  sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
-                  stash name: "linux_wheel", includes: "dist/*"
-                } }
               }
+              sh 'find . -type f -name "xcore-opt"'
+              withVenv { dir("python") {
+                sh "pip install auditwheel==5.2.0 --no-cache-dir"
+                sh "python setup.py bdist_wheel"
+                sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
+                stash name: "linux_wheel", includes: "dist/*"
+              } }
             }
           } } 
           stage("Build Mac runtime") {

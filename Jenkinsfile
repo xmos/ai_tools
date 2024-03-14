@@ -177,7 +177,7 @@ pipeline {
                     sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                     sh "chmod +x bazelisk-linux-amd64"
                     sh "mkdir -p /ai_tools/.bazel_cache && chown ${USER_ID}:${GROUP_ID} /ai_tools/.bazel_cache"
-                    sh "./bazelisk-linux-amd64 build //:xcore-opt --verbose_failures --linkopt=-lrt  --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --output_user_root=/ai_tools/.cache --repository_cache=/ai_tools/.cache"
+                    sh "./bazelisk-linux-amd64 build //:xcore-opt --verbose_failures --linkopt=-lrt  --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --repository_cache=/ai_tools/.cache --output_base=/ai_tools/.cache"
                   }
                   withVenv { dir("python") {
                     sh "pip install auditwheel==5.2.0 --no-cache-dir"

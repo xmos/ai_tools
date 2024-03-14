@@ -185,14 +185,14 @@ pipeline {
                         --repository_cache=/ai_tools/.cache \\
                         --jobs 8
                     """
-                  }
-                  withVenv { dir("python") {
-                    sh "pip install auditwheel==5.2.0 --no-cache-dir"
-                    sh "python setup.py bdist_wheel"
-                    sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
-                    stash name: "linux_wheel", includes: "dist/*"
-                  } }
+                  } 
                 }
+                withVenv { dir("python") {
+                  sh "pip install auditwheel==5.2.0 --no-cache-dir"
+                  sh "python setup.py bdist_wheel"
+                  sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
+                  stash name: "linux_wheel", includes: "dist/*"
+                } }
               }
             }
           } } 

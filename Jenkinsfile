@@ -171,18 +171,21 @@ pipeline {
             script {
               USER_ID = sh(script: 'id -u', returnStdout: true).trim()
               GROUP_ID = sh(script: 'id -g', returnStdout: true).trim()
-              docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools -u \"${USER_ID}:${GROUP_ID}\"") {
-                dir("xformer") {
-                  sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
-                  sh "chmod +x bazelisk-linux-amd64"
-                  sh "XDG_CACHE_HOME=/ai_tools/.cache ./bazelisk-linux-amd64 build //:xcore-opt --verbose_failures --linkopt=-lrt  --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
+              withEnv(['USER='+USER_ID, 'XDG_CACHE_HOME=/ai_tools/.cache']) {
+                docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools -u \"${USER_ID}:${GROUP_ID}\"") {
+                  dir("xformer") {
+                    sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
+                    sh "chmod +x bazelisk-linux-amd64"
+                    sh "mkdir -p /ai_tools/.bazel_cache && chown ${USER_ID}:${GROUP_ID} /ai_tools/.bazel_cache"
+                    sh "./bazelisk-linux-amd64 build //:xcore-opt --verbose_failures --linkopt=-lrt  --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --output_user_root=/ai_tools/.bazel_cache"
+                  }
+                  withVenv { dir("python") {
+                    sh "pip install auditwheel==5.2.0 --no-cache-dir"
+                    sh "python setup.py bdist_wheel"
+                    sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
+                    stash name: "linux_wheel", includes: "dist/*"
+                  } }
                 }
-                withVenv { dir("python") {
-                  sh "pip install auditwheel==5.2.0 --no-cache-dir"
-                  sh "python setup.py bdist_wheel"
-                  sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
-                  stash name: "linux_wheel", includes: "dist/*"
-                } }
               }
             }
           } } 

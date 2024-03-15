@@ -187,7 +187,9 @@ pipeline {
                   } 
                 }
               }
-              sh 'find . -type f -name "xcore-opt"'
+              XCORE_OPT_PATH = sh(script: 'find . -type f -name "xcore-opt"', returnStdout: true).trim()
+              sh "mkdir -p xformer/bazel-bin"
+              sh "cp ${XCORE_OPT_PATH} xformer/bazel-bin/xcore-opt"
               withVenv { dir("python") {
                 sh "pip install auditwheel==5.2.0 --no-cache-dir"
                 sh "python setup.py bdist_wheel"

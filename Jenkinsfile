@@ -172,10 +172,6 @@ pipeline {
               USER_ID = sh(script: 'id -u', returnStdout: true).trim()
               GROUP_ID = sh(script: 'id -g', returnStdout: true).trim()
               withEnv(['USER='+USER_ID, 'XDG_CACHE_HOME=/ai_tools/.cache', 'TEST_TMPDIR=/ai_tools/.cache', 'TMPDIR=/ai_tools/.cache']) {
-                sh "chown -R ${USER_ID}:${GROUP_ID} /ai_tools/.cache"
-                sh "chown -R ${USER_ID}:${GROUP_ID} /ai_tools/xformer"
-                sh "chmod -R u+rX /ai_tools/.cache"
-                sh "chmod -R u+rX /ai_tools/xformer"
                 docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -v ${env.WORKSPACE}:/ai_tools -w /ai_tools -u \"${USER_ID}:${GROUP_ID}\"") {
                   dir("xformer") {
                     sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"

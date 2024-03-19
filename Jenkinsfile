@@ -165,8 +165,10 @@ pipeline {
       stage("Build host wheels") {
         parallel {
           stage("Build linux runtime") { steps {
-            withTools(params.TOOLS_VERSION) { createZip("linux") }
-            extractRuntime()
+            dir("python/xmos_ai_tools/runtime") {
+              unstash "release_archive"
+              sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
+            }
             script {
               USER_ID = sh(script: 'id -u', returnStdout: true).trim()
               GROUP_ID = sh(script: 'id -g', returnStdout: true).trim()

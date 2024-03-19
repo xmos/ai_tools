@@ -175,10 +175,12 @@ pipeline {
                   sh "curl -LO https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.sh"
                   sh "chmod +x cmake-3.28.3-linux-x86_64.sh"
                   sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"
-                  withEnv(["PATH+CMK=${env.WORKSPACE}/bin:$PATH"]) {
-                    sh "./bin/cmake --version"
-                    sh "cmake --version"
-                    buildXinterpreter()
+                  sh "./bin/cmake --version"
+                  CMAKE_PATH = sh(script: "pwd", returnStdout: true).trim() + "/bin/cmake"
+                  sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
+                  dir("python/xmos_ai_tools/xinterpreters/build") {
+                    sh "${CMAKE_PATH} .."
+                    sh "${CMAKE_PATH} --build . -t install --parallel 8 --config Release"
                   }
                   dir("xformer") {
                     sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"

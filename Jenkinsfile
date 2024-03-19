@@ -174,6 +174,12 @@ pipeline {
               withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
                 docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -u \"${USER_ID}:${GROUP_ID}\"") {
                   dir("xformer") {
+                    sh "curl https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.sh"
+                    sh "chmod +x cmake-3.28.3-linux-x86_64.sh"
+                    sh "mkdir -p cmake-3.28.3-linux-x86_64"
+                    sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}/cmake-3.28.3-linux-x86_64"
+                    sh "export PATH=${env.WORKSPACE}/cmake-3.28.3-linux-x86_64/bin:$PATH"
+                    sh "cmake --version"
                     sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                     sh "chmod +x bazelisk-linux-amd64"
                     sh """

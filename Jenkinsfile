@@ -176,9 +176,10 @@ pipeline {
                   sh "chmod +x cmake-3.28.3-linux-x86_64.sh"
                   sh "mkdir -p cmake-3.28.3-linux-x86_64"
                   sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}/cmake-3.28.3-linux-x86_64"
-                  sh "export PATH=${env.WORKSPACE}/cmake-3.28.3-linux-x86_64/bin:$PATH"
-                  sh "cmake --version"
-                  buildXinterpreter() 
+                  withEnv(["PATH+CMK=${env.WORKSPACE}/cmake-3.28.3-linux-x86_64/bin:$PATH"]) {
+                    sh "cmake --version"
+                    buildXinterpreter()
+                  }
                   dir("xformer") {
                     sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                     sh "chmod +x bazelisk-linux-amd64"

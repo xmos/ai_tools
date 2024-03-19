@@ -174,7 +174,7 @@ pipeline {
                 docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -u \"${USER_ID}:${GROUP_ID}\"") {
                   sh "curl -LO https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.sh"
                   sh "chmod +x cmake-3.28.3-linux-x86_64.sh"
-                  sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}/cmake-3.28.3-linux-x86_64"
+                  sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"
                   withEnv(["PATH+CMK=${env.WORKSPACE}/bin:$PATH"]) {
                     sh "./bin/cmake --version"
                     sh "cmake --version"

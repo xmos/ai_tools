@@ -113,3 +113,4 @@ examples/app_yolov8_classification/xcore_flash_binary.out
 examples/app_yolov8_classification/yolov8n-cls.onnx
 examples/app_yolov8_classification/yolov8n-cls.pt
 examples/app_yolov8_classification/yolov8n-cls_saved_model/
+examples/app_denoising/data

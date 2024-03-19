@@ -62,40 +62,28 @@ struct ReplaceConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
       beginValues1[i] = 0;
       sizeValues1[i] = in_shp1[i];
       beginValues2[i] = i == axis ? in_shp1[i] : 0;
-      sizeValues2[i] = i == axis ? in_shp2[i] : in_shp1[i] + in_shp2[i];
+      sizeValues2[i] = in_shp2[i];
     }
     const size_t dtype_size = utils::getTypeSize(elementType);
-    int begin_dst1[5], end_dst1[5], in_offsets1[4], out_offsets1[4],
-        shape_dst1[5];
 
     // Cast beginValues and sizeValues to int* for slice_memcpy_get_params
-    size_t totalElements1 = dtype_size;
-    int begin1[5], size1[5], shape1[5];
+    int begin1[5], size1[5], shape[5], begin2[5], size2[5];
+    int begin_dst1[5], end_dst1[5], in_offsets1[4], out_offsets1[4],
+        shape_dst1[5];
+    int begin_dst2[5], end_dst2[5], in_offsets2[4], out_offsets2[4],
+        shape_dst2[5];
     for (int i = 0; i < rank; i++) {
       begin1[i] = beginValues1[i];
       size1[i] = sizeValues1[i];
-      shape1[i] = outputType.getShape()[i];
-      totalElements1 *= shape1[i];
-    }
-    int begin_dst2[5], end_dst2[5], in_offsets2[4], out_offsets2[4],
-        shape_dst2[5];
-
-    // Cast beginValues and sizeValues to int* for slice_memcpy_get_params
-    size_t totalElements2 = dtype_size;
-    int begin2[5], size2[5], shape2[5];
-    for (int i = 0; i < rank; i++) {
       begin2[i] = beginValues2[i];
       size2[i] = sizeValues2[i];
-      shape2[i] = outputType.getShape()[i];
-      totalElements2 *= shape2[i];
+      shape[i] = outputType.getShape()[i];
     }
 
     slice_memcpy_get_params(begin_dst1, end_dst1, in_offsets1, out_offsets1,
-                            shape_dst1, begin1, size1, shape1, dtype_size,
-                            rank);
+                            shape_dst1, begin1, size1, shape, dtype_size, rank);
     slice_memcpy_get_params(begin_dst2, end_dst2, in_offsets2, out_offsets2,
-                            shape_dst2, begin2, size2, shape2, dtype_size,
-                            rank);
+                            shape_dst2, begin2, size2, shape, dtype_size, rank);
 
     auto binaryObjectConcatOp = rewriter.create<ConcatOp>(
         concatOp.getLoc(), concatOp.getType(), values[0], values[1],

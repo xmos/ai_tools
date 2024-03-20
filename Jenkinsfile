@@ -181,7 +181,7 @@ pipeline {
                   CMAKE_PATH = sh(script: "pwd", returnStdout: true).trim() + "/bin/cmake"
                   sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
                   dir("python/xmos_ai_tools/xinterpreters/build") {
-                    sh "${CMAKE_PATH} .."
+                    sh "CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ${CMAKE_PATH} .."
                     sh "${CMAKE_PATH} --build . -t install --parallel 8 --config Release"
                   }
                   dir("xformer") {
@@ -191,15 +191,18 @@ pipeline {
                       ./bazelisk-linux-amd64 build //:xcore-opt \\
                         --verbose_failures \\
                         --linkopt=-lrt \\
+                        --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
                         --//:disable_version_check \\
                         --jobs 8
                     """
-                  } 
+                  }
+                  dir("python") {
+                    sh "python setup.py bdist_wheel"
+                  }
                 }
               }
               withVenv { dir("python") {
                 sh "pip install auditwheel==5.2.0 --no-cache-dir"
-                sh "python setup.py bdist_wheel"
                 sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
                 stash name: "linux_wheel", includes: "dist/*"
               } }

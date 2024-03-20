@@ -192,6 +192,7 @@ pipeline {
                         --verbose_failures \\
                         --linkopt=-lrt \\
                         --//:disable_version_check \\
+                        --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
                         --jobs 8
                     """
                   } 

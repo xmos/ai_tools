@@ -397,7 +397,8 @@ SmallVector<Value, 2> getBlobsForBlobUnaryI16(PatternRewriter &rewriter,
   int opBlobSize = DEQUANTIZE_INT16_TENSOR_BYTES() + 1;
   blob.resize(opBlobSize);
   blob[0] = 2;
-  dequantize_int16_tensor_blob((void *)((uint8_t*)blob.data() + 1), inputScale);
+  std::string errMsg(ERR_MSG_DESCRIPTOR_FAIL_BYTES(), '\0');
+  dequantize_int16_tensor_blob((void *)((uint8_t*)blob.data() + 1), inputScale, errMsg.data());
 
   RankedTensorType type = RankedTensorType::get(
       {opBlobSize}, rewriter.getIntegerType(8, /*signed=*/false));

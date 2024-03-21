@@ -179,10 +179,9 @@ pipeline {
                   sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"
                   sh "./bin/cmake --version"
                   CMAKE_PATH = sh(script: "pwd", returnStdout: true).trim() + "/bin/cmake"
-                  environment {
-                    PATH = ${CMAKE_PATH}:${env.PATH}
+                  withEnv(["PATH+CMAKE=${CMAKE_PATH}"]) {
+                    sh "CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
                   }
-                  sh "CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
                   dir("xformer") {
                     sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                     sh "chmod +x bazelisk-linux-amd64"

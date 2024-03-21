@@ -14,25 +14,20 @@ def setupRepo() {
   }
 }
 
-def createZip(String platform) {
+def createDeviceZip() {
   script {
     dir("xformer") { sh "./version_check.sh" }
     dir("third_party/lib_tflite_micro") {
       sh "mkdir -p build"
       dir("build") {
-        if (platform == "device") {
-          sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
-          sh "make create_zip -j8"
-        } else {
-          sh "cmake -G 'Unix Makefiles' .. -DLIB_NAME=tflitemicro_${platform}"
-          sh "make create_zip -j8" 
-        }
+        sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
+        sh "make create_zip -j8"
       }
     }
   }
 }
 
-def buildXinterpreter() {
+def buildXinterpreterAndHostLib() {
   sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
   dir("python/xmos_ai_tools/xinterpreters/build") {
     sh "cmake .."
@@ -40,12 +35,10 @@ def buildXinterpreter() {
   }
 }
 
-def extractRuntime() {
-  sh "mv third_party/lib_tflite_micro/build/release_archive.zip python/xmos_ai_tools/runtime"
+def extractDeviceZipAndHeaders() {
   dir("python/xmos_ai_tools/runtime") {
-    sh "unzip release_archive.zip"
-    sh "rm release_archive.zip"
     unstash "release_archive"
+    sh "unzip release_archive.zip"
     sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
   }
 }
@@ -158,7 +151,7 @@ pipeline {
           setupRepo()
           createVenv("requirements.txt")
           withVenv { sh "pip install -r requirements.txt" }
-          withVenv { withTools(params.TOOLS_VERSION) { createZip("device") } }
+          withVenv { withTools(params.TOOLS_VERSION) { createDeviceZip() } }
           dir("third_party/lib_tflite_micro/build/") {
             stash name: "release_archive", includes: "release_archive.zip"
           }
@@ -171,10 +164,7 @@ pipeline {
         parallel {
           stage("Build linux runtime") {
             steps {
-              dir("python/xmos_ai_tools/runtime") {
-                unstash "release_archive"
-                sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
-              }
+              extractDeviceZipAndHeaders()
               script {
                 USER_ID = sh(script: 'id -u', returnStdout: true).trim()
                 withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
@@ -184,15 +174,10 @@ pipeline {
                     sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"
                     sh "./bin/cmake --version"
                     CMAKE_PATH = sh(script: "pwd", returnStdout: true).trim() + "/bin"
-                    // Have to add this option due to https://github.com/actions/checkout/issues/760
-                    // and https://github.blog/2022-04-12-git-security-vulnerability-announced/
-                    // This was preventing setuptools-scm from detecting the version as it uses git
-                    // sh "git config --global --add safe.directory ${env.WORKSPACE}"
-                    // sh "git config --global --add safe.directory ${env.WORKSPACE}/third_party/lib_nn"
-                    // sh "git config --global --add safe.directory ${env.WORKSPACE}/third_party/lib_tflite_micro"
-                    // sh "git config --global --add safe.directory ${env.WORKSPACE}/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro"
                     sh "git describe --tags"
-                    // build host lib
+                    // Build Xinterpreter and Host lib
+                    // Instead of using buildXinterpreterAndHostLib(), we are building it
+                    // directly here as we want to specify the compiler
                     sh "PATH=${CMAKE_PATH}:${env.PATH} CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
                     dir("xformer") {
                       sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
@@ -231,9 +216,8 @@ pipeline {
             agent { label "macos && arm64 && xcode" }
             steps {
               setupRepo()
-              createZip("mac_arm")
-              extractRuntime()
-              buildXinterpreter()
+              extractDeviceZipAndHeaders()
+              buildXinterpreterAndHostLib()
               // TODO: Fix this, use a rule for the fat binary instead of manually combining
               dir("xformer") {
                 sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"

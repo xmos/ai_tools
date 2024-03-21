@@ -133,11 +133,6 @@ std::vector<uint8_t> PadOpV2::buildCustomOptions() {
 std::vector<uint8_t> ConcatOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
-  auto beginVec1 = fbb.StartVector("b1");
-  for (auto b : getBegin1()) {
-    fbb.Int((int32_t)b.cast<IntegerAttr>().getInt());
-  }
-  fbb.EndVector(beginVec1, false, false);
   auto endVec1 = fbb.StartVector("e1");
   for (auto e : getEnd1()) {
     fbb.Int((int32_t)e.cast<IntegerAttr>().getInt());
@@ -154,11 +149,7 @@ std::vector<uint8_t> ConcatOp::buildCustomOptions() {
   }
   fbb.EndVector(outOffsetVec1, false, false);
 
-  auto beginVec2 = fbb.StartVector("b2");
-  for (auto b : getBegin2()) {
-    fbb.Int((int32_t)b.cast<IntegerAttr>().getInt());
-  }
-  fbb.EndVector(beginVec2, false, false);
+  fbb.Int("b", (int32_t)getBegin());
   auto endVec2 = fbb.StartVector("e2");
   for (auto e : getEnd2()) {
     fbb.Int((int32_t)e.cast<IntegerAttr>().getInt());

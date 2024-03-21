@@ -87,11 +87,12 @@ struct ReplaceConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
 
     auto binaryObjectConcatOp = rewriter.create<ConcatOp>(
         concatOp.getLoc(), concatOp.getType(), values[0], values[1],
-        rewriter.getI32ArrayAttr(begin_dst1),
+        // we don't need begin1: always 0
         rewriter.getI32ArrayAttr(end_dst1),
         rewriter.getI32ArrayAttr(in_offsets1),
         rewriter.getI32ArrayAttr(out_offsets1),
-        rewriter.getI32ArrayAttr(begin_dst2),
+        // begin2 is always 0 apart from last element:
+        rewriter.getI32IntegerAttr(begin_dst2[4]),
         rewriter.getI32ArrayAttr(end_dst2),
         rewriter.getI32ArrayAttr(in_offsets2),
         rewriter.getI32ArrayAttr(out_offsets2));

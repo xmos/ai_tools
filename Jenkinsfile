@@ -179,12 +179,11 @@ pipeline {
                 USER_ID = sh(script: 'id -u', returnStdout: true).trim()
                 withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
                   docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION}") {
-                    // get latest pip
-                    // sh "pip uninstall pip --yes"
-                    sh "wget https://bootstrap.pypa.io/get-pip.py"
-                    sh "python get-pip.py"
-                    // install cmake
-                    sh "pip install cmake"
+                    sh "curl -LO https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.sh"
+                    sh "chmod +x cmake-3.28.3-linux-x86_64.sh"
+                    sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"
+                    sh "./bin/cmake --version"
+                    CMAKE_PATH = sh(script: "pwd", returnStdout: true).trim() + "/bin"
                     // Have to add this option due to https://github.com/actions/checkout/issues/760
                     // and https://github.blog/2022-04-12-git-security-vulnerability-announced/
                     // This was preventing setuptools-scm from detecting the version as it uses git
@@ -194,7 +193,7 @@ pipeline {
                     // sh "git config --global --add safe.directory ${env.WORKSPACE}/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro"
                     sh "git describe --tags"
                     // build host lib
-                    sh "CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
+                    sh "PATH=${CMAKE_PATH}:${env.PATH} CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
                     dir("xformer") {
                       sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                       sh "chmod +x bazelisk-linux-amd64"

@@ -22,10 +22,10 @@ def createZip(String platform) {
       dir("build") {
         if (platform == "device") {
           sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
-          sh "make create_zip -j4"
+          sh "make create_zip -j8"
         } else {
           sh "cmake -G 'Unix Makefiles' .. -DLIB_NAME=tflitemicro_${platform}"
-          sh "make create_zip -j4" 
+          sh "make create_zip -j8" 
         }
       }
     }
@@ -170,6 +170,7 @@ pipeline {
               sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
             }
             script {
+              USER_ID = sh(script: 'id -u', returnStdout: true).trim()
               withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
                 docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -u root:root") {
                   // get latest pip

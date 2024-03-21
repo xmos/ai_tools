@@ -174,14 +174,14 @@ pipeline {
               GROUP_ID = sh(script: 'id -g', returnStdout: true).trim()
               withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
                 docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -u \"${USER_ID}:${GROUP_ID}\"") {
-                  sh "curl -LO https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.sh"
-                  sh "chmod +x cmake-3.28.3-linux-x86_64.sh"
-                  sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"
-                  sh "./bin/cmake --version"
-                  CMAKE_PATH = sh(script: "pwd", returnStdout: true).trim() + "/bin/cmake"
-                  withEnv(["PATH+CMAKE=${CMAKE_PATH}"]) {
-                    sh "CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
-                  }
+                  // get latest pip
+                  sh "pip uninstall pip --yes"
+                  sh "wget https://bootstrap.pypa.io/get-pip.py"
+                  sh "python get-pip.py"
+                  // install cmake
+                  sh "pip install cmake"
+                  // build host lib
+                  sh "CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
                   dir("xformer") {
                     sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                     sh "chmod +x bazelisk-linux-amd64"

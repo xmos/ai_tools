@@ -11,7 +11,7 @@ def generate_concatenate_model(input_shapes, axis):
     converter = tfl.TFLiteConverter.from_keras_model(model)
     def representative_dataset_gen():
         for _ in range(100):
-            yield [np.random.uniform(low=-127, high=1270, size=shp).astype(np.float32) for shp in input_shapes]
+            yield [np.random.uniform(low=-127, high=127, size=shp).astype(np.float32) for shp in input_shapes]
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     converter.representative_dataset = representative_dataset_gen
     converter.target_spec.supported_ops = [tfl.OpsSet.EXPERIMENTAL_TFLITE_BUILTINS_ACTIVATIONS_INT16_WEIGHTS_INT8]

@@ -174,13 +174,7 @@ pipeline {
               GROUP_ID = sh(script: 'id -g', returnStdout: true).trim()
               withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
                 docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -u \"${USER_ID}:${GROUP_ID}\"") {
-                  // get latest pip
-                  sh "pip uninstall pip --yes"
-                  sh "wget https://bootstrap.pypa.io/get-pip.py"
-                  sh "python get-pip.py"
-                  // install cmake
                   sh "pip install cmake"
-                  // build host lib
                   sh "CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
                   dir("xformer") {
                     sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
@@ -191,7 +185,6 @@ pipeline {
                         --linkopt=-lrt \\
                         --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
                         --//:disable_version_check \\
-                        --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
                         --jobs 8
                     """
                   }

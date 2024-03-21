@@ -200,7 +200,13 @@ pipeline {
                         --//:disable_version_check \\
                         --jobs 8
                     """
-                    sh "./bazelisk-linux-amd64 test //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
+                    sh """
+                      ./bazelisk-linux-amd64 test //Test:all \\
+                        --verbose_failures \\
+                        --test_output=errors \\
+                        --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain"  \\
+                        --//:disable_version_check
+                    """
                   }
                   dir("python") {
                     sh "python setup.py bdist_wheel"

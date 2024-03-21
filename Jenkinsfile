@@ -171,7 +171,7 @@ pipeline {
             }
             script {
               withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
-                docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -u root") {
+                docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -u root:root") {
                   // get latest pip
                   sh "pip uninstall pip --yes"
                   sh "wget https://bootstrap.pypa.io/get-pip.py"

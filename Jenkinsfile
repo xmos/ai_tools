@@ -186,6 +186,7 @@ pipeline {
                   sh "git config --global --add safe.directory /ai_tools/third_party/lib_nn"
                   sh "git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro"
                   sh "git config --global --add safe.directory /ai_tools/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro"
+                  sh "git config --global --add safe.directory ${env.WORKSPACE}"
                   sh "git describe --tags"
                   // build host lib
                   sh "CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"

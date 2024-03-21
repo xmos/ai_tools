@@ -164,7 +164,7 @@ pipeline {
           }
         } 
         post {
-          failure { xcoreCleanSandbox() }
+          unsuccessful { xcoreCleanSandbox() }
         }
       }
       stage("Build host wheels") {
@@ -226,7 +226,7 @@ pipeline {
                 } }
               }
             }
-            post { failure { xcoreCleanSandbox() } }
+            post { unsuccessful { xcoreCleanSandbox() } }
           } 
           stage("Build Mac runtime") {
             agent { label "macos && arm64 && xcode" }

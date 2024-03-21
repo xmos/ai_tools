@@ -174,16 +174,14 @@ pipeline {
               GROUP_ID = sh(script: 'id -g', returnStdout: true).trim()
               withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
                 docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -u \"${USER_ID}:${GROUP_ID}\"") {
-                  sh "curl -LO https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.sh"
-                  sh "chmod +x cmake-3.28.3-linux-x86_64.sh"
-                  sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"
-                  sh "./bin/cmake --version"
-                  CMAKE_PATH = sh(script: "pwd", returnStdout: true).trim() + "/bin/cmake"
-                  sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
-                  dir("python/xmos_ai_tools/xinterpreters/build") {
-                    sh "${CMAKE_PATH} .."
-                    sh "${CMAKE_PATH} --build . -t install --parallel 8 --config Release"
-                  }
+                  // get latest pip
+                  sh "pip uninstall pip --yes"
+                  sh "wget https://bootstrap.pypa.io/get-pip.py"
+                  sh "python get-pip.py"
+                  // install cmake
+                  sh "pip install cmake"
+                  // build host lib
+                  sh "CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
                   dir("xformer") {
                     sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
                     sh "chmod +x bazelisk-linux-amd64"
@@ -191,16 +189,19 @@ pipeline {
                       ./bazelisk-linux-amd64 build //:xcore-opt \\
                         --verbose_failures \\
                         --linkopt=-lrt \\
+                        --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
                         --//:disable_version_check \\
                         --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
                         --jobs 8
                     """
-                  } 
+                  }
+                  dir("python") {
+                    sh "python setup.py bdist_wheel"
+                  }
                 }
               }
               withVenv { dir("python") {
-                sh "pip install auditwheel==5.2.0 --no-cache-dir"
-                sh "python setup.py bdist_wheel"
+                sh "pip install patchelf auditwheel==5.2.0 --no-cache-dir"
                 sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
                 stash name: "linux_wheel", includes: "dist/*"
               } }

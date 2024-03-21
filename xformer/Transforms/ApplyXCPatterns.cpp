@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "IR/XCoreOps.h"
+#include "Utils/Diagnostics.h"
 #include "Utils/Util.h"
 
 #include "Transforms/Options.h"
@@ -175,6 +176,15 @@ DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter,
   quadratic_approximation_generator(&table, fn, inputScale, outputScale, chunks,
                                     &max_error, &square_error);
   if (max_error > quadraticLookupErrorOption) {
+    std::stringstream msg;
+    msg << "Quadratic approximation error of " << max_error
+        << " larger than set threshold of " << quadraticLookupErrorOption
+        << ", therefore reverting to reference op!" << std::endl
+        << "Inspect the output, and if suitable, set a "
+           "higher threshold with --xcore-quadratic-lookup-error."
+        << std::endl;
+    activationOp->emitWarning(
+        utils::getMsgWithLocPrefix(*activationOp, msg.str()));
     (void)rewriter.notifyMatchFailure(
         activationOp->getLoc(), "Cannot calculate quadratic approximation!");
     return {};
@@ -302,6 +312,7 @@ DenseElementsAttr getBinaryI16Blob(PatternRewriter &rewriter, Operation *op,
 
   int length;
   std::vector<uint8_t> blob;
+  std::string errMsg(ERR_MSG_DESCRIPTOR_FAIL_BYTES(), '\0');
   int succeeded;
   if (isa<TFL::QuantizeOp>(op) && inputType.getElementType().isF32()) {
     length = QUANTIZE_INT16_TENSOR_BYTES();
@@ -311,31 +322,34 @@ DenseElementsAttr getBinaryI16Blob(PatternRewriter &rewriter, Operation *op,
     length = REQUANTIZE_INT16_TENSOR_BYTES();
     blob.resize(length);
     succeeded = requantize_int16_tensor_blob((void *)blob.data(), inputScale,
-                                             outputScale);
+                                             outputScale, errMsg.data());
   } else if (isa<TFL::DequantizeOp>(op)) {
     length = DEQUANTIZE_INT16_TENSOR_BYTES();
     blob.resize(length);
-    succeeded = dequantize_int16_tensor_blob((void *)blob.data(), inputScale);
+    succeeded = dequantize_int16_tensor_blob((void *)blob.data(), inputScale,
+                                             errMsg.data());
   } else if (isa<TFL::AddOp>(op)) {
     length = ADD_INT16_TENSOR_BYTES();
     blob.resize(length);
     succeeded = add_int16_tensor_blob((void *)blob.data(), inputScale,
-                                      inputScale2, outputScale);
+                                      inputScale2, outputScale, errMsg.data());
   } else if (isa<TFL::SubOp>(op)) {
     length = ADD_INT16_TENSOR_BYTES();
     blob.resize(length);
     succeeded = add_int16_tensor_blob((void *)blob.data(), inputScale,
-                                      -inputScale2, outputScale);
+                                      -inputScale2, outputScale, errMsg.data());
   } else if (isa<TFL::MulOp>(op)) {
     length = MULTIPLY_INT16_TENSOR_BYTES();
     blob.resize(length);
-    succeeded = multiply_int16_tensor_blob((void *)blob.data(), inputScale,
-                                           inputScale2, outputScale);
+    succeeded =
+        multiply_int16_tensor_blob((void *)blob.data(), inputScale, inputScale2,
+                                   outputScale, errMsg.data());
   } else {
     llvm_unreachable("Unsupported op!");
   }
 
   if (!succeeded) {
+    op->emitWarning(utils::getMsgWithLocPrefix(*op, errMsg));
     (void)rewriter.notifyMatchFailure(op->getLoc(), "Cannot obtain blob!");
     return {};
   }

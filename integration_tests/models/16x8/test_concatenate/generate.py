@@ -29,6 +29,8 @@ def generate_concatenate_model(input_shapes, axis):
 generate_concatenate_model([(64), (64)], 0)
 generate_concatenate_model([(2, 3), (2, 3)], 1)
 generate_concatenate_model([(2, 3, 5), (2, 3, 5)], -1)
+generate_concatenate_model([(2, 3, 5), (2, 3, 7)], -1)
 generate_concatenate_model([(2, 6, 5, 2), (2, 6, 5, 2)], 1)
+generate_concatenate_model([(2, 6, 5, 2), (2, 2, 5, 2)], -3)
 generate_concatenate_model([(2, 6, 5, 2), (2, 6, 5, 2)], 3)
 

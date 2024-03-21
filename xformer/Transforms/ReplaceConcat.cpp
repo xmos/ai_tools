@@ -96,7 +96,7 @@ struct ReplaceConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
         // begin2 is always 0 apart from last element:
         rewriter.getI32IntegerAttr(begin_dst2[4]),
         rewriter.getI32ArrayAttr(end_dst2),
-        rewriter.getI32ArrayAttr(in_offsets2),
+        // in_offsets2 == in_offsets1
         rewriter.getI32ArrayAttr(out_offsets2));
 
     rewriter.replaceOp(concatOp, binaryObjectConcatOp.getOutput());

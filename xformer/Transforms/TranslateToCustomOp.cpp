@@ -138,11 +138,11 @@ std::vector<uint8_t> ConcatOp::buildCustomOptions() {
     fbb.Int((int32_t)e.cast<IntegerAttr>().getInt());
   }
   fbb.EndVector(endVec1, false, false);
-  auto inOffsetVec1 = fbb.StartVector("i1");
-  for (auto i : getInputOffset1()) {
+  auto inOffsetVec = fbb.StartVector("i");
+  for (auto i : getInputOffset()) {
     fbb.Int((int32_t)i.cast<IntegerAttr>().getInt());
   }
-  fbb.EndVector(inOffsetVec1, false, false);
+  fbb.EndVector(inOffsetVec, false, false);
   auto outOffsetVec1 = fbb.StartVector("o1");
   for (auto o : getOutputOffset1()) {
     fbb.Int((int32_t)o.cast<IntegerAttr>().getInt());
@@ -155,11 +155,6 @@ std::vector<uint8_t> ConcatOp::buildCustomOptions() {
     fbb.Int((int32_t)e.cast<IntegerAttr>().getInt());
   }
   fbb.EndVector(endVec2, false, false);
-  auto inOffsetVec2 = fbb.StartVector("i2");
-  for (auto i : getInputOffset2()) {
-    fbb.Int((int32_t)i.cast<IntegerAttr>().getInt());
-  }
-  fbb.EndVector(inOffsetVec2, false, false);
   auto outOffsetVec2 = fbb.StartVector("o2");
   for (auto o : getOutputOffset2()) {
     fbb.Int((int32_t)o.cast<IntegerAttr>().getInt());

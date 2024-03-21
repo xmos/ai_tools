@@ -135,11 +135,10 @@ def XC_ConcatOp : XC_Op<"concat", [Pure]> {
     TensorOf<[QI8, QI16, F32, I8, I32]>:$input2,
 
     I32ArrayAttr:$end1,
-    I32ArrayAttr:$input_offset1,
+    I32ArrayAttr:$input_offset,
     I32ArrayAttr:$output_offset1,
     I32Attr:$begin,
     I32ArrayAttr:$end2,
-    I32ArrayAttr:$input_offset2,
     I32ArrayAttr:$output_offset2
   );
 

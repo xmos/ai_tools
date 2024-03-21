@@ -153,73 +153,81 @@ pipeline {
     when { branch pattern: "PR-.*", comparator: "REGEXP" }
     agent { label "linux && x86_64 && !noAVX2" } 
     stages {
-      stage("Build device runtime") { steps {
-        setupRepo()
-        createVenv("requirements.txt")
-        withVenv { sh "pip install -r requirements.txt" }
-        withVenv { withTools(params.TOOLS_VERSION) { createZip("device") } }
-        dir("third_party/lib_tflite_micro/build/") {
-          stash name: "release_archive", includes: "release_archive.zip"
+      stage("Build device runtime") { 
+        steps {
+          setupRepo()
+          createVenv("requirements.txt")
+          withVenv { sh "pip install -r requirements.txt" }
+          withVenv { withTools(params.TOOLS_VERSION) { createZip("device") } }
+          dir("third_party/lib_tflite_micro/build/") {
+            stash name: "release_archive", includes: "release_archive.zip"
+          }
+        } 
+        post {
+          failure { xcoreCleanSandbox() }
         }
-      } }
+      }
       stage("Build host wheels") {
         parallel {
-          stage("Build linux runtime") { steps {
-            dir("python/xmos_ai_tools/runtime") {
-              unstash "release_archive"
-              sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
-            }
-            script {
-              USER_ID = sh(script: 'id -u', returnStdout: true).trim()
-              withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
-                docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -u root:root") {
-                  // get latest pip
-                  sh "pip uninstall pip --yes"
-                  sh "wget https://bootstrap.pypa.io/get-pip.py"
-                  sh "python get-pip.py"
-                  // install cmake
-                  sh "pip install cmake"
-                  // Have to add this option due to https://github.com/actions/checkout/issues/760
-                  // and https://github.blog/2022-04-12-git-security-vulnerability-announced/
-                  // This was preventing setuptools-scm from detecting the version as it uses git
-                  sh "git config --global --add safe.directory ${env.WORKSPACE}"
-                  sh "git config --global --add safe.directory ${env.WORKSPACE}/third_party/lib_nn"
-                  sh "git config --global --add safe.directory ${env.WORKSPACE}/third_party/lib_tflite_micro"
-                  sh "git config --global --add safe.directory ${env.WORKSPACE}/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro"
-                  sh "git describe --tags"
-                  // build host lib
-                  sh "CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
-                  dir("xformer") {
-                    sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
-                    sh "chmod +x bazelisk-linux-amd64"
-                    sh """
-                      ./bazelisk-linux-amd64 build //:xcore-opt \\
-                        --verbose_failures \\
-                        --linkopt=-lrt \\
-                        --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
-                        --//:disable_version_check \\
-                        --jobs 8
-                    """
-                    sh """
-                      ./bazelisk-linux-amd64 test //Test:all \\
-                        --verbose_failures \\
-                        --test_output=errors \\
-                        --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain"  \\
-                        --//:disable_version_check
-                    """
-                  }
-                  dir("python") {
-                    sh "python setup.py bdist_wheel"
+          stage("Build linux runtime") {
+            steps {
+              dir("python/xmos_ai_tools/runtime") {
+                unstash "release_archive"
+                sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
+              }
+              script {
+                USER_ID = sh(script: 'id -u', returnStdout: true).trim()
+                withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
+                  docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION} -u root:root") {
+                    // get latest pip
+                    sh "pip uninstall pip --yes"
+                    sh "wget https://bootstrap.pypa.io/get-pip.py"
+                    sh "python get-pip.py"
+                    // install cmake
+                    sh "pip install cmake"
+                    // Have to add this option due to https://github.com/actions/checkout/issues/760
+                    // and https://github.blog/2022-04-12-git-security-vulnerability-announced/
+                    // This was preventing setuptools-scm from detecting the version as it uses git
+                    sh "git config --global --add safe.directory ${env.WORKSPACE}"
+                    sh "git config --global --add safe.directory ${env.WORKSPACE}/third_party/lib_nn"
+                    sh "git config --global --add safe.directory ${env.WORKSPACE}/third_party/lib_tflite_micro"
+                    sh "git config --global --add safe.directory ${env.WORKSPACE}/third_party/lib_tflite_micro/lib_tflite_micro/submodules/tflite-micro"
+                    sh "git describe --tags"
+                    // build host lib
+                    sh "CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
+                    dir("xformer") {
+                      sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
+                      sh "chmod +x bazelisk-linux-amd64"
+                      sh """
+                        ./bazelisk-linux-amd64 build //:xcore-opt \\
+                          --verbose_failures \\
+                          --linkopt=-lrt \\
+                          --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
+                          --//:disable_version_check \\
+                          --jobs 8
+                      """
+                      sh """
+                        ./bazelisk-linux-amd64 test //Test:all \\
+                          --verbose_failures \\
+                          --test_output=errors \\
+                          --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain"  \\
+                          --//:disable_version_check
+                      """
+                    }
+                    dir("python") {
+                      sh "python setup.py bdist_wheel"
+                    }
                   }
                 }
+                withVenv { dir("python") {
+                  sh "pip install patchelf auditwheel==5.2.0 --no-cache-dir"
+                  sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
+                  stash name: "linux_wheel", includes: "dist/*"
+                } }
               }
-              withVenv { dir("python") {
-                sh "pip install patchelf auditwheel==5.2.0 --no-cache-dir"
-                sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
-                stash name: "linux_wheel", includes: "dist/*"
-              } }
             }
-          } } 
+            post { failure { xcoreCleanSandbox() } }
+          } 
           stage("Build Mac runtime") {
             agent { label "macos && arm64 && xcode" }
             steps {

@@ -200,6 +200,7 @@ pipeline {
                         --//:disable_version_check \\
                         --jobs 8
                     """
+                    sh "./bazelisk-linux-amd64 test //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
                   }
                   dir("python") {
                     sh "python setup.py bdist_wheel"
@@ -257,11 +258,6 @@ pipeline {
     }
     stage("Test") { parallel {
       stage("Linux Test") { steps { script {
-        withVenv { dir("xformer") {
-          sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
-          sh "chmod +x bazelisk-linux-amd64"
-          sh "./bazelisk-linux-amd64 --output_user_root=${env.BAZEL_USER_ROOT} test --remote_cache=${env.BAZEL_CACHE_URL} //Test:all --verbose_failures --test_output=errors --//:disable_version_check"
-        } }
         runTests("linux", dailyHostTest)
         withVenv {
           sh "pip install pytest nbmake"

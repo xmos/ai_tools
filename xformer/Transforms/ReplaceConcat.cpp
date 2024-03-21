@@ -53,6 +53,8 @@ struct ReplaceConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
 
     int axis = concatOp.getAxis();
     const int rank = inputType1.getRank();
+    if (axis < 0)
+      axis = rank + axis;
     auto in_shp1 = inputType1.getShape();
     auto in_shp2 = inputType2.getShape();
 

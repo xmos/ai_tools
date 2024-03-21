@@ -39,7 +39,6 @@ def extractDeviceZipAndHeaders() {
   dir("python/xmos_ai_tools/runtime") {
     unstash "release_archive"
     sh "unzip release_archive.zip"
-    sh "unzip release_archive.zip lib/libxtflitemicro.a -d ./"
   }
 }
 

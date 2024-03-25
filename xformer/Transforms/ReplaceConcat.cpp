@@ -90,14 +90,13 @@ struct ReplaceConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
     auto binaryObjectConcatOp = rewriter.create<ConcatOp>(
         concatOp.getLoc(), concatOp.getType(), values[0], values[1],
         // we don't need begin1: always 0
-        rewriter.getI32ArrayAttr(end_dst1),
-        rewriter.getI32ArrayAttr(in_offsets1),
-        rewriter.getI32ArrayAttr(out_offsets1),
+        rewriter.getI32ArrayAttr({end_dst1[3], end_dst1[4]}),
+        rewriter.getI32ArrayAttr({in_offsets1[2], in_offsets1[3]}),
+        rewriter.getI32ArrayAttr({out_offsets1[2], out_offsets1[3]}),
         // begin2 is always 0 apart from last element:
         rewriter.getI32IntegerAttr(begin_dst2[4]),
-        rewriter.getI32ArrayAttr(end_dst2),
-        // in_offsets2 == in_offsets1
-        rewriter.getI32ArrayAttr(out_offsets2));
+        rewriter.getI32ArrayAttr({end_dst2[3], end_dst2[4]}),
+        rewriter.getI32ArrayAttr({out_offsets2[2], out_offsets2[3]}));
 
     rewriter.replaceOp(concatOp, binaryObjectConcatOp.getOutput());
 

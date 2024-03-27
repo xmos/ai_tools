@@ -125,6 +125,23 @@ def XC_PadOpV2 : XC_Op<"pad_v2", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
+def XC_ConcatOp : XC_Op<"concat", [Pure]> {
+  let summary = "Concat op";
+
+  let description = [{Concat op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8, QI16, F32, I8, I32]>:$input1,
+    TensorOf<[QI8, QI16, F32, I8, I32]>:$input2,
+
+    I32Attr:$num_copies,
+    I32Attr:$size1,
+    I32Attr:$size2
+  );
+
+  let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
+}
+
 def XC_AddOp : XC_Op<"add", [Pure]> {
   let summary = "Add op";
 

@@ -130,6 +130,17 @@ std::vector<uint8_t> PadOpV2::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> ConcatOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  auto rootMap = fbb.StartMap();
+  fbb.Int("n", (int32_t)getNumCopies());
+  fbb.Int("s1", (int32_t)getSize1());
+  fbb.Int("s2", (int32_t)getSize2());
+  fbb.EndMap(rootMap);
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
@@ -261,6 +272,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<SliceOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOpV2>>(ctx);
+  patterns.insert<RewriteToCustomOp<ConcatOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ActivationF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ConcatF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ConvF32Op>>(ctx);

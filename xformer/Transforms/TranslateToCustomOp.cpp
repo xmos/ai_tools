@@ -133,33 +133,9 @@ std::vector<uint8_t> PadOpV2::buildCustomOptions() {
 std::vector<uint8_t> ConcatOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
-  auto endVec1 = fbb.StartVector("e1");
-  for (auto e : getEnd1()) {
-    fbb.Int((int32_t)e.cast<IntegerAttr>().getInt());
-  }
-  fbb.EndVector(endVec1, false, false);
-  auto inOffsetVec = fbb.StartVector("i");
-  for (auto i : getInputOffset()) {
-    fbb.Int((int32_t)i.cast<IntegerAttr>().getInt());
-  }
-  fbb.EndVector(inOffsetVec, false, false);
-  auto outOffsetVec1 = fbb.StartVector("o1");
-  for (auto o : getOutputOffset1()) {
-    fbb.Int((int32_t)o.cast<IntegerAttr>().getInt());
-  }
-  fbb.EndVector(outOffsetVec1, false, false);
-
-  fbb.Int("b", (int32_t)getBegin());
-  auto endVec2 = fbb.StartVector("e2");
-  for (auto e : getEnd2()) {
-    fbb.Int((int32_t)e.cast<IntegerAttr>().getInt());
-  }
-  fbb.EndVector(endVec2, false, false);
-  auto outOffsetVec2 = fbb.StartVector("o2");
-  for (auto o : getOutputOffset2()) {
-    fbb.Int((int32_t)o.cast<IntegerAttr>().getInt());
-  }
-  fbb.EndVector(outOffsetVec2, false, false);
+  fbb.Int("n", (int32_t)getNumCopies());
+  fbb.Int("s1", (int32_t)getSize1());
+  fbb.Int("s2", (int32_t)getSize2());
   fbb.EndMap(rootMap);
   fbb.Finish();
   return fbb.GetBuffer();

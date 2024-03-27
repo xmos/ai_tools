@@ -57,46 +57,24 @@ struct ReplaceConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
       axis = rank + axis;
     auto in_shp1 = inputType1.getShape();
     auto in_shp2 = inputType2.getShape();
-
-    int beginValues1[5], sizeValues1[5];
-    int beginValues2[5], sizeValues2[5];
-    for (int i = 0; i < rank; i++) {
-      beginValues1[i] = 0;
-      sizeValues1[i] = in_shp1[i];
-      beginValues2[i] = i == axis ? in_shp1[i] : 0;
-      sizeValues2[i] = in_shp2[i];
-    }
     const size_t dtype_size = utils::getTypeSize(elementType);
-
-    // Cast beginValues and sizeValues to int* for slice_memcpy_get_params
-    int begin1[5], size1[5], shape[5], begin2[5], size2[5];
-    int begin_dst1[5], end_dst1[5], in_offsets1[4], out_offsets1[4],
-        shape_dst1[5];
-    int begin_dst2[5], end_dst2[5], in_offsets2[4], out_offsets2[4],
-        shape_dst2[5];
-    for (int i = 0; i < rank; i++) {
-      begin1[i] = beginValues1[i];
-      size1[i] = sizeValues1[i];
-      begin2[i] = beginValues2[i];
-      size2[i] = sizeValues2[i];
-      shape[i] = outputType.getShape()[i];
+    int num_copies = 1;
+    for (int i = 0; i < axis; i++) {
+      num_copies *= in_shp1[i];
     }
-
-    slice_memcpy_get_params(begin_dst1, end_dst1, in_offsets1, out_offsets1,
-                            shape_dst1, begin1, size1, shape, dtype_size, rank);
-    slice_memcpy_get_params(begin_dst2, end_dst2, in_offsets2, out_offsets2,
-                            shape_dst2, begin2, size2, shape, dtype_size, rank);
-
+    int size1 = dtype_size;
+    int size2 = dtype_size;
+    for (int i = axis; i < rank; i++) {
+      size1 *= in_shp1[i];
+      size2 *= in_shp2[i];
+    }
+    std::cout << "num_copies: " << num_copies << std::endl;
+    std::cout << "size1: " << size1 << std::endl;
+    std::cout << "size2: " << size2 << std::endl;
     auto binaryObjectConcatOp = rewriter.create<ConcatOp>(
         concatOp.getLoc(), concatOp.getType(), values[0], values[1],
-        // we don't need begin1: always 0
-        rewriter.getI32ArrayAttr({end_dst1[3], end_dst1[4]}),
-        rewriter.getI32ArrayAttr({in_offsets1[2], in_offsets1[3]}),
-        rewriter.getI32ArrayAttr({out_offsets1[2], out_offsets1[3]}),
-        // begin2 is always 0 apart from last element:
-        rewriter.getI32IntegerAttr(begin_dst2[4]),
-        rewriter.getI32ArrayAttr({end_dst2[3], end_dst2[4]}),
-        rewriter.getI32ArrayAttr({out_offsets2[2], out_offsets2[3]}));
+        rewriter.getI32IntegerAttr(num_copies),
+        rewriter.getI32IntegerAttr(size1), rewriter.getI32IntegerAttr(size2));
 
     rewriter.replaceOp(concatOp, binaryObjectConcatOp.getOutput());
 

@@ -4,9 +4,10 @@ from tensorflow import lite as tfl
 
 i = 0
 
-def generate_concatenate_model(input_shapes, dtype, axis):
+def generate_concatenate_model(input_shapes, axis):
+    dtype = tf.int8
     input_data = [tf.keras.Input(shape=input_shape, dtype=dtype, batch_size=1) for input_shape in input_shapes]
-    concatenated_output = tf.keras.layers.Concatenate(axis=axis)(input_data)
+    concatenated_output = tf.concat(input_data, axis=axis)
     model = tf.keras.Model(inputs=input_data, outputs=concatenated_output)
     converter = tfl.TFLiteConverter.from_keras_model(model)
     if dtype == tf.int8 or dtype == tf.int16:
@@ -30,8 +31,11 @@ def generate_concatenate_model(input_shapes, dtype, axis):
     print(f'Model saved: {model_name}')
 
 
-generate_concatenate_model([(64), (64)], tf.int8, 0)
-generate_concatenate_model([(2, 3), (2, 3)], tf.int8, 1)
-generate_concatenate_model([(2, 3, 5), (2, 3, 5)], tf.int8, 0)
-generate_concatenate_model([(2, 6, 5, 2), (2, 6, 5, 2)], tf.int8, 1)
+generate_concatenate_model([(64), (64)], 0)  # 0
+generate_concatenate_model([(2, 3), (2, 3)], 1)  # 1
+generate_concatenate_model([(2, 3, 5), (2, 3, 5)], -1)  # 2
+generate_concatenate_model([(2, 3, 5), (2, 3, 7)], -1)  # 3
+generate_concatenate_model([(2, 6, 5, 2), (2, 6, 5, 2)], 1)  # 4
+generate_concatenate_model([(2, 6, 5, 2), (2, 2, 5, 2)], -3)  # 5
+generate_concatenate_model([(2, 6, 5, 2), (2, 6, 5, 2)], 3)  # 6
 

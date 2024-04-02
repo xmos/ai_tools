@@ -19,6 +19,8 @@ def dailyDeviceTest = {
         sh "pytest examples/app_mobilenetv2"
     }
     runPytestDevice("8x8/test_slice", "-n 1 --tc 1", "slice_1")
+    runPytestDevice("8x8/test_pad", "-n 1 --tc 1", "pad_1")
+    runPytestDevice("8x8/test_concatenate", "-n 1 --tc 1", "concatenate_1")
     runPytestDevice("8x8/test_lstm", "-n 1 --tc 1", "lstm_1")
     runPytestDevice("8x8/test_lstm", "-n 1", "lstm_5")
     runPytestDevice("complex_models/8x8/test_cnn_classifier", "-n 1 --tc 1", "cnn_classifier_1")

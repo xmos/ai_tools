@@ -469,8 +469,8 @@ def XC_Blob_UnaryI16Op : XC_Op<"blob_unaryi16", [Pure]> {
   let description = [{Blob UnaryI16 op.}];
 
   let arguments = (ins
+    TensorOf<[I32]> : $thread_blob,
     TensorOf<[UI8]> : $op_blob,
-    TensorOf<[UI8]> : $thread_blob,
     TensorOf<[QI16, F32]> : $input
     );
 

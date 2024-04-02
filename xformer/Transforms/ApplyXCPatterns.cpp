@@ -394,11 +394,12 @@ SmallVector<Value, 2> getBlobsForBlobUnaryI16(PatternRewriter &rewriter,
 
   std::vector<uint8_t> blob;
   // Adding op type to the beginning
-  int opBlobSize = DEQUANTIZE_INT16_TENSOR_BYTES() + 1;
+  int opBlobSize = DEQUANTIZE_INT16_TENSOR_BYTES() + 4;
   blob.resize(opBlobSize);
   blob[0] = 2;
   std::string errMsg(ERR_MSG_DESCRIPTOR_FAIL_BYTES(), '\0');
-  dequantize_int16_tensor_blob((void *)((uint8_t*)blob.data() + 1), inputScale, errMsg.data());
+  dequantize_int16_tensor_blob((void *)((uint8_t *)blob.data() + 4), inputScale,
+                               errMsg.data());
 
   RankedTensorType type = RankedTensorType::get(
       {opBlobSize}, rewriter.getIntegerType(8, /*signed=*/false));
@@ -409,31 +410,33 @@ SmallVector<Value, 2> getBlobsForBlobUnaryI16(PatternRewriter &rewriter,
   // First integer for number of threads used
   // Then start1, start2, ..., count1, count2, ...
   std::vector<int> thBlob;
-  int s[5], e[5];
-  int actualthreadCount = threadCountOption;
+  constexpr int maxThreadCount = 5;
+  int s[maxThreadCount], e[maxThreadCount];
+  int actualthreadCount = 1;
   calculateThreadSplit(actualthreadCount,
                        utils::getShapedTypeSize(inputType) /
                            utils::getTypeSize(inputType.getElementType()),
                        s, e);
-  int threadBlobSize = actualthreadCount * 2 + 1;
+  int threadBlobSize = maxThreadCount * 2;
   thBlob.resize(threadBlobSize);
   int thIndex = 0;
-  thBlob[thIndex++] = actualthreadCount;
   for (int i = 0; i < actualthreadCount; i = i + 1) {
     thBlob[thIndex++] = s[i];
-  }
-  for (int i = 0; i < actualthreadCount; i = i + 1) {
     thBlob[thIndex++] = e[i] - s[i];
   }
+  for (int i = actualthreadCount; i < maxThreadCount; i = i + 1) {
+    thBlob[thIndex++] = 0;
+    thBlob[thIndex++] = 0;
+  }
 
-  auto thType = RankedTensorType::get(
-      {threadBlobSize * 4}, rewriter.getIntegerType(8, /*signed=*/false));
-  auto thAttr = DenseElementsAttr::get<uint8_t>(
-      thType, ArrayRef((uint8_t *)thBlob.data(), threadBlobSize * 4));
+  auto thType =
+      RankedTensorType::get({threadBlobSize}, rewriter.getIntegerType(32));
+  auto thAttr = DenseElementsAttr::get<int32_t>(
+      thType, ArrayRef((int32_t *)thBlob.data(), threadBlobSize));
   auto threadBlob =
       rewriter.create<arith::ConstantOp>(op->getLoc(), thType, thAttr);
 
-  return SmallVector<Value, 2>({opBlob, threadBlob});
+  return SmallVector<Value, 2>({threadBlob, opBlob});
 }
 
 #include "Transforms/GeneratedXCPatterns.inc"

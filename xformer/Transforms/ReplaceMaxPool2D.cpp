@@ -83,10 +83,26 @@ struct ReplaceMaxPool2DPattern : public OpRewritePattern<TFL::MaxPool2DOp> {
     auto afStr = std::string((char *)&afParams, sizeof(afParams));
     auto otStr = std::string((char *)&otParams, sizeof(otParams));
 
+    // Create scratch buffer tensor
+    Value scratchTensorOp;
+    // Create scratch buffer space for all threads
+    int32_t scratchBufferSize = scratchByteParam * actualThreadCount;
+    if (scratchBufferSize > 0) {
+      ShapedType scratchType =
+          RankedTensorType::get({static_cast<long long>(scratchBufferSize)},
+                                rewriter.getIntegerType(8));
+      scratchTensorOp =
+          rewriter.create<FakeScratchBufferOp>(mPoolOp.getLoc(), scratchType);
+    } else {
+      scratchTensorOp = rewriter.create<TFL::NoValueOp>(
+          rewriter.getUnknownLoc(), rewriter.getNoneType(),
+          rewriter.getUnitAttr());
+    }
+
     auto xcMaxPool2DOp = rewriter.create<MaxPool2DOp>(
         mPoolOp.getLoc(), mPoolOp.getType(), mPoolOp.getInput(),
-        rewriter.getStringAttr(mfStr), rewriter.getStringAttr(afStr),
-        rewriter.getStringAttr(otStr),
+        scratchTensorOp, rewriter.getStringAttr(mfStr),
+        rewriter.getStringAttr(afStr), rewriter.getStringAttr(otStr),
         rewriter.getI32IntegerAttr(scratchByteParam),
         rewriter.getI32IntegerAttr(actualThreadCount), getStringArrayAttr(akp));
     rewriter.replaceOp(mPoolOp, xcMaxPool2DOp.getOutput());

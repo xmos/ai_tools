@@ -9,7 +9,7 @@
 namespace mlir::xcore::utils {
 
 size_t getTypeSize(Type type) {
-  if (auto quantType = type.dyn_cast<quant::UniformQuantizedType>()) {
+  if (auto quantType = type.dyn_cast<quant::QuantizedType>()) {
     return quantType.getStorageType().getIntOrFloatBitWidth() / 8;
   } else if (auto floatType = type.dyn_cast<FloatType>()) {
     return floatType.getWidth() / 8;

@@ -10,7 +10,7 @@ include "larq_compute_engine/mlir/ir/lce_ops.td"
 include "Utils/Utils.td"
 
 // Fold Quantfork Stats ops which are created for 16x8
-// when quantizing using TFLite convertor
+// when quantized using TFLite convertor
 def : Pat<(quantfork_StatisticsOp $input, $a, $b, $c),
           (replaceWithValue $input)>;
 

@@ -22,12 +22,7 @@ size_t getTypeSize(Type type) {
 }
 
 int getShapedTypeSize(ShapedType t) {
-  int sizeInBytes;
-  if (auto quantType = t.getElementType().dyn_cast<quant::QuantizedType>()) {
-    sizeInBytes = quantType.getStorageTypeIntegralWidth() / CHAR_BIT;
-  } else {
-    sizeInBytes = t.getElementType().getIntOrFloatBitWidth() / CHAR_BIT;
-  }
+  int sizeInBytes = getTypeSize(t.getElementType());
 
   llvm::ArrayRef<int64_t> shape = t.getShape();
   // Handle dynamic shapes

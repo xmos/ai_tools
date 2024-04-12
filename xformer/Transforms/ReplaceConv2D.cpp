@@ -168,18 +168,41 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
 
   // If FakeConv2DOp, then we want to pass in the partial output tensor, in case
   // it is being used If not, we use a no value op.
-  Value value;
+  Value partialOutputTensorOp;
   if (auto fakeConv2DOp = dyn_cast<FakeConv2DOp>(conv2DOp.getOperation())) {
-    value = fakeConv2DOp.getPartialOutput();
+    partialOutputTensorOp = fakeConv2DOp.getPartialOutput();
   } else {
-    value = rewriter.create<TFL::NoValueOp>(rewriter.getUnknownLoc(),
-                                            rewriter.getNoneType(),
-                                            rewriter.getUnitAttr());
+    partialOutputTensorOp = rewriter.create<TFL::NoValueOp>(
+        rewriter.getUnknownLoc(), rewriter.getNoneType(),
+        rewriter.getUnitAttr());
   }
+
+  // Create scratch buffer tensor for conv and for expanding I16 weights
+  Value scratchTensorOp;
+  // Create scratch buffer space for all threads
+  int32_t scratchBufferSize = scratchByteParam * actualThreadCount;
+  if (args.isI16Conv) {
+    // Create scratch buffer space for expanding weights from i8 to i16
+    scratchBufferSize += weightsData.size() * 2;
+  }
+
+  if (scratchBufferSize > 0) {
+    ShapedType scratchType =
+        RankedTensorType::get({static_cast<long long>(scratchBufferSize)},
+                              rewriter.getIntegerType(8));
+    scratchTensorOp =
+        rewriter.create<FakeScratchBufferOp>(conv2DOp.getLoc(), scratchType);
+  } else {
+    scratchTensorOp = rewriter.create<TFL::NoValueOp>(rewriter.getUnknownLoc(),
+                                                      rewriter.getNoneType(),
+                                                      rewriter.getUnitAttr());
+  }
+
   // Create the Conv2DV2 Op with the params and kernel type
   auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
       conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.getInput(),
-      weightsConstantOp, mulsBiasesOrThresholdsConstantOp, value,
+      weightsConstantOp, mulsBiasesOrThresholdsConstantOp,
+      partialOutputTensorOp, scratchTensorOp,
       rewriter.getStringAttr(kernelTypeEnumParam),
       rewriter.getStringAttr(memcpyFnParam),
       rewriter.getStringAttr(aggregateFnParam),

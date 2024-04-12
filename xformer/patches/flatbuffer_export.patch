@@ -1,22 +1,32 @@
 diff --git a/tensorflow/compiler/mlir/lite/flatbuffer_export.cc b/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
-index 1a55e517791..3b4284e09e2 100644
+index 1a55e517791..fe98618d9f4 100644
 --- a/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
 +++ b/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
-@@ -2516,7 +2516,12 @@ std::optional<BufferOffset<tflite::SubGraph>> Translator::BuildSubGraph(
-     inputs.push_back(tensor_index_map[arg]);
-   }
-   for (auto result : bb.getTerminator()->getOperands()) {
--    outputs.push_back(tensor_index_map[result]);
-+    if (auto stats_op = llvm::dyn_cast_or_null<mlir::quantfork::StatisticsOp>(
-+            result.getDefiningOp())) {
-+      outputs.push_back(tensor_index_map[stats_op.getArg()]);
-+    } else {
-+      outputs.push_back(tensor_index_map[result]);
-+    }
-   }
-   for (const auto& [from, to] : control_edges) {
-     for (int what : {from, to}) {
-@@ -2577,10 +2582,12 @@ Translator::CreateMetadataVector() {
+@@ -244,6 +244,13 @@ static bool IsConst(Operation* op) {
+              mlir::stablehlo::ConstantOp>(op);
+ }
+ 
++// We don't want to export XC scratch buffer ops
++static bool IsFakeXCOp(Operation* op) {
++  if(auto customOp = dyn_cast<mlir::TFL::CustomOp>(op)){
++    return customOp.getCustomCode().str() == "XC_fake_scratch";
++  }
++}
++
+ static bool IsTFResourceOp(Operation* op) {
+   for (const auto& operand : op->getOperands()) {
+     auto elementType = getElementTypeOrSelf(operand.getType());
+@@ -2462,6 +2469,9 @@ std::optional<BufferOffset<tflite::SubGraph>> Translator::BuildSubGraph(
+     // Skip constant ops as they don't represent a TFLite operator.
+     if (IsConst(&inst)) continue;
+ 
++    // We don't want to export XC scratch buffer ops.
++    if (IsFakeXCOp(&inst)) continue;
++
+     // Fetch operand and result tensor indices.
+     std::vector<int32_t> results;
+     results.reserve(inst.getNumResults());
+@@ -2577,10 +2587,12 @@ Translator::CreateMetadataVector() {
    }
    for (const auto& kv : metadata_) {
      const std::string& val = kv.second;
@@ -33,18 +43,3 @@ index 1a55e517791..3b4284e09e2 100644
      metadata.push_back(BuildMetadata(kv.first, value));
    }
  
-@@ -2703,7 +2710,13 @@ std::vector<SignatureDefData> BuildSignaturedef(
-     // Fetch the name from the actual operand and not rely on names from
-     // outputs as deduping can make them invalid after conversion.
-     auto& operand = term->getOpOperand(i);
--    auto unique_name = std::string(name_mapper.GetUniqueName(operand.get()));
-+    std::string unique_name;
-+    if (auto stats_op = llvm::dyn_cast_or_null<mlir::quantfork::StatisticsOp>(
-+            operand.get().getDefiningOp())) {
-+      unique_name = std::string(name_mapper.GetUniqueName(stats_op.getArg()));
-+    } else {
-+      unique_name = std::string(name_mapper.GetUniqueName(operand.get()));
-+    }
-     result[0].outputs[sig_def_outputs[i]] = unique_name;
-   }
-   if (auto name_attr = exported_name[0].dyn_cast_or_null<StringAttr>())

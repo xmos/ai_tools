@@ -219,7 +219,8 @@ pipeline {
                 extractDeviceZipAndHeaders()
                 buildXinterpreterAndHostLib()
                 createVenv("requirements.txt")
-                withVenv { 
+                withVenv {
+                  bat "pyenv global 3.9.13"
                   bat "python3 --version"
                   dir("xformer") {
                     bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"

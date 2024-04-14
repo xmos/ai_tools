@@ -222,10 +222,11 @@ pipeline {
                 withVenv {
                   bat "pyenv global 3.9.13"
                   bat "python3 --version"
+                  bat "C:/Users/xmos/.pyenv/pyenv-win/shims/python3 --version"
                   dir("xformer") {
                     bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"
                     bat "set BAZEL_VC=C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC"
-                    bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt  --action_env PYTHON_BIN_PATH=C:\\Python310\\python3.exe --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
+                    bat "bazelisk-windows-amd64.exe build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
                   }
                   dir("python") { 
                     bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"

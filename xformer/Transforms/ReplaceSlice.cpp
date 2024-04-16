@@ -69,30 +69,31 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
       return success();
     }
 
+    auto inShape = inputType.getShape();
+    auto outShape = outputType.getShape();
+
     const size_t dtype_size = utils::getTypeSize(inputElementType);
 
     int32_t start, offset, size, num_copies;
-    const int mulW = inputType.getShape()[3] * dtype_size;
+    const int mulW = inShape[3] * dtype_size;
 
-    bool slicingHW = (inputType.getShape()[2] != outputType.getShape()[2]) ||
-                     (inputType.getShape()[1] != outputType.getShape()[1]);
+    bool slicingHW = (inShape[2] != outShape[2]) || (inShape[1] != outShape[1]);
 
-    if (slicingHW && (outputType.getShape()[3] != inputType.getShape()[3]))
+    if (slicingHW && (outShape[3] != inShape[3]))
       return failure();
 
     if (slicingHW) {
-      if (inputType.getShape()[0] != 1 || outputType.getShape()[0] != 1)
+      if (inShape[0] != 1 || outShape[0] != 1)
         return failure();
-      size = outputType.getShape()[2] * mulW;
-      offset = inputType.getShape()[2] * mulW;
+      size = outShape[2] * mulW;
+      offset = inShape[2] * mulW;
       start = beginValues[1] * offset + beginValues[2] * mulW;
-      num_copies = outputType.getShape()[1];
+      num_copies = outShape[1];
     } else {
       offset = mulW;
-      size = outputType.getShape()[3] * dtype_size;
+      size = outShape[3] * dtype_size;
       start = beginValues[3] * dtype_size;
-      num_copies = outputType.getShape()[0] * outputType.getShape()[1] *
-                   outputType.getShape()[2];
+      num_copies = outShape[0] * outputType.getShape()[1] * outShape[2];
     }
     bool isVpu = start % 4 == 0 && size % 4 == 0 && offset % 4 == 0;
     auto binaryObjectSliceOp = rewriter.create<SliceOp>(

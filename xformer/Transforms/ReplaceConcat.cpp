@@ -68,10 +68,13 @@ struct ReplaceConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
       size1 *= in_shp1[i];
       size2 *= in_shp2[i];
     }
+
+    bool isVpu = size1 % 4 == 0 && size2 % 4 == 0;
     auto binaryObjectConcatOp = rewriter.create<ConcatOp>(
         concatOp.getLoc(), concatOp.getType(), values[0], values[1],
         rewriter.getI32IntegerAttr(num_copies),
-        rewriter.getI32IntegerAttr(size1), rewriter.getI32IntegerAttr(size2));
+        rewriter.getI32IntegerAttr(size1), rewriter.getI32IntegerAttr(size2),
+        rewriter.getBoolAttr(isVpu));
 
     rewriter.replaceOp(concatOp, binaryObjectConcatOp.getOutput());
 

@@ -114,16 +114,18 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
       end = paddingValues[7] * dtype_size;
       // -1 because the last memcpy is done separately, since we also need to
       // memset
-      num_copies = inShape[2] * inputType.getShape()[1] * inShape[0] - 1;
+      num_copies = inShape[2] * inShape[1] * inShape[0] - 1;
     }
+    bool isVpu =
+        start % 4 == 0 && pad_size % 4 == 0 && size % 4 == 0 && end % 4 == 0;
 
     auto binaryObjectPadOp = rewriter.create<PadOp>(
         padOp.getLoc(), padOp.getType(), padOp.getInput(),
         rewriter.getI32IntegerAttr(start), rewriter.getI32IntegerAttr(pad_size),
         rewriter.getI32IntegerAttr(size),
         rewriter.getI32IntegerAttr(num_copies),
-        rewriter.getI32IntegerAttr(zero_point),
-        rewriter.getI32IntegerAttr(end));
+        rewriter.getI32IntegerAttr(zero_point), rewriter.getI32IntegerAttr(end),
+        rewriter.getBoolAttr(isVpu));
 
     rewriter.replaceOp(padOp, binaryObjectPadOp.getOutput());
 

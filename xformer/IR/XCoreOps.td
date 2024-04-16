@@ -86,7 +86,8 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
     I32Attr:$start,
     I32Attr:$offset,
     I32Attr:$size,
-    I32Attr:$num_copies
+    I32Attr:$num_copies,
+    BoolAttr:$use_vpu
   );
 
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
@@ -105,7 +106,8 @@ def XC_PadOp : XC_Op<"pad", [Pure]> {
     I32Attr:$size,
     I32Attr:$num_copies,
     I32Attr:$zero_point,
-    I32Attr:$end
+    I32Attr:$end,
+    BoolAttr:$use_vpu
   );
 
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
@@ -124,7 +126,8 @@ def XC_ConcatOp : XC_Op<"concat", [Pure]> {
 
     I32Attr:$num_copies,
     I32Attr:$size1,
-    I32Attr:$size2
+    I32Attr:$size2,
+    BoolAttr:$use_vpu
   );
 
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);

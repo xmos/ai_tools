@@ -86,7 +86,7 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
       size = outputType.getShape()[2] * mulW;
       offset = inputType.getShape()[2] * mulW;
       start = beginValues[1] * offset + beginValues[2] * mulW;
-      num_copies = outputType.getShape()[2];
+      num_copies = outputType.getShape()[1];
     } else {
       offset = mulW;
       size = outputType.getShape()[3] * dtype_size;
@@ -94,11 +94,12 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
       num_copies = outputType.getShape()[0] * outputType.getShape()[1] *
                    outputType.getShape()[2];
     }
+    bool isVpu = start % 4 == 0 && size % 4 == 0 && offset % 4 == 0;
     auto binaryObjectSliceOp = rewriter.create<SliceOp>(
         sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput(),
         rewriter.getI32IntegerAttr(start), rewriter.getI32IntegerAttr(offset),
         rewriter.getI32IntegerAttr(size),
-        rewriter.getI32IntegerAttr(num_copies));
+        rewriter.getI32IntegerAttr(num_copies), rewriter.getBoolAttr(isVpu));
 
     rewriter.replaceOp(sliceOp, binaryObjectSliceOp.getOutput());
 

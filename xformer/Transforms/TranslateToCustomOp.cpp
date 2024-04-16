@@ -70,6 +70,7 @@ std::vector<uint8_t> SliceOp::buildCustomOptions() {
   fbb.Int("o", (int32_t)getOffset());
   fbb.Int("l", (int32_t)getSize());
   fbb.Int("n", (int32_t)getNumCopies());
+  fbb.Bool("v", (bool)getUseVpu());
   fbb.EndMap(rootMap);
   fbb.Finish();
   return fbb.GetBuffer();
@@ -84,6 +85,7 @@ std::vector<uint8_t> PadOp::buildCustomOptions() {
   fbb.Int("n", (int32_t)getNumCopies());
   fbb.Int("z", (int32_t)getZeroPoint());
   fbb.Int("e", (int32_t)getEnd());
+  fbb.Bool("v", (bool)getUseVpu());
   fbb.EndMap(rootMap);
   fbb.Finish();
   return fbb.GetBuffer();
@@ -95,6 +97,7 @@ std::vector<uint8_t> ConcatOp::buildCustomOptions() {
   fbb.Int("n", (int32_t)getNumCopies());
   fbb.Int("s1", (int32_t)getSize1());
   fbb.Int("s2", (int32_t)getSize2());
+  fbb.Bool("v", (bool)getUseVpu());
   fbb.EndMap(rootMap);
   fbb.Finish();
   return fbb.GetBuffer();

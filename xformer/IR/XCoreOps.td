@@ -275,6 +275,8 @@ def XC_MaxPool2DOp : XC_Op<"maxpool2d", [Pure]> {
 
   let arguments = (ins
     TensorOf<[QI8]>:$input,
+    // The scratch buffer tensor
+    AnyTypeOf<[TensorOf<[I8]>, NoneType]>:$scratch_tensor,
     StrAttr:$memcpy_fn_param,
     StrAttr:$aggregate_fn_param,
     StrAttr:$output_transform_fn_param,
@@ -308,6 +310,8 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
     TensorOf<[I16, I32]>:$mulsbiases_or_thresholds,
     // The partial output parameter is used when we chain convolutions
     AnyTypeOf<[TensorOf<[QI8, QI16]>, NoneType]>:$partial_output,
+    // The scratch buffer tensor
+    AnyTypeOf<[TensorOf<[I8]>, NoneType]>:$scratch_tensor,
     StrAttr:$conv2d_kernel_type,
     StrAttr:$memcpy_fn_param,
     StrAttr:$aggregate_fn_param,
@@ -320,6 +324,15 @@ def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
 
   // I32 output is for BNNs
   let results = (outs TensorOf<[QI8, QI16, I32]> : $output);
+}
+
+// This op is not exported to the flatbuffer
+def XC_FakeScratchBufferOp : XC_Op<"fake_scratch", [Pure]> {
+  let summary = "Fake scratch buffer op";
+
+  let description = [{Fake scratch buffer op.}];
+
+  let results = (outs TensorOf<[I8]> : $output);
 }
 
 def XC_FakeConv2DOp : XC_Op<"fake_conv2d", [Pure]> {

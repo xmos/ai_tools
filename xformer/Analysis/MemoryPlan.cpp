@@ -41,12 +41,12 @@ void MemoryPlan::build() {
   }
 
   funcOp.walk<WalkOrder::PreOrder>([&](Operation *op) {
-    if (op == funcOp) {
-      return;
-    }
-
     operationIds.insert({op, operationIds.size()});
     operations.push_back(op);
+
+    if (op == funcOp || llvm::isa<quantfork::StatisticsOp>(op)) {
+      return;
+    }
 
     bool isConstantOp = false;
     // TODO(renjieliu): Find a generic way to deal with const ops.
@@ -313,8 +313,10 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
   for (auto i : allocatedValuesOrderedByID) {
     offsets.push_back(i.second);
     peakUsed = std::max(peakUsed, vInfo[i.first].size + i.second);
-    LLVM_DEBUG(llvm::dbgs() << "\nValue " << vInfo[i.first].id << ", size "
-                            << vInfo[i.first].size << ", offset " << i.second);
+    LLVM_DEBUG(llvm::dbgs() << "\nValue " << vInfo[i.first].id << ", size = "
+                            << vInfo[i.first].size << ", offset = " << i.second
+                            << ", first = " << vInfo[i.first].firstUsed
+                            << ", last = " << vInfo[i.first].lastUsed);
   }
   LLVM_DEBUG(llvm::dbgs() << "\n\nPEAK USED : " << peakUsed << "\n\n");
   LLVM_DEBUG(llvm::dbgs() << "\n\n");

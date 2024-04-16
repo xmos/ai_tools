@@ -32,7 +32,7 @@ void PlanMemory::runOnOperation() {
     bool unSupportedOpsInGraph = false;
     func.walk<WalkOrder::PreOrder>([&](Operation *op) {
       if (llvm::isa<TFL::UnidirectionalSequenceLSTMOp, TFL::WhileOp, TFL::IfOp,
-                    TFL::CallOnceOp, quantfork::StatisticsOp>(op)) {
+                    TFL::CallOnceOp>(op)) {
         unSupportedOpsInGraph = true;
       }
     });
@@ -43,8 +43,8 @@ void PlanMemory::runOnOperation() {
 
       auto &m = getAnalysis<MemoryPlan>();
       int peakMemoryUsedWithOverlap, peakMemoryUsedWithoutOverlap;
-      auto offlineOffsetsWithOverlap =
-          m.getAllocatedOffsets(/*overlapOps=*/true, peakMemoryUsedWithOverlap);
+      auto offlineOffsetsWithOverlap = m.getAllocatedOffsets(
+          /*overlapOps=*/true, peakMemoryUsedWithOverlap);
       auto offlineOffsetsWithoutOverlap = m.getAllocatedOffsets(
           /*overlapOps=*/false, peakMemoryUsedWithoutOverlap);
 

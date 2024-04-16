@@ -141,14 +141,6 @@ def:
   Pat<(TFL_PadOp
            : $output TensorOf<[QI8]>:$input, (constOp
                               : $padding_op $padding_attr)),
-          (XC_PadOp $input, (getPaddingPlan $output), (getPadValue $input)), [
-            (HasOnlySpatialPadding $padding_attr),
-            (HasMultipleOfNBytesPerPixel<4> $input)
-          ]>;
-def:
-  Pat<(TFL_PadOp
-           : $output TensorOf<[QI8]>:$input, (constOp
-                              : $padding_op $padding_attr)),
           (XC_Pad3To4Op $input, (getPadValue $input)), [
             (HasOnlyChannelPadding $padding_attr),
             (Has3To4Channel $input, $output),

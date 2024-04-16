@@ -10,6 +10,7 @@
 
 extern "C" {
 #include "lib_nn/api/nn_layers.h"
+#include "lib_nn/api/vpu_memset_256.h"
 }
 
 namespace mlir::xcore {
@@ -45,80 +46,84 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
     }
 
     auto inputType = padOp.getInput().getType().cast<RankedTensorType>();
+    auto outputType = padOp.getOutput().getType().cast<RankedTensorType>();
+
     if (!inputType.hasStaticShape()) {
       return failure();
     }
 
-    Type elementType =
-        padOp.getInput().getType().cast<ShapedType>().getElementType();
+    Type elementType = inputType.getElementType();
+    const size_t dtype_size = utils::getTypeSize(elementType);
+    const int rank = inputType.getRank();
 
-    // TODO: Remove this
-    // Currently QINT8 is handled by the original XC_PadOp
-    // because this doesn't support non zero zero points or
-    // the buffer re-use optimisation.
-    if (utils::hasNBitSignedQType(elementType) && (inputType.getRank() == 4) &&
-        (inputType.getShape()[3] % 4 == 0)) {
+    if (rank != 4)
       return failure();
-    }
 
-    // TODO: Remove this as well
+    int32_t zero_point = 0;
     if (elementType.isa<quant::QuantizedType>()) {
       auto inputQType = elementType.dyn_cast<quant::UniformQuantizedType>();
-      int padValue = inputQType.getZeroPoint();
-      if (padValue != 0) {
-        return failure();
-      }
+      zero_point = BROADCAST_8_TO_32(inputQType.getZeroPoint());
     }
-
-    Type inputElementType = inputType.getElementType();
-    auto outputType = padOp.getOutput().getType().cast<RankedTensorType>();
 
     DenseElementsAttr paddingAttr;
     matchPattern(padOp.getPadding(), m_Constant(&paddingAttr));
     auto paddingValues = paddingAttr.getValues<int32_t>();
 
-    const int rank = inputType.getRank();
+    if (paddingValues[0] != 0 || paddingValues[1] != 0)
+      return failure();
 
-    int beginValues[5], sizeValues[5];
-    for (int i = 0; i < rank; i++) {
-      beginValues[i] = paddingValues[i * 2];
-      sizeValues[i] = inputType.getShape()[i];
-    }
+    bool paddingHW = false;
+    for (int i = 2; i < 6; i++)
+      if (paddingValues[i] != 0)
+        paddingHW = true;
+    if (paddingHW && (paddingValues[6] != 0 || paddingValues[7] != 0))
+      return failure();
 
-    if (utils::checkSliceNoOp(beginValues, sizeValues, outputType)) {
+    bool isNoOp = true;
+    for (int i = 0; i < 8; i++)
+      if (paddingValues[i] != 0)
+        isNoOp = false;
+
+    if (isNoOp) {
       rewriter.replaceOp(padOp, padOp.getInput());
       return success();
     }
 
-    int begin_dst[5], end_dst[5], in_offsets[4], out_offsets[4], shape_dst[5];
+    auto inShape = inputType.getShape();
+    auto outShape = outputType.getShape();
 
-    const size_t dtype_size = utils::getTypeSize(inputElementType);
-
-    // Cast beginValues and sizeValues to int* for slice_memcpy_get_params
-    size_t totalElements = dtype_size;
-    int begin[5], size[5], shape[5];
-    for (int i = 0; i < rank; i++) {
-      begin[i] = beginValues[i];
-      size[i] = sizeValues[i];
-      shape[i] = outputType.getShape()[i];
-      totalElements *= shape[i];
+    int32_t start, pad_size, size, num_copies, end;
+    const int mulW = inShape[3] * dtype_size;
+    if (paddingHW) {
+      if (outShape[0] != 1)
+        return failure();
+      size = inShape[2] * mulW;
+      pad_size = (outShape[2] - inShape[2]) * mulW;
+      start = (paddingValues[2] * outShape[2] + paddingValues[4]) * mulW;
+      end = (paddingValues[3] * outShape[2] + paddingValues[5]) * mulW;
+      // -1 because the last memcpy is done separately, since we also need to
+      // memset
+      num_copies = inShape[1] - 1;
+    } else {
+      // Pad3to4 is a special case, handled by it's own op
+      if (inShape[3] == 3 && outShape[3] == 4)
+        return failure();
+      size = mulW;
+      pad_size = (outShape[3] - inShape[3]) * dtype_size;
+      start = paddingValues[6] * dtype_size;
+      end = paddingValues[7] * dtype_size;
+      // -1 because the last memcpy is done separately, since we also need to
+      // memset
+      num_copies = inShape[2] * inputType.getShape()[1] * inShape[0] - 1;
     }
 
-    // TODO: Fix this.
-    // For now we just use vpu_memset_32 to set everything to zero
-    // this means some memory would be left over if the output size
-    // is not a multiple of 4.
-    if (totalElements % 4) {
-      return failure();
-    }
-
-    slice_memcpy_get_params(begin_dst, end_dst, in_offsets, out_offsets,
-                            shape_dst, begin, size, shape, dtype_size, rank);
-    auto binaryObjectPadOp = rewriter.create<PadOpV2>(
+    auto binaryObjectPadOp = rewriter.create<PadOp>(
         padOp.getLoc(), padOp.getType(), padOp.getInput(),
-        rewriter.getI32ArrayAttr(begin_dst), rewriter.getI32ArrayAttr(end_dst),
-        rewriter.getI32ArrayAttr(in_offsets),
-        rewriter.getI32ArrayAttr(out_offsets));
+        rewriter.getI32IntegerAttr(start), rewriter.getI32IntegerAttr(pad_size),
+        rewriter.getI32IntegerAttr(size),
+        rewriter.getI32IntegerAttr(num_copies),
+        rewriter.getI32IntegerAttr(zero_point),
+        rewriter.getI32IntegerAttr(end));
 
     rewriter.replaceOp(padOp, binaryObjectPadOp.getOutput());
 

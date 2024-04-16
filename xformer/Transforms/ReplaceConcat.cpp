@@ -68,9 +68,6 @@ struct ReplaceConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
       size1 *= in_shp1[i];
       size2 *= in_shp2[i];
     }
-    std::cout << "num_copies: " << num_copies << std::endl;
-    std::cout << "size1: " << size1 << std::endl;
-    std::cout << "size2: " << size2 << std::endl;
     auto binaryObjectConcatOp = rewriter.create<ConcatOp>(
         concatOp.getLoc(), concatOp.getType(), values[0], values[1],
         rewriter.getI32IntegerAttr(num_copies),

@@ -35,7 +35,6 @@ filegroup(
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_softmax.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_add.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_pad.cc",
-        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_pad_v2.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_concat.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_3_to_4.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_slice.cc",

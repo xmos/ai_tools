@@ -38,4 +38,9 @@ generate_concatenate_model([(2, 3, 5), (2, 3, 7)], -1)  # 3
 generate_concatenate_model([(2, 6, 5, 2), (2, 6, 5, 2)], 1)  # 4
 generate_concatenate_model([(2, 6, 5, 2), (2, 2, 5, 2)], -3)  # 5
 generate_concatenate_model([(2, 6, 5, 2), (2, 6, 5, 2)], 3)  # 6
+generate_concatenate_model([(2, 6, 5, 2)] * 8, 3)  # 6
+generate_concatenate_model([(2, 6, 5, 2)] * 9, 3)  # 6
+generate_concatenate_model([(2, 6, 5, 2)] * 16, 3)  # 6
+generate_concatenate_model([(2, 6, 5, 2)] * 33, 3)  # 6
+generate_concatenate_model([(2, 6, 5, 2)] * 40, 3)  # 6
 

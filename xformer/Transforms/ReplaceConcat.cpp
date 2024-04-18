@@ -38,43 +38,44 @@ struct ReplaceConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
                                 PatternRewriter &rewriter) const override {
 
     auto values = concatOp.getValues();
-    if (values.size() != 2) {
+    int num_inputs = values.size();
+    if (num_inputs > 16)
       return failure();
+    ArrayRef<int64_t> inputShapes[16];
+    for (int i = 0; i < num_inputs; i++) {
+      auto inputType = values[i].getType().cast<RankedTensorType>();
+      if (!inputType.hasStaticShape())
+        return failure();
+      inputShapes[i] = inputType.getShape();
     }
-
-    auto inputType1 = values[0].getType().cast<RankedTensorType>();
-    auto inputType2 = values[1].getType().cast<RankedTensorType>();
     auto outputType = concatOp.getOutput().getType().cast<RankedTensorType>();
-    if (!inputType1.hasStaticShape() || !inputType2.hasStaticShape()) {
-      return failure();
-    }
 
-    Type elementType = inputType1.getElementType();
+    Type elementType = outputType.getElementType();
 
     int axis = concatOp.getAxis();
-    const int rank = inputType1.getRank();
+    const int rank = outputType.getRank();
     if (axis < 0)
       axis = rank + axis;
-    auto in_shp1 = inputType1.getShape();
-    auto in_shp2 = inputType2.getShape();
     const size_t dtype_size = utils::getTypeSize(elementType);
     int num_copies = 1;
     for (int i = 0; i < axis; i++) {
-      num_copies *= in_shp1[i];
-    }
-    int size1 = dtype_size;
-    int size2 = dtype_size;
-    for (int i = axis; i < rank; i++) {
-      size1 *= in_shp1[i];
-      size2 *= in_shp2[i];
+      num_copies *= outputType.getShape()[i];
     }
 
-    bool isVpu = size1 % 4 == 0 && size2 % 4 == 0;
+    bool isVpu = true;
+    int32_t sizes[16];
+    for (int i = 0; i < num_inputs; i++) {
+      sizes[i] = dtype_size;
+      for (int j = axis; j < rank; j++)
+        sizes[i] *= inputShapes[i][j];
+      if (sizes[i] % 4 != 0)
+        isVpu = false;
+    }
+
     auto binaryObjectConcatOp = rewriter.create<ConcatOp>(
-        concatOp.getLoc(), concatOp.getType(), values[0], values[1],
-        rewriter.getI32IntegerAttr(num_copies),
-        rewriter.getI32IntegerAttr(size1), rewriter.getI32IntegerAttr(size2),
-        rewriter.getBoolAttr(isVpu));
+        concatOp.getLoc(), concatOp.getType(), values,
+        rewriter.getI32IntegerAttr(num_copies), rewriter.getI32ArrayAttr(sizes),
+        rewriter.getI32IntegerAttr(num_inputs), rewriter.getBoolAttr(isVpu));
 
     rewriter.replaceOp(concatOp, binaryObjectConcatOp.getOutput());
 

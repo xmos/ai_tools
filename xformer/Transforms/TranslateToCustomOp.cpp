@@ -95,8 +95,13 @@ std::vector<uint8_t> ConcatOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
   fbb.Int("n", (int32_t)getNumCopies());
-  fbb.Int("s1", (int32_t)getSize1());
-  fbb.Int("s2", (int32_t)getSize2());
+  auto sizesVec = fbb.StartVector("s");
+  auto sizes = getSizes().cast<ArrayAttr>();
+  for (int i = 0; i < 16; ++i) {
+    fbb.Int(sizes[i].cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(sizesVec, false, false);
+  fbb.Int("i", (int32_t)getNumInputs());
   fbb.Bool("v", (bool)getUseVpu());
   fbb.EndMap(rootMap);
   fbb.Finish();

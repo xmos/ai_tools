@@ -121,12 +121,11 @@ def XC_ConcatOp : XC_Op<"concat", [Pure]> {
   let description = [{Concat op.}];
 
   let arguments = (ins
-    TensorOf<[QI8, QI16, F32, I8, I32]>:$input1,
-    TensorOf<[QI8, QI16, F32, I8, I32]>:$input2,
+    Variadic<TensorOf<[QI8, QI16, F32, I8, I32]>> : $input,
 
     I32Attr:$num_copies,
-    I32Attr:$size1,
-    I32Attr:$size2,
+    I32ArrayAttr:$sizes,
+    I32Attr:$num_inputs,
     BoolAttr:$use_vpu
   );
 

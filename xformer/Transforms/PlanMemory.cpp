@@ -48,7 +48,7 @@ void PlanMemory::runOnOperation() {
       auto offlineOffsetsWithoutOverlap = m.getAllocatedOffsets(
           /*overlapOps=*/false, peakMemoryUsedWithoutOverlap);
 
-      if (peakMemoryUsedWithOverlap < peakMemoryUsedWithoutOverlap) {
+      if (peakMemoryUsedWithOverlap <= peakMemoryUsedWithoutOverlap) {
         module->setAttr("xc.offsets",
                         builder.getI32VectorAttr(offlineOffsetsWithOverlap));
       } else {

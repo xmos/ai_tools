@@ -18,4 +18,6 @@
 #define GET_OP_CLASSES
 #include "IR/XCoreOps.h.inc"
 
+constexpr int CONCAT_OP_MAX_INPUTS = 13;
+
 #endif // XFORMER_IR_XCOREOPS_H

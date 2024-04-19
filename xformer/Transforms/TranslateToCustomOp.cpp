@@ -97,7 +97,7 @@ std::vector<uint8_t> ConcatOp::buildCustomOptions() {
   fbb.Int("n", (int32_t)getNumCopies());
   auto sizesVec = fbb.StartVector("s");
   auto sizes = getSizes().cast<ArrayAttr>();
-  for (int i = 0; i < 16; ++i) {
+  for (int i = 0; i < CONCAT_OP_MAX_INPUTS; ++i) {
     fbb.Int(sizes[i].cast<IntegerAttr>().getInt());
   }
   fbb.EndVector(sizesVec, false, false);

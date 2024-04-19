@@ -9,13 +9,11 @@
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 // 13 because flexbuffers are allocated in multiples of 16 bytes, and the op
-// already allocates 2 integers and a boolean on top of MAX_NUM_INPUTS * 4
+// already allocates 2 integers and a boolean on top of CONCAT_OP_MAX_INPUTS * 4
 // bytes. This will use 64 bytes per concat op.
 //
 // This number must match kMaxNumInputs in the ConcatOp definition in the
 // runtime.
-constexpr int MAX_NUM_INPUTS = 13;
-
 namespace mlir::xcore {
 
 namespace {
@@ -58,7 +56,7 @@ struct SplitConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
       return failure();
     mlir::Operation::operand_range values = concatOp.getValues();
     int num_inputs = values.size();
-    if (num_inputs <= MAX_NUM_INPUTS)
+    if (num_inputs <= CONCAT_OP_MAX_INPUTS)
       return failure();
 
     auto outputType = concatOp.getOutput().getType().cast<RankedTensorType>();
@@ -67,7 +65,7 @@ struct SplitConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
     const int axis = concatOp.getAxis();
 
     int axisShape = 0;
-    for (int i = 0; i < MAX_NUM_INPUTS; i++) {
+    for (int i = 0; i < CONCAT_OP_MAX_INPUTS; i++) {
       auto inputType = values[i].getType().cast<RankedTensorType>();
       axisShape += inputType.getShape()[axis];
     }
@@ -80,14 +78,14 @@ struct SplitConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
     std::vector<int64_t> newShapeVec(newShape, newShape + rank);
     auto newOutputType =
         RankedTensorType::get(ArrayRef<int64_t>(newShapeVec), elementType);
-    auto firstValues = values.take_front(MAX_NUM_INPUTS);
+    auto firstValues = values.take_front(CONCAT_OP_MAX_INPUTS);
 
     auto first_concatOp = rewriter.create<TFL::ConcatenationOp>(
         concatOp.getLoc(), newOutputType, firstValues, concatOp.getAxis(),
         "NONE");
 
     Value first_output = first_concatOp.getResult();
-    OperandRange remainingValues = values.drop_front(MAX_NUM_INPUTS);
+    OperandRange remainingValues = values.drop_front(CONCAT_OP_MAX_INPUTS);
     SmallVector<Value, 4> remainingValuesVec;
     remainingValuesVec.push_back(first_output);
     for (auto value : remainingValues)
@@ -113,10 +111,10 @@ struct ReplaceConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
 
     auto values = concatOp.getValues();
     int num_inputs = values.size();
-    if (num_inputs > MAX_NUM_INPUTS)
+    if (num_inputs > CONCAT_OP_MAX_INPUTS)
       return failure();
 
-    ArrayRef<int64_t> inputShapes[MAX_NUM_INPUTS];
+    ArrayRef<int64_t> inputShapes[CONCAT_OP_MAX_INPUTS];
     for (int i = 0; i < num_inputs; i++) {
       auto inputType = values[i].getType().cast<RankedTensorType>();
       inputShapes[i] = inputType.getShape();
@@ -137,7 +135,7 @@ struct ReplaceConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
     }
 
     bool isVpu = true;
-    int32_t sizes[MAX_NUM_INPUTS];
+    int32_t sizes[CONCAT_OP_MAX_INPUTS];
     for (int i = 0; i < num_inputs; i++) {
       sizes[i] = dtype_size;
       for (int j = axis; j < rank; j++)

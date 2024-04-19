@@ -25,3 +25,8 @@ def save_quantized_mobilenet(model: tf.keras.Model, model_path: str, size: tuple
     with open(model_path, "wb") as f:
         f.write(tflite_model)
     print("Model quantized and saved successfully.")
+
+
+if __name__ == "__main__":
+    model = tf.keras.applications.MobileNetV2(input_shape=(160, 160, 3), alpha=1.0, weights="imagenet")
+    save_quantized_mobilenet(model, "src/model.tflite", (160, 160))

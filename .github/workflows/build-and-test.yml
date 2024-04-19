@@ -80,10 +80,9 @@ jobs:
           cd python/dist
           pip install *
           cd ../..
-          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 3 --reruns 5 --reruns-delay 1
-
-
-          
+          pytest integration_tests/runner.py --models_path integration_tests/models/8x8 -n 3 --reruns 5 --reruns-delay 1
+          pytest integration_tests/runner.py --models_path integration_tests/models/16x8 -n 3 --reruns 5 --reruns-delay 1
+          pytest integration_tests/runner.py --models_path integration_tests/models/float32 -n 3 --reruns 5 --reruns-delay 1
   
 
   manylinux-release-wheel:
@@ -158,7 +157,9 @@ jobs:
           cd python/wheelhouse
           pip install *
           cd ../..
-          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 2 --reruns 5 --reruns-delay 1
+          pytest integration_tests/runner.py --models_path integration_tests/models/8x8 -n 2 --reruns 5 --reruns-delay 1
+          pytest integration_tests/runner.py --models_path integration_tests/models/16x8 -n 2 --reruns 5 --reruns-delay 1
+          pytest integration_tests/runner.py --models_path integration_tests/models/float32 -n 2 --reruns 5 --reruns-delay 1
 
  
 
@@ -230,5 +231,7 @@ jobs:
           cd python/dist
           pip install xmos_ai_tools-0.1.1-py3-none-win_amd64.whl
           cd ../..
-          pytest integration_tests/runner.py --models_path integration_tests/models/non-bnns -n 2 --reruns 5 --reruns-delay 1
+          pytest integration_tests/runner.py --models_path integration_tests/models/8x8 -n 2 --reruns 5 --reruns-delay 1
+          pytest integration_tests/runner.py --models_path integration_tests/models/16x8 -n 2 --reruns 5 --reruns-delay 1
+          pytest integration_tests/runner.py --models_path integration_tests/models/float32 -n 2 --reruns 5 --reruns-delay 1
 

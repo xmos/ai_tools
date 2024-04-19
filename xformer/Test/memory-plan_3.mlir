@@ -1,0 +1,11 @@
+// RUN: xcore-opt --mlir-io %s --xcore-plan-memory -mlir-print-ir-module-scope -mlir-disable-threading | FileCheck %s
+
+// CHECK: xc.offsets = dense<[4608, 4224, 3840, 3456, 1728, 0]> : vector<6xi32>
+func.func @main(%arg0: tensor<1x4x1x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>) -> (tensor<1x4x9x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>, tensor<1x4x9x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>) attributes {tf.entry_function = {inputs = "arg0", outputs = "4,5"}} {
+  %0 = "xc.pad"(%arg0) <{end = 0 : i32, num_copies = 3 : i32, pad_size = 96 : i32, size = 48 : i32, start = 96 : i32, use_vpu = true, zero_point = -1 : i32}> : (tensor<1x4x1x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>) -> tensor<1x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
+  %1 = "xc.pad"(%0) <{end = 0 : i32, num_copies = 3 : i32, pad_size = 96 : i32, size = 144 : i32, start = 96 : i32, use_vpu = true, zero_point = -1 : i32}> : (tensor<1x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>) -> tensor<1x4x5x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
+  %2 = "xc.pad"(%1) <{end = 0 : i32, num_copies = 3 : i32, pad_size = 96 : i32, size = 240 : i32, start = 96 : i32, use_vpu = true, zero_point = -1 : i32}> : (tensor<1x4x5x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>) -> tensor<1x4x7x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
+  %3 = "xc.pad"(%2) <{end = 0 : i32, num_copies = 3 : i32, pad_size = 96 : i32, size = 336 : i32, start = 96 : i32, use_vpu = true, zero_point = -1 : i32}> : (tensor<1x4x7x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>) -> tensor<1x4x9x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
+  %4 = "xc.pad"(%2) <{end = 0 : i32, num_copies = 3 : i32, pad_size = 96 : i32, size = 336 : i32, start = 96 : i32, use_vpu = true, zero_point = -1 : i32}> : (tensor<1x4x7x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>) -> tensor<1x4x9x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
+  return %3, %4 : tensor<1x4x9x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>, tensor<1x4x9x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
+}

@@ -36,7 +36,7 @@ int getShapedTypeSize(ShapedType t) {
 quant::UniformQuantizedType
 getQType(mlir::TypedValue<mlir::TensorType> tensor) {
   return tensor.getType()
-      .cast<ShapedType>()
+      .cast<RankedTensorType>()
       .getElementType()
       .cast<quant::UniformQuantizedType>();
 }

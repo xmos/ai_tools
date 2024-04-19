@@ -54,9 +54,9 @@ struct ReplaceStridedSlicePattern
     if (!canReplaceWithSlice(stridedSliceOp))
       return failure();
 
-    auto inputType = stridedSliceOp.getInput().getType().dyn_cast<ShapedType>();
-    auto rank =
-        stridedSliceOp.getInput().getType().cast<ShapedType>().getRank();
+    auto inputType =
+        stridedSliceOp.getInput().getType().dyn_cast<RankedTensorType>();
+    auto rank = inputType.getRank();
 
     // Get begin/end attributes
     DenseIntElementsAttr beginAttr;

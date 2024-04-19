@@ -51,9 +51,9 @@ ArrayRef<To> castArrayRef(ArrayRef<From> ref) {
 }
 
 template <typename T> bool checkBinaryCompatibility(T op) {
-  auto lhsType = op.getLhs().getType().template cast<ShapedType>();
-  auto rhsType = op.getRhs().getType().template cast<ShapedType>();
-  auto outputType = op.getOutput().getType().template cast<ShapedType>();
+  auto lhsType = op.getLhs().getType().template cast<RankedTensorType>();
+  auto rhsType = op.getRhs().getType().template cast<RankedTensorType>();
+  auto outputType = op.getOutput().getType().template cast<RankedTensorType>();
 
   // Check for invalid types and return
   // We don't currently handle the unusual case where both input shapes have

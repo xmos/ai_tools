@@ -70,14 +70,16 @@ struct SplitConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
       axisShape += inputType.getShape()[axis];
     }
     int rank = outputType.getRank();
-    int64_t newShape[rank];
-    for (int i = 0; i < rank; i++)
-      newShape[i] = outputShape[i];
-    newShape[axis] = axisShape;
 
-    std::vector<int64_t> newShapeVec(newShape, newShape + rank);
+    std::vector<int64_t> newShape;
+    for (int i = 0; i < rank; i++)
+      if (i == axis)
+        newShape.push_back(axisShape);
+      else
+        newShape.push_back(outputShape[i]);
+
     auto newOutputType =
-        RankedTensorType::get(ArrayRef<int64_t>(newShapeVec), elementType);
+        RankedTensorType::get(ArrayRef<int64_t>(newShape), elementType);
     auto firstValues = values.take_front(CONCAT_OP_MAX_INPUTS);
 
     auto first_concatOp = rewriter.create<TFL::ConcatenationOp>(

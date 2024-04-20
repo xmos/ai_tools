@@ -178,8 +178,14 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
 
         // Set first Used of output Val to the first input Val
         vInfo[outVal].firstUsed = vInfo[inputVals[0]].firstUsed;
+        auto unalignedSizeOutVal =
+            utils::getShapedTypeSize(outVal.getType().dyn_cast<ShapedType>());
         for (auto inV : inputVals) {
-          int offset = vInfo[outVal].size - vInfo[inV].size;
+          auto unalignedSizeInV =
+              utils::getShapedTypeSize(inV.getType().dyn_cast<ShapedType>());
+          auto unalignedOffset = unalignedSizeOutVal - unalignedSizeInV;
+          // Align offset up to double word = 8 bytes
+          auto offset = ((unalignedOffset + 7) / 8) * 8;
           inOutMap[inV] = {outVal, offset};
         }
       }

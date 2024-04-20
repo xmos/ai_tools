@@ -180,19 +180,25 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
         vInfo[outVal].firstUsed = vInfo[inputVals[0]].firstUsed;
         auto unalignedSizeOutVal =
             utils::getShapedTypeSize(outVal.getType().dyn_cast<ShapedType>());
+        size_t maxSizeNeeded = 0;
         for (auto inV : inputVals) {
           auto unalignedSizeInV =
               utils::getShapedTypeSize(inV.getType().dyn_cast<ShapedType>());
           auto unalignedOffset = unalignedSizeOutVal - unalignedSizeInV;
           // Align offset up to double word = 8 bytes
           auto offset = ((unalignedOffset + 7) / 8) * 8;
+          maxSizeNeeded = std::max(vInfo[inV].size + offset, maxSizeNeeded);
           inOutMap[inV] = {outVal, offset};
         }
+        // The aligned input val size plus aligned offset might be larger than
+        // aligned output val size
+        vInfo[outVal].size = std::max(vInfo[outVal].size, maxSizeNeeded);
       }
     }
   }
 
-  // The comparator keeps the buffers ordered by id if their sizes are the same
+  // The comparator keeps the buffers ordered by id if their sizes are the
+  // same
   auto DecreasingSizesComparator = [&](QueueItem &lhs, QueueItem &rhs) {
     if (lhs.second != rhs.second) {
       return lhs.second < rhs.second;

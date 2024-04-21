@@ -1,8 +1,8 @@
 diff --git a/tensorflow/compiler/mlir/lite/flatbuffer_export.cc b/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
-index 1a55e517791..fe98618d9f4 100644
+index 1a55e517791..445224147da 100644
 --- a/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
 +++ b/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
-@@ -244,6 +244,13 @@ static bool IsConst(Operation* op) {
+@@ -244,6 +244,14 @@ static bool IsConst(Operation* op) {
               mlir::stablehlo::ConstantOp>(op);
  }
  
@@ -11,12 +11,13 @@ index 1a55e517791..fe98618d9f4 100644
 +  if(auto customOp = dyn_cast<mlir::TFL::CustomOp>(op)){
 +    return customOp.getCustomCode().str() == "XC_fake_scratch";
 +  }
++  return false;
 +}
 +
  static bool IsTFResourceOp(Operation* op) {
    for (const auto& operand : op->getOperands()) {
      auto elementType = getElementTypeOrSelf(operand.getType());
-@@ -2462,6 +2469,9 @@ std::optional<BufferOffset<tflite::SubGraph>> Translator::BuildSubGraph(
+@@ -2462,6 +2470,9 @@ std::optional<BufferOffset<tflite::SubGraph>> Translator::BuildSubGraph(
      // Skip constant ops as they don't represent a TFLite operator.
      if (IsConst(&inst)) continue;
  
@@ -26,7 +27,7 @@ index 1a55e517791..fe98618d9f4 100644
      // Fetch operand and result tensor indices.
      std::vector<int32_t> results;
      results.reserve(inst.getNumResults());
-@@ -2577,10 +2587,12 @@ Translator::CreateMetadataVector() {
+@@ -2577,10 +2588,12 @@ Translator::CreateMetadataVector() {
    }
    for (const auto& kv : metadata_) {
      const std::string& val = kv.second;

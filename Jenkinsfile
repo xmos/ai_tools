@@ -4,7 +4,6 @@ getApproval()
 
 def runPytestDevice(String test, String args, String junit) {
     timeout(time: 60, unit: 'MINUTES') {
-        sh "xtagctl reset_all XCORE-AI-EXPLORER"
         sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args} --device --junitxml=integration_tests/integration_device_${junit}_junit.xml"
     }
 }
@@ -18,7 +17,9 @@ def dailyDeviceTest = {
         sh "xtagctl reset_all XCORE-AI-EXPLORER"
         sh "pytest examples/app_mobilenetv2"
     }
+    runPytestDevice("8x8/test_concatenate", "-n 1 --tc 1", "concatenate_1")
     runPytestDevice("8x8/test_slice", "-n 1 --tc 1", "slice_1")
+    runPytestDevice("8x8/test_pad", "-n 1 --tc 1", "pad_1")
     runPytestDevice("8x8/test_lstm", "-n 1 --tc 1", "lstm_1")
     runPytestDevice("8x8/test_lstm", "-n 1", "lstm_5")
     runPytestDevice("complex_models/8x8/test_cnn_classifier", "-n 1 --tc 1", "cnn_classifier_1")
@@ -74,7 +75,6 @@ pipeline {
         REPO = "ai_tools"
         BAZEL_CACHE_URL = 'http://srv-bri-bld-cache:8080'
         BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
-        REBOOT_XTAG = '1'
     }
     parameters { // Available to modify on the job page within Jenkins if starting a build
         string( // use to try different tools versions

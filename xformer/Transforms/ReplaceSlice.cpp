@@ -61,31 +61,46 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
 
     const int rank = inputType.getRank();
 
+    if (rank != 4)
+      return failure();
+
     if (utils::checkSliceNoOp(beginValues, sizeValues, inputType)) {
       rewriter.replaceOp(sliceOp, sliceOp.getInput());
       return success();
     }
 
-    int begin_dst[5], end_dst[5], in_offsets[4], out_offsets[4], shape_dst[5];
+    auto inShape = inputType.getShape();
+    auto outShape = outputType.getShape();
 
-    // TFLite supports up to 5 dimensions, if the input is less we pad
     const size_t dtype_size = utils::getTypeSize(inputElementType);
 
-    // Cast beginValues and sizeValues to int* for slice_memcpy_get_params
-    int begin[5], size[5], shape[5];
-    for (int i = 0; i < rank; i++) {
-      begin[i] = beginValues[i];
-      size[i] = sizeValues[i];
-      shape[i] = inputType.getShape()[i];
-    }
+    int32_t start, offset, size, num_copies;
+    const int mulW = inShape[3] * dtype_size;
 
-    slice_memcpy_get_params(begin_dst, end_dst, in_offsets, out_offsets,
-                            shape_dst, begin, size, shape, dtype_size, rank);
+    bool slicingHW = (inShape[2] != outShape[2]) || (inShape[1] != outShape[1]);
+
+    if (slicingHW && (outShape[3] != inShape[3]))
+      return failure();
+
+    if (slicingHW) {
+      if (inShape[0] != 1 || outShape[0] != 1)
+        return failure();
+      size = outShape[2] * mulW;
+      offset = inShape[2] * mulW;
+      start = beginValues[1] * offset + beginValues[2] * mulW;
+      num_copies = outShape[1];
+    } else {
+      offset = mulW;
+      size = outShape[3] * dtype_size;
+      start = beginValues[3] * dtype_size;
+      num_copies = outShape[0] * outputType.getShape()[1] * outShape[2];
+    }
+    bool isVpu = start % 4 == 0 && size % 4 == 0 && offset % 4 == 0;
     auto binaryObjectSliceOp = rewriter.create<SliceOp>(
         sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput(),
-        rewriter.getI32ArrayAttr(begin_dst), rewriter.getI32ArrayAttr(end_dst),
-        rewriter.getI32ArrayAttr(in_offsets),
-        rewriter.getI32ArrayAttr(out_offsets));
+        rewriter.getI32IntegerAttr(start), rewriter.getI32IntegerAttr(offset),
+        rewriter.getI32IntegerAttr(size),
+        rewriter.getI32IntegerAttr(num_copies), rewriter.getBoolAttr(isVpu));
 
     rewriter.replaceOp(sliceOp, binaryObjectSliceOp.getOutput());
 

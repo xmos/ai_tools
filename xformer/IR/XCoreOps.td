@@ -83,10 +83,11 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let arguments = (ins
     TensorOf<[QI8, QI16, F32, I8, I32]>:$input,
 
-    I32ArrayAttr:$begin,
-    I32ArrayAttr:$end,
-    I32ArrayAttr:$input_offset,
-    I32ArrayAttr:$output_offset
+    I32Attr:$start,
+    I32Attr:$offset,
+    I32Attr:$size,
+    I32Attr:$num_copies,
+    BoolAttr:$use_vpu
   );
 
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
@@ -98,28 +99,34 @@ def XC_PadOp : XC_Op<"pad", [Pure]> {
   let description = [{Pad op.}];
 
   let arguments = (ins
-    TensorOf<[QI8]>:$input,
-    StrAttr:$padding_plan,
-    I32Attr:$pad_value
-    );
+    TensorOf<[QI8, QI16, F32, I8, I32]>:$input,
 
-  let results = (outs TensorOf<[QI8]> : $output);
+    I32Attr:$start,
+    I32Attr:$pad_size,
+    I32Attr:$size,
+    I32Attr:$num_copies,
+    I32Attr:$zero_point,
+    I32Attr:$end,
+    BoolAttr:$use_vpu
+  );
+
+  let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 
   let hasFolder = 1;
 }
 
-def XC_PadOpV2 : XC_Op<"pad_v2", [Pure]> {
-  let summary = "Pad op v2";
+def XC_ConcatOp : XC_Op<"concat", [Pure]> {
+  let summary = "Concat op";
 
-  let description = [{Pad op v2.}];
+  let description = [{Concat op.}];
 
   let arguments = (ins
-    TensorOf<[QI8, QI16, F32, I8, I32]>:$input,
+    Variadic<TensorOf<[QI8, QI16, F32, I8, I32]>> : $input,
 
-    I32ArrayAttr:$begin,
-    I32ArrayAttr:$end,
-    I32ArrayAttr:$input_offset,
-    I32ArrayAttr:$output_offset
+    I32Attr:$num_copies,
+    I32ArrayAttr:$sizes,
+    I32Attr:$num_inputs,
+    BoolAttr:$use_vpu
   );
 
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);

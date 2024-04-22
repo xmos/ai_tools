@@ -152,65 +152,53 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
   auto vInfo = valueInfo;
 
   // Overlap buffers
-  llvm::DenseMap<Value, std::pair<Value, int>> outInVals;
-  // outInInVals are only used when overlapping conv and pad together
-  llvm::DenseMap<Value, std::pair<std::pair<Value, int>, std::pair<Value, int>>>
-      outInInVals;
-
-  int maxOpId = -1;
-  if (overlapConvOption) {
-    // TODO: Try overlap conv
-    // Need to revert conv to run single-threaded which is not implemented yet
-    auto maxOp = getOpWithMaxMemoryUsed();
-    // max op is usually pad or conv
-    // if max op is pad, we choose the next one which should be conv
-    if (llvm::isa<Conv2DV2Op>(maxOp)) {
-      maxOpId = operationIds[maxOp];
-    } else if (llvm::isa<PadOp>(maxOp) &&
-               llvm::isa<Conv2DV2Op>(operations[operationIds[maxOp] + 1])) {
-      maxOpId = operationIds[maxOp] + 1;
-    }
-  }
-
+  llvm::DenseMap<Value, std::pair<Value, int>> inOutMap;
+  llvm::DenseSet<Operation *> alreadyVisited;
   if (overlapOps) {
     for (auto o : operations) {
-      if (llvm::isa<PadOp>(o)) {
-        auto in = o->getOperand(0);
-        if (in.hasOneUse()) {
-          auto out = o->getResult(0);
-          int offset = vInfo[out].size - vInfo[in].size;
-          outInVals[out] = {in, offset};
-          vInfo[in].size += offset;
-          vInfo[in].lastUsed = vInfo[out].lastUsed;
+      // We are only overlapping Pad op as of now
+      if (llvm::isa<PadOp>(o) && !alreadyVisited.contains(o) &&
+          o->getOperand(0).hasOneUse()) {
+        alreadyVisited.insert(o);
+
+        llvm::SmallVector<Value> inputVals;
+        auto inVal = o->getOperand(0);
+        inputVals.push_back(inVal);
+
+        auto outVal = o->getResult(0);
+        auto nextOp = *outVal.getUsers().begin();
+        // Identify chain of Pad Ops
+        while (outVal.hasOneUse() && llvm::isa<PadOp>(nextOp)) {
+          inVal = nextOp->getOperand(0);
+          inputVals.push_back(inVal);
+          alreadyVisited.insert(nextOp);
+          outVal = nextOp->getResult(0);
+          nextOp = *outVal.getUsers().begin();
         }
-      }
 
-      if (llvm::isa<Conv2DV2Op>(o)) {
-        if (operationIds[o] == maxOpId) {
-          auto convOp = dyn_cast<Conv2DV2Op>(o);
-          auto in = o->getOperand(0);
-          auto out = o->getResult(0);
-          int offset = out.getType().dyn_cast<RankedTensorType>().getDimSize(
-              3); // pixel size
-
-          // since pad is input to this conv and already overlapped
-          if (outInVals.count(in)) {
-            // find the original input op
-            auto firstVal = outInVals[in].first;
-            auto firstOffset = outInVals[in].second;
-
-            offset += vInfo[out].size - vInfo[firstVal].size;
-
-            outInInVals[out] = {{in, offset}, {firstVal, firstOffset}};
-            vInfo[firstVal].size += offset;
-            vInfo[firstVal].lastUsed = vInfo[out].lastUsed;
-          }
+        // Set first Used of output Val to the first input Val
+        vInfo[outVal].firstUsed = vInfo[inputVals[0]].firstUsed;
+        auto unalignedSizeOutVal =
+            utils::getShapedTypeSize(outVal.getType().dyn_cast<ShapedType>());
+        size_t maxSizeNeeded = 0;
+        for (auto inV : inputVals) {
+          auto unalignedSizeInV =
+              utils::getShapedTypeSize(inV.getType().dyn_cast<ShapedType>());
+          auto unalignedOffset = unalignedSizeOutVal - unalignedSizeInV;
+          // Align offset up to double word = 8 bytes
+          auto offset = ((unalignedOffset + 7) / 8) * 8;
+          maxSizeNeeded = std::max(vInfo[inV].size + offset, maxSizeNeeded);
+          inOutMap[inV] = {outVal, offset};
         }
+        // The aligned input val size plus aligned offset might be larger than
+        // aligned output val size
+        vInfo[outVal].size = std::max(vInfo[outVal].size, maxSizeNeeded);
       }
     }
   }
 
-  // The comparator keeps the buffers ordered by id if their sizes are the same
+  // The comparator keeps the buffers ordered by id if their sizes are the
+  // same
   auto DecreasingSizesComparator = [&](QueueItem &lhs, QueueItem &rhs) {
     if (lhs.second != rhs.second) {
       return lhs.second < rhs.second;
@@ -224,7 +212,7 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
 
   // Insert values and their sizes into priority queue
   for (auto v : values) {
-    if (!outInVals.count(v) && !outInInVals.count(v) && !vInfo[v].isConstant) {
+    if (!inOutMap.count(v) && !vInfo[v].isConstant) {
       queue.push({v, vInfo[v].size});
     }
   }
@@ -245,54 +233,23 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
   }
 
   // Patch up overlapped buffers
-  for (auto val : outInInVals) {
-    auto out = val.first;
-    auto inPair = val.second.first;
-    auto firstValPair = val.second.second;
-
-    auto in = inPair.first;
-    auto offset = inPair.second;
-    // We allocate here itself
-    if (outInVals.count(in)) {
-      outInVals.erase(in);
-    }
-
-    auto firstVal = firstValPair.first;
-    auto firstOffset = firstValPair.second;
-
-    auto it =
-        std::find_if(allocatedValues.begin(), allocatedValues.end(),
-                     [&](const QueueItem &p) { return p.first == firstVal; });
-
-    if (it != allocatedValues.end()) {
-      int currentOffset = it->second;
-      allocatedValues.erase(it);
-      allocatedValues.insert({firstVal, currentOffset + offset + firstOffset});
-      allocatedValues.insert({in, currentOffset + offset});
-      allocatedValues.insert({out, currentOffset});
-    } else {
-      assert(false);
-    }
-  }
-
-  for (auto val : outInVals) {
-    auto out = val.first;
-    auto in = val.second.first;
+  for (auto val : inOutMap) {
+    auto in = val.first;
+    auto out = val.second.first;
     auto offset = val.second.second;
 
     auto it = std::find_if(allocatedValues.begin(), allocatedValues.end(),
-                           [&](const QueueItem &p) { return p.first == in; });
+                           [&](const QueueItem &p) { return p.first == out; });
 
     if (it != allocatedValues.end()) {
       int currentOffset = it->second;
-      allocatedValues.erase(it);
       allocatedValues.insert({in, currentOffset + offset});
-      allocatedValues.insert({out, currentOffset});
     } else {
       assert(false);
     }
   }
 
+  // Insert -1 offset for constant values
   for (auto v : values) {
     if (vInfo[v].isConstant) {
       allocatedValues.insert({v, -1});

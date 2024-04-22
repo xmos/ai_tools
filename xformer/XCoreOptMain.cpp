@@ -148,10 +148,6 @@ cl::opt<bool> convDebugOption("xcore-conv-debug",
                               cl::init(false), cl::cat(XformerCategory),
                               cl::Hidden);
 
-cl::opt<bool> overlapConvOption("xcore-overlap-conv",
-                                cl::desc("Overlap conv also."), cl::init(false),
-                                cl::cat(XformerCategory), cl::Hidden);
-
 cl::opt<bool> offlineOffsetsOption("xcore-offline-offsets",
                                    cl::desc("Offline offsets"), cl::init(true),
                                    cl::cat(XformerCategory), cl::Hidden);

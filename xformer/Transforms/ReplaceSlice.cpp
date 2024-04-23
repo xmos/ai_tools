@@ -37,6 +37,17 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
   LogicalResult matchAndRewrite(TFL::SliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
 
+    auto inputType = sliceOp.getInput().getType().cast<RankedTensorType>();
+    auto outputType = sliceOp.getOutput().getType().cast<RankedTensorType>();
+
+    if (!inputType.hasStaticShape())
+      return failure();
+
+    if (utils::checkSliceNoOp(inputType, outputType)) {
+      rewriter.replaceOp(sliceOp, sliceOp.getInput());
+      return success();
+    }
+
     // If the input is a constant, LLVM's Canonicalizer will
     // fold the slice into a constant later.
     if (matchPattern(sliceOp.getInput(), m_Constant()) ||
@@ -44,12 +55,7 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
       return failure();
     }
 
-    auto inputType = sliceOp.getInput().getType().cast<RankedTensorType>();
-    if (!inputType.hasStaticShape())
-      return failure();
-
     Type inputElementType = inputType.getElementType();
-    auto outputType = sliceOp.getOutput().getType().cast<RankedTensorType>();
 
     DenseElementsAttr beginAttr;
     matchPattern(sliceOp.getBegin(), m_Constant(&beginAttr));
@@ -63,11 +69,6 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
 
     if (rank != 4)
       return failure();
-
-    if (utils::checkSliceNoOp(beginValues, sizeValues, inputType)) {
-      rewriter.replaceOp(sliceOp, sliceOp.getInput());
-      return success();
-    }
 
     auto inShape = inputType.getShape();
     auto outShape = outputType.getShape();

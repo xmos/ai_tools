@@ -84,4 +84,16 @@ Type getValElementType(Value tensor) {
 ArrayRef<int64_t> getValShape(Value tensor) {
   return tensor.getType().template cast<RankedTensorType>().getShape();
 }
+
+bool checkSliceNoOp(RankedTensorType inputType, RankedTensorType outputType) {
+  const int rank = inputType.getRank();
+  bool isNoOp = true;
+  for (int i = 0; i < rank; i++) {
+    if (inputType.getDimSize(i) != outputType.getDimSize(i)) {
+      isNoOp = false;
+      break;
+    }
+  }
+  return isNoOp;
+}
 } // namespace mlir::xcore::utils

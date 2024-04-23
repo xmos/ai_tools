@@ -38,17 +38,22 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
   LogicalResult matchAndRewrite(TFL::PadOp padOp,
                                 PatternRewriter &rewriter) const override {
 
-    // If the input is a constant, LLVM's Canonicalizer will
-    // fold the pad into a constant later.
-    if (matchPattern(padOp.getInput(), m_Constant()) ||
-        matchPattern(padOp.getInput(), m_Op<TFL::ShapeOp>())) {
-      return failure();
-    }
-
     auto inputType = padOp.getInput().getType().cast<RankedTensorType>();
     auto outputType = padOp.getOutput().getType().cast<RankedTensorType>();
 
     if (!inputType.hasStaticShape()) {
+      return failure();
+    }
+
+    if (utils::checkSliceNoOp(inputType, outputType)) {
+      rewriter.replaceOp(padOp, padOp.getInput());
+      return success();
+    }
+
+    // If the input is a constant, LLVM's Canonicalizer will
+    // fold the pad into a constant later.
+    if (matchPattern(padOp.getInput(), m_Constant()) ||
+        matchPattern(padOp.getInput(), m_Op<TFL::ShapeOp>())) {
       return failure();
     }
 

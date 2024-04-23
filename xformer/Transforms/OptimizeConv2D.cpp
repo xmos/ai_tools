@@ -272,8 +272,11 @@ Value createPaddedFilterOp(int padSize, int padDim, T convOp,
     filterVal = cOp.getWeights();
   } else if (auto cOp = dyn_cast<TFL::Conv2DOp>(convOp.getOperation())) {
     filterVal = cOp.getFilter();
+  } else if (auto cOp =
+                 dyn_cast<TFL::DepthwiseConv2DOp>(convOp.getOperation())) {
+    filterVal = cOp.getFilter();
   } else {
-    assert("Shouldn't be here!");
+    assert(false && "Shouldn't be here!");
   }
 
   auto filterQConstOp = dyn_cast<TFL::QConstOp>(filterVal.getDefiningOp());

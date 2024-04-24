@@ -31,6 +31,35 @@ struct ReplaceSlice
   void runOnOperation() override;
 };
 
+int mergeAxes(std::vector<int32_t> &begin, std::vector<int32_t> &size,
+              std::vector<int32_t> &inShape, std::vector<int32_t> &outShape,
+              int rank) {
+
+  for (int i = rank - 1; i > 0; i--) {
+    while ((inShape[i] == outShape[i]) && (i > 0)) {
+      const int mul = inShape[i];
+      inShape[i - 1] *= mul;
+      outShape[i - 1] *= mul;
+      begin[i - 1] *= mul;
+      size[i - 1] *= mul;
+      inShape.erase(inShape.begin() + i);
+      outShape.erase(outShape.begin() + i);
+      begin.erase(begin.begin() + i);
+      size.erase(size.begin() + i);
+      rank -= 1;
+      i -= 1;
+    }
+  }
+  if ((inShape[0] == 1) && (outShape[0] == 1)) {
+    inShape.erase(inShape.begin());
+    outShape.erase(outShape.begin());
+    begin.erase(begin.begin());
+    size.erase(size.begin());
+    rank -= 1;
+  }
+  return rank;
+}
+
 struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
   using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
 
@@ -65,37 +94,39 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
     matchPattern(sliceOp.getSize(), m_Constant(&sizeAttr));
     auto sizeValues = sizeAttr.getValues<int32_t>();
 
-    const int rank = inputType.getRank();
-
-    if (rank != 4)
-      return failure();
-
     auto inShape = inputType.getShape();
     auto outShape = outputType.getShape();
 
-    const size_t dtype_size = utils::getTypeSize(inputElementType);
+    std::vector<int32_t> begin(beginValues.begin(), beginValues.end());
+    std::vector<int32_t> sizes(sizeValues.begin(), sizeValues.end());
+    std::vector<int32_t> inShapeVec(inShape.begin(), inShape.end());
+    std::vector<int32_t> outShapeVec(outShape.begin(), outShape.end());
 
-    int32_t start, offset, size, num_copies;
-    const int mulW = inShape[3] * dtype_size;
+    int rank =
+        mergeAxes(begin, sizes, inShapeVec, outShapeVec, inputType.getRank());
 
-    bool slicingHW = (inShape[2] != outShape[2]) || (inShape[1] != outShape[1]);
-
-    if (slicingHW && (outShape[3] != inShape[3]))
+    if (rank > 2)
       return failure();
 
-    if (slicingHW) {
-      if (inShape[0] != 1 || outShape[0] != 1)
-        return failure();
-      size = outShape[2] * mulW;
-      offset = inShape[2] * mulW;
-      start = beginValues[1] * offset + beginValues[2] * mulW;
-      num_copies = outShape[1];
+    const size_t dtype_size = utils::getTypeSize(inputElementType);
+    begin[rank - 1] *= dtype_size;
+    sizes[rank - 1] *= dtype_size;
+    inShapeVec[rank - 1] *= dtype_size;
+    outShapeVec[rank - 1] *= dtype_size;
+
+    int32_t start, offset, size, num_copies;
+    if (rank == 1) {
+      start = begin[0];
+      offset = inShapeVec[0];
+      size = outShapeVec[0];
+      num_copies = 1;
     } else {
-      offset = mulW;
-      size = outShape[3] * dtype_size;
-      start = beginValues[3] * dtype_size;
-      num_copies = outShape[0] * outputType.getShape()[1] * outShape[2];
+      start = begin[0] * inShapeVec[1] + begin[1];
+      offset = inShapeVec[1];
+      size = outShapeVec[1];
+      num_copies = outShapeVec[0];
     }
+
     bool isVpu = start % 4 == 0 && size % 4 == 0 && offset % 4 == 0;
     auto binaryObjectSliceOp = rewriter.create<SliceOp>(
         sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput(),

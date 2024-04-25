@@ -73,8 +73,8 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
     std::vector<int32_t> inShapeVec(inShape.begin(), inShape.end());
     std::vector<int32_t> outShapeVec(outShape.begin(), outShape.end());
 
-    // Assuming we can translate the pad op to reshape -> pad -> reshape
-    // such that the number of dimensions of the pad in the middle is as small
+    // Assuming we can translate the slice op to reshape -> slice -> reshape
+    // such that the number of dimensions of the slice in the middle is as small
     // as possible, rank would represent that number of dimensions.
     int rank = utils::mergeAxes(begin, sizes, inShapeVec, outShapeVec,
                                 inputType.getRank());

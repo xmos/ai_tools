@@ -62,7 +62,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: [3.9.0]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -125,7 +125,7 @@ jobs:
     runs-on: macos-11
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: [3.9.0]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -189,7 +189,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: [3.9.0]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -271,7 +271,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: [3.9.0]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4

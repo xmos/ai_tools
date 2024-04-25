@@ -35,7 +35,7 @@ func.func @replace_pad_with_invalid_shape(%arg0: tensor<1x4x48x!quant.uniform<i8
 // CHECK-LABEL: replace_pad_with_batchchannel_padding
 func.func @replace_pad_with_batchchannel_padding(%arg0: tensor<1x4x1x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>) -> tensor<1x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>> attributes {tf.entry_function = {inputs = "zero_padding2d_input_int8", outputs = "Identity_int8"}} {
   %0 = "tfl.pseudo_const"() {value = dense<[[1, 1], [0, 0], [2, 0], [1, 1]]> : tensor<4x2xi32>} : () -> tensor<4x2xi32>
-  // CHECK-NOT: xc.pad
+  // CHECK: xc.pad
   %1 = "tfl.pad"(%arg0, %0) : (tensor<1x4x1x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>, tensor<4x2xi32>) -> tensor<1x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
   return %1 : tensor<1x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
 }

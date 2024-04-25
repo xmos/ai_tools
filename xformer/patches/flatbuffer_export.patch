@@ -1,5 +1,5 @@
 diff --git a/tensorflow/compiler/mlir/lite/flatbuffer_export.cc b/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
-index 1a55e517791..445224147da 100644
+index 1a55e517791..cb2c21c8861 100644
 --- a/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
 +++ b/tensorflow/compiler/mlir/lite/flatbuffer_export.cc
 @@ -244,6 +244,14 @@ static bool IsConst(Operation* op) {
@@ -44,3 +44,12 @@ index 1a55e517791..445224147da 100644
      metadata.push_back(BuildMetadata(kv.first, value));
    }
  
+@@ -2986,8 +2999,6 @@ std::optional<std::string> Translator::TranslateInternal() {
+       mac_str = absl::StrFormat("%.3f G ",
+                                 static_cast<double>(ops_count / 2) / billion);
+     }
+-    LOG(INFO) << "Estimated count of arithmetic ops: " << flops_str
+-              << " ops, equivalently " << mac_str << " MACs";
+   }
+ 
+   std::string model_description;

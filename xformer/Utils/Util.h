@@ -17,18 +17,8 @@ bool hasOnlyChannelPadding(DenseIntElementsAttr attr);
 bool hasOnlySpatialPadding(DenseIntElementsAttr attr);
 
 quant::UniformQuantizedType getQType(mlir::TypedValue<mlir::TensorType> tensor);
-template <typename T>
-bool checkSliceNoOp(T beginValues, T sizeValues, RankedTensorType type) {
-  const int rank = type.getRank();
-  bool isNoOp = true;
-  for (int i = 0; i < rank; i++) {
-    if (beginValues[i] != 0 || sizeValues[i] != type.getShape()[i]) {
-      isNoOp = false;
-      break;
-    }
-  }
-  return isNoOp;
-}
+
+bool checkSliceNoOp(RankedTensorType inputType, RankedTensorType outputType);
 
 template <int N = 8> bool hasNBitSignedQType(Type type) {
   return (type.template isa<quant::QuantizedType>() &&
@@ -73,6 +63,10 @@ template <typename T> bool checkBinaryCompatibility(T op) {
   }
   return true;
 }
+
+int mergeAxes(std::vector<int32_t> &begin, std::vector<int32_t> &size,
+              std::vector<int32_t> &inShape, std::vector<int32_t> &outShape,
+              int rank);
 } // namespace mlir::xcore::utils
 
 #endif // XFORMER_UTILS_UTIL_H

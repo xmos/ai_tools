@@ -38,13 +38,6 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
   LogicalResult matchAndRewrite(TFL::PadOp padOp,
                                 PatternRewriter &rewriter) const override {
 
-    // If the input is a constant, LLVM's Canonicalizer will
-    // fold the pad into a constant later.
-    if (matchPattern(padOp.getInput(), m_Constant()) ||
-        matchPattern(padOp.getInput(), m_Op<TFL::ShapeOp>())) {
-      return failure();
-    }
-
     auto inputType = padOp.getInput().getType().cast<RankedTensorType>();
     auto outputType = padOp.getOutput().getType().cast<RankedTensorType>();
 
@@ -52,12 +45,48 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
       return failure();
     }
 
+    if (utils::checkSliceNoOp(inputType, outputType)) {
+      rewriter.replaceOp(padOp, padOp.getInput());
+      return success();
+    }
+
+    // If the input is a constant, LLVM's Canonicalizer will
+    // fold the pad into a constant later.
+    if (matchPattern(padOp.getInput(), m_Constant()) ||
+        matchPattern(padOp.getInput(), m_Op<TFL::ShapeOp>())) {
+      return failure();
+    }
+
+    DenseElementsAttr paddingAttr;
+    matchPattern(padOp.getPadding(), m_Constant(&paddingAttr));
+    auto paddingValues = paddingAttr.getValues<int32_t>();
+
+    std::vector<int32_t> paddingValuesStart;
+    std::vector<int32_t> paddingValuesEnd;
+    for (int i = 0; i < paddingValues.size(); i += 2)
+      paddingValuesStart.push_back(paddingValues[i]);
+    for (int i = 1; i < paddingValues.size(); i += 2)
+      paddingValuesEnd.push_back(paddingValues[i]);
+    auto inputShape = inputType.getShape();
+    auto outputShape = outputType.getShape();
+    std::vector<int32_t> inShapeVec(inputShape.begin(), inputShape.end());
+    std::vector<int32_t> outShapeVec(outputShape.begin(), outputShape.end());
+
+    // Assuming we can translate the pad op to reshape -> pad -> reshape
+    // such that the number of dimensions of the pad in the middle is as small
+    // as possible, rank would represent that number of dimensions.
+    int rank = utils::mergeAxes(paddingValuesStart, paddingValuesEnd,
+                                inShapeVec, outShapeVec, inputType.getRank());
+
+    if (rank > 2)
+      return failure();
+
     Type elementType = inputType.getElementType();
     const size_t dtype_size = utils::getTypeSize(elementType);
-    const int rank = inputType.getRank();
-
-    if (rank != 4)
-      return failure();
+    paddingValuesStart[rank - 1] *= dtype_size;
+    paddingValuesEnd[rank - 1] *= dtype_size;
+    outShapeVec[rank - 1] *= dtype_size;
+    inShapeVec[rank - 1] *= dtype_size;
 
     int32_t zero_point = 0;
     if (elementType.isa<quant::QuantizedType>()) {
@@ -65,56 +94,22 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
       zero_point = BROADCAST_8_TO_32(inputQType.getZeroPoint());
     }
 
-    DenseElementsAttr paddingAttr;
-    matchPattern(padOp.getPadding(), m_Constant(&paddingAttr));
-    auto paddingValues = paddingAttr.getValues<int32_t>();
-
-    if (paddingValues[0] != 0 || paddingValues[1] != 0)
-      return failure();
-
-    bool paddingHW = false;
-    for (int i = 2; i < 6; i++)
-      if (paddingValues[i] != 0)
-        paddingHW = true;
-    if (paddingHW && (paddingValues[6] != 0 || paddingValues[7] != 0))
-      return failure();
-
-    bool isNoOp = true;
-    for (int i = 0; i < 8; i++)
-      if (paddingValues[i] != 0)
-        isNoOp = false;
-
-    if (isNoOp) {
-      rewriter.replaceOp(padOp, padOp.getInput());
-      return success();
-    }
-
-    auto inShape = inputType.getShape();
-    auto outShape = outputType.getShape();
-
     int32_t start, pad_size, size, num_copies, end;
-    const int mulW = inShape[3] * dtype_size;
-    if (paddingHW) {
-      if (outShape[0] != 1)
-        return failure();
-      size = inShape[2] * mulW;
-      pad_size = (outShape[2] - inShape[2]) * mulW;
-      start = (paddingValues[2] * outShape[2] + paddingValues[4]) * mulW;
-      end = (paddingValues[3] * outShape[2] + paddingValues[5]) * mulW;
-      // -1 because the last memcpy is done separately, since we also need to
-      // memset
-      num_copies = inShape[1] - 1;
+    if (rank == 1) {
+      start = paddingValuesStart[0];
+      pad_size = 0;
+      size = inShapeVec[0];
+      num_copies = 0;
+      end = paddingValuesEnd[0];
     } else {
-      // Pad3to4 is a special case, handled by it's own op
-      if (inShape[3] == 3 && outShape[3] == 4)
+      // We have a special optimised Pad3to4 op for this case
+      if ((inShapeVec[1] == 3) && (outShapeVec[1] == 4))
         return failure();
-      size = mulW;
-      pad_size = (outShape[3] - inShape[3]) * dtype_size;
-      start = paddingValues[6] * dtype_size;
-      end = paddingValues[7] * dtype_size;
-      // -1 because the last memcpy is done separately, since we also need to
-      // memset
-      num_copies = inShape[2] * inShape[1] * inShape[0] - 1;
+      start = paddingValuesStart[0] * outShapeVec[1] + paddingValuesStart[1];
+      pad_size = paddingValuesStart[1] + paddingValuesEnd[1];
+      size = inShapeVec[1];
+      num_copies = inShapeVec[0] - 1;
+      end = paddingValuesEnd[0] * outShapeVec[1] + paddingValuesEnd[1];
     }
     bool isVpu =
         start % 4 == 0 && pad_size % 4 == 0 && size % 4 == 0 && end % 4 == 0;

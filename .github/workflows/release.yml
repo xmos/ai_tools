@@ -23,7 +23,7 @@ env:
 jobs:
   build-release-archive:
     name: Build release archive
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -59,7 +59,7 @@ jobs:
   macos-release-wheel:
     name: Build release wheels for macOS
     needs: [build-release-archive]
-    runs-on: macos-latest
+    runs-on: macos-13
     strategy:
       matrix:
         python-version: [3.9]
@@ -186,7 +186,7 @@ jobs:
   manylinux-release-wheel:
     name: Build release wheels for manylinux2014
     needs: [build-release-archive]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         python-version: [3.9]
@@ -343,7 +343,7 @@ jobs:
     name: Publish wheels to PyPi
     if: ${{ always() }}
     needs: [macos-release-wheel, macos-arm-release-wheel, manylinux-release-wheel, windows-release-wheel]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/download-artifact@v4
         with:

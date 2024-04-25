@@ -19,7 +19,7 @@ env:
 jobs:
   macos-release-wheel:
     name: Build and test release wheels for macOS
-    runs-on: macos-latest
+    runs-on: macos-13
     strategy:
       matrix:
         python-version: [3.9]
@@ -87,7 +87,7 @@ jobs:
 
   manylinux-release-wheel:
     name: Build and test release wheels for manylinux2014
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         python-version: [3.9]

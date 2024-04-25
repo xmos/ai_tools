@@ -31,35 +31,6 @@ struct ReplaceSlice
   void runOnOperation() override;
 };
 
-int mergeAxes(std::vector<int32_t> &begin, std::vector<int32_t> &size,
-              std::vector<int32_t> &inShape, std::vector<int32_t> &outShape,
-              int rank) {
-
-  for (int i = rank - 1; i > 0; i--) {
-    while ((inShape[i] == outShape[i]) && (i > 0)) {
-      const int mul = inShape[i];
-      inShape[i - 1] *= mul;
-      outShape[i - 1] *= mul;
-      begin[i - 1] *= mul;
-      size[i - 1] *= mul;
-      inShape.erase(inShape.begin() + i);
-      outShape.erase(outShape.begin() + i);
-      begin.erase(begin.begin() + i);
-      size.erase(size.begin() + i);
-      rank -= 1;
-      i -= 1;
-    }
-  }
-  if ((inShape[0] == 1) && (outShape[0] == 1)) {
-    inShape.erase(inShape.begin());
-    outShape.erase(outShape.begin());
-    begin.erase(begin.begin());
-    size.erase(size.begin());
-    rank -= 1;
-  }
-  return rank;
-}
-
 struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
   using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
 
@@ -102,8 +73,11 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
     std::vector<int32_t> inShapeVec(inShape.begin(), inShape.end());
     std::vector<int32_t> outShapeVec(outShape.begin(), outShape.end());
 
-    int rank =
-        mergeAxes(begin, sizes, inShapeVec, outShapeVec, inputType.getRank());
+    // Assuming we can translate the pad op to reshape -> pad -> reshape
+    // such that the number of dimensions of the pad in the middle is as small
+    // as possible, rank would represent that number of dimensions.
+    int rank = utils::mergeAxes(begin, sizes, inShapeVec, outShapeVec,
+                                inputType.getRank());
 
     if (rank > 2)
       return failure();

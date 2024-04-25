@@ -63,6 +63,10 @@ template <typename T> bool checkBinaryCompatibility(T op) {
   }
   return true;
 }
+
+int mergeAxes(std::vector<int32_t> &begin, std::vector<int32_t> &size,
+              std::vector<int32_t> &inShape, std::vector<int32_t> &outShape,
+              int rank);
 } // namespace mlir::xcore::utils
 
 #endif // XFORMER_UTILS_UTIL_H

@@ -5,7 +5,7 @@
 
 getApproval()
 
-def sh_bat() {
+def sh_bat(cmd) {
   if (isUnix()) {
     sh cmd
   } else {

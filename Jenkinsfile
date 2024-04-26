@@ -1,44 +1,44 @@
 // Things to optimise if this is too slow:
 // - build device runtime in parallel with host runtimes, use mutex before combining into wheel
 
-@Library('xmos_jenkins_shared_library@v0.25.0') _
+@Library('xmos_jenkins_shared_library@v0.30.0') _
 
 getApproval()
 
-def setupRepo() {
-  script {
-    println "Stage running on: ${env.NODE_NAME}"
-    checkout scm
-    sh "git submodule update --init --recursive --jobs 4"
-    sh "make -C third_party/lib_tflite_micro patch"
+def sh_bat() {
+  if (isUnix()) {
+    sh cmd
+  } else {
+    bat cmd
   }
 }
 
+def setupRepo() {
+  println "Stage running on: ${env.NODE_NAME}"
+  checkout scm
+  sh_bat "git submodule update --init --recursive --jobs 4"
+  sh_bat "make -C third_party/lib_tflite_micro patch"
+}
+
 def createDeviceZip() {
-  script {
-    dir("xformer") { sh "./version_check.sh" }
-    dir("third_party/lib_tflite_micro") {
-      sh "mkdir -p build"
-      dir("build") {
-        sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
-        sh "make create_zip -j8"
-      }
-    }
+  dir("xformer") { sh "./version_check.sh" }
+  dir("third_party/lib_tflite_micro/build") {
+    sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
+    sh "make create_zip -j8"
   }
 }
 
 def buildXinterpreterAndHostLib() {
-  sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
   dir("python/xmos_ai_tools/xinterpreters/build") {
-    sh "cmake .."
-    sh "cmake --build . -t install --parallel 8 --config Release"
+    sh_bat "cmake .."
+    sh_bat "cmake --build . -t install --parallel 8 --config Release"
   }
 }
 
 def extractDeviceZipAndHeaders() {
   dir("python/xmos_ai_tools/runtime") {
     unstash "release_archive"
-    sh "unzip release_archive.zip"
+    sh_bat "unzip release_archive.zip"
   }
 }
 
@@ -118,7 +118,6 @@ pipeline {
     REPO = "ai_tools"
     BAZEL_CACHE_URL = 'http://srv-bri-bld-cache.xmos.local:8080'
     BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
-    REBOOT_XTAG = '1'
   }
   parameters { // Available to modify on the job page within Jenkins if starting a build
     string( // use to try different tools versions
@@ -136,14 +135,11 @@ pipeline {
   options {
     timestamps()
     skipDefaultCheckout()
-    buildDiscarder(logRotator(
-      numToKeepStr:         env.BRANCH_NAME ==~ /develop/ ? '100' : '',
-      artifactNumToKeepStr: env.BRANCH_NAME ==~ /develop/ ? '100' : ''
-    ))
+    buildDiscarder(xmosDiscardBuildSettings())
   }
   stages { stage("On PR") { 
     when { branch pattern: "PR-.*", comparator: "REGEXP" }
-    agent { label "linux && x86_64 && !noAVX2" } 
+    agent { label "linux && x86_64 && !noAVX2" }
     stages {
       stage("Build device runtime") { 
         steps {

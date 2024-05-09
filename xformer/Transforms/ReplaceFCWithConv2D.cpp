@@ -38,16 +38,16 @@ struct ReplaceFCWithConv2DPattern
 
     // Check for invalid types and return
     // Input type must be QI8 or QI16
-    if (!utils::hasNBitSignedQType<8>(fcInputElementType) &&
-        !utils::hasNBitSignedQType<16>(fcInputElementType))
+    if (!utils::isNBitSignedQType<8>(fcInputElementType) &&
+        !utils::isNBitSignedQType<16>(fcInputElementType))
       return failure();
 
-    if (!utils::hasNBitSignedQType(fcFilterElementType))
+    if (!utils::isNBitSignedQType<8>(fcFilterElementType))
       return failure();
 
     // If bias exists, it must be QI32
     if (auto biasType = fcOp.getBias().getType().dyn_cast<ShapedType>()) {
-      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
+      if (!utils::isNBitSignedQType<32>(biasType.getElementType()))
         return failure();
     }
 

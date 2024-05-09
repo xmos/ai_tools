@@ -37,14 +37,14 @@ struct ChannelwiseSplitConv2DOutputPattern
     auto filterElementType =
         op.getFilter().getType().cast<ShapedType>().getElementType();
 
-    if (!utils::hasNBitSignedQType(inputElementType) ||
-        !utils::hasNBitSignedQType(filterElementType)) {
+    if (!utils::isNBitSignedQType<8>(inputElementType) ||
+        !utils::isNBitSignedQType<8>(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
     if (auto biasType = op.getBias().getType().dyn_cast<ShapedType>()) {
-      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
+      if (!utils::isNBitSignedQType<32>(biasType.getElementType()))
         return failure();
     }
 
@@ -457,15 +457,15 @@ struct SameToValidTransposeConvPattern
     // Input type must be QI8
     auto inputElementType =
         tConvOp.getInput().getType().cast<ShapedType>().getElementType();
-    if (!utils::hasNBitSignedQType(inputElementType) &&
-        !utils::hasNBitSignedQType<16>(inputElementType)) {
+    if (!utils::isNBitSignedQType<8>(inputElementType) &&
+        !utils::isNBitSignedQType<16>(inputElementType)) {
       return failure();
     }
 
     auto filterElementType =
         tConvOp.getWeights().getType().cast<ShapedType>().getElementType();
-    if (!utils::hasNBitSignedQType(filterElementType) &&
-        !utils::hasNBitSignedQType<16>(filterElementType)) {
+    if (!utils::isNBitSignedQType<8>(filterElementType) &&
+        !utils::isNBitSignedQType<16>(filterElementType)) {
       return failure();
     }
 
@@ -551,8 +551,8 @@ struct PadConv2DInputPattern : public OpRewritePattern<Conv2DOp> {
                                 .getType()
                                 .template cast<ShapedType>()
                                 .getElementType();
-    if (!utils::hasNBitSignedQType(inputElementType) &&
-        !utils::hasNBitSignedQType<16>(inputElementType)) {
+    if (!utils::isNBitSignedQType<8>(inputElementType) &&
+        !utils::isNBitSignedQType<16>(inputElementType)) {
       return failure();
     }
 
@@ -568,14 +568,14 @@ struct PadConv2DInputPattern : public OpRewritePattern<Conv2DOp> {
     }
     auto filterElementType =
         filterVal.getType().template cast<ShapedType>().getElementType();
-    if (!utils::hasNBitSignedQType(filterElementType)) {
+    if (!utils::isNBitSignedQType<8>(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
     if (auto biasType =
             conv2DOp.getBias().getType().template dyn_cast<ShapedType>()) {
-      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
+      if (!utils::isNBitSignedQType<32>(biasType.getElementType()))
         return failure();
     }
 
@@ -584,8 +584,8 @@ struct PadConv2DInputPattern : public OpRewritePattern<Conv2DOp> {
                                  .getType()
                                  .template cast<ShapedType>()
                                  .getElementType();
-    if (!utils::hasNBitSignedQType(outputElementType) &&
-        !utils::hasNBitSignedQType<16>(outputElementType)) {
+    if (!utils::isNBitSignedQType<8>(outputElementType) &&
+        !utils::isNBitSignedQType<16>(outputElementType)) {
       return failure();
     }
     bool i16Conv = false;
@@ -637,8 +637,8 @@ struct PadConv2DOutputPattern : public OpRewritePattern<Conv2DOp> {
                                 .getType()
                                 .template cast<ShapedType>()
                                 .getElementType();
-    if (!utils::hasNBitSignedQType(inputElementType) &&
-        !utils::hasNBitSignedQType<16>(inputElementType)) {
+    if (!utils::isNBitSignedQType<8>(inputElementType) &&
+        !utils::isNBitSignedQType<16>(inputElementType)) {
       return failure();
     }
 
@@ -653,14 +653,14 @@ struct PadConv2DOutputPattern : public OpRewritePattern<Conv2DOp> {
     }
     auto filterElementType =
         filterVal.getType().template cast<ShapedType>().getElementType();
-    if (!utils::hasNBitSignedQType(filterElementType)) {
+    if (!utils::isNBitSignedQType<8>(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
     if (auto biasType =
             conv2DOp.getBias().getType().template dyn_cast<ShapedType>()) {
-      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
+      if (!utils::isNBitSignedQType<32>(biasType.getElementType()))
         return failure();
     }
 
@@ -669,8 +669,8 @@ struct PadConv2DOutputPattern : public OpRewritePattern<Conv2DOp> {
                                  .getType()
                                  .template cast<ShapedType>()
                                  .getElementType();
-    if (!utils::hasNBitSignedQType(outputElementType) &&
-        !utils::hasNBitSignedQType<16>(outputElementType)) {
+    if (!utils::isNBitSignedQType<8>(outputElementType) &&
+        !utils::isNBitSignedQType<16>(outputElementType)) {
       return failure();
     }
     bool i16Conv = false;
@@ -728,21 +728,21 @@ struct PadTo4DepthwiseConv2DPattern
     // Input type must be QI8
     auto inputElementType =
         dConv2DOp.getInput().getType().cast<ShapedType>().getElementType();
-    if (!utils::hasNBitSignedQType(inputElementType)) {
+    if (!utils::isNBitSignedQType<8>(inputElementType)) {
       return failure();
     }
 
     // Filter type must be
     auto filterElementType =
         dConv2DOp.getFilter().getType().cast<ShapedType>().getElementType();
-    if (!utils::hasNBitSignedQType(filterElementType)) {
+    if (!utils::isNBitSignedQType<8>(filterElementType)) {
       return failure();
     }
 
     // If bias exists, it must be QI32
     if (auto biasType =
             dConv2DOp.getBias().getType().template dyn_cast<ShapedType>()) {
-      if (!utils::hasNBitSignedQType<32>(biasType.getElementType()))
+      if (!utils::isNBitSignedQType<32>(biasType.getElementType()))
         return failure();
     }
 

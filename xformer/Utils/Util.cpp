@@ -34,6 +34,15 @@ int getShapedTypeSize(ShapedType t) {
   return sizeInBytes;
 }
 
+SmallVector<int32_t, 8> getI32DimFromI64Dim(ArrayRef<int64_t> dims) {
+  SmallVector<int32_t, 8> output_shape_values;
+  for (auto dim : dims) {
+    output_shape_values.push_back(
+        ShapedType::isDynamic(dim) ? -1 : static_cast<int32_t>(dim));
+  }
+  return output_shape_values;
+}
+
 quant::UniformQuantizedType
 getQType(mlir::TypedValue<mlir::TensorType> tensor) {
   return tensor.getType()

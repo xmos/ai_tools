@@ -13,6 +13,7 @@ namespace mlir::xcore::utils {
 int getShapedTypeSize(ShapedType t);
 bool hasSameShape(ShapedType type1, ShapedType type2);
 size_t getTypeSize(Type type);
+SmallVector<int32_t, 8> getI32DimFromI64Dim(ArrayRef<int64_t> dims);
 bool hasOnlyChannelPadding(DenseIntElementsAttr attr);
 bool hasOnlySpatialPadding(DenseIntElementsAttr attr);
 

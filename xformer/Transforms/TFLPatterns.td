@@ -78,11 +78,13 @@ foreach binaryOp = [TFL_AddOp, TFL_SubOp, TFL_MulOp] in {
 }
 
 def HasUnequalShape
-    : Constraint<CPred<"! utils::hasSameShape($0.getType().cast<ShapedType>(), "
+    : Constraint<CPred<"!utils::hasSameShape($0.getType().cast<ShapedType>(), "
                        "$1.getType().cast<ShapedType>())">>;
 
-def getShapeAttr : NativeCodeCall<"$_builder.getI64TensorAttr($0.getType()."
-                                  "cast<ShapedType>().getShape())">;
+def getShapeAttr
+    : NativeCodeCall<
+          "$_builder.getI32TensorAttr(utils::getI32DimFromI64Dim($0.getType()."
+          "cast<ShapedType>().getShape()))">;
 
 // Add TFL_BroadcastToOp if necessary
 // TFL Add, Sub, Mul

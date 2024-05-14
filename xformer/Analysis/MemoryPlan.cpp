@@ -167,9 +167,9 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
         auto outVal = o->getResult(0);
         auto nextOp = *outVal.getUsers().begin();
         // Identify chain of overlappable Ops
-        while (outVal.hasOneUse() &&
+        while (outVal.hasOneUse() && !alreadyVisited.contains(nextOp) &&
                nextOp->hasTrait<OpTrait::xcore::MemoryOverlappable>()) {
-          inVal = nextOp->getOperand(0);
+          inVal = outVal;
           inputVals.push_back(inVal);
           alreadyVisited.insert(nextOp);
           outVal = nextOp->getResult(0);

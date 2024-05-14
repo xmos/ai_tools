@@ -93,6 +93,23 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
+def XC_BroadcastOp : XC_Op<"broadcast", [Pure]> {
+  let summary = "Broadcast op";
+
+  let description = [{Broadcast op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8, QI16, F32, I8, I32]>:$input,
+
+    I32Attr:$size,
+    I32Attr:$num_copies,
+    I32Attr:$num_broadcasts,
+    BoolAttr:$use_vpu
+  );
+
+  let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
+}
+
 def XC_PadOp : XC_Op<"pad", [Pure]> {
   let summary = "Pad op";
 

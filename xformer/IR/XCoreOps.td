@@ -193,7 +193,7 @@ def XC_UnaryI16_OpTypeAttr : I32EnumAttr<"UnaryI16OpType", "op type enum", [
   XC_UnaryI16_Quantize, XC_UnaryI16_Requantize, XC_UnaryI16_Dequantize
 ]>;
 
-def XC_UnaryI16Op : XC_Op<"unaryi16", [Pure, XC_MemoryOverlappable]> {
+def XC_UnaryI16Op : XC_Op<"unaryi16", [Pure]> {
   let summary = "Unary I16 op";
 
   let description = [{Unary I16 op.}];

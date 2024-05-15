@@ -15,6 +15,8 @@ def generate_broadcast_model(input_shape, output_shape):
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     converter.representative_dataset = representative_dataset_gen
     converter.target_spec.supported_ops = [tfl.OpsSet.TFLITE_BUILTINS_INT8]
+    converter.inference_input_type = tf.int8
+    converter.inference_output_type = tf.int8
     tflite_model = converter.convert()
     global i
     model_name = f'test_broadcast_{i}.tflite'

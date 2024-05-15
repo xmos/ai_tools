@@ -157,7 +157,11 @@ jobs:
           cd python/wheelhouse
           pip install *
           cd ../..
-          pytest integration_tests/runner.py --models_path integration_tests/models/8x8/test_add --log-cli-level=debug
+          pytest integration_tests/runner.py --models_path integration_tests/models/8x8 -n 2 --reruns 5 --reruns-delay 1
+          pytest integration_tests/runner.py --models_path integration_tests/models/16x8 -n 2 --reruns 5 --reruns-delay 1
+          pytest integration_tests/runner.py --models_path integration_tests/models/float32 -n 2 --reruns 5 --reruns-delay 1
+
+ 
 
   windows-release-wheel:
     name: Build and test release wheels for windows

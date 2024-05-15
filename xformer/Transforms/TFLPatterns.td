@@ -20,7 +20,7 @@ def : Pat<(TFL_QuantizeOp(TFL_ReshapeOp $input, $shape), $qtype),
           (TFL_ReshapeOp(TFL_QuantizeOp $input,
                          (UpdateShapeWithAxis<-1> $qtype, $input)),
            $shape),
-          [(IsQuantizedType $input)]>;
+          [(IsQuantizedType<8> $input), (IsQuantizedType<16> $input)]>;
 
 // Fuse Quantize(Quantize()) -> Quantize()
 def : Pat<(TFL_QuantizeOp(TFL_QuantizeOp $input, $qtype1), $qtype2),

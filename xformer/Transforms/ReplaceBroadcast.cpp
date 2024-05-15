@@ -79,6 +79,8 @@ struct ReplaceBroadcastPattern : public OpRewritePattern<TFL::BroadcastToOp> {
             num_broadcasts *= outShapeVec[i];
         }
       } else {
+        if (inShapeVec[i] != outShapeVec[i])
+          return failure();
         size *= inShapeVec[i];
       }
     }

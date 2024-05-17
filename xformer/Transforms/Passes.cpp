@@ -29,6 +29,8 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createOptimizeConv2DPass());
   pm.addPass(createApplyTFLPatternsPass());
   pm.addPass(createReplaceStridedSlicePass());
+  // Run canonicalization, which includes combining Reshapes
+  pm.addPass(mlir::createCanonicalizerPass());
 
   // XC passes
   pm.addPass(createReplaceAddPass());

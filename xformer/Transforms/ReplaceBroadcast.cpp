@@ -63,7 +63,18 @@ struct ReplaceBroadcastPattern : public OpRewritePattern<TFL::BroadcastToOp> {
 
     std::vector<int32_t> inShapeVec(inShape.begin(), inShape.end());
     std::vector<int32_t> outShapeVec(outShape.begin(), outShape.end());
-    // check only broadcasting along 1 dimension
+    // if number of dimensions are different, and in shape has fewer dimensions
+    // than out shape pad in shape with 1s
+    if (inShapeVec.size() < outShapeVec.size())
+      inShapeVec.insert(inShapeVec.begin(),
+                        outShapeVec.size() - inShapeVec.size(), 1);
+
+    // check dimensions are compatible for broadcasting
+    for (int i = 0; i < inShapeVec.size(); i++)
+      if (inShapeVec[i] != outShapeVec[i] && inShapeVec[i] != 1)
+        return failure();
+
+    // check only broadcasting along 1 dimension (or consecutive dimensions)
     bool canBroadcast = true;
     int size = utils::getTypeSize(inputElementType);
     int num_copies = 1, num_broadcasts = 1;

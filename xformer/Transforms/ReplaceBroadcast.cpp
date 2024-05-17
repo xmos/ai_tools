@@ -40,7 +40,8 @@ struct ReplaceBroadcastPattern : public OpRewritePattern<TFL::BroadcastToOp> {
     auto inputType = broadcastOp.getInput().getType().cast<RankedTensorType>();
     auto outputType =
         broadcastOp.getOutput().getType().cast<RankedTensorType>();
-
+    llvm::outs() << "inputType: " << inputType << "\n";
+    llvm::outs() << "outputType: " << outputType << "\n";
     if (!inputType.hasStaticShape())
       return failure();
 

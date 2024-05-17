@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "Utils/Util.h"
+#include <iostream>
 
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -87,6 +88,10 @@ ArrayRef<int64_t> getValShape(Value tensor) {
 
 bool checkSliceNoOp(RankedTensorType inputType, RankedTensorType outputType) {
   const int rank = inputType.getRank();
+  if (rank != outputType.getRank()) {
+    return false;
+  }
+  std::cout << "Rank: " << rank << std::endl;
   bool isNoOp = true;
   for (int i = 0; i < rank; i++) {
     if (inputType.getDimSize(i) != outputType.getDimSize(i)) {

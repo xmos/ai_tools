@@ -45,6 +45,9 @@ class XC_Op<string mnemonic, list<Trait> traits = []>
   let extraClassDeclaration = [{ std::vector<uint8_t> buildCustomOptions(); }];
 }
 
+// Trait
+def XC_MemoryOverlappable : NativeOpTrait<"xcore::MemoryOverlappable">;
+
 // Conv2D
 
 def XC_Conv2D_ValidDirect : I32EnumAttrCase<"ValidDirect", 0>;
@@ -93,7 +96,24 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
-def XC_PadOp : XC_Op<"pad", [Pure]> {
+def XC_BroadcastOp : XC_Op<"broadcast", [Pure]> {
+  let summary = "Broadcast op";
+
+  let description = [{Broadcast op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8, QI16, F32, I8, I32]>:$input,
+
+    I32Attr:$size,
+    I32Attr:$num_copies,
+    I32Attr:$num_broadcasts,
+    BoolAttr:$use_vpu
+  );
+
+  let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
+}
+
+def XC_PadOp : XC_Op<"pad", [Pure, XC_MemoryOverlappable]> {
   let summary = "Pad op";
 
   let description = [{Pad op.}];
@@ -132,7 +152,7 @@ def XC_ConcatOp : XC_Op<"concat", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
-def XC_AddOp : XC_Op<"add", [Pure]> {
+def XC_AddOp : XC_Op<"add", [Pure, XC_MemoryOverlappable]> {
   let summary = "Add op";
 
   let description = [{Add op.}];
@@ -151,7 +171,7 @@ def XC_AddOp : XC_Op<"add", [Pure]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-def XC_MulOp : XC_Op<"mul", [Pure]> {
+def XC_MulOp : XC_Op<"mul", [Pure, XC_MemoryOverlappable]> {
   let summary = "Mul op";
 
   let description = [{Mul op.}];
@@ -193,7 +213,7 @@ def XC_BinaryI16_Mul : I32EnumAttrCase<"Mul", 1>;
 def XC_BinaryI16_OpTypeAttr : I32EnumAttr<"BinaryI16OpType", "op type enum",
                                           [XC_BinaryI16_Add, XC_BinaryI16_Mul]>;
 
-def XC_BinaryI16Op : XC_Op<"binaryi16", [Pure]> {
+def XC_BinaryI16Op : XC_Op<"binaryi16", [Pure, XC_MemoryOverlappable]> {
   let summary = "Binary I16 op";
 
   let description = [{Binary I16 op.}];
@@ -209,7 +229,8 @@ def XC_BinaryI16Op : XC_Op<"binaryi16", [Pure]> {
   let results = (outs TensorOf<[QI16]> : $output);
 }
 
-def XC_Beta_ActivationF32Op : XC_Op<"beta_activationf32", [Pure]> {
+def XC_Beta_ActivationF32Op
+    : XC_Op<"beta_activationf32", [Pure, XC_MemoryOverlappable]> {
   let summary = "Beta ActivationF32 op";
 
   let description = [{Beta ActivationF32 op.}];
@@ -391,7 +412,7 @@ def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16]> : $output);
 }
 
-def XC_LookupOp : XC_Op<"lookup", [Pure]> {
+def XC_LookupOp : XC_Op<"lookup", [Pure, XC_MemoryOverlappable]> {
   let summary = "Lookup table op";
 
   let description = [{Lookup table op.}];
@@ -401,7 +422,7 @@ def XC_LookupOp : XC_Op<"lookup", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16]> : $output);
 }
 
-def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [Pure]> {
+def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [Pure, XC_MemoryOverlappable]> {
   let summary = "Pad 3 to 4 op";
 
   let description = [{Pad 3 to 4 op.}];

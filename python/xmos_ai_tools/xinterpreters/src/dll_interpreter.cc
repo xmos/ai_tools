@@ -47,6 +47,7 @@ void add_lib_vision_ops(
   resolver->AddSplitV();
   resolver->AddShape();
   resolver->AddElu();
+  resolver->AddBroadcastTo();
 }
 
 extern "C" {

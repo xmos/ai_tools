@@ -38,6 +38,7 @@ filegroup(
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_concat.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_3_to_4.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_slice.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_broadcast.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_mul.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_binaryi16.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_unaryi16.cc",

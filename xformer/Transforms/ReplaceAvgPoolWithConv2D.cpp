@@ -42,8 +42,8 @@ struct ReplaceAvgPoolWithConv2DPattern
 
     // Check for invalid types and return
     // Input type must be QI8
-    if (!utils::hasNBitSignedQType(inputElementalType) ||
-        !utils::hasNBitSignedQType(outputElementalType)) {
+    if (!utils::isNBitSignedQType<8>(inputElementalType) ||
+        !utils::isNBitSignedQType<8>(outputElementalType)) {
       return failure();
     }
 

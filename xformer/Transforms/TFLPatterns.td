@@ -20,7 +20,7 @@ def : Pat<(TFL_QuantizeOp(TFL_ReshapeOp $input, $shape), $qtype),
           (TFL_ReshapeOp(TFL_QuantizeOp $input,
                          (UpdateShapeWithAxis<-1> $qtype, $input)),
            $shape),
-          [(IsQuantizedType $input)]>;
+          [(IsQuantizedType<8> $input), (IsQuantizedType<16> $input)]>;
 
 // Fuse Quantize(Quantize()) -> Quantize()
 def : Pat<(TFL_QuantizeOp(TFL_QuantizeOp $input, $qtype1), $qtype2),
@@ -77,10 +77,37 @@ foreach binaryOp = [TFL_AddOp, TFL_SubOp, TFL_MulOp] in {
   }
 }
 
+def HasUnequalShape
+    : Constraint<CPred<"!utils::hasSameShape($0.getType().cast<ShapedType>(), "
+                       "$1.getType().cast<ShapedType>())">>;
+
+def getShapeAttr
+    : NativeCodeCall<
+          "$_builder.getI32TensorAttr(utils::getI32DimFromI64Dim($0.getType()."
+          "cast<ShapedType>().getShape()))">;
+
+// Add TFL_BroadcastToOp if necessary
+// TFL Add, Sub, Mul
+foreach binaryOp = [TFL_AddOp, TFL_SubOp, TFL_MulOp] in {
+def:
+  Pat<(binaryOp
+            : $output TensorOf<[QI8, QI16]>:$input1, TensorOf<[QI8,
+            QI16]>:$input2, $activation), (binaryOp (TFL_BroadcastToOp
+            $input1, (TFL_ConstOp(getShapeAttr $output)),(returnType (getTypeOf1WithQParamsOf0 $input1, $output))), $input2, $activation),
+            [(HasUnequalShape $input1, $output)]>;
+
+def:
+  Pat<(binaryOp
+            : $output TensorOf<[QI8, QI16]>:$input1, TensorOf<[QI8,
+            QI16]>:$input2, $activation), (binaryOp $input1, (TFL_BroadcastToOp
+            $input2, (TFL_ConstOp(getShapeAttr $output)),(returnType (getTypeOf1WithQParamsOf0 $input2, $output))), $activation),
+            [(HasUnequalShape $input2, $output)]>;
+}
+
 // If MeanOp with spatial axis and rank 2 output, expand output to rank 4, which
 // we later lower to AveragePool2D
 def : Pat<(TFL_MeanOp
-           : $output $input,
+           : $output TensorOf<[QI8]>:$input,
              (TFL_ConstOp
               : $axis_op $axis),
              $kd),
@@ -91,7 +118,7 @@ def : Pat<(TFL_MeanOp
 
 // Lower MeanOp with spatial axis to AveragePool2D
 def : Pat<(TFL_MeanOp
-           : $output $input, (TFL_ConstOp $axis), $kd),
+           : $output TensorOf<[QI8]>:$input, (TFL_ConstOp $axis), $kd),
           (TFL_QuantizeOp(
                TFL_AveragePool2DOp $input, (GetDimAsI32<1> $input),
                (GetDimAsI32<2> $input), TFL_PAD_Valid,

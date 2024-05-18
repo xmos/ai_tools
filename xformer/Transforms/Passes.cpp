@@ -29,6 +29,8 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createOptimizeConv2DPass());
   pm.addPass(createApplyTFLPatternsPass());
   pm.addPass(createReplaceStridedSlicePass());
+  // Run canonicalization, which includes combining Reshapes
+  pm.addPass(mlir::createCanonicalizerPass());
 
   // XC passes
   pm.addPass(createReplaceAddPass());
@@ -38,6 +40,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceConv2DPass());
   pm.addPass(createReplacePadPass());
   pm.addPass(createReplaceSlicePass());
+  pm.addPass(createReplaceBroadcastPass());
   pm.addPass(createReplaceConcatPass());
   pm.addPass(createApplyXCPatternsPass());
   // Add to pipeline only if flash image file option is provided

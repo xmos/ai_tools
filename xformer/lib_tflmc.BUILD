@@ -175,6 +175,7 @@ filegroup(
 cc_library(
     name = "tflmc_lib",
     hdrs = [
+        "src/Api.h",
         "src/CodeWriter.h",
         "src/Compiler.h",
         "src/MemMap.h",
@@ -182,6 +183,7 @@ cc_library(
         "src/xtflm_conf.h",
     ],
     srcs = [
+        "src/Api.cc",
         "src/CodeWriter.cc",
         "src/Compiler.cc",
         "src/MemMap.cc",

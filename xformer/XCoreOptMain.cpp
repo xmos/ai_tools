@@ -23,7 +23,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 // TODO: dpk
 // refactor tflmc to have include folder
-#include "src/Compiler.h"
+#include "src/Api.h"
 
 using namespace llvm;
 using namespace mlir;
@@ -481,7 +481,7 @@ int main(int argc, char **argv) {
     // Invoke tflmc and get info
     std::stringstream tflmcSourceString, tflmcHeaderString;
     try {
-      tflmc::Compiler compiler(flatBufferString.data(), &sharedCfg,
+      tflmc::TFLMC_Compiler compiler(flatBufferString.data(), &sharedCfg,
                                tflmcPrefixOption, tflmcPrintEnabled);
       emitRemark(UnknownLoc::get(module.getContext()))
           << "Tensor arena size : " << compiler.getTensorArenaSize();

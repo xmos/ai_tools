@@ -156,9 +156,8 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
   llvm::DenseSet<Operation *> alreadyVisited;
   if (overlapOps) {
     for (auto o : operations) {
-      // We are only overlapping Pad op as of now
-      if (llvm::isa<PadOp>(o) && !alreadyVisited.contains(o) &&
-          o->getOperand(0).hasOneUse()) {
+      if (o->hasTrait<OpTrait::xcore::MemoryOverlappable>() &&
+          !alreadyVisited.contains(o) && o->getOperand(0).hasOneUse()) {
         alreadyVisited.insert(o);
 
         llvm::SmallVector<Value> inputVals;
@@ -167,9 +166,10 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
 
         auto outVal = o->getResult(0);
         auto nextOp = *outVal.getUsers().begin();
-        // Identify chain of Pad Ops
-        while (outVal.hasOneUse() && llvm::isa<PadOp>(nextOp)) {
-          inVal = nextOp->getOperand(0);
+        // Identify chain of overlappable Ops
+        while (outVal.hasOneUse() && !alreadyVisited.contains(nextOp) &&
+               nextOp->hasTrait<OpTrait::xcore::MemoryOverlappable>()) {
+          inVal = outVal;
           inputVals.push_back(inVal);
           alreadyVisited.insert(nextOp);
           outVal = nextOp->getResult(0);

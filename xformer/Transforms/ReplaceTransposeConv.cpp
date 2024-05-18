@@ -42,15 +42,15 @@ struct ReplaceTransposeConvPattern
     auto outputElementType =
         tConvOp.getOutput().getType().cast<ShapedType>().getElementType();
 
-    if (!utils::hasNBitSignedQType(inputElementType) &&
-        !utils::hasNBitSignedQType<16>(inputElementType))
+    if (!utils::isNBitSignedQType<8>(inputElementType) &&
+        !utils::isNBitSignedQType<16>(inputElementType))
       return failure();
 
-    if (!utils::hasNBitSignedQType(weightsElementType))
+    if (!utils::isNBitSignedQType<8>(weightsElementType))
       return failure();
 
-    if (!utils::hasNBitSignedQType(outputElementType) &&
-        !utils::hasNBitSignedQType<16>(outputElementType))
+    if (!utils::isNBitSignedQType<8>(outputElementType) &&
+        !utils::isNBitSignedQType<16>(outputElementType))
       return failure();
 
     if (tConvOp.getPadding() != "VALID") {

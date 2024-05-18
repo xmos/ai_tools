@@ -92,7 +92,8 @@ def getUnaryI16BlobOrFail
 def: Pat<(TFL_QuantizeOp
             : $output TensorOf<[F32]>:$input, $qtype),
             (XC_UnaryI16Op $input, (Arith_ConstantOp (getUnaryI16BlobOrFail:$blob
-            $output)), XC_UnaryI16_Quantize)>;
+            $output)), XC_UnaryI16_Quantize),
+            [(IsQuantizedType<16> $output)]>;
 def: Pat<(TFL_QuantizeOp
             : $output TensorOf<[QI16]>:$input, $qtype),
             (XC_UnaryI16Op $input, (Arith_ConstantOp (getUnaryI16BlobOrFail:$blob

@@ -76,6 +76,18 @@ std::vector<uint8_t> SliceOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> BroadcastOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  auto rootMap = fbb.StartMap();
+  fbb.Int("s", (int32_t)getSize());
+  fbb.Int("n", (int32_t)getNumCopies());
+  fbb.Int("b", (int32_t)getNumBroadcasts());
+  fbb.Bool("v", (bool)getUseVpu());
+  fbb.EndMap(rootMap);
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> PadOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
@@ -237,6 +249,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<MulOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Pad3To4Op>>(ctx);
   patterns.insert<RewriteToCustomOp<SliceOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<BroadcastOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<ConcatOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ActivationF32Op>>(ctx);

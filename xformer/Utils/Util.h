@@ -13,6 +13,7 @@ namespace mlir::xcore::utils {
 int getShapedTypeSize(ShapedType t);
 bool hasSameShape(ShapedType type1, ShapedType type2);
 size_t getTypeSize(Type type);
+SmallVector<int32_t, 8> getI32DimFromI64Dim(ArrayRef<int64_t> dims);
 bool hasOnlyChannelPadding(DenseIntElementsAttr attr);
 bool hasOnlySpatialPadding(DenseIntElementsAttr attr);
 
@@ -20,7 +21,7 @@ quant::UniformQuantizedType getQType(mlir::TypedValue<mlir::TensorType> tensor);
 
 bool checkSliceNoOp(RankedTensorType inputType, RankedTensorType outputType);
 
-template <int N = 8> bool hasNBitSignedQType(Type type) {
+template <int N> bool isNBitSignedQType(Type type) {
   return (type.template isa<quant::QuantizedType>() &&
           type.template cast<quant::QuantizedType>().isSigned() &&
           type.template cast<quant::QuantizedType>()
@@ -57,8 +58,9 @@ template <typename T> bool checkBinaryCompatibility(T op) {
   Type rhsElemType = rhsType.getElementType();
   Type outputElemType = outputType.getElementType();
 
-  if (!hasNBitSignedQType(lhsElemType) || !hasNBitSignedQType(rhsElemType) ||
-      !hasNBitSignedQType(outputElemType)) {
+  if (!isNBitSignedQType<8>(lhsElemType) ||
+      !isNBitSignedQType<8>(rhsElemType) ||
+      !isNBitSignedQType<8>(outputElemType)) {
     return false;
   }
   return true;

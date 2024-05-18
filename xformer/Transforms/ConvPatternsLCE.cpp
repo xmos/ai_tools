@@ -28,7 +28,7 @@ ReplaceBConv2DPattern::checkIfValid(lq::Bconv2dOp conv2DOp) const {
                                .getType()
                                .template cast<ShapedType>()
                                .getElementType();
-  if (!utils::hasNBitSignedQType(outputElementType) &&
+  if (!utils::isNBitSignedQType<8>(outputElementType) &&
       !outputElementType.isInteger(32)) {
     conv2DOp.emitError(
         "Output type must be int32(packed binary) or int8 for BConv2D!");

@@ -61,7 +61,7 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
       return failure();
 
     // Output type must be QI8
-    if (!utils::hasNBitSignedQType(
+    if (!utils::isNBitSignedQType<8>(
             utils::getValElementType(targetOp.getOutput())))
       return failure();
 

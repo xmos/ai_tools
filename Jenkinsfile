@@ -38,7 +38,7 @@ def buildXinterpreterAndHostLib() {
 def extractDeviceZipAndHeaders() {
   dir("python/xmos_ai_tools/runtime") {
     unstash "release_archive"
-    sh_bat "unzip release_archive.zip"
+    sh_bat "unzip -o release_archive.zip"
   }
 }
 

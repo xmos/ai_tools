@@ -218,11 +218,9 @@ pipeline {
                 withVenv {
                   dir("xformer") {
                     bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"
-                    withVS {
-                      script {
-                        PYTHON_BIN_PATH = bat(script: "@where python.exe", returnStdout: true).split()[0].trim()
-                        bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"${VCINSTALLDIR}\""
-                      }
+                    script {
+                      PYTHON_BIN_PATH = bat(script: "@where python.exe", returnStdout: true).split()[0].trim()
+                      bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\""
                     }
                   }
                   dir("python") { 

@@ -309,8 +309,8 @@ static LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
           // printf("splits = %d, usage = %d\n", numSplits, peakUsage);
         }
       }
-      llvm::outs() << "\nOPERATION SPLIT ANALYSIS\n"
-                   << "¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯";
+      llvm::outs() << "\nOPERATION SPLIT ANALYSIS (BETA FEATURE)\n"
+                   << "¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯";
       llvm::outs() << llvm::format(
           "\nThe compiler suggests the following configuration for operation "
           "splitting:\nStart op is 0, End op is %d and Number of Splits is "

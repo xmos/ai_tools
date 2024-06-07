@@ -80,6 +80,11 @@ void RemoveDynamicShape::runOnOperation() {
       result.setType(getNewTensorType(tensorType));
     }
   });
+
+  // Save function name to be later used for memory plan pass analysis
+  auto module = func->getParentOfType<ModuleOp>();
+  OpBuilder builder(module);
+  module->setAttr("xc.fn_name", builder.getStringAttr(func.getName()));
 }
 } // namespace
 

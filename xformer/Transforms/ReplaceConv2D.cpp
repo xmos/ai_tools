@@ -280,8 +280,9 @@ void ReplaceConv2D::runOnOperation() {
 
   // Replace with XC Conv2D op
   RewritePatternSet patterns2(ctx);
+  std::unordered_set<Operation *> errorOpsSet;
   patterns2.insert<ReplaceConv2DPattern, ReplaceDepthwiseConv2DPattern,
-                   ReplaceBConv2DPattern>(ctx);
+                   ReplaceBConv2DPattern>(&errorOpsSet, ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
 
   // Revert remaining XC Fake Conv ops back to TFL Conv2D ops

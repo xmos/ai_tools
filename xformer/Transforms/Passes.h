@@ -16,7 +16,8 @@ namespace xcore {
 
 // Create a single pipeline that will run all the needed passes in the right
 // order.
-void buildXCorePassPipeline(OpPassManager &pm);
+void buildXCorePreOpSplitPassPipeline(OpPassManager &pm);
+void buildXCoreRemainingPassPipeline(OpPassManager &pm);
 
 //===----------------------------------------------------------------------===//
 // XCore-specific passes

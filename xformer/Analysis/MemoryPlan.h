@@ -41,11 +41,15 @@ public:
   //    last buffer that's simultaneously active.
   //  - This continues until all buffers are placed, and the offsets stored.
   std::vector<int> getAllocatedOffsets(const bool overlapOps,
-                                       int &peakMemoryUsed);
+                                       int &peakMemoryUsed, int &peakOpId);
 
   Operation *getOpWithMaxMemoryUsed();
 
+  int getNextBottomOpId(int opId);
+
   // OpSplitPlan getOpSplitPlan();
+
+  void printMemoryPlan();
 
 private:
   /// Initializes the internal mappings.
@@ -73,6 +77,8 @@ private:
   int getOffset(Value v, int size, DenseMap<Value, ValueInfo> &valueInfo,
                 ValuesOrderedByOffset &allocatedOffsets);
 
+  char getOrdinalCharacter(int i);
+
   DenseMap<Value, ValueInfo> valueInfo;
 
   std::vector<Value> values;
@@ -82,6 +88,12 @@ private:
 
   // Stores all operations according to the program sequence.
   std::vector<Operation *> operations;
+
+  // Stores non constant values and offsets
+  // We need them for printing out the memory plan without getting polluted with
+  // constant values.
+  std::vector<Value> nonConstantAllocatedValues;
+  std::vector<int> nonConstantOffsets;
 
   Liveness liveness;
 

@@ -1,6 +1,7 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
+#include "Analysis/MemoryPlan.h"
 #include "IR/XCoreOps.h"
 #include "Transforms/Options.h"
 #include "Transforms/Passes.h"
@@ -18,6 +19,7 @@
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -33,6 +35,11 @@ namespace mlir::xcore {
 // Mark all our options with this category, everything else (except for -version
 // and -help) will be hidden.
 static cl::OptionCategory XformerCategory("Xformer options");
+
+cl::opt<bool> enableMemoryAnalysisOption(
+    "xcore-run-memory-analysis",
+    cl::desc("Run memory analysis to aid in operation splitting."),
+    cl::init(false), cl::cat(XformerCategory));
 
 cl::opt<unsigned>
     quadraticLookupErrorOption("xcore-quadratic-lookup-error",
@@ -181,7 +188,141 @@ static LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
       return failure();
 
   } else {
-    xcore::buildXCorePassPipeline(pm);
+
+    xcore::buildXCorePreOpSplitPassPipeline(pm);
+    if (failed(pm.run(*mod))) {
+      return failure();
+    }
+
+    int lastGoodId = 0;
+    unsigned lastGoodNumSplits = 4;
+    if (mlir::xcore::enableMemoryAnalysisOption) {
+
+      auto fnName =
+          mod.get()->getAttr("xc.fn_name").cast<mlir::StringAttr>().str();
+      // run a pass with certain config and get arena size
+      //  do that again until small size
+      //  continue with that mod
+
+      auto funcOp = mod.get().lookupSymbol<func::FuncOp>(fnName);
+      auto mPlan = mlir::xcore::MemoryPlan(funcOp);
+      int peakUsage, peakOpId;
+      auto offlineOffsetsWithoutOverlap = mPlan.getAllocatedOffsets(
+          /*overlapOps=*/false, peakUsage, peakOpId);
+      mPlan.printMemoryPlan();
+
+      // set config for op split
+      // set op id with 4 splits
+      // find memory usage, if 10% larger okay, otherwise give up
+      int lastGoodUsage = 0;
+
+      mlir::xcore::opSplitTopOpsOption.clear();
+      mlir::xcore::opSplitTopOpsOption.setInitialValues({0});
+      mlir::xcore::opSplitBottomOpsOption.clear();
+      mlir::xcore::opSplitBottomOpsOption.setInitialValues(
+          {static_cast<unsigned int>(peakOpId)});
+      mlir::xcore::opSplitNumSplitsOption.clear();
+      mlir::xcore::opSplitNumSplitsOption.setInitialValues({lastGoodNumSplits});
+
+      // otherwise try down
+      // get next down op from current bottom op
+      // rerun
+      // if under 10% larger, okay
+      // while( there is next op && peaksize is under 10% larger than current
+      // size)
+
+      auto moduleClone = mod.get().clone();
+      PassManager pm3(moduleClone->getName(),
+                      mlir::OpPassManager::Nesting::Implicit);
+      pm3.addPass(mlir::xcore::createOpSplitPass());
+      pm3.addPass(mlir::xcore::createPlanMemoryPass());
+
+      int nextId = peakOpId;
+      int currentUsage = peakUsage;
+      bool twoConsecutiveIncreasesInPeakUsage = false;
+      while (nextId != -1) {
+        currentUsage = peakUsage;
+        mlir::xcore::opSplitBottomOpsOption.clear();
+        mlir::xcore::opSplitBottomOpsOption.overwriteDefault();
+        mlir::xcore::opSplitBottomOpsOption.setInitialValues(
+            {static_cast<unsigned int>(nextId)});
+
+        auto moduleClone = mod.get().clone();
+        OwningOpRef<ModuleOp> cloneMod(moduleClone);
+        if (failed(pm3.run(*cloneMod))) {
+          return failure();
+        }
+
+        if (auto attr = moduleClone->getAttr("xc.peakusage")) {
+          peakUsage = attr.cast<mlir::IntegerAttr>().getInt();
+        } else {
+          return failure();
+        }
+        // printf("split bottom op id = %d, usage = %d\n", nextId, peakUsage);
+
+        if (peakUsage >= currentUsage) {
+          if (!twoConsecutiveIncreasesInPeakUsage) {
+            twoConsecutiveIncreasesInPeakUsage = true;
+          } else {
+            break;
+          }
+        } else {
+          twoConsecutiveIncreasesInPeakUsage = false;
+          lastGoodId = nextId;
+          lastGoodUsage = peakUsage;
+        }
+        nextId = mPlan.getNextBottomOpId(nextId);
+      }
+
+      if (lastGoodId != 0) {
+        mlir::xcore::opSplitBottomOpsOption.clear();
+        mlir::xcore::opSplitBottomOpsOption.overwriteDefault();
+        mlir::xcore::opSplitBottomOpsOption.setInitialValues(
+            {static_cast<unsigned int>(lastGoodId)});
+
+        // now find ideal number of splits
+        currentUsage = lastGoodUsage;
+        peakUsage = lastGoodUsage;
+        unsigned numSplits = 4;
+        while (numSplits == 4 || peakUsage < currentUsage) {
+          numSplits++;
+          currentUsage = peakUsage;
+          mlir::xcore::opSplitNumSplitsOption.clear();
+          mlir::xcore::opSplitNumSplitsOption.overwriteDefault();
+          mlir::xcore::opSplitNumSplitsOption.setInitialValues({numSplits});
+
+          auto moduleClone = mod.get().clone();
+          OwningOpRef<ModuleOp> cloneMod(moduleClone);
+          if (failed(pm3.run(*cloneMod))) {
+            return failure();
+          }
+
+          if (auto attr = moduleClone->getAttr("xc.peakusage")) {
+            peakUsage = attr.cast<mlir::IntegerAttr>().getInt();
+          } else {
+            return failure();
+          }
+
+          if (peakUsage < currentUsage) {
+            lastGoodNumSplits = numSplits;
+          }
+          // printf("splits = %d, usage = %d\n", numSplits, peakUsage);
+        }
+      }
+      llvm::outs() << "\nOPERATION SPLIT ANALYSIS\n"
+                   << "¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯";
+      llvm::outs() << llvm::format(
+          "\nThe compiler suggests the following configuration for operation "
+          "splitting:\nStart op is 0, End op is %d and Number of Splits is "
+          "%d\nPass the following options to the compiler to get started:\n"
+          "--xcore-op-split-tensor-arena=1 --xcore-op-split-top-op=0 "
+          "--xcore-op-split-bottom-op=%d --xcore-op-split-num-splits=%d\n\n",
+          lastGoodId, lastGoodNumSplits, lastGoodId, lastGoodNumSplits);
+      // We want to quit at this point and not continue other compiler passes
+      return success();
+    }
+
+    xcore::buildXCoreRemainingPassPipeline(pm);
     if (failed(pm.run(*mod))) {
       return failure();
     }
@@ -297,6 +438,21 @@ int main(int argc, char **argv) {
   };
 
   // Validate options
+  if (mlir::xcore::enableMemoryAnalysisOption && argc > 3) {
+    return failedMessage("Please don't specify any other options with the "
+                         "--xcore-run-memory-analysis option!");
+  }
+
+  if (mlir::xcore::enableMemoryAnalysisOption && !outputFilename.empty()) {
+    return failedMessage("Please don't specify an output filename with the "
+                         "--xcore-run-memory-analysis option!");
+  }
+  if (!mlirIOEnabled && !mlir::xcore::enableMemoryAnalysisOption &&
+      outputFilename.empty()) {
+    return failedMessage(
+        "Please specify an output filename using the -o option!");
+  }
+
   if (mlir::xcore::tileLoadOption.getNumOccurrences() > 0 &&
       mlir::xcore::threadCountOption < 4) {
     return failedMessage("Please specify at least four threads using "
@@ -482,9 +638,9 @@ int main(int argc, char **argv) {
     std::stringstream tflmcSourceString, tflmcHeaderString;
     try {
       tflmc::TFLMC_Compiler compiler(flatBufferString.data(), &sharedCfg,
-                               tflmcPrefixOption, tflmcPrintEnabled);
-      emitRemark(UnknownLoc::get(module.getContext()))
-          << "Tensor arena size : " << compiler.getTensorArenaSize();
+                                     tflmcPrefixOption, tflmcPrintEnabled);
+      llvm::outs() << "Tensor arena size : " << compiler.getTensorArenaSize()
+                   << "\n";
       compiler.writeSource(tflmcSourceString);
       compiler.writeHeader(tflmcHeaderString);
     } catch (const std::exception &e) {

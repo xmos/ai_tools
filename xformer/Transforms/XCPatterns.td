@@ -46,14 +46,22 @@ def getExpLookupF32
 def isSingleSegment
     : Constraint<CPred<"$0.getType().cast<ShapedType>().getRank() == 2">>;
 
+def isSingleBatch : Constraint<CPred<"$0.getType().cast<ShapedType>().getDimSize(0) == 1">>;
+def isMultiBatch : Constraint<CPred<"$0.getType().cast<ShapedType>().getDimSize(0) != 1">>;
+
 def betaIsOne : Constraint<CPred<"$0.getValue().convertToFloat() == 1.0">>;
 
-// Softmax -> XC_SoftmaxOp
+// Softmax -> XC_SoftmaxOp if single batch else XC_BatchedSoftmaxOp
 def:
    Pat<(TFL_SoftmaxOp
             : $output TensorOf<[QI8]>:$input, $beta),
            (XC_SoftmaxOp $input, (Arith_ConstantOp (getExpLookupF32
-           $output))), [(betaIsOne $beta), (isSingleSegment $input)]>;
+           $output))), [(betaIsOne $beta), (isSingleSegment $input), (isSingleBatch $input)]>;
+def:
+   Pat<(TFL_SoftmaxOp
+            : $output TensorOf<[QI8]>:$input, $beta),
+           (XC_BatchedSoftmaxOp $input, (Arith_ConstantOp (getExpLookupF32
+           $output))), [(betaIsOne $beta), (isSingleSegment $input), (isMultiBatch $input)]>;
 
 // Beta float activation lookup
 def getActivationType

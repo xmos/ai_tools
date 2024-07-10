@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "ai-tools-timing"
+version = "0.1.0"
+description = ""
+authors = ["XMOS"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+xmos_ai_tools = "1.2.1.dev131"
+requests = "^2.32.3"
+openai = "^1.35.10"
+langchain = "^0.2.6"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

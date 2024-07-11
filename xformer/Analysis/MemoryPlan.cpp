@@ -162,42 +162,50 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
   if (overlapOps) {
     for (auto o : operations) {
       if (o->hasTrait<OpTrait::xcore::MemoryOverlappable>() &&
-          !alreadyVisited.contains(o) && o->getOperand(0).hasOneUse()) {
-        alreadyVisited.insert(o);
-
-        llvm::SmallVector<Value> inputVals;
+          !alreadyVisited.contains(o)) {
         auto inVal = o->getOperand(0);
-        inputVals.push_back(inVal);
 
-        auto outVal = o->getResult(0);
-        auto nextOp = *outVal.getUsers().begin();
-        // Identify chain of overlappable Ops
-        while (outVal.hasOneUse() && !alreadyVisited.contains(nextOp) &&
-               nextOp->hasTrait<OpTrait::xcore::MemoryOverlappable>()) {
-          inVal = outVal;
+        if ((o->getNumOperands() == 1 && inVal.hasOneUse()) ||
+            (o->getNumOperands() == 2 &&
+             (inVal.hasOneUse() || o->getOperand(1).hasOneUse()))) {
+          if ((o->getNumOperands() == 2 && !inVal.hasOneUse())) {
+            inVal = o->getOperand(1);
+          }
+
+          alreadyVisited.insert(o);
+          llvm::SmallVector<Value> inputVals;
           inputVals.push_back(inVal);
-          alreadyVisited.insert(nextOp);
-          outVal = nextOp->getResult(0);
-          nextOp = *outVal.getUsers().begin();
-        }
 
-        // Set first Used of output Val to the first input Val
-        vInfo[outVal].firstUsed = vInfo[inputVals[0]].firstUsed;
-        auto unalignedSizeOutVal =
-            utils::getShapedTypeSize(outVal.getType().dyn_cast<ShapedType>());
-        size_t maxSizeNeeded = 0;
-        for (auto inV : inputVals) {
-          auto unalignedSizeInV =
-              utils::getShapedTypeSize(inV.getType().dyn_cast<ShapedType>());
-          auto unalignedOffset = unalignedSizeOutVal - unalignedSizeInV;
-          // Align offset up to double word = 8 bytes
-          auto offset = ((unalignedOffset + 7) / 8) * 8;
-          maxSizeNeeded = std::max(vInfo[inV].size + offset, maxSizeNeeded);
-          inOutMap[inV] = {outVal, offset};
+          auto outVal = o->getResult(0);
+          auto nextOp = *outVal.getUsers().begin();
+          // Identify chain of overlappable Ops
+          while (outVal.hasOneUse() && !alreadyVisited.contains(nextOp) &&
+                 nextOp->hasTrait<OpTrait::xcore::MemoryOverlappable>()) {
+            inVal = outVal;
+            inputVals.push_back(inVal);
+            alreadyVisited.insert(nextOp);
+            outVal = nextOp->getResult(0);
+            nextOp = *outVal.getUsers().begin();
+          }
+
+          // Set first Used of output Val to the first input Val
+          vInfo[outVal].firstUsed = vInfo[inputVals[0]].firstUsed;
+          auto unalignedSizeOutVal =
+              utils::getShapedTypeSize(outVal.getType().dyn_cast<ShapedType>());
+          size_t maxSizeNeeded = 0;
+          for (auto inV : inputVals) {
+            auto unalignedSizeInV =
+                utils::getShapedTypeSize(inV.getType().dyn_cast<ShapedType>());
+            auto unalignedOffset = unalignedSizeOutVal - unalignedSizeInV;
+            // Align offset up to double word = 8 bytes
+            auto offset = ((unalignedOffset + 7) / 8) * 8;
+            maxSizeNeeded = std::max(vInfo[inV].size + offset, maxSizeNeeded);
+            inOutMap[inV] = {outVal, offset};
+          }
+          // The aligned input val size plus aligned offset might be larger than
+          // aligned output val size
+          vInfo[outVal].size = std::max(vInfo[outVal].size, maxSizeNeeded);
         }
-        // The aligned input val size plus aligned offset might be larger than
-        // aligned output val size
-        vInfo[outVal].size = std::max(vInfo[outVal].size, maxSizeNeeded);
       }
     }
   }
@@ -353,6 +361,7 @@ void MemoryPlan::printMemoryPlan() {
       line[c] = '.';
     }
     int memory_use = 0;
+    int peakSize = 0;
     for (int i = 0; i < nonConstantAllocatedValues.size(); ++i) {
       if ((t < valueInfo[nonConstantAllocatedValues[i]].firstUsed) ||
           (t > valueInfo[nonConstantAllocatedValues[i]].lastUsed)) {
@@ -362,7 +371,12 @@ void MemoryPlan::printMemoryPlan() {
       if (offset == -1) {
         continue;
       }
+
       const int size = valueInfo[nonConstantAllocatedValues[i]].size;
+      if (peakSize < offset + size) {
+        peakSize = offset + size;
+      }
+
       memory_use += size;
       const int line_start = (offset * kLineWidth) / max_size;
       const int line_end = ((offset + size) * kLineWidth) / max_size;
@@ -377,9 +391,10 @@ void MemoryPlan::printMemoryPlan() {
     line[kLineWidth] = 0;
 
     llvm::outs() << llvm::format(
-        "\n%-20s %s%d: %s (%dk)",
+        "\n%-20s %s%d: %s (%dk), (%dk)",
         operations[t]->getName().stripDialect().str().c_str(),
-        t < 10 ? " " : "", t, (const char *)line, (memory_use + 1023) / 1024);
+        t < 10 ? " " : "", t, (const char *)line, (memory_use + 1023) / 1024,
+        (peakSize + 1023) / 1024);
   }
   llvm::outs() << "\n";
 }

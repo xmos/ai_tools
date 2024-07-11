@@ -321,6 +321,16 @@ def XC_SoftmaxOp : XC_Op<"softmax", [Pure]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_BatchedSoftmaxOp : XC_Op<"batched_softmax", [Pure]> {
+  let summary = "Batched softmax op";
+
+  let description = [{Batched softmax op.}];
+
+  let arguments = (ins TensorOf<[QI8]> : $input, TensorOf<[F32]> : $lut);
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_Conv2DV2Op : XC_Op<"conv2d_v2", [Pure]> {
   let summary = "Conv2D V2 op";
 

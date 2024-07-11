@@ -178,6 +178,118 @@ struct RaiseSliceHorizontalAddPattern : public OpRewritePattern<TFL::SliceOp> {
   }
 };
 
+struct RaiseSliceHorizontalMulPattern : public OpRewritePattern<TFL::SliceOp> {
+  using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::SliceOp slice,
+                                PatternRewriter &rewriter) const override {
+    // Only raise slices that have been inserted with op split pass
+    if (!((slice->hasAttr(opSplitLabel))))
+      return failure();
+
+    // If slice does not have a defining op, return failure
+    if (!(slice.getInput().getDefiningOp())) {
+      return failure();
+    }
+
+    if (!isa<TFL::MulOp>(slice.getInput().getDefiningOp())) {
+      return failure();
+    }
+
+    auto addOriginal = llvm::cast<TFL::MulOp>(slice.getInput().getDefiningOp());
+
+    // Do not raise slice if op does not have op split label
+    if (!(addOriginal->hasAttr(opSplitLabel)))
+      return failure();
+
+    auto sliceOutShape = utils::getValShape(slice.getOutput());
+
+
+//     // if broadcast, create fakeslice op with no slices
+//     // find if lhs or rhs has broadcast
+//     auto lhsType = addOriginal.getLhs().getType().cast<RankedTensorType>();
+//     auto rhsType = addOriginal.getRhs().getType().cast<RankedTensorType>();
+//     auto outputType = addOriginal.getOutput().getType().cast<RankedTensorType>();
+//     if (!hasSameShape(rhsType, outputType) &&
+//       !hasSameShape(lhsType, outputType)) {
+//       return failure();
+//     }
+//     // RHS needs broadcast
+//     if (!hasSameShape(rhsType, outputType) {
+
+//     } else {
+
+//     }
+
+//    o  l
+//     mul
+//   s s s s
+//     op
+
+//        l
+//   fs fs fs fs
+
+//   fs
+//   l
+//   fs fs fs
+
+//       o  l
+//       s fs
+//       m       m 
+//               s s s 
+
+
+// fc
+// 10
+// conv
+// 40x10x1
+
+//     // raisefsaboveop
+//     // if op can be split spatially, then raise fs and convert to slice
+//     // if another fs already above op, then merge with that one
+//     // otherwise, raise above op
+
+
+//     conv
+//     1x1x1x16
+//     fs(4)
+
+
+
+
+//      conv
+//      1x40x10x10
+//     s s s s
+//     1x10x10
+
+    // Create new slice for above add
+    auto sliceLHS = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
+    sliceLHS.setOperand(0, addOriginal.getLhs());
+    RankedTensorType sliceLHSType = RankedTensorType::get(
+        sliceOutShape, utils::getValElementType(addOriginal.getLhs()));
+    sliceLHS->getResult(0).setType(sliceLHSType);
+
+    // Create new slice for above add
+    auto sliceRHS = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
+    sliceRHS.setOperand(0, addOriginal.getRhs());
+    RankedTensorType sliceRHSType = RankedTensorType::get(
+        sliceOutShape, utils::getValElementType(addOriginal.getRhs()));
+    sliceRHS->getResult(0).setType(sliceRHSType);
+
+    auto addReplacement = llvm::cast<TFL::MulOp>(rewriter.clone(*addOriginal));
+    RankedTensorType addReplacementType = RankedTensorType::get(
+        sliceOutShape, utils::getValElementType(addOriginal.getOutput()));
+    addReplacement->getResult(0).setType(addReplacementType);
+    addReplacement.setOperand(0, sliceLHS);
+    addReplacement.setOperand(1, sliceRHS);
+
+    // replace slice with new slice -> new add
+    rewriter.replaceOp(slice, addReplacement.getOutput());
+
+    return success();
+  }
+};
+
 template <typename ConvOp>
 struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
   using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
@@ -744,6 +856,7 @@ void OpSplit::runOnOperation() {
   RewritePatternSet patterns2(ctx);
 
   patterns2.insert<RaiseSliceHorizontalAddPattern>(ctx);
+  patterns2.insert<RaiseSliceHorizontalMulPattern>(ctx);
   patterns2.insert<RaiseSliceHorizontalPadPattern>(ctx);
   patterns2.insert<RaiseSliceHorizontalPattern<TFL::Conv2DOp>>(ctx);
   patterns2.insert<RaiseSliceHorizontalPattern<TFL::DepthwiseConv2DOp>>(ctx);

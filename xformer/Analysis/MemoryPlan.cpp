@@ -161,14 +161,25 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
   llvm::DenseSet<Operation *> alreadyVisited;
   if (overlapOps) {
     for (auto o : operations) {
+      // We iterate through overlappable ops which have not been visited yet
       if (o->hasTrait<OpTrait::xcore::MemoryOverlappable>() &&
           !alreadyVisited.contains(o)) {
         auto inVal = o->getOperand(0);
 
-        if ((o->getNumOperands() == 1 && inVal.hasOneUse()) ||
+        // We have binary and unary ops as overlappable
+        // For binary ops, we might have to overlap with the second operand
+        // The complicated if condition below is to check for valid one operand
+        // or two operand cases
+        if ((o->getNumOperands() == 1 && inVal.hasOneUse() &&
+             !vInfo[inVal].isConstant) ||
             (o->getNumOperands() == 2 &&
-             (inVal.hasOneUse() || o->getOperand(1).hasOneUse()))) {
-          if ((o->getNumOperands() == 2 && !inVal.hasOneUse())) {
+             (inVal.hasOneUse() && !vInfo[inVal].isConstant ||
+              o->getOperand(1).hasOneUse() &&
+                  !vInfo[o->getOperand(1)].isConstant))) {
+          // In case of two operands and first operand is invalid, use the
+          // second one
+          if (o->getNumOperands() == 2 &&
+              (!inVal.hasOneUse() || vInfo[inVal].isConstant)) {
             inVal = o->getOperand(1);
           }
 

@@ -4,6 +4,7 @@ Example with flash and tensor arena on external memory
 Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 
 This is an example with one network using a tensor arena in external memory.
+This is much slower than having the tensor arena in the 512 kB SRAM, but it allows tensor arenas to have a size larger than 512 kB.
 
 The differences with the ``app_flash_single_model`` example are minimal:
 

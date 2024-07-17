@@ -96,8 +96,7 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
-def XC_FakeSliceOp
-    : XC_Op<"fake_slice", [Pure, SameOperandsAndResultType]> {
+def XC_FakeSliceOp : XC_Op<"fake_slice", [Pure]> {
   let summary = "Fake slice op";
 
   let description = [{Fake slice op.}];

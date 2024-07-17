@@ -1,6 +1,7 @@
 //  Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
+#include "IR/XCoreOps.h"
 #include "Transforms/Options.h"
 #include "Utils/Util.h"
 
@@ -15,6 +16,8 @@ namespace mlir::xcore {
 namespace {
 static constexpr char opSplitLabel[] = "opSplitLabel";
 static constexpr char opSplitLabelNumSplits[] = "opSplitLabelNumSplits";
+static constexpr char opSplitLabelSavedNumSplits[] =
+    "opSplitLabelSavedNumSplits";
 
 // OpSplit
 struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
@@ -22,6 +25,7 @@ struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
 
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TensorFlowLiteDialect>();
+    registry.insert<XCoreDialect>();
   }
   StringRef getArgument() const final { return "xcore-op-split"; }
   StringRef getDescription() const final { return "Op Split."; }
@@ -41,6 +45,88 @@ TFL::SliceOp createSliceOp(PatternRewriter &rewriter, Location loc, Value input,
                                                beginConstantOp, sizeConstantOp);
   sliceOp->setAttr(opSplitLabel, rewriter.getUnitAttr());
   return sliceOp;
+}
+
+LogicalResult isRaisableSlice(PatternRewriter &rewriter, TFL::SliceOp slice) {
+  // Only raise slices that have been inserted with op split pass
+  if (!slice->hasAttr(opSplitLabel))
+    return failure();
+
+  auto definingOp = slice.getInput().getDefiningOp();
+  // Do not raise slice if defining op does not have op split label
+  if (!definingOp->hasAttr(opSplitLabel))
+    return failure();
+
+  // all other uses of defining op must be eligible slices
+  // we currently only opsplit ops with one result
+  int numEligibleSlices = 0;
+  for (const mlir::OpOperand &use : definingOp->getResult(0).getUses()) {
+    mlir::Operation *op = use.getOwner();
+    if (auto sliceOp = dyn_cast_or_null<TFL::SliceOp>(op)) {
+      if (!sliceOp->hasAttr(opSplitLabel)) {
+        return failure();
+      } else {
+        numEligibleSlices++;
+      }
+    } else {
+      return failure();
+    }
+  }
+
+  // no of eligible slices must be greater than or equal to set num of splits
+  // If more slices, we should try to combine before raising
+  if (!definingOp->hasAttr(opSplitLabelSavedNumSplits))
+    return failure();
+  auto attr = definingOp->getAttr(opSplitLabelSavedNumSplits);
+  int numSplits = attr.cast<mlir::IntegerAttr>().getInt();
+  if (numSplits != -1 && numEligibleSlices < numSplits) {
+    return failure();
+  } else {
+    definingOp->setAttr(opSplitLabelSavedNumSplits,
+                        rewriter.getI32IntegerAttr(-1));
+  }
+
+  return success();
+}
+
+LogicalResult combineSliceWithExisting(PatternRewriter &rewriter,
+                                       TFL::SliceOp slice) {
+  auto definingOp = slice.getInput().getDefiningOp();
+
+  // all other uses of defining op must be eligible slices
+  // we currently only opsplit ops with one result
+  SmallVector<TFL::SliceOp> sliceOps;
+  for (const mlir::OpOperand &use : definingOp->getResult(0).getUses()) {
+    mlir::Operation *op = use.getOwner();
+    if (auto sliceOp = dyn_cast_or_null<TFL::SliceOp>(op)) {
+      // dont push current slice op
+      if (sliceOp != slice) {
+        sliceOps.push_back(sliceOp);
+      }
+    }
+  }
+
+  auto f = slice->getParentOfType<func::FuncOp>();
+  int i;
+  for (i = 0; i < sliceOps.size(); i++) {
+    // if slice op matches with another op in list
+    // remove current one and attach to that
+    if (slice.getBegin() == sliceOps[i].getBegin() &&
+        slice.getSize() == sliceOps[i].getSize()) {
+      break;
+    }
+  }
+
+  if (i < sliceOps.size()) {
+    // slice.getOutput().replaceAllUsesWith(sliceOps[i]);
+    // rewriter.eraseOp(slice);
+    rewriter.replaceOp(slice, sliceOps[i].getOutput());
+    return success();
+  }
+  // // replace slice with new slice -> new add
+  // rewriter.replaceOp(fakeSlice, opReplacement->getResult(0));
+
+  return failure();
 }
 
 template <typename TargetOp>
@@ -129,41 +215,43 @@ struct RaiseSliceHorizontalAddPattern : public OpRewritePattern<TFL::SliceOp> {
 
   LogicalResult matchAndRewrite(TFL::SliceOp slice,
                                 PatternRewriter &rewriter) const override {
-    // Only raise slices that have been inserted with op split pass
-    if (!((slice->hasAttr(opSplitLabel))))
-      return failure();
-
-    // If slice does not have a defining op, return failure
-    if (!(slice.getInput().getDefiningOp())) {
+    if (!slice.getInput().getDefiningOp() ||
+        !isa<TFL::AddOp>(slice.getInput().getDefiningOp())) {
       return failure();
     }
 
-    if (!isa<TFL::AddOp>(slice.getInput().getDefiningOp())) {
+    if (failed(isRaisableSlice(rewriter, slice))) {
       return failure();
+    }
+
+    // combineslice with existing
+    // go through all uses of defining op
+    // find other slices and see if there is a match
+    // if so, erase this slice and attach to that one, remove opsplitlabel from
+    // attached new slice
+    if (succeeded(combineSliceWithExisting(rewriter, slice))) {
+      return success();
     }
 
     auto addOriginal = llvm::cast<TFL::AddOp>(slice.getInput().getDefiningOp());
 
-    // Do not raise slice if op does not have op split label
-    if (!(addOriginal->hasAttr(opSplitLabel)))
-      return failure();
-
     auto sliceOutShape = utils::getValShape(slice.getOutput());
 
-    // Create new slice for above add
-    auto sliceLHS = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
-    sliceLHS.setOperand(0, addOriginal.getLhs());
-    RankedTensorType sliceLHSType = RankedTensorType::get(
-        sliceOutShape, utils::getValElementType(addOriginal.getLhs()));
-    sliceLHS->getResult(0).setType(sliceLHSType);
+    auto outputType =
+        addOriginal.getOutput().getType().cast<RankedTensorType>();
+    auto getSliceOp = [&](Value arg) -> Value {
+      auto argType = arg.getType().cast<RankedTensorType>();
+      auto newSlice = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
+      newSlice.setOperand(0, arg);
+      RankedTensorType newSliceType =
+          RankedTensorType::get(sliceOutShape, utils::getValElementType(arg));
+      newSlice->getResult(0).setType(newSliceType);
+      return newSlice;
+    };
 
-    // Create new slice for above add
-    auto sliceRHS = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
-    sliceRHS.setOperand(0, addOriginal.getRhs());
-    RankedTensorType sliceRHSType = RankedTensorType::get(
-        sliceOutShape, utils::getValElementType(addOriginal.getRhs()));
-    sliceRHS->getResult(0).setType(sliceRHSType);
-
+    // Create new slice for above adds
+    auto sliceLHS = getSliceOp(addOriginal.getLhs());
+    auto sliceRHS = getSliceOp(addOriginal.getRhs());
     auto addReplacement = llvm::cast<TFL::AddOp>(rewriter.clone(*addOriginal));
     RankedTensorType addReplacementType = RankedTensorType::get(
         sliceOutShape, utils::getValElementType(addOriginal.getOutput()));
@@ -178,108 +266,217 @@ struct RaiseSliceHorizontalAddPattern : public OpRewritePattern<TFL::SliceOp> {
   }
 };
 
+struct RaiseFakeSliceHorizontalPattern : public OpRewritePattern<FakeSliceOp> {
+  using OpRewritePattern<FakeSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FakeSliceOp fakeSlice,
+                                PatternRewriter &rewriter) const override {
+    auto definingOp = fakeSlice.getInput().getDefiningOp();
+    // If fakeslice does not have a defining op, remove it
+    if (!definingOp) {
+      rewriter.replaceOp(fakeSlice, fakeSlice->getResult(0));
+      return success();
+    }
+
+    // no of fake slices must be equal to set num of splits
+    if (!definingOp->hasAttr(opSplitLabelSavedNumSplits))
+      return failure();
+    auto attr = definingOp->getAttr(opSplitLabelSavedNumSplits);
+    int numSplits = attr.cast<mlir::IntegerAttr>().getInt();
+    auto beginAttr = fakeSlice->getAttr("begin").cast<mlir::ArrayAttr>();
+    if (beginAttr.size() != numSplits) {
+      return failure();
+    }
+
+    if (!dyn_cast_or_null<TFL::LogisticOp>(definingOp) &&
+        !dyn_cast_or_null<TFL::FullyConnectedOp>(definingOp) &&
+        !dyn_cast_or_null<TFL::ConstOp>(definingOp)) {
+      return failure();
+    }
+
+    // Do not raise slice if op does not have op split label
+    if (!(definingOp->hasAttr(opSplitLabel)))
+      return failure();
+
+    auto sliceOutShape = utils::getValShape(fakeSlice.getOutput());
+
+    // Create new slice for above adds
+    auto sliceReplacement = rewriter.clone(*fakeSlice);
+    sliceReplacement->setOperand(0, definingOp->getOperand(0));
+    sliceReplacement->getResult(0).setType(definingOp->getOperand(0).getType());
+    auto opReplacement = rewriter.clone(*definingOp);
+    opReplacement->setOperand(0, sliceReplacement->getResult(0));
+
+    // replace slice with new slice -> new add
+    rewriter.replaceOp(fakeSlice, opReplacement->getResult(0));
+
+    return success();
+  }
+};
+
+struct RaiseFakeSliceHorizontalMeanPattern
+    : public OpRewritePattern<FakeSliceOp> {
+  using OpRewritePattern<FakeSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FakeSliceOp fakeSlice,
+                                PatternRewriter &rewriter) const override {
+    // If slice does not have a defining op, return failure
+    if (!(fakeSlice.getInput().getDefiningOp())) {
+      return failure();
+    }
+
+    auto meanOriginal =
+        dyn_cast_or_null<TFL::MeanOp>(fakeSlice.getInput().getDefiningOp());
+    if (!meanOriginal) {
+      return failure();
+    }
+
+    fakeSlice.dump();
+
+    // Do not raise slice if op does not have op split label
+    if (!(meanOriginal->hasAttr(opSplitLabel)))
+      return failure();
+
+    auto beginAttr = fakeSlice->getAttr("begin").cast<mlir::ArrayAttr>();
+    auto sizeAttr = fakeSlice->getAttr("size").cast<mlir::ArrayAttr>();
+    assert(beginAttr.size() == sizeAttr.size());
+
+    SmallVector<Value> meanOps;
+
+    for (int i = 0; i < beginAttr.size(); i++) {
+      auto begin = beginAttr.getValue()[i].cast<mlir::DenseIntElementsAttr>();
+      auto beginVector = std::vector<int32_t>{
+          begin.getValues<int32_t>().begin(), begin.getValues<int32_t>().end()};
+
+      auto size = sizeAttr.getValue()[i].cast<mlir::DenseIntElementsAttr>();
+      auto sizeVector = std::vector<int32_t>{size.getValues<int32_t>().begin(),
+                                             size.getValues<int32_t>().end()};
+
+      // create slice and mean op
+      auto sliceReplacement = createSliceOp(
+          rewriter, fakeSlice.getLoc(), meanOriginal.getInput(), beginVector,
+          sizeVector, utils::getValElementType(meanOriginal.getInput()));
+
+      auto meanReplacement =
+          llvm::cast<TFL::MeanOp>(rewriter.clone(*meanOriginal));
+      meanReplacement.setOperand(0, sliceReplacement);
+
+      meanOps.push_back(meanReplacement.getResult());
+    }
+    // create concat and final mean op
+    RankedTensorType newOutputType = RankedTensorType::get(
+        {1, 4, 1, 16}, utils::getValElementType(meanOriginal.getOutput()));
+    auto newConcatOp = rewriter.create<TFL::ConcatenationOp>(
+        meanOriginal.getLoc(), newOutputType, meanOps, /*axis=*/1, "NONE");
+
+    auto meanReplacement =
+        llvm::cast<TFL::MeanOp>(rewriter.clone(*meanOriginal));
+    meanReplacement.setOperand(0, newConcatOp);
+
+    // auto sliceOutShape = utils::getValShape(fakeSlice.getOutput());
+
+    // // Create new slice for above adds
+    // auto sliceReplacement = rewriter.clone(*fakeSlice);
+    // sliceReplacement->setOperand(0, definingOp.getOperand());
+    // sliceReplacement->getResult(0).setType(definingOp.getResult().getType());
+
+    // auto opReplacement = rewriter.clone(*definingOp);
+    // opReplacement->setOperand(0, sliceReplacement->getResult(0));
+
+    // // replace slice with new slice -> new add
+    rewriter.replaceOp(fakeSlice, meanReplacement->getResult(0));
+
+    return success();
+  }
+};
+
 struct RaiseSliceHorizontalMulPattern : public OpRewritePattern<TFL::SliceOp> {
   using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TFL::SliceOp slice,
                                 PatternRewriter &rewriter) const override {
-    // Only raise slices that have been inserted with op split pass
-    if (!((slice->hasAttr(opSplitLabel))))
-      return failure();
-
+    auto f = slice->getParentOfType<func::FuncOp>();
     // If slice does not have a defining op, return failure
-    if (!(slice.getInput().getDefiningOp())) {
+    if (!slice.getInput().getDefiningOp() ||
+        !isa<TFL::MulOp>(slice.getInput().getDefiningOp())) {
       return failure();
     }
 
-    if (!isa<TFL::MulOp>(slice.getInput().getDefiningOp())) {
+    if (failed(isRaisableSlice(rewriter, slice))) {
       return failure();
     }
 
     auto addOriginal = llvm::cast<TFL::MulOp>(slice.getInput().getDefiningOp());
 
-    // Do not raise slice if op does not have op split label
-    if (!(addOriginal->hasAttr(opSplitLabel)))
+    DenseElementsAttr beginAttr, sizeAttr;
+    if (!matchPattern(slice.getBegin(), m_Constant(&beginAttr))) {
       return failure();
+    }
+    if (!matchPattern(slice.getSize(), m_Constant(&sizeAttr))) {
+      return failure();
+    }
 
     auto sliceOutShape = utils::getValShape(slice.getOutput());
-
-
-//     // if broadcast, create fakeslice op with no slices
-//     // find if lhs or rhs has broadcast
-//     auto lhsType = addOriginal.getLhs().getType().cast<RankedTensorType>();
-//     auto rhsType = addOriginal.getRhs().getType().cast<RankedTensorType>();
-//     auto outputType = addOriginal.getOutput().getType().cast<RankedTensorType>();
-//     if (!hasSameShape(rhsType, outputType) &&
-//       !hasSameShape(lhsType, outputType)) {
-//       return failure();
-//     }
-//     // RHS needs broadcast
-//     if (!hasSameShape(rhsType, outputType) {
-
-//     } else {
-
-//     }
-
-//    o  l
-//     mul
-//   s s s s
-//     op
-
-//        l
-//   fs fs fs fs
-
-//   fs
-//   l
-//   fs fs fs
-
-//       o  l
-//       s fs
-//       m       m 
-//               s s s 
-
-
-// fc
-// 10
-// conv
-// 40x10x1
-
-//     // raisefsaboveop
-//     // if op can be split spatially, then raise fs and convert to slice
-//     // if another fs already above op, then merge with that one
-//     // otherwise, raise above op
-
-
-//     conv
-//     1x1x1x16
-//     fs(4)
-
-
-
-
-//      conv
-//      1x40x10x10
-//     s s s s
-//     1x10x10
-
-    // Create new slice for above add
-    auto sliceLHS = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
-    sliceLHS.setOperand(0, addOriginal.getLhs());
-    RankedTensorType sliceLHSType = RankedTensorType::get(
-        sliceOutShape, utils::getValElementType(addOriginal.getLhs()));
-    sliceLHS->getResult(0).setType(sliceLHSType);
-
-    // Create new slice for above add
-    auto sliceRHS = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
-    sliceRHS.setOperand(0, addOriginal.getRhs());
-    RankedTensorType sliceRHSType = RankedTensorType::get(
-        sliceOutShape, utils::getValElementType(addOriginal.getRhs()));
-    sliceRHS->getResult(0).setType(sliceRHSType);
-
     auto addReplacement = llvm::cast<TFL::MulOp>(rewriter.clone(*addOriginal));
     RankedTensorType addReplacementType = RankedTensorType::get(
         sliceOutShape, utils::getValElementType(addOriginal.getOutput()));
     addReplacement->getResult(0).setType(addReplacementType);
+
+    auto outputType =
+        addOriginal.getOutput().getType().cast<RankedTensorType>();
+    auto getSliceOp = [&](int argNo, Value arg) -> Value {
+      auto argType = arg.getType().cast<RankedTensorType>();
+      if (utils::hasSameShape(argType, outputType)) {
+        rewriter.setInsertionPoint(addReplacement);
+        auto newSlice = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
+        newSlice.setOperand(0, arg);
+        RankedTensorType newSliceType =
+            RankedTensorType::get(sliceOutShape, utils::getValElementType(arg));
+        newSlice->getResult(0).setType(newSliceType);
+        return newSlice;
+      } else {
+        auto fakeSlice = dyn_cast_or_null<FakeSliceOp>(arg.getDefiningOp());
+        if (!fakeSlice) {
+          rewriter.setInsertionPoint(addOriginal);
+          auto newFsOp =
+              rewriter.create<FakeSliceOp>(arg.getLoc(), arg.getType(), arg);
+
+          llvm::SmallVector<mlir::Attribute> beginVals;
+          beginVals.push_back(beginAttr);
+          newFsOp->setAttr("begin", rewriter.getArrayAttr(beginVals));
+
+          llvm::SmallVector<mlir::Attribute> sizeVals;
+          sizeVals.push_back(sizeAttr);
+          newFsOp->setAttr("size", rewriter.getArrayAttr(sizeVals));
+
+          auto addReplacement =
+              llvm::cast<TFL::MulOp>(rewriter.clone(*addOriginal));
+          addReplacement.setOperand(argNo, newFsOp);
+          addOriginal.getOutput().replaceAllUsesWith(addReplacement);
+          rewriter.eraseOp(addOriginal);
+          return newFsOp;
+        } else {
+          auto begin = fakeSlice->getAttr("begin").cast<mlir::ArrayAttr>();
+          llvm::SmallVector<mlir::Attribute> beginVals = {
+              begin.getValue().begin(), begin.getValue().end()};
+          beginVals.push_back(beginAttr);
+          fakeSlice->setAttr("begin", rewriter.getArrayAttr(beginVals));
+
+          auto size = fakeSlice->getAttr("size").cast<mlir::ArrayAttr>();
+          llvm::SmallVector<mlir::Attribute> sizeVals = {
+              size.getValue().begin(), size.getValue().end()};
+          sizeVals.push_back(sizeAttr);
+          fakeSlice->setAttr("size", rewriter.getArrayAttr(sizeVals));
+        }
+        return fakeSlice;
+      }
+    };
+
+    // Create new slice for above adds
+    auto sliceLHS = getSliceOp(0, addOriginal.getLhs());
+    auto sliceRHS = getSliceOp(1, addOriginal.getRhs());
+    // auto addReplacement =
+    // llvm::cast<TFL::MulOp>(rewriter.clone(*addOriginal2));
     addReplacement.setOperand(0, sliceLHS);
     addReplacement.setOperand(1, sliceRHS);
 
@@ -296,25 +493,27 @@ struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
 
   LogicalResult matchAndRewrite(TFL::SliceOp slice,
                                 PatternRewriter &rewriter) const override {
-    // Only raise slices that have been inserted with op split pass
-    if (!(slice->hasAttr(opSplitLabel)))
-      return failure();
-
     // If slice does not have a defining op, return failure
-    if (!(slice.getInput().getDefiningOp())) {
+    if (!slice.getInput().getDefiningOp() ||
+        !isa<ConvOp>(slice.getInput().getDefiningOp())) {
       return failure();
     }
 
-    if (!isa<ConvOp>(slice.getInput().getDefiningOp())) {
+    if (failed(isRaisableSlice(rewriter, slice))) {
       return failure();
+    }
+
+    // combineslice with existing
+    // go through all uses of defining op
+    // find other slices and see if there is a match
+    // if so, erase this slice and attach to that one, remove opsplitlabel from
+    // attached new slice
+    if (succeeded(combineSliceWithExisting(rewriter, slice))) {
+      return success();
     }
 
     // Get data from conv needed to raise slice
     auto convOriginal = llvm::cast<ConvOp>(slice.getInput().getDefiningOp());
-
-    // Do not raise slice if op does not have op split label
-    if (!(convOriginal->hasAttr(opSplitLabel)))
-      return failure();
 
     auto convOriginalInput =
         convOriginal.getInput().getType().template cast<RankedTensorType>();
@@ -635,189 +834,6 @@ void OpSplit::runOnOperation() {
     return;
   }
 
-  if (numSplits.empty()) {
-    int memoryThreshold = opSplitTargetSizeOption.getValue();
-    // Initialize operation counter, tensor vectors, and size variables
-    int opNum = 0;
-
-    std::vector<mlir::Value> unconsumedTensors;
-    std::vector<mlir::Value> newUnconsumedTensors;
-
-    std::map<int, std::vector<size_t>> opSize;
-    std::vector<size_t> sizeInfo;
-
-    size_t currentTensorArenaSize;
-    size_t inputSize;
-    size_t outputSize;
-    size_t residualSize;
-
-    // Keep a pointer to the previous operation
-    Operation *prevOp = nullptr;
-
-    // Walk through each operation in the function
-    func.walk([&](Operation *op) {
-      // Ignore constant and quantized constant operations
-      if (!op->hasTrait<OpTrait::IsTerminator>() &&
-          !llvm::isa<TFL::NoValueOp, TFL::QConstOp, TFL::ConstOp,
-                     arith::ConstantOp>(op)) {
-
-        // Helper function to compute the size of a tensor
-        auto computeTensorSize = [](mlir::Type type) -> size_t {
-          mlir::TensorType tensorType = type.cast<mlir::TensorType>();
-          mlir::ArrayRef<int64_t> shape = tensorType.getShape();
-          size_t tensorSize = 1;
-
-          for (int64_t dim : shape) {
-            tensorSize *= dim;
-          }
-
-          return tensorSize;
-        };
-
-        // Clear the contents of the vector
-        newUnconsumedTensors.clear();
-        // Iterate over unconsumed tensors and remove those consumed by the
-        // current operation
-        for (const mlir::Value &tensor : unconsumedTensors) {
-          bool shouldRemove = false;
-          for (mlir::Value::use_iterator it = tensor.use_begin(),
-                                         e = tensor.use_end();
-               it != e; ++it) {
-            if ((*it).getOwner() == op) {
-              shouldRemove = true;
-              break;
-            }
-          }
-          if (!shouldRemove) {
-            newUnconsumedTensors.push_back(tensor);
-          }
-        }
-        // Update unconsumed tensors with the new vector
-        unconsumedTensors = newUnconsumedTensors;
-
-        currentTensorArenaSize = 0;
-
-        residualSize = 0;
-        // Iterate over the unconsumed tensors and compute their sizes
-        for (mlir::Value tensor : unconsumedTensors) {
-          residualSize += computeTensorSize(tensor.getType());
-          currentTensorArenaSize += computeTensorSize(tensor.getType());
-        }
-
-        inputSize = 0;
-        // Iterate over the input operands and compute their sizes
-        for (mlir::Value input : op->getOperands()) {
-          if (!input.getType().isa<mlir::TensorType>()) {
-            continue;
-          }
-          if (input.getDefiningOp() &&
-              (input.getDefiningOp()->hasTrait<OpTrait::IsTerminator>() ||
-               llvm::isa<TFL::NoValueOp, TFL::QConstOp, TFL::ConstOp,
-                         arith::ConstantOp>(input.getDefiningOp()))) {
-            continue;
-          }
-
-          inputSize += computeTensorSize(input.getType());
-          currentTensorArenaSize += computeTensorSize(input.getType());
-
-          // If input tensor has more than one use and was created by the
-          // previous operation, add it to unconsumed tensors
-          if ((std::distance(input.use_begin(), input.use_end()) > 1) &&
-              (input.getDefiningOp() == prevOp)) {
-            unconsumedTensors.push_back(input);
-          }
-        }
-
-        outputSize = 0;
-        // Iterate over the output results and compute their sizes
-        for (mlir::Value output : op->getResults()) {
-          if (!output.getType().isa<mlir::TensorType>()) {
-            continue;
-          }
-          if (output.getDefiningOp() &&
-              (output.getDefiningOp()->hasTrait<OpTrait::IsTerminator>() ||
-               llvm::isa<TFL::NoValueOp, TFL::QConstOp, TFL::ConstOp,
-                         arith::ConstantOp>(output.getDefiningOp()))) {
-            continue;
-          }
-          outputSize += computeTensorSize(output.getType());
-          currentTensorArenaSize += computeTensorSize(output.getType());
-        }
-
-        sizeInfo = {currentTensorArenaSize, inputSize, outputSize,
-                    residualSize};
-        opSize[opNum] = sizeInfo;
-
-        // Increment operation counter
-        opNum++;
-
-        // Update the previous operation pointer
-        prevOp = op;
-      }
-    });
-
-    double size = 0;
-    std::vector<int> aboveThreshold;
-    std::vector<int> belowThreshold;
-    bool crossedThreshold = false;
-
-    for (auto it = opSize.rbegin(); it != opSize.rend(); ++it) {
-      size = it->second[0];
-      auto opId = it->first;
-      if (size > memoryThreshold) {
-        if (!crossedThreshold) {
-          outputSize = it->second[2];
-          // if 2 * output size is greater than the threshold,
-          // concat will be greater than the threshold
-          // so add the next op
-          if (2 * outputSize > memoryThreshold) {
-            aboveThreshold.push_back(opId + 1);
-          } else {
-            aboveThreshold.push_back(opId);
-          }
-          crossedThreshold = true;
-        }
-      } else {
-        if (crossedThreshold) {
-          belowThreshold.push_back(opId);
-          crossedThreshold = false;
-        }
-      }
-    }
-
-    // If the first operation was above the threshold, add it, 0, to
-    // belowThreshold
-    if (crossedThreshold) {
-      belowThreshold.push_back(0);
-    }
-
-    // adjust threshold trackers if size goes below threshold for only one
-    // operation
-    for (size_t i = 0; i < aboveThreshold.size(); ++i) {
-      if (i > 0 && belowThreshold[i - 1] - aboveThreshold[i] <= 1) {
-        aboveThreshold.erase(aboveThreshold.begin() + i);
-        belowThreshold.erase(belowThreshold.begin() + i - 1);
-        // Decrement the indices to account for the removed elements
-        --i;
-      }
-    }
-
-    // Clear the llvm::cl::list<int> containers first
-    startOps.clear();
-    endOps.clear();
-    // Copy the elements from the std::vector<int> containers
-    for (int value : aboveThreshold) {
-      startOps.push_back(value);
-    }
-    for (int value : belowThreshold) {
-      endOps.push_back(value);
-    }
-    for (size_t i = 0; i < startOps.size(); ++i) {
-      numSplits.push_back(8);
-    }
-
-  } // if numSplits
-
   OpBuilder builder(func);
   for (int i = 0; i < startOps.size(); ++i) {
     int k = 0;
@@ -835,9 +851,13 @@ void OpSplit::runOnOperation() {
           } else { // add label to insert slice under op later
             op->setAttr(opSplitLabelNumSplits,
                         builder.getI32IntegerAttr(numSplits[i]));
+            op->setAttr(opSplitLabelSavedNumSplits,
+                        builder.getI32IntegerAttr(numSplits[i]));
           }
         } else if (k < startOps[i] && k >= endOps[i]) {
           op->setAttr(opSplitLabel, builder.getUnitAttr());
+          op->setAttr(opSplitLabelSavedNumSplits,
+                      builder.getI32IntegerAttr(numSplits[i]));
         }
         k++;
       }
@@ -861,7 +881,11 @@ void OpSplit::runOnOperation() {
   patterns2.insert<RaiseSliceHorizontalPattern<TFL::Conv2DOp>>(ctx);
   patterns2.insert<RaiseSliceHorizontalPattern<TFL::DepthwiseConv2DOp>>(ctx);
 
+  patterns2.insert<RaiseFakeSliceHorizontalPattern>(ctx);
+  patterns2.insert<RaiseFakeSliceHorizontalMeanPattern>(ctx);
+
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
+
 } // void OpSplit::runOnOperation() {
 } // namespace
 

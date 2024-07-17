@@ -29,6 +29,8 @@ std::vector<uint8_t> BinaryI16Op::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> FakeSliceOp::buildCustomOptions() { return {}; }
+
 std::vector<uint8_t> Beta_ActivationF32Op::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() { fbb.Int("type", (int32_t)getType()); });
@@ -263,6 +265,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<UnaryI16Op>>(ctx);
   patterns.insert<RewriteToCustomOp<BinaryI16Op>>(ctx);
   patterns.insert<RewriteToCustomOp<FakeScratchBufferOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<FakeSliceOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

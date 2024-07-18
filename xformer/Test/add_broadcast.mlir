@@ -1,4 +1,4 @@
-// RUN: xcore-opt --mlir-io %s --xcore-replace-add | FileCheck %s 
+// RUN: xcore-opt --mlir-io %s --xcore-replace-addsub | FileCheck %s 
 
 // CHECK-LABEL: add_broadcast
 func.func @add_broadcast(%arg0: tensor<1x15x1x1x!quant.uniform<i8:f32, 0.0078378040343523026:-1>> {tf_saved_model.index_path = ["input_1"]}) -> (tensor<?x15x5x4x!quant.uniform<i8:f32, 0.033033743500709534:-6>> {tf_saved_model.index_path = ["add"]}) attributes {tf.entry_function = {inputs = "serving_default_input_1:0", outputs = "PartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {

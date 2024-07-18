@@ -112,7 +112,7 @@ jobs:
     if: github.event.pull_request.merged == true
     name: Build release wheels for macOS arm64
     needs: [build-release-archive]
-    runs-on: macos-11
+    runs-on: macos-14
     strategy:
       matrix:
         python-version: [3.9]

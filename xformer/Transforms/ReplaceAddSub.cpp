@@ -39,7 +39,7 @@ LogicalResult replaceAddorSub(T addOp, PatternRewriter &rewriter,
   auto lhsZeroPoint = lhsQType.getZeroPoint();
 
   auto rhsQType = utils::getQType(addOp.getRhs());
-  auto rhsScale = negateForSub ? -rhsQType.getScale() : rhsQType.getScale();
+  auto rhsScale =  rhsQType.getScale();
   auto rhsZeroPoint = rhsQType.getZeroPoint();
 
   auto outputQType = utils::getQType(addOp.getOutput());
@@ -54,6 +54,9 @@ LogicalResult replaceAddorSub(T addOp, PatternRewriter &rewriter,
   double maxR = std::max(lhsRatio, rhsRatio);
   // We want the max shift to be 14 bits
   int shift = int(floor(log2(pow(2, 14) / maxR)));
+
+  // For doing subtraction with add op
+  rhsRatio = negateForSub? -rhsRatio: rhsRatio;
 
   // Multipliers are converted to fixed-point
   int m1 = round(lhsRatio * pow(2, shift));

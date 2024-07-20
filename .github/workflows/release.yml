@@ -243,12 +243,19 @@ jobs:
           fi
           popd
 
-          docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.TAG_VERSION }} \
+          if [[ -n $GOOGLE_APPLICATION_CREDENTIALS ]]; then
+          docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-credentials.json \
             -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/gcloud-credentials.json:ro \
             -v ${PWD}:/ai_tools -w /ai_tools \
             tensorflow/build:2.15-python${{ matrix.python-version }} \
             .github/scripts/build_linux_wheel.sh
+          else
+          docker run -e SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PRETEND_VERSION }} \
+            -v ${PWD}:/ai_tools -w /ai_tools \
+            tensorflow/build:2.15-python${{ matrix.python-version }} \
+            .github/scripts/build_linux_wheel.sh
+          fi
           
           sudo apt-get -y -qq install patchelf --no-install-recommends
           python -m pip install auditwheel==5.2.0 --no-cache-dir

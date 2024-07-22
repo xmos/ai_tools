@@ -145,9 +145,10 @@ void WriteWeights::runOnOperation() {
   patterns.insert<WriteWeightsPattern>(&tensorsVec, ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 
-  if (tileLoadOption) {
+  if (weightsAsArrayOption) {
     if (failed(utils::writeTileServerDataToFile(weightsFilenameOption,
-                                                tensorsVec))) {
+                                                tensorsVec,
+                                                weightsInExternalMemory))) {
       f.emitError("Failed to write tile data!");
       signalPassFailure();
       return;

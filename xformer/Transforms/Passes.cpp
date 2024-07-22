@@ -17,13 +17,13 @@ void buildXCorePreOpSplitPassPipeline(OpPassManager &pm) {
   pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
   // Convert dynamic shapes in batch dimension to static
   pm.addPass(createRemoveDynamicShapePass());
+}
+
+void buildXCoreRemainingPassPipeline(OpPassManager &pm) {
   // TFL passes
   pm.addPass(createOptimizeTransposePass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createReplaceFCWithConv2DPass());
-}
-
-void buildXCoreRemainingPassPipeline(OpPassManager &pm) {
   if (opSplitTensorArenaOption) {
     pm.addPass(createOpSplitPass());
   }
@@ -36,7 +36,7 @@ void buildXCoreRemainingPassPipeline(OpPassManager &pm) {
   pm.addPass(mlir::createCanonicalizerPass());
 
   // XC passes
-  pm.addPass(createReplaceAddPass());
+  pm.addPass(createReplaceAddSubPass());
   pm.addPass(createReplaceMaxPoolPass());
   pm.addPass(createReplaceMulPass());
   pm.addPass(createReplaceTransposeConvPass());

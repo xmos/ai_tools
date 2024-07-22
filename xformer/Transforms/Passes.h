@@ -16,7 +16,8 @@ namespace xcore {
 
 // Create a single pipeline that will run all the needed passes in the right
 // order.
-void buildXCorePassPipeline(OpPassManager &pm);
+void buildXCorePreOpSplitPassPipeline(OpPassManager &pm);
+void buildXCoreRemainingPassPipeline(OpPassManager &pm);
 
 //===----------------------------------------------------------------------===//
 // XCore-specific passes
@@ -30,7 +31,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createOptimizeConv2DPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createOpSplitPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createApplyTFLPatternsPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createRemoveDynamicShapePass();
-std::unique_ptr<OperationPass<func::FuncOp>> createReplaceAddPass();
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceAddSubPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMulPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMaxPoolPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceStridedSlicePass();

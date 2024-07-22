@@ -100,7 +100,6 @@ bool checkSliceNoOp(RankedTensorType inputType, RankedTensorType outputType) {
   if (rank != outputType.getRank()) {
     return false;
   }
-  std::cout << "Rank: " << rank << std::endl;
   bool isNoOp = true;
   for (int i = 0; i < rank; i++) {
     if (inputType.getDimSize(i) != outputType.getDimSize(i)) {

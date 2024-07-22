@@ -11,12 +11,15 @@
 
 namespace mlir::xcore {
 
-void buildXCorePassPipeline(OpPassManager &pm) {
+void buildXCorePreOpSplitPassPipeline(OpPassManager &pm) {
   // Run pass from LCE to convert Larq ops which are in TFL custom op format to
   // Larq dialect
   pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
   // Convert dynamic shapes in batch dimension to static
   pm.addPass(createRemoveDynamicShapePass());
+}
+
+void buildXCoreRemainingPassPipeline(OpPassManager &pm) {
   // TFL passes
   pm.addPass(createOptimizeTransposePass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
@@ -33,7 +36,7 @@ void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(mlir::createCanonicalizerPass());
 
   // XC passes
-  pm.addPass(createReplaceAddPass());
+  pm.addPass(createReplaceAddSubPass());
   pm.addPass(createReplaceMaxPoolPass());
   pm.addPass(createReplaceMulPass());
   pm.addPass(createReplaceTransposeConvPass());
@@ -58,7 +61,10 @@ void registerXCorePassPipeline() {
   mlir::PassPipelineRegistration<> pipeline(
       "xcore-tfl-pipeline",
       "Run XCore passes for transforming TFLite code into XCore",
-      [](OpPassManager &passManager) { buildXCorePassPipeline(passManager); });
+      [](OpPassManager &passManager) {
+        buildXCorePreOpSplitPassPipeline(passManager);
+        buildXCoreRemainingPassPipeline(passManager);
+      });
 }
 
 } // namespace mlir::xcore

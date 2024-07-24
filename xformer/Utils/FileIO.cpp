@@ -36,35 +36,51 @@ LogicalResult writeWeightsToFile(const std::string &filename,
 
 LogicalResult
 writeTileServerDataToFile(const std::string &filename,
-                          std::vector<std::vector<char>> tensorsVec) {
+                          std::vector<std::vector<char>> tensorsVec,
+                          bool placeInExternalMemory) {
   // Add header
   auto tileHeader = utils::tileRamHeader();
   tensorsVec.insert(tensorsVec.begin(), tileHeader);
 
-  std::ostringstream out;
-  out << R"(#ifndef TILESERVERGEN_H
-#define TILESERVERGEN_H
+  std::ostringstream cOut;
+  cOut << R"(#include <stdint.h>)";
 
-const int8_t tile_server_weights[] = {
-)";
+  if (placeInExternalMemory) {
+    cOut << "\n\n" << R"(__attribute__ ((section(".ExtMem.data"))))" << "\n";
+  }
+
+  cOut << "const int8_t tile_server_weights[] = {\n";
   int lineEnding = 0;
+  int weightsSize = 0;
   for (auto const &tensor : tensorsVec) {
     for (auto const &i : tensor) {
-      out << (int)i << ", ";
+      cOut << (int)i << ", ";
       lineEnding++;
+      weightsSize++;
       if (lineEnding > 80) {
-        out << "\n";
+        cOut << "\n";
         lineEnding = 0;
       }
     }
   }
 
-  out << R"(};
+  cOut << R"(};
+)";
+
+  if (failed(utils::writeDataToFile(filename + ".c", cOut.str()))) {
+    return failure();
+  }
+
+  std::ostringstream hOut;
+    hOut << R"(#ifndef TILESERVERGEN_H
+#define TILESERVERGEN_H
+
+#define TILE_SERVER_WEIGHTS_SIZE ()" << weightsSize << R"(U)
 
 #endif // TILESERVERGEN_H
 )";
 
-  return utils::writeDataToFile(filename, out.str());
+  return utils::writeDataToFile(filename + ".h", hOut.str());
 }
 
 LogicalResult getFlatBufferStringFromMLIR(

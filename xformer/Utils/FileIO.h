@@ -15,7 +15,8 @@ LogicalResult writeWeightsToFile(const std::string &filename,
 
 LogicalResult
 writeTileServerDataToFile(const std::string &filename,
-                          std::vector<std::vector<char>> tensorsVec);
+                          std::vector<std::vector<char>> tensorsVec,
+                          bool placeInExternalMemory);
 
 LogicalResult getFlatBufferStringFromMLIR(
     mlir::ModuleOp module, std::map<std::string, std::string> metadata,

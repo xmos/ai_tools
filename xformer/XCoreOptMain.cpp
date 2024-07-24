@@ -72,8 +72,12 @@ cl::alias aliasWeightsFilenameOption("f",
                                      cl::desc("Alias for --xcore-weights-file"),
                                      cl::aliasopt(weightsFilenameOption));
 
-cl::opt<bool> tileLoadOption("xcore-load-tile",
-                             cl::desc("Enable loading weights from a tile."),
+cl::opt<bool> weightsAsArrayOption("xcore-write-weights-as-array",
+                             cl::desc("Write the weights in the form of an array in a source file (creates .c/.h files with <xcore-weights-file> as the file name)."),
+                             cl::init(false), cl::cat(XformerCategory));
+
+cl::opt<bool> weightsInExternalMemory("xcore-weights-in-external-memory",
+                             cl::desc("Annotate the generated weights array with an attribute to place it in external memory."),
                              cl::init(false), cl::cat(XformerCategory));
 
 cl::opt<unsigned> loadExternallyIfLargerOption(
@@ -453,11 +457,18 @@ int main(int argc, char **argv) {
         "Please specify an output filename using the -o option!");
   }
 
-  if (mlir::xcore::tileLoadOption.getNumOccurrences() > 0 &&
+  if (mlir::xcore::weightsAsArrayOption.getNumOccurrences() > 0 &&
       mlir::xcore::threadCountOption < 4) {
+    // TODO: This feels wrong considering this is just about the export format of the weights
     return failedMessage("Please specify at least four threads using "
                          "xcore-thread-count option when using the "
-                         "xcore-load-tile option!");
+                         "xcore-write-weights-as-array option!");
+  }
+
+  if (mlir::xcore::weightsInExternalMemory.getNumOccurrences() > 0 &&
+      mlir::xcore::weightsAsArrayOption.getNumOccurrences() == 0) {
+    return failedMessage("Please specify the xcore-write-weights-as-array"
+                         "when using the xcore-weights-in-external-memory option!");
   }
 
   if (mlir::xcore::loadExternallyIfLargerOption.getNumOccurrences() > 0 &&

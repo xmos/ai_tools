@@ -20,27 +20,29 @@
 #define NUMBER_OF_MODELS 1
 extern void model_init(unsigned);
 extern void inference();
+extern void test_ddr();
 
 // Hack for xc to be happy with EXTMEM
 // Have to specify the extern array size
-extern const int8_t tile_server_weights[3587012];
+#include "model_weights.h"
+extern const int8_t tile_server_weights[TILE_SERVER_WEIGHTS_SIZE];
 int8_t* weights = (int8_t*)&tile_server_weights;
 
 int main(void) {
     //chan c_flash_or_tile[NUMBER_OF_MODELS];
 
     par {
-        on tile[0]: {
-            //flash_t headers[NUMBER_OF_MODELS];
-            //tile_ram_server(c_flash_or_tile, headers, NUMBER_OF_MODELS, weights);
-            // flash_server(c_flash_or_tile, headers, NUMBER_OF_MODELS, qspi, flash_spec, 1);
-        }
+        // on tile[0]: {
+        //     //flash_t headers[NUMBER_OF_MODELS];
+        //     //tile_ram_server(c_flash_or_tile, headers, NUMBER_OF_MODELS, weights);
+        //     // flash_server(c_flash_or_tile, headers, NUMBER_OF_MODELS, qspi, flash_spec, 1);
+        // }
 
-        on tile[1]: {
+        on tile[0]: {
             unsafe {
             //c_flash_or_tile[0] <: FLASH_SERVER_INIT;
 
-            model_init((unsigned)(weights + 20));
+            model_init((unsigned)(weights));
 
             inference();
 

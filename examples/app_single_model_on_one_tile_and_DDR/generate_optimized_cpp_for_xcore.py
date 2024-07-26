@@ -4,14 +4,14 @@ TFLITE_MODEL_PATH = "mobilenetv2.tflite"
 OPTIMIZED_MODEL_PATH = "src/model.tflite"
 
 OPTIMIZED_MODEL_PATH = "src/model.tflite"
-WEIGHT_PARAMS_PATH = "src/model_weights.c"
+WEIGHT_PARAMS_PATH = "src/model_weights"
 FLASH_IMAGE_PATH = "src/xcore_flash_binary.out"
 print("Generating app cpp files for model...")
 xformer.convert(
     TFLITE_MODEL_PATH,
     OPTIMIZED_MODEL_PATH,
     {
-        "xcore-thread-count": "5",
+        "xcore-thread-count": "1",
         # set conv err threshold
         "xcore-conv-err-threshold": "3",
         # operation splitting to reduce tensor arena size
@@ -21,7 +21,9 @@ xformer.convert(
         "xcore-op-split-num-splits": "8,4",
         # write weights as an array to be 
         # placed on second tile
-        "xcore-load-tile" : "True",
+        "xcore-write-weights-as-array" : "True",
+        "xcore-weights-in-external-memory" : "True",
+        "xcore-load-externally-if-larger" : "1500",
         # roughly(tensors are not split) specifies 
         # size of weights to move out to header file
         # "xcore-max-load-external-size" : "270000",

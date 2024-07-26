@@ -80,4 +80,39 @@ extern "C" {
 void model_init(unsigned flash_data) { init(flash_data); }
 
 void inference() { run(); }
+
+//__attribute__ ((section(".ExtMem.data")))
+int8_t src[38944];
+int8_t dst[38944];
+int time_t0, time_t1;
+extern void OptMemCpy2(void* d, void* s, int n);
+extern void vpu_memcpy_ext(void *, const void *, unsigned int);
+extern void vpu_memcpy_vector_ext(void *, const void *, int);
+
+#include<string.h>
+
+void test_ddr(){
+  for(int i = 0; i < 38944; i ++){
+    src[i] = i;
+  }
+  int time = 0;
+  char *d = (char*)((((unsigned)&dst[0]) + 31) & 0xffffffe0);
+  int8_t *s = (int8_t *)(((unsigned)src + 31) &0xffffffe0);
+
+  for (int i = 0; i < 82; i++) {
+    #ifdef __xcore__
+      asm volatile ("gettime %0" : "=r" (time_t0));
+    #endif
+    //memcpy(dst, src, 304*32*4);
+    //OptMemCpy2(d, s, 304 * 32);
+    //vpu_memcpy_ext(d, s, 304 * 32 * 4);
+    vpu_memcpy_vector_ext(dst, src, 304);
+    #ifdef __xcore__
+      asm volatile ("gettime %0" : "=r" (time_t1));
+    #endif
+    time += time_t1 - time_t0;
+  }
+  printf("\ntotal time = %.2fms\nMBps = %.2f", time/100000.0, (304 * 32 * 4 * 82)/(time/100.0));
+}
+
 }

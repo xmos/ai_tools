@@ -121,7 +121,7 @@ std::vector<uint8_t> ConcatOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
-std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
+std::vector<uint8_t> LoadWeightsOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
   fbb.Int("addr", (int32_t)getAddress());
@@ -130,6 +130,7 @@ std::vector<uint8_t> LoadFlashOp::buildCustomOptions() {
     fbb.Int(getSizes().cast<ArrayAttr>()[i].cast<IntegerAttr>().getInt());
   }
   fbb.EndVector(sizesVec, false, false);
+  fbb.Bool("ddr", (bool)getInDdr());
   fbb.EndMap(rootMap);
   fbb.Finish();
   return fbb.GetBuffer();
@@ -244,7 +245,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<Bsign8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Conv2DV2Op>>(ctx);
   patterns.insert<RewriteToCustomOp<MaxPool2DOp>>(ctx);
-  patterns.insert<RewriteToCustomOp<LoadFlashOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<LoadWeightsOp>>(ctx);
   patterns.insert<RewriteToCustomOp<LookupOp>>(ctx);
   patterns.insert<RewriteToCustomOp<SoftmaxOp>>(ctx);
   patterns.insert<RewriteToCustomOp<BatchedSoftmaxOp>>(ctx);

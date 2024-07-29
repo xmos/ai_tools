@@ -7,7 +7,7 @@ namespace mlir::xcore::utils {
 
 /** Function that creates a tile_ram_header
  */
-std::vector<char> tileRamHeader();
+std::vector<char> tileRamServerHeader();
 
 } // namespace mlir::xcore::utils
 

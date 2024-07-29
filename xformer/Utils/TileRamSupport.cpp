@@ -2,7 +2,7 @@
 
 namespace mlir::xcore::utils {
 
-std::vector<char> tileRamHeader() {
+std::vector<char> tileRamServerHeader() {
   // TODO: Change flash_t struct to mem_server_header_t
   // We are reusing the flash_t struct in lib_tflite_micro as the header
   // The header version is stored as one integer

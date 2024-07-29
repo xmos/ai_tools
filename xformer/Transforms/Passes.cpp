@@ -46,7 +46,7 @@ void buildXCoreRemainingPassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceBroadcastPass());
   pm.addPass(createReplaceConcatPass());
   pm.addPass(createApplyXCPatternsPass());
-  // Add to pipeline only if flash image file option is provided
+  // Add to pipeline only if weights file option is provided
   if (!weightsFilenameOption.empty()) {
     pm.addPass(createApplyLoadConstantOpPatternsPass());
     pm.addPass(createWriteWeightsPass());

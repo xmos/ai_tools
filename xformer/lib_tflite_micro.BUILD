@@ -30,7 +30,7 @@ filegroup(
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_conv2d_v2.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_maxpool2d.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_detection_post.cc",
-        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_load_from_flash.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_load_weights.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_lookup.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_softmax.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_batched_softmax.cc",

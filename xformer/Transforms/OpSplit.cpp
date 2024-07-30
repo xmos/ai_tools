@@ -15,9 +15,8 @@ namespace mlir::xcore {
 
 namespace {
 static constexpr char opSplitLabel[] = "opSplitLabel";
+static constexpr char opSplitLabelStartSplits[] = "opSplitLabelStartSplits";
 static constexpr char opSplitLabelNumSplits[] = "opSplitLabelNumSplits";
-static constexpr char opSplitLabelSavedNumSplits[] =
-    "opSplitLabelSavedNumSplits";
 
 // OpSplit
 struct OpSplit : public PassWrapper<OpSplit, OperationPass<func::FuncOp>> {
@@ -57,8 +56,8 @@ LogicalResult isRaisableSlice(PatternRewriter &rewriter, TFL::SliceOp slice) {
   if (!definingOp->hasAttr(opSplitLabel))
     return failure();
 
-  // all other uses of defining op must be eligible slices
-  // we currently only opsplit ops with one result
+  // All other uses of defining op must be eligible slices
+  // We currently only opsplit ops with one result
   int numEligibleSlices = 0;
   for (const mlir::OpOperand &use : definingOp->getResult(0).getUses()) {
     mlir::Operation *op = use.getOwner();
@@ -73,17 +72,17 @@ LogicalResult isRaisableSlice(PatternRewriter &rewriter, TFL::SliceOp slice) {
     }
   }
 
-  // no of eligible slices must be greater than or equal to set num of splits
-  // If more slices, we should try to combine before raising
-  if (!definingOp->hasAttr(opSplitLabelSavedNumSplits))
+  // No of eligible slices must be greater than or equal to set num of splits
+  // If there are more slices, we should try to combine before raising
+  if (!definingOp->hasAttr(opSplitLabelNumSplits))
     return failure();
-  auto attr = definingOp->getAttr(opSplitLabelSavedNumSplits);
+
+  auto attr = definingOp->getAttr(opSplitLabelNumSplits);
   int numSplits = attr.cast<mlir::IntegerAttr>().getInt();
   if (numSplits != -1 && numEligibleSlices < numSplits) {
     return failure();
   } else {
-    definingOp->setAttr(opSplitLabelSavedNumSplits,
-                        rewriter.getI32IntegerAttr(-1));
+    definingOp->setAttr(opSplitLabelNumSplits, rewriter.getI32IntegerAttr(-1));
   }
 
   return success();
@@ -93,13 +92,24 @@ LogicalResult combineSliceWithExisting(PatternRewriter &rewriter,
                                        TFL::SliceOp slice) {
   auto definingOp = slice.getInput().getDefiningOp();
 
-  // all other uses of defining op must be eligible slices
-  // we currently only opsplit ops with one result
+  // All other uses of defining op must be slices
+  // We currently only opsplit ops with one result
   SmallVector<TFL::SliceOp> sliceOps;
   for (const mlir::OpOperand &use : definingOp->getResult(0).getUses()) {
     mlir::Operation *op = use.getOwner();
     if (auto sliceOp = dyn_cast_or_null<TFL::SliceOp>(op)) {
-      // dont push current slice op
+      // We only support slices on height dimension
+      // Slice must have rank 4 and dim 0, 2, 3 must be the same for input and
+      // output
+      auto inType = sliceOp.getInput().getType().cast<ShapedType>();
+      auto outType = sliceOp.getOutput().getType().cast<ShapedType>();
+      if (!inType.getRank() == 4 ||
+          inType.getDimSize(0) != outType.getDimSize(0) ||
+          inType.getDimSize(2) != outType.getDimSize(2) ||
+          inType.getDimSize(3) != outType.getDimSize(3)) {
+        return failure();
+      }
+      // Dont push current slice op
       if (sliceOp != slice) {
         sliceOps.push_back(sliceOp);
       }
@@ -107,36 +117,78 @@ LogicalResult combineSliceWithExisting(PatternRewriter &rewriter,
   }
 
   auto f = slice->getParentOfType<func::FuncOp>();
+
+  // Get begin index for slice
+  DenseElementsAttr attr;
+  int sliceBegin, sliceSize, candidateBegin, candidateSize;
+  if (!matchPattern(slice.getBegin(), m_Constant(&attr))) {
+    return failure();
+  }
+  sliceBegin = attr.getValues<int32_t>()[1];
+  if (!matchPattern(slice.getSize(), m_Constant(&attr))) {
+    return failure();
+  }
+  sliceSize = attr.getValues<int32_t>()[1];
+
   int i;
   for (i = 0; i < sliceOps.size(); i++) {
-    // if slice op matches with another op in list
+    // If slice op matches with another op in list,
     // remove current one and attach to that
-    if (slice.getBegin() == sliceOps[i].getBegin() &&
-        slice.getSize() == sliceOps[i].getSize()) {
+    // Only need to consider height dimension as we only slice on that
+    if (!matchPattern(sliceOps[i].getBegin(), m_Constant(&attr))) {
+      return failure();
+    }
+    candidateBegin = attr.getValues<int32_t>()[1];
+    if (!matchPattern(sliceOps[i].getSize(), m_Constant(&attr))) {
+      return failure();
+    }
+    candidateSize = attr.getValues<int32_t>()[1];
+
+    if (sliceBegin >= candidateBegin &&
+        sliceBegin + sliceSize <= candidateBegin + candidateSize) {
       break;
     }
   }
 
   if (i < sliceOps.size()) {
-    // slice.getOutput().replaceAllUsesWith(sliceOps[i]);
-    // rewriter.eraseOp(slice);
-    rewriter.replaceOp(slice, sliceOps[i].getOutput());
+    // Slice can be removed
+    if (sliceBegin == candidateBegin && sliceSize == candidateSize) {
+      rewriter.replaceOp(slice, sliceOps[i].getOutput());
+    } else {
+      // Create new slice
+      if (!matchPattern(sliceOps[i].getBegin(), m_Constant(&attr))) {
+        return failure();
+      }
+      int32_t newBeginAttr[4] = {
+          attr.getValues<int32_t>()[0], sliceBegin - candidateBegin,
+          attr.getValues<int32_t>()[2], attr.getValues<int32_t>()[3]};
+      if (!matchPattern(slice.getSize(), m_Constant(&attr))) {
+        return failure();
+      }
+      // Same as slice size attr
+      int32_t newSizeAttr[4] = {
+          attr.getValues<int32_t>()[0], attr.getValues<int32_t>()[1],
+          attr.getValues<int32_t>()[2], attr.getValues<int32_t>()[3]};
+      auto newSlice = createSliceOp(
+          rewriter, sliceOps[i].getLoc(), sliceOps[i], newBeginAttr,
+          newSizeAttr, slice.getOutput().getType().getElementType());
+      newSlice->removeAttr(opSplitLabel);
+      rewriter.replaceOp(slice, newSlice.getOutput());
+    }
     return success();
   }
-  // // replace slice with new slice -> new add
-  // rewriter.replaceOp(fakeSlice, opReplacement->getResult(0));
-
   return failure();
 }
 
 template <typename TargetOp>
-struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
+struct OpSplitPattern : public OpRewritePattern<TargetOp> {
   using OpRewritePattern<TargetOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TargetOp targetOp,
                                 PatternRewriter &rewriter) const override {
     // Do not split ops already split
-    if (!(targetOp->hasAttr(opSplitLabelNumSplits)))
+    // Only start splitting if the label is present
+    if (!(targetOp->hasAttr(opSplitLabelStartSplits)))
       return failure();
 
     int numSplits = 0;
@@ -210,112 +262,73 @@ struct OpSplitHorizontalPattern : public OpRewritePattern<TargetOp> {
   }
 };
 
-struct RaiseSliceHorizontalAddPattern : public OpRewritePattern<TFL::SliceOp> {
-  using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(TFL::SliceOp slice,
-                                PatternRewriter &rewriter) const override {
-    if (!slice.getInput().getDefiningOp() ||
-        !isa<TFL::AddOp>(slice.getInput().getDefiningOp())) {
-      return failure();
-    }
-
-    if (failed(isRaisableSlice(rewriter, slice))) {
-      return failure();
-    }
-
-    // combineslice with existing
-    // go through all uses of defining op
-    // find other slices and see if there is a match
-    // if so, erase this slice and attach to that one, remove opsplitlabel from
-    // attached new slice
-    if (succeeded(combineSliceWithExisting(rewriter, slice))) {
-      return success();
-    }
-
-    auto addOriginal = llvm::cast<TFL::AddOp>(slice.getInput().getDefiningOp());
-
-    auto sliceOutShape = utils::getValShape(slice.getOutput());
-
-    auto outputType =
-        addOriginal.getOutput().getType().cast<RankedTensorType>();
-    auto getSliceOp = [&](Value arg) -> Value {
-      auto argType = arg.getType().cast<RankedTensorType>();
-      auto newSlice = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
-      newSlice.setOperand(0, arg);
-      RankedTensorType newSliceType =
-          RankedTensorType::get(sliceOutShape, utils::getValElementType(arg));
-      newSlice->getResult(0).setType(newSliceType);
-      return newSlice;
-    };
-
-    // Create new slice for above adds
-    auto sliceLHS = getSliceOp(addOriginal.getLhs());
-    auto sliceRHS = getSliceOp(addOriginal.getRhs());
-    auto addReplacement = llvm::cast<TFL::AddOp>(rewriter.clone(*addOriginal));
-    RankedTensorType addReplacementType = RankedTensorType::get(
-        sliceOutShape, utils::getValElementType(addOriginal.getOutput()));
-    addReplacement->getResult(0).setType(addReplacementType);
-    addReplacement.setOperand(0, sliceLHS);
-    addReplacement.setOperand(1, sliceRHS);
-
-    // replace slice with new slice -> new add
-    rewriter.replaceOp(slice, addReplacement.getOutput());
-
-    return success();
-  }
-};
-
-struct RaiseFakeSliceHorizontalPattern : public OpRewritePattern<FakeSliceOp> {
+template <typename TargetOp>
+struct RaiseFakeSlicePattern : public OpRewritePattern<FakeSliceOp> {
   using OpRewritePattern<FakeSliceOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(FakeSliceOp fakeSlice,
                                 PatternRewriter &rewriter) const override {
     auto definingOp = fakeSlice.getInput().getDefiningOp();
-    // If fakeslice does not have a defining op, remove it
-    if (!definingOp) {
-      rewriter.replaceOp(fakeSlice, fakeSlice->getResult(0));
+    // If fakeslice is only defined by const ops, remove it as we have reached
+    // the top
+    if (dyn_cast_or_null<TFL::ConstOp>(definingOp) ||
+        dyn_cast_or_null<TFL::QConstOp>(definingOp)) {
+      rewriter.replaceOp(fakeSlice, fakeSlice->getOperand(0));
       return success();
     }
 
-    // no of fake slices must be equal to set num of splits
-    if (!definingOp->hasAttr(opSplitLabelSavedNumSplits))
+    // No of fake slices must be equal to set num of splits
+    if (!definingOp->hasAttr(opSplitLabelNumSplits))
       return failure();
-    auto attr = definingOp->getAttr(opSplitLabelSavedNumSplits);
+    auto attr = definingOp->getAttr(opSplitLabelNumSplits);
     int numSplits = attr.cast<mlir::IntegerAttr>().getInt();
     auto beginAttr = fakeSlice->getAttr("begin").cast<mlir::ArrayAttr>();
     if (beginAttr.size() != numSplits) {
       return failure();
     }
 
-    if (!dyn_cast_or_null<TFL::LogisticOp>(definingOp) &&
-        !dyn_cast_or_null<TFL::FullyConnectedOp>(definingOp) &&
-        !dyn_cast_or_null<TFL::ConstOp>(definingOp)) {
+    if (!dyn_cast_or_null<TargetOp>(definingOp)) {
       return failure();
     }
 
-    // Do not raise slice if op does not have op split label
+    // Do not raise fake slice if op does not have op split label
     if (!(definingOp->hasAttr(opSplitLabel)))
       return failure();
 
     auto sliceOutShape = utils::getValShape(fakeSlice.getOutput());
 
-    // Create new slice for above adds
+    // Create new fake slice above op
     auto sliceReplacement = rewriter.clone(*fakeSlice);
     sliceReplacement->setOperand(0, definingOp->getOperand(0));
     sliceReplacement->getResult(0).setType(definingOp->getOperand(0).getType());
     auto opReplacement = rewriter.clone(*definingOp);
     opReplacement->setOperand(0, sliceReplacement->getResult(0));
 
-    // replace slice with new slice -> new add
+    // replace fakeslice with new fakeslice -> op
     rewriter.replaceOp(fakeSlice, opReplacement->getResult(0));
 
     return success();
   }
 };
 
-struct RaiseFakeSliceHorizontalMeanPattern
-    : public OpRewritePattern<FakeSliceOp> {
+template <typename TargetOp>
+struct RaiseFakeSliceConstPattern : public OpRewritePattern<FakeSliceOp> {
+  using OpRewritePattern<FakeSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FakeSliceOp fakeSlice,
+                                PatternRewriter &rewriter) const override {
+    auto definingOp = fakeSlice.getInput().getDefiningOp();
+    // If fakeslice is only defined by const ops, remove it as we have reached
+    // the top
+    if (dyn_cast_or_null<TargetOp>(definingOp)) {
+      rewriter.replaceOp(fakeSlice, fakeSlice->getOperand(0));
+      return success();
+    }
+    return failure();
+  }
+};
+
+struct RaiseFakeSliceToSliceMeanPattern : public OpRewritePattern<FakeSliceOp> {
   using OpRewritePattern<FakeSliceOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(FakeSliceOp fakeSlice,
@@ -331,8 +344,6 @@ struct RaiseFakeSliceHorizontalMeanPattern
       return failure();
     }
 
-    fakeSlice.dump();
-
     // Do not raise slice if op does not have op split label
     if (!(meanOriginal->hasAttr(opSplitLabel)))
       return failure();
@@ -341,8 +352,18 @@ struct RaiseFakeSliceHorizontalMeanPattern
     auto sizeAttr = fakeSlice->getAttr("size").cast<mlir::ArrayAttr>();
     assert(beginAttr.size() == sizeAttr.size());
 
-    SmallVector<Value> meanOps;
+    // We only support all equal slices at the moment
+    assert(sizeAttr.size() > 1);
+    auto size = sizeAttr.getValue()[0].cast<mlir::DenseIntElementsAttr>();
+    for (int i = 1; i < sizeAttr.size(); i++) {
+      auto size2 = sizeAttr.getValue()[i].cast<mlir::DenseIntElementsAttr>();
+      if (size != size2) {
+        return failure();
+      }
+    }
 
+    // For each begin and size attr, create slice and corresponding mean op
+    SmallVector<Value> meanOps;
     for (int i = 0; i < beginAttr.size(); i++) {
       auto begin = beginAttr.getValue()[i].cast<mlir::DenseIntElementsAttr>();
       auto beginVector = std::vector<int32_t>{
@@ -352,7 +373,7 @@ struct RaiseFakeSliceHorizontalMeanPattern
       auto sizeVector = std::vector<int32_t>{size.getValues<int32_t>().begin(),
                                              size.getValues<int32_t>().end()};
 
-      // create slice and mean op
+      // Create slice and mean op
       auto sliceReplacement = createSliceOp(
           rewriter, fakeSlice.getLoc(), meanOriginal.getInput(), beginVector,
           sizeVector, utils::getValElementType(meanOriginal.getInput()));
@@ -363,9 +384,11 @@ struct RaiseFakeSliceHorizontalMeanPattern
 
       meanOps.push_back(meanReplacement.getResult());
     }
-    // create concat and final mean op
+    // Create concat and final mean op
+    auto meanOutShape = utils::getValShape(meanOriginal.getOutput());
     RankedTensorType newOutputType = RankedTensorType::get(
-        {1, 4, 1, 16}, utils::getValElementType(meanOriginal.getOutput()));
+        {1, static_cast<long long>(beginAttr.size()), 1, meanOutShape[3]},
+        utils::getValElementType(meanOriginal.getOutput()));
     auto newConcatOp = rewriter.create<TFL::ConcatenationOp>(
         meanOriginal.getLoc(), newOutputType, meanOps, /*axis=*/1, "NONE");
 
@@ -373,24 +396,15 @@ struct RaiseFakeSliceHorizontalMeanPattern
         llvm::cast<TFL::MeanOp>(rewriter.clone(*meanOriginal));
     meanReplacement.setOperand(0, newConcatOp);
 
-    // auto sliceOutShape = utils::getValShape(fakeSlice.getOutput());
-
-    // // Create new slice for above adds
-    // auto sliceReplacement = rewriter.clone(*fakeSlice);
-    // sliceReplacement->setOperand(0, definingOp.getOperand());
-    // sliceReplacement->getResult(0).setType(definingOp.getResult().getType());
-
-    // auto opReplacement = rewriter.clone(*definingOp);
-    // opReplacement->setOperand(0, sliceReplacement->getResult(0));
-
-    // // replace slice with new slice -> new add
+    // Replace fake slice with new slices -> mean ops -> concat -> mean
     rewriter.replaceOp(fakeSlice, meanReplacement->getResult(0));
 
     return success();
   }
 };
 
-struct RaiseSliceHorizontalMulPattern : public OpRewritePattern<TFL::SliceOp> {
+template <typename BinaryOp>
+struct RaiseSliceBinaryPattern : public OpRewritePattern<TFL::SliceOp> {
   using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TFL::SliceOp slice,
@@ -398,7 +412,7 @@ struct RaiseSliceHorizontalMulPattern : public OpRewritePattern<TFL::SliceOp> {
     auto f = slice->getParentOfType<func::FuncOp>();
     // If slice does not have a defining op, return failure
     if (!slice.getInput().getDefiningOp() ||
-        !isa<TFL::MulOp>(slice.getInput().getDefiningOp())) {
+        !isa<BinaryOp>(slice.getInput().getDefiningOp())) {
       return failure();
     }
 
@@ -406,7 +420,11 @@ struct RaiseSliceHorizontalMulPattern : public OpRewritePattern<TFL::SliceOp> {
       return failure();
     }
 
-    auto addOriginal = llvm::cast<TFL::MulOp>(slice.getInput().getDefiningOp());
+    if (succeeded(combineSliceWithExisting(rewriter, slice))) {
+      return success();
+    }
+
+    auto opOriginal = llvm::cast<BinaryOp>(slice.getInput().getDefiningOp());
 
     DenseElementsAttr beginAttr, sizeAttr;
     if (!matchPattern(slice.getBegin(), m_Constant(&beginAttr))) {
@@ -417,17 +435,17 @@ struct RaiseSliceHorizontalMulPattern : public OpRewritePattern<TFL::SliceOp> {
     }
 
     auto sliceOutShape = utils::getValShape(slice.getOutput());
-    auto addReplacement = llvm::cast<TFL::MulOp>(rewriter.clone(*addOriginal));
-    RankedTensorType addReplacementType = RankedTensorType::get(
-        sliceOutShape, utils::getValElementType(addOriginal.getOutput()));
-    addReplacement->getResult(0).setType(addReplacementType);
+    auto opReplacement = llvm::cast<BinaryOp>(rewriter.clone(*opOriginal));
+    RankedTensorType opReplacementType = RankedTensorType::get(
+        sliceOutShape, utils::getValElementType(opOriginal.getOutput()));
+    opReplacement->getResult(0).setType(opReplacementType);
 
     auto outputType =
-        addOriginal.getOutput().getType().cast<RankedTensorType>();
+        opOriginal.getOutput().getType().template cast<RankedTensorType>();
     auto getSliceOp = [&](int argNo, Value arg) -> Value {
       auto argType = arg.getType().cast<RankedTensorType>();
       if (utils::hasSameShape(argType, outputType)) {
-        rewriter.setInsertionPoint(addReplacement);
+        rewriter.setInsertionPoint(opReplacement);
         auto newSlice = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
         newSlice.setOperand(0, arg);
         RankedTensorType newSliceType =
@@ -437,7 +455,7 @@ struct RaiseSliceHorizontalMulPattern : public OpRewritePattern<TFL::SliceOp> {
       } else {
         auto fakeSlice = dyn_cast_or_null<FakeSliceOp>(arg.getDefiningOp());
         if (!fakeSlice) {
-          rewriter.setInsertionPoint(addOriginal);
+          rewriter.setInsertionPoint(opOriginal);
           auto newFsOp =
               rewriter.create<FakeSliceOp>(arg.getLoc(), arg.getType(), arg);
 
@@ -449,11 +467,11 @@ struct RaiseSliceHorizontalMulPattern : public OpRewritePattern<TFL::SliceOp> {
           sizeVals.push_back(sizeAttr);
           newFsOp->setAttr("size", rewriter.getArrayAttr(sizeVals));
 
-          auto addReplacement =
-              llvm::cast<TFL::MulOp>(rewriter.clone(*addOriginal));
-          addReplacement.setOperand(argNo, newFsOp);
-          addOriginal.getOutput().replaceAllUsesWith(addReplacement);
-          rewriter.eraseOp(addOriginal);
+          auto opReplacement =
+              llvm::cast<BinaryOp>(rewriter.clone(*opOriginal));
+          opReplacement.setOperand(argNo, newFsOp);
+          opOriginal.getOutput().replaceAllUsesWith(opReplacement);
+          rewriter.eraseOp(opOriginal);
           return newFsOp;
         } else {
           auto begin = fakeSlice->getAttr("begin").cast<mlir::ArrayAttr>();
@@ -472,23 +490,21 @@ struct RaiseSliceHorizontalMulPattern : public OpRewritePattern<TFL::SliceOp> {
       }
     };
 
-    // Create new slice for above adds
-    auto sliceLHS = getSliceOp(0, addOriginal.getLhs());
-    auto sliceRHS = getSliceOp(1, addOriginal.getRhs());
-    // auto addReplacement =
-    // llvm::cast<TFL::MulOp>(rewriter.clone(*addOriginal2));
-    addReplacement.setOperand(0, sliceLHS);
-    addReplacement.setOperand(1, sliceRHS);
+    // Create new slices for above op
+    auto sliceLHS = getSliceOp(0, opOriginal.getLhs());
+    auto sliceRHS = getSliceOp(1, opOriginal.getRhs());
+    opReplacement.setOperand(0, sliceLHS);
+    opReplacement.setOperand(1, sliceRHS);
 
-    // replace slice with new slice -> new add
-    rewriter.replaceOp(slice, addReplacement.getOutput());
+    // replace slice with new slice -> new op
+    rewriter.replaceOp(slice, opReplacement.getOutput());
 
     return success();
   }
 };
 
 template <typename ConvOp>
-struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
+struct RaiseSlicePattern : public OpRewritePattern<TFL::SliceOp> {
   using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TFL::SliceOp slice,
@@ -503,11 +519,6 @@ struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
       return failure();
     }
 
-    // combineslice with existing
-    // go through all uses of defining op
-    // find other slices and see if there is a match
-    // if so, erase this slice and attach to that one, remove opsplitlabel from
-    // attached new slice
     if (succeeded(combineSliceWithExisting(rewriter, slice))) {
       return success();
     }
@@ -680,7 +691,7 @@ struct RaiseSliceHorizontalPattern : public OpRewritePattern<TFL::SliceOp> {
   }
 };
 
-struct RaiseSliceHorizontalPadPattern : public OpRewritePattern<TFL::SliceOp> {
+struct RaiseSlicePadPattern : public OpRewritePattern<TFL::SliceOp> {
   using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TFL::SliceOp slice,
@@ -717,16 +728,16 @@ struct RaiseSliceHorizontalPadPattern : public OpRewritePattern<TFL::SliceOp> {
     auto outputWidth = padOriginalOutput.getDimSize(2);
     auto outputChannels = padOriginalOutput.getDimSize(3);
 
-    int64_t padVertical, padHorizontal;
+    int64_t padVertical, pad;
     int64_t padTop, padBottom, padLeft, padRight;
 
     padVertical = outputHeight - inputHeight;
-    padHorizontal = outputWidth - inputWidth;
+    pad = outputWidth - inputWidth;
 
     padTop = padVertical / 2;
     padBottom = padVertical - padTop;
-    padLeft = padHorizontal / 2;
-    padRight = padHorizontal - padLeft;
+    padLeft = pad / 2;
+    padRight = pad - padLeft;
 
     // Get original slice's output height
     auto sliceOutput = slice.getOutput().getType().cast<RankedTensorType>();
@@ -780,13 +791,13 @@ struct RaiseSliceHorizontalPadPattern : public OpRewritePattern<TFL::SliceOp> {
     auto paddedHeight = newOutputHeight + padTop + padBottom;
     auto paddedWidth = inputWidth + padLeft + padRight;
 
-    DenseIntElementsAttr pad;
-    if (!matchPattern(padOriginal.getPadding(), m_Constant(&pad))) {
+    DenseIntElementsAttr padAttr;
+    if (!matchPattern(padOriginal.getPadding(), m_Constant(&padAttr))) {
       return failure();
     }
 
     // Keep padding values the same in the last dimension
-    auto padVal = pad.getValues<int32_t>();
+    auto padVal = padAttr.getValues<int32_t>();
 
     std::vector<int32_t> paddingValues{0,
                                        0,
@@ -849,14 +860,13 @@ void OpSplit::runOnOperation() {
             sliceOp.getInput().getDefiningOp()->setAttr(opSplitLabel,
                                                         builder.getUnitAttr());
           } else { // add label to insert slice under op later
+            op->setAttr(opSplitLabelStartSplits, builder.getUnitAttr());
             op->setAttr(opSplitLabelNumSplits,
-                        builder.getI32IntegerAttr(numSplits[i]));
-            op->setAttr(opSplitLabelSavedNumSplits,
                         builder.getI32IntegerAttr(numSplits[i]));
           }
         } else if (k < startOps[i] && k >= endOps[i]) {
           op->setAttr(opSplitLabel, builder.getUnitAttr());
-          op->setAttr(opSplitLabelSavedNumSplits,
+          op->setAttr(opSplitLabelNumSplits,
                       builder.getI32IntegerAttr(numSplits[i]));
         }
         k++;
@@ -866,25 +876,36 @@ void OpSplit::runOnOperation() {
 
   RewritePatternSet patterns1(ctx);
 
-  patterns1.insert<OpSplitHorizontalPattern<TFL::Conv2DOp>>(ctx);
-  patterns1.insert<OpSplitHorizontalPattern<TFL::DepthwiseConv2DOp>>(ctx);
-  patterns1.insert<OpSplitHorizontalPattern<TFL::AddOp>>(ctx);
-  patterns1.insert<OpSplitHorizontalPattern<TFL::PadOp>>(ctx);
+  patterns1.insert<OpSplitPattern<TFL::Conv2DOp>>(ctx);
+  patterns1.insert<OpSplitPattern<TFL::DepthwiseConv2DOp>>(ctx);
+  patterns1.insert<OpSplitPattern<TFL::AddOp>>(ctx);
+  patterns1.insert<OpSplitPattern<TFL::MulOp>>(ctx);
+  patterns1.insert<OpSplitPattern<TFL::PadOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns1));
 
   RewritePatternSet patterns2(ctx);
+  // We are restricting pattern matching to only move slices above when they
+  // have reached the number of set splits. This means many pass iterations
+  // would fail as they don't meet the criteria. We increase the maxIterations
+  // count here so that more iterations are tried before the rewriter decides
+  // failure.
+  GreedyRewriteConfig config;
+  config.maxIterations = 50;
 
-  patterns2.insert<RaiseSliceHorizontalAddPattern>(ctx);
-  patterns2.insert<RaiseSliceHorizontalMulPattern>(ctx);
-  patterns2.insert<RaiseSliceHorizontalPadPattern>(ctx);
-  patterns2.insert<RaiseSliceHorizontalPattern<TFL::Conv2DOp>>(ctx);
-  patterns2.insert<RaiseSliceHorizontalPattern<TFL::DepthwiseConv2DOp>>(ctx);
+  patterns2.insert<RaiseSliceBinaryPattern<TFL::AddOp>>(ctx);
+  patterns2.insert<RaiseSliceBinaryPattern<TFL::MulOp>>(ctx);
+  patterns2.insert<RaiseSlicePadPattern>(ctx);
+  patterns2.insert<RaiseSlicePattern<TFL::Conv2DOp>>(ctx);
+  patterns2.insert<RaiseSlicePattern<TFL::DepthwiseConv2DOp>>(ctx);
 
-  patterns2.insert<RaiseFakeSliceHorizontalPattern>(ctx);
-  patterns2.insert<RaiseFakeSliceHorizontalMeanPattern>(ctx);
+  patterns2.insert<RaiseFakeSlicePattern<TFL::FullyConnectedOp>>(ctx);
+  patterns2.insert<RaiseFakeSlicePattern<TFL::LogisticOp>>(ctx);
+  patterns2.insert<RaiseFakeSliceConstPattern<TFL::ConstOp>>(ctx);
+  patterns2.insert<RaiseFakeSliceConstPattern<TFL::QConstOp>>(ctx);
+  patterns2.insert<RaiseFakeSliceToSliceMeanPattern>(ctx);
 
-  (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns2), config);
 
 } // void OpSplit::runOnOperation() {
 } // namespace

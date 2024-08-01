@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <platform.h>
 
-#define NUMBER_OF_MODELS 1
 extern void model_init(unsigned);
 extern void inference();
 

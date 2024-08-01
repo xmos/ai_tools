@@ -96,6 +96,16 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
+def XC_FakeSliceOp : XC_Op<"fake_slice", [Pure]> {
+  let summary = "Fake slice op";
+
+  let description = [{Fake slice op.}];
+
+  let arguments = (ins AnyTensor : $input);
+
+  let results = (outs AnyTensor : $output);
+}
+
 def XC_BroadcastOp : XC_Op<"broadcast", [Pure]> {
   let summary = "Broadcast op";
 

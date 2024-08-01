@@ -453,12 +453,15 @@ def XC_LoadConstantOp
   let results = (outs AnyTensor : $output);
 }
 
-def XC_LoadFlashOp : XC_Op<"ld_flash", [Pure]> {
-  let summary = "Load from flash op";
+def XC_LoadWeightsOp : XC_Op<"ld_weights", [Pure]> {
+  let summary = "Load weights op";
 
-  let description = [{Load from flash op.}];
+  let description = [{Load weights op.}];
 
-  let arguments = (ins I32Attr : $address, I32ArrayAttr : $sizes);
+  let arguments = (ins I32Attr
+                   : $address, I32ArrayAttr
+                   : $sizes, BoolAttr
+                   : $in_ddr);
 
   let results = (outs Variadic<AnyTensor> : $output);
 }

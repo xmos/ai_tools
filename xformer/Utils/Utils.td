@@ -57,6 +57,11 @@ class IsSplatAndEqualTo<int n>
                 "dyn_cast<TFL::QConstOp>($0.getDefiningOp()).getValue()."
                 "cast<DenseElementsAttr>().getSplatValue<int8_t>() == " #n>>;
 
+class IsZeroPointNotEqualTo<int n>
+    : Constraint<
+          CPred<"dyn_cast<mlir::quant::UniformQuantizedType>($0.getType().cast<"
+                "ShapedType>().getElementType()).getZeroPoint() != " #n>>;
+
 // Get the dimension size as integer attr.
 class GetDimAsI32<int n>
     : NativeCodeCall<

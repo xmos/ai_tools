@@ -34,6 +34,7 @@ void add_lib_vision_ops(
   resolver->AddResizeBilinear();
   resolver->AddResizeNearestNeighbor();
   resolver->AddRound();
+  resolver->AddRsqrt();
   resolver->AddStridedSlice();
   resolver->AddSlice();
   resolver->AddSub();

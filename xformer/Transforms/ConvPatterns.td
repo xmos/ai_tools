@@ -8,6 +8,13 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 include "IR/XCoreOps.td"
 include "Utils/Utils.td"
 
+// Unfuse Relu from Conv if output zero point is not -128 for QI8 output
+// XC Conv assumes there is no RELU, or that if there is one, it is being
+// clamped to -128 Add benefit so that this pattern runs first
+def:
+Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, TFL_AF_Relu, $wf, $sh, $sw),
+  (TFL_ReluOp (TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $wf, $sh, $sw, (returnType $output))), [(IsZeroPointNotEqualTo<-128> $output)], [], (addBenefit 20)>;
+
 def CreateNoneValue : NativeCodeCall<"$_builder.create<TFL::NoValueOp>($0."
                                      "getLoc(), $_builder.getUnitAttr())">;
 

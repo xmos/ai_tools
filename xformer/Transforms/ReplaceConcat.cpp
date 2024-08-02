@@ -62,7 +62,8 @@ struct SplitConcatPattern : public OpRewritePattern<TFL::ConcatenationOp> {
     auto outputType = concatOp.getOutput().getType().cast<RankedTensorType>();
     Type elementType = outputType.getElementType();
     ArrayRef<int64_t> outputShape = outputType.getShape();
-    const int axis = concatOp.getAxis();
+    const int axis = concatOp.getAxis() == -1 ? outputType.getRank() - 1
+                                              : concatOp.getAxis();
 
     int axisShape = 0;
     for (int i = 0; i < CONCAT_OP_MAX_INPUTS; i++) {

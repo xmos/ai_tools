@@ -56,8 +56,9 @@ def : Pat<(TFL_ReluOp(TFL_MinimumOp $lhs, $rhs)), (TFL_ReluOp $lhs),
           [(IsSplatAndEqualTo<127> $rhs)]>;
 
 // Merge Relu with Conv
-def : Pat<(TFL_ReluOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $p,
-                      $sh, $sw)),
+def : Pat<(TFL_ReluOp
+           : $output(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $p,
+                     $sh, $sw)),
           (TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_Relu, $p, $sh, $sw)>;
 
 // Unfuse activation functions from binary ops

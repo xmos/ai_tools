@@ -17,6 +17,7 @@ def dailyDeviceTest = {
         sh "xtagctl reset_all XCORE-AI-EXPLORER"
         sh "pytest examples/app_mobilenetv2"
     }
+    runPytestDevice("8x8/test_mul", "-n 1 --tc 5", "mul_1")
     runPytestDevice("8x8/test_broadcast", "-n 1 --tc 1", "broadcast_1")
     runPytestDevice("8x8/test_lstm", "-n 1 --tc 1", "lstm_1")
     runPytestDevice("8x8/test_lstm", "-n 1", "lstm_5")

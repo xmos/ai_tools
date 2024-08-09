@@ -105,30 +105,6 @@ def:
             [(HasUnequalShape $input2, $output)]>;
 }
 
-// If MeanOp with spatial axis and rank 2 output, expand output to rank 4, which
-// we later lower to AveragePool2D
-def : Pat<(TFL_MeanOp
-           : $output TensorOf<[QI8]>:$input,
-             (TFL_ConstOp
-              : $axis_op $axis),
-             $kd),
-          (TFL_ReshapeOp(TFL_MeanOp $input, $axis_op, $kd,
-                         (returnType(getExpandedShape $output))),
-           (TFL_ConstOp(getExpandedShapeAttr $output))),
-          [(HasSpatialAxisForMean $axis), (HasRank<2> $output)]>;
-
-// Lower MeanOp with spatial axis to AveragePool2D
-def : Pat<(TFL_MeanOp
-           : $output TensorOf<[QI8]>:$input, (TFL_ConstOp $axis), $kd),
-          (TFL_QuantizeOp(
-               TFL_AveragePool2DOp $input, (GetDimAsI32<1> $input),
-               (GetDimAsI32<2> $input), TFL_PAD_Valid,
-               ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">,
-               TFL_AF_None,
-               (returnType(getTypeOf1WithQParamsOf0 $input, $output))),
-           (getTypeAttrOf1WithQParamsOf0 $output, $output)),
-          [(HasSpatialAxisForMean $axis), (HasRank<4> $output)]>;
-
 // PadChannel(PadSpatial) to PadSpatial(PadChannel)
 // Match cases where arith constant op and tfl constant op are both used
 foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {

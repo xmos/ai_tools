@@ -311,11 +311,6 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         errors = np.concatenate(
             [(a - b).reshape(-1) for a, b in zip(ref_outputs, xf_outputs)]
         )
-        if any(errors != 0):
-            print(f"{input_tensors=}")
-            print(f"{ref_outputs=}")
-            print(f"{xf_outputs=}")
-            print(f"{errors=}")
 
         if not len(errors):
             continue

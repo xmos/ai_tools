@@ -82,8 +82,8 @@ struct ReplaceMeanPattern : public OpRewritePattern<TFL::MeanOp> {
 
     float inZeroPoint = static_cast<float>(inputQType.getZeroPoint());
     float outZeroPoint = static_cast<float>(outputQType.getZeroPoint());
-    float scaleMul =
-        static_cast<float>(inputQType.getScale()) / outputQType.getScale();
+    float scaleMul = inputQType.getScale() / outputQType.getScale() /
+                     static_cast<float>(meanDims);
 
     auto beginDimsAttr = rewriter.getI32IntegerAttr(beginDims);
     auto endDimsAttr = rewriter.getI32IntegerAttr(endDims);

@@ -181,6 +181,25 @@ def XC_AddOp : XC_Op<"add", [Pure, XC_MemoryOverlappable]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
+def XC_MeanOp : XC_Op<"mean", [Pure]> {
+  let summary = "Mean op";
+
+  let description = [{Mean op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+
+    I32Attr:$start,
+    I32Attr:$mean,
+    I32Attr:$end,
+    F32Attr:$in_zero_point,
+    F32Attr:$out_zero_point,
+    F32Attr:$scale_mul
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
 def XC_MulOp : XC_Op<"mul", [Pure, XC_MemoryOverlappable]> {
   let summary = "Mul op";
 

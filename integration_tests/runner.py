@@ -311,6 +311,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
         errors = np.concatenate(
             [(a - b).reshape(-1) for a, b in zip(ref_outputs, xf_outputs)]
         )
+
         if not len(errors):
             continue
 

@@ -34,6 +34,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createRemoveDynamicShapePass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceAddSubPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMulPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMeanPass();
+std::unique_ptr<OperationPass<func::FuncOp>> createReplaceSumPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMaxPoolPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceStridedSlicePass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceSlicePass();

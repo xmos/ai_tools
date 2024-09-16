@@ -5,7 +5,9 @@ package(
 filegroup(
     name = "TFLITE_SOURCES",
     srcs = [
+        "@tflite_micro//tensorflow/lite:array.cc",
         "@tflite_micro//tensorflow/lite/core/c:common.cc",
+        "@tflite_micro//tensorflow/lite/kernels/internal:common.cc",
         "@tflite_micro//tensorflow/lite/core/api:error_reporter.cc",
         "@tflite_micro//tensorflow/lite/core/api:tensor_utils.cc",
         "@tflite_micro//tensorflow/lite/core/api:flatbuffer_conversions.cc",

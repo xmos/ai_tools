@@ -12,8 +12,8 @@ on:
 # tag version might be a branch name or commit hash
 env:
   TAG_VERSION: ${{ github.event.inputs.version }}
-  TOOLS_VERSION: 15.2.1
-  TOOLS_LINK: https://www.xmos.ai/download/Tools-15---Linux-64(15_2_1).tgz
+  TOOLS_VERSION: 15.3.0
+  TOOLS_LINK: https://www.xmos.ai/download/Tools-15---Linux-64(15_3_0).tgz
   
 jobs:
   build-release-archive:

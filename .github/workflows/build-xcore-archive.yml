@@ -13,7 +13,7 @@ on:
 env:
   TAG_VERSION: ${{ github.event.inputs.version }}
   TOOLS_VERSION: 15.3.0
-  TOOLS_LINK: https://www.xmos.ai/download/Tools-15---Linux-64(15_3_0).tgz
+  TOOLS_LINK: https://www.xmos.com/download/Tools-15---Linux-64(15_3_0).tgz
   
 jobs:
   build-release-archive:

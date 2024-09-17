@@ -248,12 +248,6 @@ cc_binary(
     name = "xcore-opt",
     srcs = ["XCoreOptMain.cpp",
         "Version.h",
-        # "@org_tensorflow//tensorflow/lite/kernels:padding.h",
-        # "@org_tensorflow//tensorflow/lite/kernels/internal:reference/pooling.h",
-        # "@org_tensorflow//tensorflow/lite/kernels/internal:reference/integer_ops/pooling.h",
-        # "@org_tensorflow//tensorflow/lite/c:common.h",
-        # "@org_tensorflow//tensorflow/lite/c:builtin_op_data.h",
-        # "@org_tensorflow//tensorflow/lite/c:c_api_types.h",
     ],
     deps = [
         "@lib_tflite_micro//:shared_headers",

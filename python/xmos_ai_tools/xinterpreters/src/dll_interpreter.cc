@@ -18,7 +18,7 @@
 //*****************************************
 
 void add_lib_vision_ops(
-    tflite::MicroMutableOpResolver<XTFLM_OPERATORS> *resolver) {
+    tflite_micro::MicroMutableOpResolver<XTFLM_OPERATORS> *resolver) {
   resolver->AddAddN();
   resolver->AddCast();
   resolver->AddFloor();
@@ -88,7 +88,7 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
   resolver->AddIf();
   resolver->AddWhile();
   resolver->AddCallOnce();
-  tflite::ops::micro::xcore::RegisterXCOps(resolver);
+  tflite_micro::ops::micro::xcore::RegisterXCOps(resolver);
   add_lib_vision_ops(resolver);
 
   return ie;

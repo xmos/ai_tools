@@ -8,8 +8,8 @@ on:
       - develop
 env:
   BAZEL_CACHE_URL: https://storage.googleapis.com/bazel_remote_cache_0/gh_actions
-  TOOLS_VERSION: 15.2.1
-  TOOLS_LINK: https://www.xmos.ai/download/Tools-15---Linux-64(15_2_1).tgz
+  TOOLS_VERSION: 15.3.0
+  TOOLS_LINK: https://www.xmos.com/download/Tools-15---Linux-64(15_3_0).tgz
 
 jobs:
   build-release-archive:

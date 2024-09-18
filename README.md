@@ -11,7 +11,7 @@ Documentation
 - [Changelog](docs/rst/changelog.rst)
 - Advanced topics
 	- [Detailed background to deploying on the edge using XCORE.AI](docs/rst/xcore-ai-coding.rst)
-	- [Building the graph transformer and xmos-ai-tools package](docs/rst/build-xformer.rst)
+	- [Building the graph transformer and xmos-ai-tools package](docs/rst/build-from-source.rst)
 
 
 ## Installing xmos-ai-tools

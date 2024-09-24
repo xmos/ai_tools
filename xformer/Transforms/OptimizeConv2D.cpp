@@ -31,14 +31,17 @@ struct ChannelwiseSplitConv2DOutputPattern
   LogicalResult matchAndRewrite(TFL::Conv2DOp op,
                                 PatternRewriter &rewriter) const override {
     // Check for invalid types and return
-    // Input type must be QI8
+    // Input type must be QI8 or QI16
     auto inputElementType =
-        op.getInput().getType().cast<ShapedType>().getElementType();
+        op.getInput().getType().template cast<ShapedType>().getElementType();
+    if (!utils::isNBitSignedQType<8>(inputElementType) &&
+        !utils::isNBitSignedQType<16>(inputElementType)) {
+      return failure();
+    }
+
     auto filterElementType =
         op.getFilter().getType().cast<ShapedType>().getElementType();
-
-    if (!utils::isNBitSignedQType<8>(inputElementType) ||
-        !utils::isNBitSignedQType<8>(filterElementType)) {
+    if (!utils::isNBitSignedQType<8>(filterElementType)) {
       return failure();
     }
 
@@ -91,13 +94,16 @@ struct ChannelwiseSplitConv2DOutputPattern
 
     // We want to try to keep the split filtersize less than specified size
     int numSplits = ceil(filterSize / convChannelwiseSplitSizeOption);
-    // Only try to split if at least two splits are possible
-    if (numSplits < 2) {
-      return failure();
-    }
+
     // Let's split the filter batch size as that's the same as bias size and
     // output channel size
+    // We want splits to be multiples of four
     auto filterBatchSize = filterType.getShape()[0];
+    // Only try to split if at least two splits are possible
+    if (numSplits < 2 || filterBatchSize / 4 < 2) {
+      return failure();
+    }
+
     // We want splits to be multiples of four, so we divide here and multiply
     // after calculating the split sizes
     int tmp = filterBatchSize / 4;
@@ -790,7 +796,6 @@ void OptimizeConv2D::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
   RewritePatternSet patterns(ctx);
-
   // Convert TransposeConv2D with SAME padding to VALID padding + slice
   patterns.insert<SameToValidTransposeConvPattern>(ctx);
 
@@ -813,12 +818,21 @@ void OptimizeConv2D::runOnOperation() {
   // conv2d output channels, and add a slice to remove the padded
   // section
   patterns.insert<PadTo4DepthwiseConv2DPattern>(ctx);
+  FrozenRewritePatternSet frozenPatterns(std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(func, frozenPatterns);
+
+  // We apply channelwise splitting after padding.
+  RewritePatternSet patterns2(ctx);
   // When the filter is too large, we channelwise split the conv2d output to
   // make multiple conv2ds so that the filter for each can be loaded separately.
   // This means the filter batch gets split. We also have to split the
   // quantization params.
-  patterns.insert<ChannelwiseSplitConv2DOutputPattern>(ctx);
-  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+  patterns2.insert<ChannelwiseSplitConv2DOutputPattern>(ctx);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
+
+  // We apply padding once after channelwise splitting if there are some convs
+  // that are left unoptimized
+  (void)applyPatternsAndFoldGreedily(func, frozenPatterns);
 }
 } // namespace
 

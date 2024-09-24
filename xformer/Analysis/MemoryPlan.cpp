@@ -188,34 +188,47 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
           inputVals.push_back(inVal);
 
           auto outVal = o->getResult(0);
-          auto nextOp = *outVal.getUsers().begin();
-          // Identify chain of overlappable Ops
-          while (outVal.hasOneUse() && !alreadyVisited.contains(nextOp) &&
-                 nextOp->hasTrait<OpTrait::xcore::MemoryOverlappable>()) {
-            inVal = outVal;
-            inputVals.push_back(inVal);
-            alreadyVisited.insert(nextOp);
-            outVal = nextOp->getResult(0);
-            nextOp = *outVal.getUsers().begin();
-          }
 
-          // Set first Used of output Val to the first input Val
-          vInfo[outVal].firstUsed = vInfo[inputVals[0]].firstUsed;
-          auto unalignedSizeOutVal =
-              utils::getShapedTypeSize(outVal.getType().dyn_cast<ShapedType>());
-          size_t maxSizeNeeded = 0;
-          for (auto inV : inputVals) {
-            auto unalignedSizeInV =
-                utils::getShapedTypeSize(inV.getType().dyn_cast<ShapedType>());
-            auto unalignedOffset = unalignedSizeOutVal - unalignedSizeInV;
-            // Align offset up to double word = 8 bytes
-            auto offset = ((unalignedOffset + 7) / 8) * 8;
-            maxSizeNeeded = std::max(vInfo[inV].size + offset, maxSizeNeeded);
-            inOutMap[inV] = {outVal, offset};
+          // Only overlap if the output value size is equal or larger than the
+          // input value size We use the allocated space for the output value to
+          // store the input value
+          if ((utils::getShapedTypeSize(
+                   outVal.getType().dyn_cast<ShapedType>()) >=
+               utils::getShapedTypeSize(
+                   inVal.getType().dyn_cast<ShapedType>()))) {
+            auto nextOp = *outVal.getUsers().begin();
+            // Identify chain of overlappable Ops
+            while (outVal.hasOneUse() && !alreadyVisited.contains(nextOp) &&
+                   nextOp->hasTrait<OpTrait::xcore::MemoryOverlappable>() &&
+                   (utils::getShapedTypeSize(
+                        outVal.getType().dyn_cast<ShapedType>()) >=
+                    utils::getShapedTypeSize(
+                        inVal.getType().dyn_cast<ShapedType>()))) {
+              inVal = outVal;
+              inputVals.push_back(inVal);
+              alreadyVisited.insert(nextOp);
+              outVal = nextOp->getResult(0);
+              nextOp = *outVal.getUsers().begin();
+            }
+
+            // Set first Used of output Val to the first input Val
+            vInfo[outVal].firstUsed = vInfo[inputVals[0]].firstUsed;
+            auto unalignedSizeOutVal = utils::getShapedTypeSize(
+                outVal.getType().dyn_cast<ShapedType>());
+            size_t maxSizeNeeded = 0;
+            for (auto inV : inputVals) {
+              auto unalignedSizeInV = utils::getShapedTypeSize(
+                  inV.getType().dyn_cast<ShapedType>());
+              auto unalignedOffset = unalignedSizeOutVal - unalignedSizeInV;
+              // Align offset up to double word = 8 bytes
+              auto offset = ((unalignedOffset + 7) / 8) * 8;
+              maxSizeNeeded = std::max(vInfo[inV].size + offset, maxSizeNeeded);
+              inOutMap[inV] = {outVal, offset};
+            }
+            // The aligned input val size plus aligned offset might be larger
+            // than aligned output val size
+            vInfo[outVal].size = std::max(vInfo[outVal].size, maxSizeNeeded);
           }
-          // The aligned input val size plus aligned offset might be larger than
-          // aligned output val size
-          vInfo[outVal].size = std::max(vInfo[outVal].size, maxSizeNeeded);
         }
       }
     }

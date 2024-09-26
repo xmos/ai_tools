@@ -1,44 +1,44 @@
 // Things to optimise if this is too slow:
 // - build device runtime in parallel with host runtimes, use mutex before combining into wheel
 
-@Library('xmos_jenkins_shared_library@v0.25.0') _
+@Library('xmos_jenkins_shared_library@v0.30.0') _
 
 getApproval()
 
-def setupRepo() {
-  script {
-    println "Stage running on: ${env.NODE_NAME}"
-    checkout scm
-    sh "git submodule update --init --recursive --jobs 4"
-    sh "make -C third_party/lib_tflite_micro patch"
+def sh_bat(cmd) {
+  if (isUnix()) {
+    sh cmd
+  } else {
+    bat cmd
   }
 }
 
+def setupRepo() {
+  println "Stage running on: ${env.NODE_NAME}"
+  checkout scm
+  sh_bat "git submodule update --init --recursive --jobs 4"
+  sh_bat "make -C third_party/lib_tflite_micro patch"
+}
+
 def createDeviceZip() {
-  script {
-    dir("xformer") { sh "./version_check.sh" }
-    dir("third_party/lib_tflite_micro") {
-      sh "mkdir -p build"
-      dir("build") {
-        sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
-        sh "make create_zip -j8"
-      }
-    }
+  dir("xformer") { sh "./version_check.sh" }
+  dir("third_party/lib_tflite_micro/build") {
+    sh "cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake"
+    sh "make create_zip -j8"
   }
 }
 
 def buildXinterpreterAndHostLib() {
-  sh "mkdir -p python/xmos_ai_tools/xinterpreters/build"
   dir("python/xmos_ai_tools/xinterpreters/build") {
-    sh "cmake .."
-    sh "cmake --build . -t install --parallel 8 --config Release"
+    sh_bat "cmake .."
+    sh_bat "cmake --build . -t install --parallel 8 --config Release"
   }
 }
 
 def extractDeviceZipAndHeaders() {
   dir("python/xmos_ai_tools/runtime") {
     unstash "release_archive"
-    sh "unzip release_archive.zip"
+    sh_bat "unzip -o release_archive.zip"
   }
 }
 
@@ -118,7 +118,6 @@ pipeline {
     REPO = "ai_tools"
     BAZEL_CACHE_URL = 'http://srv-bri-bld-cache.xmos.local:8080'
     BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
-    REBOOT_XTAG = '1'
   }
   parameters { // Available to modify on the job page within Jenkins if starting a build
     string( // use to try different tools versions
@@ -136,14 +135,11 @@ pipeline {
   options {
     timestamps()
     skipDefaultCheckout()
-    buildDiscarder(logRotator(
-      numToKeepStr:         env.BRANCH_NAME ==~ /develop/ ? '100' : '',
-      artifactNumToKeepStr: env.BRANCH_NAME ==~ /develop/ ? '100' : ''
-    ))
+    buildDiscarder(xmosDiscardBuildSettings())
   }
   stages { stage("On PR") { 
     when { branch pattern: "PR-.*", comparator: "REGEXP" }
-    agent { label "linux && x86_64 && !noAVX2" } 
+    agent { label "linux && x86_64 && !noAVX2" }
     stages {
       stage("Build device runtime") { 
         steps {
@@ -213,25 +209,32 @@ pipeline {
           } 
           stage("Build Windows runtime") {
             agent { label "ai && windows10" }
-            steps { withVS() {
-              setupRepo()
-              createZip("windows")
-              extractRuntime()
-              buildXinterpreter()
-              createVenv("requirements.txt")
-              withVenv { 
-                bat "python3 --version"
-                dir("xformer") {
-                  bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"
-                  bat "bazelisk-windows-amd64.exe --output_user_root c:\\_bzl build //:xcore-opt --action_env PYTHON_BIN_PATH='C:/hostedtoolcache/windows/Python/3.9.13/x64/python.exe' --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL}"
+            steps { 
+              withVS() {
+                setupRepo()
+                extractDeviceZipAndHeaders()
+                buildXinterpreterAndHostLib()
+                createVenv("requirements.txt")
+                withVenv {
+                  dir("xformer") {
+                    bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"
+                    script {
+                      PYTHON_BIN_PATH = bat(script: "@where python.exe", returnStdout: true).split()[0].trim()
+                      bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\""
+                    }
+                  }
+                  dir("python") { 
+                    bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
+                    bat "python setup.py bdist_wheel"
+                    stash name: "windows_wheel", includes: "dist/*"
+                  }
+                  dir("xformer") {
+                    bat "bazelisk-windows-amd64.exe clean --expunge"
+                    bat "bazelisk-windows-amd64.exe shutdown"
+                  }
                 }
-                dir("python") { 
-                  bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
-                  bat "python setup.py bdist_wheel"
-                  stash name: "windows_wheel", includes: "dist/*"
-                } 
-              }
-            } }
+              } 
+            }
             post { cleanup { xcoreCleanSandbox() } }
           }
           stage("Build Mac runtime") {

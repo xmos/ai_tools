@@ -326,14 +326,19 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
 
     if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
-      msg << "Quantization error of " << quantError
+      msg << std::endl
+          << "WARNING: Op left unoptimized!" << std::endl
+          << "Reason: Quantization error of " << quantError
           << " larger than set threshold of " << args.quantErrorThreshold
-          << ", therefore reverting to reference Conv2D op!" << std::endl
-          << "Inspect the output, and if suitable, set a "
-             "higher threshold with --xcore-conv-err-threshold."
+          << ", therefore reverting to reference Conv2D op" << std::endl
+          << "Name: " << utils::getLocName(*args.convOp) << std::endl
+          << "Solution: Inspect the output, and if suitable, set a "
+             "higher threshold with --xcore-conv-err-threshold"
           << std::endl;
-      args.convOp->emitWarning(
-          utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
+      if (!errorOpsSet_->count(args.convOp)) {
+        errorOpsSet_->insert(args.convOp);
+        llvm::errs() << msg.str();
+      }
       return failure();
     } else {
       otType = OtType::Channelwise;
@@ -627,15 +632,20 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
         mulAndBiases, qp, true);
     if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
-      msg << "Quantization error of " << quantError
+      msg << std::endl
+          << "WARNING: Op left unoptimized!" << std::endl
+          << "Reason: Quantization error of " << quantError
           << " larger than set threshold of " << args.quantErrorThreshold
-          << ", therefore reverting to reference DepthwiseConv2D op!"
+          << ", therefore reverting to reference DepthwiseConv2D op"
           << std::endl
-          << "Inspect the output, and if suitable, set a "
-             "higher threshold with --xcore-conv-err-threshold."
+          << "Name: " << utils::getLocName(*args.convOp) << std::endl
+          << "Solution: Inspect the output, and if suitable, set a "
+             "higher threshold with --xcore-conv-err-threshold"
           << std::endl;
-      args.convOp->emitWarning(
-          utils::getMsgWithLocPrefix(*args.convOp, msg.str()));
+      if (!errorOpsSet_->count(args.convOp)) {
+        errorOpsSet_->insert(args.convOp);
+        llvm::errs() << msg.str();
+      }
       return failure();
     } else {
       otType = OtType::Channelwise;

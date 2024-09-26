@@ -11,11 +11,9 @@ namespace mlir::xcore::utils {
 LogicalResult writeDataToFile(const std::string &filename, std::string data);
 
 LogicalResult writeWeightsToFile(const std::string &filename,
-                                 std::vector<std::vector<char>> tensorsVec);
-
-LogicalResult
-writeTileServerDataToFile(const std::string &filename,
-                          std::vector<std::vector<char>> tensorsVec);
+                                 std::vector<std::vector<char>> tensorsVec,
+                                 bool writeWeightsAsArray,
+                                 bool placeInExternalMemory);
 
 LogicalResult getFlatBufferStringFromMLIR(
     mlir::ModuleOp module, std::map<std::string, std::string> metadata,

@@ -13,24 +13,15 @@ namespace mlir::xcore::utils {
 int getShapedTypeSize(ShapedType t);
 bool hasSameShape(ShapedType type1, ShapedType type2);
 size_t getTypeSize(Type type);
+SmallVector<int32_t, 8> getI32DimFromI64Dim(ArrayRef<int64_t> dims);
 bool hasOnlyChannelPadding(DenseIntElementsAttr attr);
 bool hasOnlySpatialPadding(DenseIntElementsAttr attr);
 
 quant::UniformQuantizedType getQType(mlir::TypedValue<mlir::TensorType> tensor);
-template <typename T>
-bool checkSliceNoOp(T beginValues, T sizeValues, RankedTensorType type) {
-  const int rank = type.getRank();
-  bool isNoOp = true;
-  for (int i = 0; i < rank; i++) {
-    if (beginValues[i] != 0 || sizeValues[i] != type.getShape()[i]) {
-      isNoOp = false;
-      break;
-    }
-  }
-  return isNoOp;
-}
 
-template <int N = 8> bool hasNBitSignedQType(Type type) {
+bool checkSliceNoOp(RankedTensorType inputType, RankedTensorType outputType);
+
+template <int N> bool isNBitSignedQType(Type type) {
   return (type.template isa<quant::QuantizedType>() &&
           type.template cast<quant::QuantizedType>().isSigned() &&
           type.template cast<quant::QuantizedType>()
@@ -51,9 +42,9 @@ ArrayRef<To> castArrayRef(ArrayRef<From> ref) {
 }
 
 template <typename T> bool checkBinaryCompatibility(T op) {
-  auto lhsType = op.getLhs().getType().template cast<ShapedType>();
-  auto rhsType = op.getRhs().getType().template cast<ShapedType>();
-  auto outputType = op.getOutput().getType().template cast<ShapedType>();
+  auto lhsType = op.getLhs().getType().template cast<RankedTensorType>();
+  auto rhsType = op.getRhs().getType().template cast<RankedTensorType>();
+  auto outputType = op.getOutput().getType().template cast<RankedTensorType>();
 
   // Check for invalid types and return
   // We don't currently handle the unusual case where both input shapes have
@@ -67,12 +58,17 @@ template <typename T> bool checkBinaryCompatibility(T op) {
   Type rhsElemType = rhsType.getElementType();
   Type outputElemType = outputType.getElementType();
 
-  if (!hasNBitSignedQType(lhsElemType) || !hasNBitSignedQType(rhsElemType) ||
-      !hasNBitSignedQType(outputElemType)) {
+  if (!isNBitSignedQType<8>(lhsElemType) ||
+      !isNBitSignedQType<8>(rhsElemType) ||
+      !isNBitSignedQType<8>(outputElemType)) {
     return false;
   }
   return true;
 }
+
+int mergeAxes(std::vector<int32_t> &begin, std::vector<int32_t> &size,
+              std::vector<int32_t> &inShape, std::vector<int32_t> &outShape,
+              int rank);
 } // namespace mlir::xcore::utils
 
 #endif // XFORMER_UTILS_UTIL_H

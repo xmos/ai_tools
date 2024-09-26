@@ -76,8 +76,8 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   args.filterWidth = filterType.getDimSize(2);
   args.filterDepth = filterType.getDimSize(3);
   // Check if convolution is an int16 one
-  args.isI16Conv = (utils::hasNBitSignedQType<16>(inputType.getElementType()) &&
-                    utils::hasNBitSignedQType<16>(outputType.getElementType()));
+  args.isI16Conv = (utils::isNBitSignedQType<16>(inputType.getElementType()) &&
+                    utils::isNBitSignedQType<16>(outputType.getElementType()));
 
   // Get op-type specific args
   if (failed(builder->getArgs(conv2DOp, args))) {
@@ -280,8 +280,9 @@ void ReplaceConv2D::runOnOperation() {
 
   // Replace with XC Conv2D op
   RewritePatternSet patterns2(ctx);
+  std::unordered_set<Operation *> errorOpsSet;
   patterns2.insert<ReplaceConv2DPattern, ReplaceDepthwiseConv2DPattern,
-                   ReplaceBConv2DPattern>(ctx);
+                   ReplaceBConv2DPattern>(&errorOpsSet, ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2));
 
   // Revert remaining XC Fake Conv ops back to TFL Conv2D ops

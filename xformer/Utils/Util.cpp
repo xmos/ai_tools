@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "Utils/Util.h"
+#include <iostream>
 
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -33,10 +34,19 @@ int getShapedTypeSize(ShapedType t) {
   return sizeInBytes;
 }
 
+SmallVector<int32_t, 8> getI32DimFromI64Dim(ArrayRef<int64_t> dims) {
+  SmallVector<int32_t, 8> output_shape_values;
+  for (auto dim : dims) {
+    output_shape_values.push_back(
+        ShapedType::isDynamic(dim) ? -1 : static_cast<int32_t>(dim));
+  }
+  return output_shape_values;
+}
+
 quant::UniformQuantizedType
 getQType(mlir::TypedValue<mlir::TensorType> tensor) {
   return tensor.getType()
-      .cast<ShapedType>()
+      .cast<RankedTensorType>()
       .getElementType()
       .cast<quant::UniformQuantizedType>();
 }
@@ -84,4 +94,49 @@ Type getValElementType(Value tensor) {
 ArrayRef<int64_t> getValShape(Value tensor) {
   return tensor.getType().template cast<RankedTensorType>().getShape();
 }
+
+bool checkSliceNoOp(RankedTensorType inputType, RankedTensorType outputType) {
+  const int rank = inputType.getRank();
+  if (rank != outputType.getRank()) {
+    return false;
+  }
+  bool isNoOp = true;
+  for (int i = 0; i < rank; i++) {
+    if (inputType.getDimSize(i) != outputType.getDimSize(i)) {
+      isNoOp = false;
+      break;
+    }
+  }
+  return isNoOp;
+}
+
+int mergeAxes(std::vector<int32_t> &begin, std::vector<int32_t> &size,
+              std::vector<int32_t> &inShape, std::vector<int32_t> &outShape,
+              int rank) {
+
+  for (int i = rank - 1; i > 0; i--) {
+    while ((inShape[i] == outShape[i]) && (i > 0)) {
+      const int mul = inShape[i];
+      inShape[i - 1] *= mul;
+      outShape[i - 1] *= mul;
+      begin[i - 1] *= mul;
+      size[i - 1] *= mul;
+      inShape.erase(inShape.begin() + i);
+      outShape.erase(outShape.begin() + i);
+      begin.erase(begin.begin() + i);
+      size.erase(size.begin() + i);
+      rank -= 1;
+      i -= 1;
+    }
+  }
+  if ((inShape[0] == 1) && (outShape[0] == 1)) {
+    inShape.erase(inShape.begin());
+    outShape.erase(outShape.begin());
+    begin.erase(begin.begin());
+    size.erase(size.begin());
+    rank -= 1;
+  }
+  return rank;
+}
+
 } // namespace mlir::xcore::utils

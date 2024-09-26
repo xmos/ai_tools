@@ -11,7 +11,7 @@ Documentation
 - [Changelog](docs/rst/changelog.rst)
 - Advanced topics
 	- [Detailed background to deploying on the edge using XCORE.AI](docs/rst/xcore-ai-coding.rst)
-	- [Building the graph transformer and xmos-ai-tools package](docs/rst/build-xformer.rst)
+	- [Building the graph transformer and xmos-ai-tools package](docs/rst/build-from-source.rst)
 
 
 ## Installing xmos-ai-tools
@@ -95,12 +95,15 @@ Some of the commonly used configuration options are described [here](docs/rst/op
 ```python
 from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 
+input_data = ... # define your input data
+
 ie = TFLMHostInterpreter()
 ie.set_model(model_path='path_to_xcore_model', params_path='path_to_xcore_params')
-ie.set_tensor(ie.get_input_details()[0]['index'], value='input_data')
+ie.set_tensor(ie.get_input_details()[0]['index'], value=input_data)
 ie.invoke()
 
 xformer_outputs = []
+num_of_outputs = len(ie.get_output_details())
 for i in range(num_of_outputs):
     xformer_outputs.append(ie.get_tensor(ie.get_output_details()[i]['index']))
 ```

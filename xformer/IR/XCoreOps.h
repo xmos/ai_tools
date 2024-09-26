@@ -15,7 +15,21 @@
 
 #include "IR/XCoreEnumOps.h.inc"
 
+namespace mlir {
+namespace OpTrait {
+namespace xcore {
+
+template <typename ConcreteType>
+class MemoryOverlappable : public TraitBase<ConcreteType, MemoryOverlappable> {
+};
+
+} // namespace xcore
+} // namespace OpTrait
+} // namespace mlir
+
 #define GET_OP_CLASSES
 #include "IR/XCoreOps.h.inc"
+
+constexpr int CONCAT_OP_MAX_INPUTS = 13;
 
 #endif // XFORMER_IR_XCOREOPS_H

@@ -9,11 +9,21 @@ mentioned [here](https://github.com/xmos/ai_tools#readme) and
 have followed all steps including installing the necessary Python 
 packages from `requirements.txt`.
 
-With Bazel installed (check `.bazelversion` for current version),
-you can build with the following command (make sure you run it 
-from the directory /ai_tools/xformer):
+Also note that submodules need to be cloned and tflite-micro needs to be patched before building `xformer`.
+The following command should be run from this repo's root:
+
+    ./build.sh -T init
+
+See instructions [here](https://github.com/xmos/ai_tools/blob/develop/docs/rst/build-from-source.rst)
+
+With Bazel installed (check `.bazelversion` for current version or use [bazelisk](https://github.com/bazelbuild/bazelisk) which handles this for you),
+you can build with the following command (make sure you run it from the directory /ai_tools/xformer):
 
     bazel build //:xcore-opt
+
+or if you are using bazelisk:
+
+    bazelisk build //:xcore-opt
 
 To run the binary on an input tflite  file:
 

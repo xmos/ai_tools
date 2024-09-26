@@ -24,47 +24,68 @@ LogicalResult writeDataToFile(const std::string &filename, std::string data) {
 }
 
 LogicalResult writeWeightsToFile(const std::string &filename,
-                                 std::vector<std::vector<char>> tensorsVec) {
-  // Combine data for the tensors
-  std::string data;
-  for (auto const &tensor : tensorsVec) {
-    data += std::string(tensor.data(), tensor.size());
-  }
+                                 std::vector<std::vector<char>> tensorsVec,
+                                 bool writeWeightsAsArray,
+                                 bool placeInExternalMemory) {
+  if (writeWeightsAsArray) {
+    std::ostringstream cOut;
+    cOut << R"(#include <stdint.h>)";
 
-  return utils::writeDataToFile(filename, data);
-}
+    if (placeInExternalMemory) {
+      cOut << "\n\n"
+           << R"(__attribute__ ((section(".ExtMem.data"))))"
+           << "\n";
+    } else {
+      // Weights are to be placed in SRAM tile
+      // Add tile ram server header
+      auto tileHeader = utils::tileRamServerHeader();
+      tensorsVec.insert(tensorsVec.begin(), tileHeader);
+    }
 
-LogicalResult
-writeTileServerDataToFile(const std::string &filename,
-                          std::vector<std::vector<char>> tensorsVec) {
-  // Add header
-  auto tileHeader = utils::tileRamHeader();
-  tensorsVec.insert(tensorsVec.begin(), tileHeader);
-
-  std::ostringstream out;
-  out << R"(#ifndef TILESERVERGEN_H
-#define TILESERVERGEN_H
-
-const int8_t tile_server_weights[] = {
-)";
-  int lineEnding = 0;
-  for (auto const &tensor : tensorsVec) {
-    for (auto const &i : tensor) {
-      out << (int)i << ", ";
-      lineEnding++;
-      if (lineEnding > 80) {
-        out << "\n";
-        lineEnding = 0;
+    cOut << "const int8_t weights[] = {\n";
+    int lineEnding = 0;
+    int weightsSize = 0;
+    for (auto const &tensor : tensorsVec) {
+      for (auto const &i : tensor) {
+        cOut << (int)i << ", ";
+        lineEnding++;
+        weightsSize++;
+        if (lineEnding > 80) {
+          cOut << "\n";
+          lineEnding = 0;
+        }
       }
     }
-  }
 
-  out << R"(};
-
-#endif // TILESERVERGEN_H
+    cOut << R"(};
 )";
 
-  return utils::writeDataToFile(filename, out.str());
+    if (failed(utils::writeDataToFile(filename + ".c", cOut.str()))) {
+      return failure();
+    }
+
+    std::ostringstream hOut;
+    hOut << R"(#ifndef WEIGHTSGEN_H
+#define WEIGHTSGEN_H
+
+#define WEIGHTS_SIZE ()"
+         << weightsSize << R"(U)
+
+#endif // WEIGHTSGEN_H
+)";
+
+    return utils::writeDataToFile(filename + ".h", hOut.str());
+
+  } else {
+    // Write data for flash image
+    // Combine data for the tensors
+    std::string data;
+    for (auto const &tensor : tensorsVec) {
+      data += std::string(tensor.data(), tensor.size());
+    }
+
+    return utils::writeDataToFile(filename, data);
+  }
 }
 
 LogicalResult getFlatBufferStringFromMLIR(

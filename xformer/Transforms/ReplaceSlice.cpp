@@ -37,6 +37,17 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
   LogicalResult matchAndRewrite(TFL::SliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
 
+    auto inputType = sliceOp.getInput().getType().cast<RankedTensorType>();
+    auto outputType = sliceOp.getOutput().getType().cast<RankedTensorType>();
+
+    if (!inputType.hasStaticShape())
+      return failure();
+
+    if (utils::checkSliceNoOp(inputType, outputType)) {
+      rewriter.replaceOp(sliceOp, sliceOp.getInput());
+      return success();
+    }
+
     // If the input is a constant, LLVM's Canonicalizer will
     // fold the slice into a constant later.
     if (matchPattern(sliceOp.getInput(), m_Constant()) ||
@@ -44,12 +55,7 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
       return failure();
     }
 
-    auto inputType = sliceOp.getInput().getType().cast<RankedTensorType>();
-    if (!inputType.hasStaticShape())
-      return failure();
-
     Type inputElementType = inputType.getElementType();
-    auto outputType = sliceOp.getOutput().getType().cast<RankedTensorType>();
 
     DenseElementsAttr beginAttr;
     matchPattern(sliceOp.getBegin(), m_Constant(&beginAttr));
@@ -59,33 +65,48 @@ struct ReplaceSlicePattern : public OpRewritePattern<TFL::SliceOp> {
     matchPattern(sliceOp.getSize(), m_Constant(&sizeAttr));
     auto sizeValues = sizeAttr.getValues<int32_t>();
 
-    const int rank = inputType.getRank();
+    auto inShape = inputType.getShape();
+    auto outShape = outputType.getShape();
 
-    if (utils::checkSliceNoOp(beginValues, sizeValues, inputType)) {
-      rewriter.replaceOp(sliceOp, sliceOp.getInput());
-      return success();
-    }
+    std::vector<int32_t> begin(beginValues.begin(), beginValues.end());
+    std::vector<int32_t> sizes(sizeValues.begin(), sizeValues.end());
+    std::vector<int32_t> inShapeVec(inShape.begin(), inShape.end());
+    std::vector<int32_t> outShapeVec(outShape.begin(), outShape.end());
 
-    int begin_dst[5], end_dst[5], in_offsets[4], out_offsets[4], shape_dst[5];
+    // Assuming we can translate the slice op to reshape -> slice -> reshape
+    // such that the number of dimensions of the slice in the middle is as small
+    // as possible, rank would represent that number of dimensions.
+    int rank = utils::mergeAxes(begin, sizes, inShapeVec, outShapeVec,
+                                inputType.getRank());
 
-    // TFLite supports up to 5 dimensions, if the input is less we pad
+    if (rank > 2)
+      return failure();
+
     const size_t dtype_size = utils::getTypeSize(inputElementType);
+    begin[rank - 1] *= dtype_size;
+    sizes[rank - 1] *= dtype_size;
+    inShapeVec[rank - 1] *= dtype_size;
+    outShapeVec[rank - 1] *= dtype_size;
 
-    // Cast beginValues and sizeValues to int* for slice_memcpy_get_params
-    int begin[5], size[5], shape[5];
-    for (int i = 0; i < rank; i++) {
-      begin[i] = beginValues[i];
-      size[i] = sizeValues[i];
-      shape[i] = inputType.getShape()[i];
+    int32_t start, offset, size, num_copies;
+    if (rank == 1) {
+      start = begin[0];
+      offset = inShapeVec[0];
+      size = outShapeVec[0];
+      num_copies = 1;
+    } else {
+      start = begin[0] * inShapeVec[1] + begin[1];
+      offset = inShapeVec[1];
+      size = outShapeVec[1];
+      num_copies = outShapeVec[0];
     }
 
-    slice_memcpy_get_params(begin_dst, end_dst, in_offsets, out_offsets,
-                            shape_dst, begin, size, shape, dtype_size, rank);
+    bool isVpu = start % 4 == 0 && size % 4 == 0 && offset % 4 == 0;
     auto binaryObjectSliceOp = rewriter.create<SliceOp>(
         sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput(),
-        rewriter.getI32ArrayAttr(begin_dst), rewriter.getI32ArrayAttr(end_dst),
-        rewriter.getI32ArrayAttr(in_offsets),
-        rewriter.getI32ArrayAttr(out_offsets));
+        rewriter.getI32IntegerAttr(start), rewriter.getI32IntegerAttr(offset),
+        rewriter.getI32IntegerAttr(size),
+        rewriter.getI32IntegerAttr(num_copies), rewriter.getBoolAttr(isVpu));
 
     rewriter.replaceOp(sliceOp, binaryObjectSliceOp.getOutput());
 

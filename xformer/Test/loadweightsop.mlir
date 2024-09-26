@@ -1,4 +1,4 @@
-// RUN: xcore-opt --mlir-io %s --xcore-write-flash-image --xcore-weights-file=/dev/null | FileCheck %s
+// RUN: xcore-opt --mlir-io %s --xcore-write-weights --xcore-weights-file=/dev/null | FileCheck %s
 
 // CHECK-LABEL: valid
 func.func @valid(%arg0: tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>) -> tensor<?x32x!quant.uniform<i8:f32, 0.037329975515604019:-13>> attributes {tf.entry_function = {inputs = "flatten_input", outputs = "Identity"}} {
@@ -10,8 +10,8 @@ func.func @valid(%arg0: tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997
   %cst_4 = "tfl.no_value"() {value} : () -> none
   %0 = "tfl.reshape"(%arg0, %cst_3) : (tensor<?x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>, tensor<2xi32>) -> tensor<?x32x!quant.uniform<i8:f32, 0.0078160231932997704>>
   %1 = "tfl.reshape"(%0, %cst_1) : (tensor<?x32x!quant.uniform<i8:f32, 0.0078160231932997704>>, tensor<4xi64>) -> tensor<?x1x1x32x!quant.uniform<i8:f32, 0.0078160231932997704>>
-  // CHECK: xc.ld_flash
-  // CHECK-NOT: xc.ld_flash
+  // CHECK: xc.ld_weights
+  // CHECK-NOT: xc.ld_weights
   // CHECK: xc.conv2d_v2
   %2 = "xc.ld_constant"(%cst) : (tensor<10xi8>) -> tensor<10xi8>
   %3 = "xc.ld_constant"(%cst_0) : (tensor<1x10xi16>) -> tensor<1x10xi16>

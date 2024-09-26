@@ -75,8 +75,6 @@ build:windows --features=compiler_param_file
 build:windows --features=archive_param_file
 
 build:windows --enable_runfiles
-build:windows --linkopt=/FORCE:MULTIPLE
-build:windows --host_linkopt=/FORCE:MULTIPLE
 
 # Link with these libs only on macos
 build:macos --linkopt=-framework
@@ -101,6 +99,10 @@ build:asan --copt -fno-omit-frame-pointer
 build:asan --copt -fno-sanitize-recover=all
 build:asan --copt -gmlt
 build:asan --linkopt -fsanitize=address
+
+build:ubsan --copt -fsanitize=undefined
+build:ubsan --linkopt -fsanitize=undefined
+build:ubsan --action_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 
 # BAZEL DEBUG BUILD NOTES
 # Creating a debug build for Tensorflow is extremely taxing. Enabling debug for all of Tensorflow makes the build and link process take 3-4 hours. It finally doesn't work as the library is too large to be loaded. 

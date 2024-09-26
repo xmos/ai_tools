@@ -28,8 +28,10 @@ class UpdateShapeWithAxis<int i>
           "quant::CastQuantizedTypeAttrFromExpressedType($_builder, $0, "
           "quant::QuantizedType::castToExpressedType($1.getType()), " #i #")">;
 
-def IsQuantizedType : Constraint<CPred<"dyn_cast<QuantizedType>($0.getType()."
-                                       "cast<ShapedType>().getElementType())">>;
+class IsQuantizedType<int n>
+    : Constraint<CPred<
+          "utils::isNBitSignedQType<" #n #">($0.getType().cast<ShapedType>()."
+          "getElementType())">>;
 
 // Get padding values and output type as two return values
 def GetConv2DPaddingValues
@@ -54,6 +56,11 @@ class IsSplatAndEqualTo<int n>
                 "cast<DenseElementsAttr>().isSplat() && "
                 "dyn_cast<TFL::QConstOp>($0.getDefiningOp()).getValue()."
                 "cast<DenseElementsAttr>().getSplatValue<int8_t>() == " #n>>;
+
+class IsZeroPointNotEqualTo<int n>
+    : Constraint<
+          CPred<"dyn_cast<mlir::quant::UniformQuantizedType>($0.getType().cast<"
+                "ShapedType>().getElementType()).getZeroPoint() != " #n>>;
 
 // Get the dimension size as integer attr.
 class GetDimAsI32<int n>

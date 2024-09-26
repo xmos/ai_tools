@@ -18,6 +18,13 @@ template <typename T> std::string getMsgWithLocPrefix(T &op, std::string msg) {
   return message;
 }
 
+template <typename T> std::string getLocName(T &op) {
+  if (auto name_loc = op.getLoc().template dyn_cast<NameLoc>()) {
+    return name_loc.getName().str();
+  }
+  return "";
+}
+
 } // namespace mlir::xcore::utils
 
 #endif // XFORMER_UTILS_DIAGNOSTICS_H

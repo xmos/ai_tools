@@ -15,7 +15,7 @@
 namespace mlir::xcore {
 
 namespace {
-// Write flash image
+// Write weights to a file
 struct WriteWeights
     : public PassWrapper<WriteWeights, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(WriteWeights)
@@ -23,8 +23,8 @@ struct WriteWeights
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
-  StringRef getArgument() const final { return "xcore-write-flash-image"; }
-  StringRef getDescription() const final { return "Write flash image"; }
+  StringRef getArgument() const final { return "xcore-write-weights"; }
+  StringRef getDescription() const final { return "Write weights"; }
   void runOnOperation() override;
 };
 
@@ -66,7 +66,11 @@ struct WriteWeightsPattern : public OpRewritePattern<LoadConstantOp> {
       address += t.size();
     }
 
-    if (loadOp.getResult().hasOneUse()) {
+    // We try to combine loads to one op if the load has only one use or if the
+    // load is not from external memory.
+    // External memory loads have to be aligned to 32 bytes/256 bits for max
+    // speed
+    if (loadOp.getResult().hasOneUse() && !weightsInExternalMemory) {
       auto use = loadOp->use_begin();
       Operation *ownerOp = use->getOwner();
 
@@ -87,36 +91,43 @@ struct WriteWeightsPattern : public OpRewritePattern<LoadConstantOp> {
         }
       }
 
-      auto loadFlashOp =
-          rewriter.create<LoadFlashOp>(loadOp.getLoc(), outputTypes, address,
-                                       rewriter.getArrayAttr(dataSizes));
+      auto loadWeightsOp = rewriter.create<LoadWeightsOp>(
+          loadOp.getLoc(), outputTypes, address,
+          rewriter.getArrayAttr(dataSizes), /*in_ddr=*/false);
 
       for (int i = 0; i < opNums.size(); i++) {
-        ownerOp->setOperand(opNums[i], loadFlashOp.getResult(i));
+        ownerOp->setOperand(opNums[i], loadWeightsOp.getResult(i));
       }
 
-      loadFlashOp->moveBefore(ownerOp);
+      loadWeightsOp->moveBefore(ownerOp);
       loadOp.erase();
     } else {
       std::vector<char> loadOpData = getTensorData(loadOp);
       dataSizes.push_back(rewriter.getI32IntegerAttr(loadOpData.size()));
       tensorData.insert(tensorData.end(), loadOpData.begin(), loadOpData.end());
-      auto loadFlashOp = rewriter.create<LoadFlashOp>(
+      if (weightsInExternalMemory) {
+        // Pad tensordata to 32 bytes alignment
+        auto alignedSize = ((loadOpData.size() + 31) / 32) * 32;
+        auto toBePaddedSize = alignedSize - loadOpData.size();
+        // Pad with zeros
+        tensorData.insert(tensorData.end(), toBePaddedSize, 0);
+      }
+      auto loadWeightsOp = rewriter.create<LoadWeightsOp>(
           loadOp.getLoc(), loadOp.getType(), address,
-          rewriter.getArrayAttr(dataSizes));
-      rewriter.replaceOp(loadOp, loadFlashOp.getOutput());
+          rewriter.getArrayAttr(dataSizes), /*in_ddr=*/weightsInExternalMemory);
+      rewriter.replaceOp(loadOp, loadWeightsOp.getOutput());
 
-      // Find all uses of loadFlashOp and find the first Owner op
+      // Find all uses of loadWeightsOp and find the first Owner op
       // so that we can move the loading to just before that op.
       mlir::Operation *firstOwnerOp =
-          loadFlashOp->getResult(0).getUses().begin()->getOwner();
-      for (const mlir::OpOperand &use : loadFlashOp->getResult(0).getUses()) {
+          loadWeightsOp->getResult(0).getUses().begin()->getOwner();
+      for (const mlir::OpOperand &use : loadWeightsOp->getResult(0).getUses()) {
         mlir::Operation *op = use.getOwner();
         if (op->isBeforeInBlock(firstOwnerOp)) {
           firstOwnerOp = op;
         }
       }
-      loadFlashOp->moveBefore(firstOwnerOp);
+      loadWeightsOp->moveBefore(firstOwnerOp);
     }
 
     tensorsVec_->push_back(tensorData);
@@ -131,7 +142,7 @@ private:
 void WriteWeights::runOnOperation() {
   func::FuncOp f = getOperation();
   if (weightsFilenameOption.empty()) {
-    f.emitError("Flash image file option should be provided to run this pass!");
+    f.emitError("Weights file option should be provided to run this pass!");
     signalPassFailure();
     return;
   }
@@ -139,24 +150,16 @@ void WriteWeights::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
   // For each LoadOp in the graph, save the tensor data, and replace the LoadOp
-  // with a LoadFlashOp
+  // with a LoadWeightsOp
   std::vector<std::vector<char>> tensorsVec;
   RewritePatternSet patterns(ctx);
   patterns.insert<WriteWeightsPattern>(&tensorsVec, ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 
-  if (tileLoadOption) {
-    if (failed(utils::writeTileServerDataToFile(weightsFilenameOption,
-                                                tensorsVec))) {
-      f.emitError("Failed to write tile data!");
-      signalPassFailure();
-      return;
-    }
-  }
-  // Write tensor data to flash image file
-  else if (failed(
-               utils::writeWeightsToFile(weightsFilenameOption, tensorsVec))) {
-    f.emitError("Failed to write flash image!");
+  if (failed(utils::writeWeightsToFile(weightsFilenameOption, tensorsVec,
+                                       weightsAsArrayOption,
+                                       weightsInExternalMemory))) {
+    f.emitError("Failed to write weights to file!");
     signalPassFailure();
     return;
   }

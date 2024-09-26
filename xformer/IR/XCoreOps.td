@@ -45,6 +45,9 @@ class XC_Op<string mnemonic, list<Trait> traits = []>
   let extraClassDeclaration = [{ std::vector<uint8_t> buildCustomOptions(); }];
 }
 
+// Trait
+def XC_MemoryOverlappable : NativeOpTrait<"xcore::MemoryOverlappable">;
+
 // Conv2D
 
 def XC_Conv2D_ValidDirect : I32EnumAttrCase<"ValidDirect", 0>;
@@ -83,49 +86,83 @@ def XC_SliceOp : XC_Op<"slice", [Pure]> {
   let arguments = (ins
     TensorOf<[QI8, QI16, F32, I8, I32]>:$input,
 
-    I32ArrayAttr:$begin,
-    I32ArrayAttr:$end,
-    I32ArrayAttr:$input_offset,
-    I32ArrayAttr:$output_offset
+    I32Attr:$start,
+    I32Attr:$offset,
+    I32Attr:$size,
+    I32Attr:$num_copies,
+    BoolAttr:$use_vpu
   );
 
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
-def XC_PadOp : XC_Op<"pad", [Pure]> {
+def XC_FakeSliceOp : XC_Op<"fake_slice", [Pure]> {
+  let summary = "Fake slice op";
+
+  let description = [{Fake slice op.}];
+
+  let arguments = (ins AnyTensor : $input);
+
+  let results = (outs AnyTensor : $output);
+}
+
+def XC_BroadcastOp : XC_Op<"broadcast", [Pure]> {
+  let summary = "Broadcast op";
+
+  let description = [{Broadcast op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8, QI16, F32, I8, I32]>:$input,
+
+    I32Attr:$size,
+    I32Attr:$num_copies,
+    I32Attr:$num_broadcasts,
+    BoolAttr:$use_vpu
+  );
+
+  let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
+}
+
+def XC_PadOp : XC_Op<"pad", [Pure, XC_MemoryOverlappable]> {
   let summary = "Pad op";
 
   let description = [{Pad op.}];
 
   let arguments = (ins
-    TensorOf<[QI8]>:$input,
-    StrAttr:$padding_plan,
-    I32Attr:$pad_value
-    );
+    TensorOf<[QI8, QI16, F32, I8, I32]>:$input,
 
-  let results = (outs TensorOf<[QI8]> : $output);
+    I32Attr:$start,
+    I32Attr:$pad_size,
+    I32Attr:$size,
+    I32Attr:$num_copies,
+    I32Attr:$zero_point,
+    I32Attr:$end,
+    BoolAttr:$use_vpu
+  );
+
+  let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 
   let hasFolder = 1;
 }
 
-def XC_PadOpV2 : XC_Op<"pad_v2", [Pure]> {
-  let summary = "Pad op v2";
+def XC_ConcatOp : XC_Op<"concat", [Pure]> {
+  let summary = "Concat op";
 
-  let description = [{Pad op v2.}];
+  let description = [{Concat op.}];
 
   let arguments = (ins
-    TensorOf<[QI8, QI16, F32, I8, I32]>:$input,
+    Variadic<TensorOf<[QI8, QI16, F32, I8, I32]>> : $input,
 
-    I32ArrayAttr:$begin,
-    I32ArrayAttr:$end,
-    I32ArrayAttr:$input_offset,
-    I32ArrayAttr:$output_offset
+    I32Attr:$num_copies,
+    I32ArrayAttr:$sizes,
+    I32Attr:$num_inputs,
+    BoolAttr:$use_vpu
   );
 
   let results = (outs TensorOf<[QI8, QI16, F32, I8, I32]> : $output);
 }
 
-def XC_AddOp : XC_Op<"add", [Pure]> {
+def XC_AddOp : XC_Op<"add", [Pure, XC_MemoryOverlappable]> {
   let summary = "Add op";
 
   let description = [{Add op.}];
@@ -144,7 +181,26 @@ def XC_AddOp : XC_Op<"add", [Pure]> {
   let results = (outs TensorOf<[QI8]> : $output);
 }
 
-def XC_MulOp : XC_Op<"mul", [Pure]> {
+def XC_MeanOp : XC_Op<"mean", [Pure]> {
+  let summary = "Mean op";
+
+  let description = [{Mean op.}];
+
+  let arguments = (ins
+    TensorOf<[QI8]>:$input,
+
+    I32Attr:$start,
+    I32Attr:$mean,
+    I32Attr:$end,
+    F32Attr:$in_zero_point,
+    F32Attr:$out_zero_point,
+    F32Attr:$scale_mul
+  );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_MulOp : XC_Op<"mul", [Pure, XC_MemoryOverlappable]> {
   let summary = "Mul op";
 
   let description = [{Mul op.}];
@@ -186,7 +242,7 @@ def XC_BinaryI16_Mul : I32EnumAttrCase<"Mul", 1>;
 def XC_BinaryI16_OpTypeAttr : I32EnumAttr<"BinaryI16OpType", "op type enum",
                                           [XC_BinaryI16_Add, XC_BinaryI16_Mul]>;
 
-def XC_BinaryI16Op : XC_Op<"binaryi16", [Pure]> {
+def XC_BinaryI16Op : XC_Op<"binaryi16", [Pure, XC_MemoryOverlappable]> {
   let summary = "Binary I16 op";
 
   let description = [{Binary I16 op.}];
@@ -202,7 +258,8 @@ def XC_BinaryI16Op : XC_Op<"binaryi16", [Pure]> {
   let results = (outs TensorOf<[QI16]> : $output);
 }
 
-def XC_Beta_ActivationF32Op : XC_Op<"beta_activationf32", [Pure]> {
+def XC_Beta_ActivationF32Op
+    : XC_Op<"beta_activationf32", [Pure, XC_MemoryOverlappable]> {
   let summary = "Beta ActivationF32 op";
 
   let description = [{Beta ActivationF32 op.}];
@@ -287,6 +344,16 @@ def XC_SoftmaxOp : XC_Op<"softmax", [Pure]> {
   let summary = "Softmax op";
 
   let description = [{Softmax op.}];
+
+  let arguments = (ins TensorOf<[QI8]> : $input, TensorOf<[F32]> : $lut);
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_BatchedSoftmaxOp : XC_Op<"batched_softmax", [Pure]> {
+  let summary = "Batched softmax op";
+
+  let description = [{Batched softmax op.}];
 
   let arguments = (ins TensorOf<[QI8]> : $input, TensorOf<[F32]> : $lut);
 
@@ -384,7 +451,7 @@ def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16]> : $output);
 }
 
-def XC_LookupOp : XC_Op<"lookup", [Pure]> {
+def XC_LookupOp : XC_Op<"lookup", [Pure, XC_MemoryOverlappable]> {
   let summary = "Lookup table op";
 
   let description = [{Lookup table op.}];
@@ -394,7 +461,7 @@ def XC_LookupOp : XC_Op<"lookup", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16]> : $output);
 }
 
-def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [Pure]> {
+def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [Pure, XC_MemoryOverlappable]> {
   let summary = "Pad 3 to 4 op";
 
   let description = [{Pad 3 to 4 op.}];
@@ -415,12 +482,15 @@ def XC_LoadConstantOp
   let results = (outs AnyTensor : $output);
 }
 
-def XC_LoadFlashOp : XC_Op<"ld_flash", [Pure]> {
-  let summary = "Load from flash op";
+def XC_LoadWeightsOp : XC_Op<"ld_weights", [Pure]> {
+  let summary = "Load weights op";
 
-  let description = [{Load from flash op.}];
+  let description = [{Load weights op.}];
 
-  let arguments = (ins I32Attr : $address, I32ArrayAttr : $sizes);
+  let arguments = (ins I32Attr
+                   : $address, I32ArrayAttr
+                   : $sizes, BoolAttr
+                   : $in_ddr);
 
   let results = (outs Variadic<AnyTensor> : $output);
 }

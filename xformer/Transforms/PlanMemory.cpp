@@ -42,13 +42,16 @@ void PlanMemory::runOnOperation() {
       OpBuilder builder(module);
 
       auto &m = getAnalysis<MemoryPlan>();
-      int peakMemoryUsedWithOverlap, peakMemoryUsedWithoutOverlap;
+      int peakMemoryUsedWithOverlap, peakMemoryUsedWithoutOverlap, peakOpId;
       auto offlineOffsetsWithOverlap = m.getAllocatedOffsets(
-          /*overlapOps=*/true, peakMemoryUsedWithOverlap);
+          /*overlapOps=*/true, peakMemoryUsedWithOverlap, peakOpId);
       auto offlineOffsetsWithoutOverlap = m.getAllocatedOffsets(
-          /*overlapOps=*/false, peakMemoryUsedWithoutOverlap);
+          /*overlapOps=*/false, peakMemoryUsedWithoutOverlap, peakOpId);
+      module->setAttr("xc.peakopid", builder.getI32IntegerAttr(peakOpId));
+      module->setAttr("xc.peakusage",
+                      builder.getI32IntegerAttr(peakMemoryUsedWithoutOverlap));
 
-      if (peakMemoryUsedWithOverlap < peakMemoryUsedWithoutOverlap) {
+      if (peakMemoryUsedWithOverlap <= peakMemoryUsedWithoutOverlap) {
         module->setAttr("xc.offsets",
                         builder.getI32VectorAttr(offlineOffsetsWithOverlap));
       } else {

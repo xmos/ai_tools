@@ -46,14 +46,27 @@ def getExpLookupF32
 def isSingleSegment
     : Constraint<CPred<"$0.getType().cast<ShapedType>().getRank() == 2">>;
 
+def isSingleBatch
+    : Constraint<CPred<"$0.getType().cast<ShapedType>().getDimSize(0) == 1">>;
+def isMultiBatch
+    : Constraint<CPred<"($0.getType().cast<ShapedType>().getRank() == 2 && "
+                       "$0.getType().cast<ShapedType>().getDimSize(0) != 1) || "
+                       "($0.getType().cast<ShapedType>().getRank() == 3 && "
+                       "$0.getType().cast<ShapedType>().getDimSize(1) != 1)">>;
+
 def betaIsOne : Constraint<CPred<"$0.getValue().convertToFloat() == 1.0">>;
 
-// Softmax -> XC_SoftmaxOp
+// Softmax -> XC_SoftmaxOp if single batch else XC_BatchedSoftmaxOp
 def:
    Pat<(TFL_SoftmaxOp
             : $output TensorOf<[QI8]>:$input, $beta),
            (XC_SoftmaxOp $input, (Arith_ConstantOp (getExpLookupF32
-           $output))), [(betaIsOne $beta), (isSingleSegment $input)]>;
+           $output))), [(betaIsOne $beta), (isSingleSegment $input), (isSingleBatch $input)]>;
+def:
+   Pat<(TFL_SoftmaxOp
+            : $output TensorOf<[QI8]>:$input, $beta),
+           (XC_BatchedSoftmaxOp $input, (Arith_ConstantOp (getExpLookupF32
+           $output))), [(betaIsOne $beta), (isMultiBatch $input)]>;
 
 // Beta float activation lookup
 def getActivationType
@@ -92,7 +105,8 @@ def getUnaryI16BlobOrFail
 def: Pat<(TFL_QuantizeOp
             : $output TensorOf<[F32]>:$input, $qtype),
             (XC_UnaryI16Op $input, (Arith_ConstantOp (getUnaryI16BlobOrFail:$blob
-            $output)), XC_UnaryI16_Quantize)>;
+            $output)), XC_UnaryI16_Quantize),
+            [(IsQuantizedType<16> $output)]>;
 def: Pat<(TFL_QuantizeOp
             : $output TensorOf<[QI16]>:$input, $qtype),
             (XC_UnaryI16Op $input, (Arith_ConstantOp (getUnaryI16BlobOrFail:$blob
@@ -137,14 +151,6 @@ def Has3To4Channel
                        "$1.getType().cast<ShapedType>().getDimSize(3) == 4">>;
 
 foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
-def:
-  Pat<(TFL_PadOp
-           : $output TensorOf<[QI8]>:$input, (constOp
-                              : $padding_op $padding_attr)),
-          (XC_PadOp $input, (getPaddingPlan $output), (getPadValue $input)), [
-            (HasOnlySpatialPadding $padding_attr),
-            (HasMultipleOfNBytesPerPixel<4> $input)
-          ]>;
 def:
   Pat<(TFL_PadOp
            : $output TensorOf<[QI8]>:$input, (constOp

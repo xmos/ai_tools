@@ -63,11 +63,15 @@ struct BConvArgs {
 template <typename ConcreteType, typename ConvOpType, typename ArgsType>
 class ReplaceWithXCConv2DBase : public OpRewritePattern<ConvOpType> {
 public:
-  ReplaceWithXCConv2DBase(MLIRContext *context)
-      : OpRewritePattern<ConvOpType>(context) {}
+  ReplaceWithXCConv2DBase(std::unordered_set<Operation *> *errorOpsSet,
+                          MLIRContext *context)
+      : OpRewritePattern<ConvOpType>(context), errorOpsSet_(errorOpsSet) {}
 
   LogicalResult matchAndRewrite(ConvOpType op,
                                 PatternRewriter &rewriter) const override;
+
+public:
+  std::unordered_set<Operation *> *errorOpsSet_;
 };
 
 //
@@ -80,7 +84,9 @@ class ReplaceBConv2DPattern
 public:
   using BaseType =
       ReplaceWithXCConv2DBase<ReplaceBConv2DPattern, lq::Bconv2dOp, BConvArgs>;
-  ReplaceBConv2DPattern(MLIRContext *context) : BaseType(context) {}
+  ReplaceBConv2DPattern(std::unordered_set<Operation *> *errorOpsSet,
+                        MLIRContext *context)
+      : BaseType(errorOpsSet, context) {}
 
   LogicalResult checkIfValid(lq::Bconv2dOp op) const;
 
@@ -142,7 +148,9 @@ public:
   using BaseType =
       ReplaceWithXCConv2DBase<ReplaceConv2DBase<ConcreteType, TFLConvOpType>,
                               TFLConvOpType, TFLConvArgs>;
-  ReplaceConv2DBase(MLIRContext *context) : BaseType(context) {}
+  ReplaceConv2DBase(std::unordered_set<Operation *> *errorOpsSet,
+                    MLIRContext *context)
+      : BaseType(errorOpsSet, context) {}
 
   LogicalResult checkIfValid(TFLConvOpType op) const { return success(); }
 
@@ -181,7 +189,9 @@ class ReplaceConv2DPattern
     : public ReplaceConv2DBase<ReplaceConv2DPattern, FakeConv2DOp> {
 public:
   using BaseType = ReplaceConv2DBase<ReplaceConv2DPattern, FakeConv2DOp>;
-  ReplaceConv2DPattern(MLIRContext *context) : BaseType(context) {}
+  ReplaceConv2DPattern(std::unordered_set<Operation *> *errorOpsSet,
+                       MLIRContext *context)
+      : BaseType(errorOpsSet, context) {}
 
   LogicalResult getKernelType(const TFLConvArgs &args, Conv2DType &kt) const;
 
@@ -240,7 +250,9 @@ class ReplaceDepthwiseConv2DPattern
 public:
   using BaseType =
       ReplaceConv2DBase<ReplaceDepthwiseConv2DPattern, FakeDepthwiseConv2DOp>;
-  ReplaceDepthwiseConv2DPattern(MLIRContext *context) : BaseType(context) {}
+  ReplaceDepthwiseConv2DPattern(std::unordered_set<Operation *> *errorOpsSet,
+                                MLIRContext *context)
+      : BaseType(errorOpsSet, context) {}
 
   LogicalResult getKernelType(const TFLConvArgs &args, Conv2DType &kt) const;
 

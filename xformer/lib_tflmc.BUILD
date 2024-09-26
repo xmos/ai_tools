@@ -5,7 +5,9 @@ package(
 filegroup(
     name = "TFLITE_SOURCES",
     srcs = [
+        "@tflite_micro//tensorflow/lite:array.cc",
         "@tflite_micro//tensorflow/lite/core/c:common.cc",
+        "@tflite_micro//tensorflow/lite/kernels/internal:common.cc",
         "@tflite_micro//tensorflow/lite/core/api:error_reporter.cc",
         "@tflite_micro//tensorflow/lite/core/api:tensor_utils.cc",
         "@tflite_micro//tensorflow/lite/core/api:flatbuffer_conversions.cc",
@@ -175,6 +177,7 @@ filegroup(
 cc_library(
     name = "tflmc_lib",
     hdrs = [
+        "src/Api.h",
         "src/CodeWriter.h",
         "src/Compiler.h",
         "src/MemMap.h",
@@ -182,6 +185,7 @@ cc_library(
         "src/xtflm_conf.h",
     ],
     srcs = [
+        "src/Api.cc",
         "src/CodeWriter.cc",
         "src/Compiler.cc",
         "src/MemMap.cc",

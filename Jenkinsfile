@@ -160,56 +160,56 @@ pipeline {
       }
       stage("Build host wheels") {
         parallel {
-          stage("Build linux runtime") {
-            steps {
-              extractDeviceZipAndHeaders()
-              script {
-                USER_ID = sh(script: 'id -u', returnStdout: true).trim()
-                withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
-                  docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION}") {
-                    sh "curl -LO https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.sh"
-                    sh "chmod +x cmake-3.28.3-linux-x86_64.sh"
-                    sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"
-                    sh "./bin/cmake --version"
-                    CMAKE_PATH = sh(script: "pwd", returnStdout: true).trim() + "/bin"
-                    sh "git describe --tags"
-                    // Build Xinterpreter and Host lib
-                    // Instead of using buildXinterpreterAndHostLib(), we are building it
-                    // directly here as we want to specify the compiler
-                    sh "PATH=${CMAKE_PATH}:${env.PATH} CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
-                    dir("xformer") {
-                      sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
-                      sh "chmod +x bazelisk-linux-amd64"
-                      sh """
-                        ./bazelisk-linux-amd64 build //:xcore-opt \\
-                          --verbose_failures \\
-                          --linkopt=-lrt \\
-                          --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
-                          --//:disable_version_check \\
-                          --jobs 8
-                      """
-                      sh """
-                        ./bazelisk-linux-amd64 test //Test:all \\
-                          --verbose_failures \\
-                          --test_output=errors \\
-                          --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain"  \\
-                          --//:disable_version_check
-                      """
-                    }
-                    dir("python") {
-                      sh "python setup.py bdist_wheel"
-                    }
-                  }
-                }
-                withVenv { dir("python") {
-                  sh "pip install patchelf auditwheel==5.2.0 --no-cache-dir"
-                  sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
-                  stash name: "linux_wheel", includes: "dist/*"
-                } }
-              }
-            }
-            post { unsuccessful { xcoreCleanSandbox() } }
-          } 
+          // stage("Build linux runtime") {
+          //   steps {
+          //     extractDeviceZipAndHeaders()
+          //     script {
+          //       USER_ID = sh(script: 'id -u', returnStdout: true).trim()
+          //       withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
+          //         docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION}") {
+          //           sh "curl -LO https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.sh"
+          //           sh "chmod +x cmake-3.28.3-linux-x86_64.sh"
+          //           sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"
+          //           sh "./bin/cmake --version"
+          //           CMAKE_PATH = sh(script: "pwd", returnStdout: true).trim() + "/bin"
+          //           sh "git describe --tags"
+          //           // Build Xinterpreter and Host lib
+          //           // Instead of using buildXinterpreterAndHostLib(), we are building it
+          //           // directly here as we want to specify the compiler
+          //           sh "PATH=${CMAKE_PATH}:${env.PATH} CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
+          //           dir("xformer") {
+          //             sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64"
+          //             sh "chmod +x bazelisk-linux-amd64"
+          //             sh """
+          //               ./bazelisk-linux-amd64 build //:xcore-opt \\
+          //                 --verbose_failures \\
+          //                 --linkopt=-lrt \\
+          //                 --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
+          //                 --//:disable_version_check \\
+          //                 --jobs 8
+          //             """
+          //             sh """
+          //               ./bazelisk-linux-amd64 test //Test:all \\
+          //                 --verbose_failures \\
+          //                 --test_output=errors \\
+          //                 --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain"  \\
+          //                 --//:disable_version_check
+          //             """
+          //           }
+          //           dir("python") {
+          //             sh "python setup.py bdist_wheel"
+          //           }
+          //         }
+          //       }
+          //       withVenv { dir("python") {
+          //         sh "pip install patchelf auditwheel==5.2.0 --no-cache-dir"
+          //         sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
+          //         stash name: "linux_wheel", includes: "dist/*"
+          //       } }
+          //     }
+          //   }
+          //   post { unsuccessful { xcoreCleanSandbox() } }
+          // } 
           stage("Build Windows runtime") {
             agent { label "ai && windows10" }
             steps { 
@@ -223,7 +223,7 @@ pipeline {
                     bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"
                     script {
                       PYTHON_BIN_PATH = bat(script: "@where python.exe", returnStdout: true).split()[0].trim()
-                      bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\""
+                      bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build @lib_nn//:nn_lib --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\""
                     }
                   }
                   dir("python") { 
@@ -235,84 +235,85 @@ pipeline {
                     bat "bazelisk-windows-amd64.exe clean --expunge"
                     bat "bazelisk-windows-amd64.exe shutdown"
                   }
+                  bat "rmdir /s xformer"
                 }
               } 
             }
             post { cleanup { xcoreCleanSandbox() } }
           }
-          stage("Build Mac runtime") {
-            agent { label "macos && arm64 && xcode" }
-            steps {
-              setupRepo()
-              extractDeviceZipAndHeaders()
-              buildXinterpreterAndHostLib()
-              // TODO: Fix this, use a rule for the fat binary instead of manually combining
-              dir("xformer") {
-                sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
-                sh "chmod +x bazelisk-darwin-arm64"
-                script {
-                  def compileAndRename = { arch ->
-                    def cpuFlag = arch == 'arm64' ? 'darwin_arm64' : 'darwin_x86_64'
-                    def outputName = "xcore-opt-${arch}"
-                    sh """
-                      ./bazelisk-darwin-arm64 build //:xcore-opt \\
-                        --cpu=${cpuFlag} \\
-                        --copt=-fvisibility=hidden \\
-                        --copt=-mmacosx-version-min=10.15 \\
-                        --linkopt=-mmacosx-version-min=10.15 \\
-                        --linkopt=-dead_strip \\
-                        --//:disable_version_check
-                      mv bazel-bin/xcore-opt ${outputName}
-                    """
-                  }
-                  compileAndRename('arm64')
-                  compileAndRename('x86_64')
-                }
-                sh "lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt"
-              }
-              createVenv("requirements.txt")
-              dir("python") { withVenv {
-                sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
-                sh "python setup.py bdist_wheel --plat macosx_10_15_universal2"
-                stash name: "mac_wheel", includes: "dist/*"
-              } }
-            }
-            post { cleanup { xcoreCleanSandbox() } }
-          }
+          // stage("Build Mac runtime") {
+          //   agent { label "macos && arm64 && xcode" }
+          //   steps {
+          //     setupRepo()
+          //     extractDeviceZipAndHeaders()
+          //     buildXinterpreterAndHostLib()
+          //     // TODO: Fix this, use a rule for the fat binary instead of manually combining
+          //     dir("xformer") {
+          //       sh "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64"
+          //       sh "chmod +x bazelisk-darwin-arm64"
+          //       script {
+          //         def compileAndRename = { arch ->
+          //           def cpuFlag = arch == 'arm64' ? 'darwin_arm64' : 'darwin_x86_64'
+          //           def outputName = "xcore-opt-${arch}"
+          //           sh """
+          //             ./bazelisk-darwin-arm64 build //:xcore-opt \\
+          //               --cpu=${cpuFlag} \\
+          //               --copt=-fvisibility=hidden \\
+          //               --copt=-mmacosx-version-min=10.15 \\
+          //               --linkopt=-mmacosx-version-min=10.15 \\
+          //               --linkopt=-dead_strip \\
+          //               --//:disable_version_check
+          //             mv bazel-bin/xcore-opt ${outputName}
+          //           """
+          //         }
+          //         compileAndRename('arm64')
+          //         compileAndRename('x86_64')
+          //       }
+          //       sh "lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt"
+          //     }
+          //     createVenv("requirements.txt")
+          //     dir("python") { withVenv {
+          //       sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
+          //       sh "python setup.py bdist_wheel --plat macosx_10_15_universal2"
+          //       stash name: "mac_wheel", includes: "dist/*"
+          //     } }
+          //   }
+          //   post { cleanup { xcoreCleanSandbox() } }
+          // }
         }
     }
-    stage("Test") { parallel {
-      stage("Linux Test") { steps { script {
-        runTests("linux", dailyHostTest)
-        withVenv {
-          sh "pip install pytest nbmake"
-          sh "pytest --nbmake ./docs/notebooks/*.ipynb"
-        }
-      } } } 
-      stage("Mac arm64 Test") {
-        agent { label "macos && arm64 && !macos_10_14" }
-        steps { script {
-          runTests("mac", dailyHostTest)
-        } }
-        post { cleanup {xcoreCleanSandbox() } }
-      }
-      stage("Mac x86_64 Test") {
-        agent { label "macos && x86_64 && !macos_10_14" }
-        steps { script {
-          runTests("mac", dailyHostTest)
-        } }
-        post { cleanup {xcoreCleanSandbox() } }
-      }
-      stage("Device Test") {
-        agent { label "xcore.ai-explorer && lpddr && !macos" }
-        steps { script { runTests("device", dailyDeviceTest) } }
-        post {
-          always { 
-            archiveArtifacts artifacts: 'examples/app_mobilenetv2/arena_sizes.csv', allowEmptyArchive: true
-          }
-          cleanup { xcoreCleanSandbox() }
-        }
-      } }
+    // stage("Test") { parallel {
+    //   stage("Linux Test") { steps { script {
+    //     runTests("linux", dailyHostTest)
+    //     withVenv {
+    //       sh "pip install pytest nbmake"
+    //       sh "pytest --nbmake ./docs/notebooks/*.ipynb"
+    //     }
+    //   } } } 
+    //   stage("Mac arm64 Test") {
+    //     agent { label "macos && arm64 && !macos_10_14" }
+    //     steps { script {
+    //       runTests("mac", dailyHostTest)
+    //     } }
+    //     post { cleanup {xcoreCleanSandbox() } }
+    //   }
+    //   stage("Mac x86_64 Test") {
+    //     agent { label "macos && x86_64 && !macos_10_14" }
+    //     steps { script {
+    //       runTests("mac", dailyHostTest)
+    //     } }
+    //     post { cleanup {xcoreCleanSandbox() } }
+    //   }
+    //   stage("Device Test") {
+    //     agent { label "xcore.ai-explorer && lpddr && !macos" }
+    //     steps { script { runTests("device", dailyDeviceTest) } }
+    //     post {
+    //       always { 
+    //         archiveArtifacts artifacts: 'examples/app_mobilenetv2/arena_sizes.csv', allowEmptyArchive: true
+    //       }
+    //       cleanup { xcoreCleanSandbox() }
+    //     }
+    //   } }
       // stage("Publish") { steps {
       //   script {
       //     // if (params.TAG_VERSION != "") {

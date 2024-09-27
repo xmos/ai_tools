@@ -235,7 +235,7 @@ pipeline {
                     bat "bazelisk-windows-amd64.exe clean --expunge"
                     bat "bazelisk-windows-amd64.exe shutdown"
                   }
-                  bat "rmdir /s xformer"
+                  bat "rmdir /s /q xformer"
                 }
               } 
             }

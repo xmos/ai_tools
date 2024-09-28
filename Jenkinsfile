@@ -234,7 +234,7 @@ pipeline {
                   dir("xformer") {
                     bat "bazelisk-windows-amd64.exe shutdown"
                     script {
-                      HANGING_BAZEL_EMBEDDED_JAVA_PID = bat(script: "@ps -W | grep _bzl | tr -s " " | cut -d " " -f 5", returnStdout: true).split()[0].trim()
+                      HANGING_BAZEL_EMBEDDED_JAVA_PID = bat(script: "@ps -W | grep _bzl | tr -s \" \" | cut -d \" \" -f 5", returnStdout: true).split()[0].trim()
                       bat "taskkill /F /PID \"${HANGING_BAZEL_EMBEDDED_JAVA_PID}\""
                     }
                   }

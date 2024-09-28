@@ -238,9 +238,10 @@ pipeline {
                   bat "rmdir /s /q xformer"
                 }
               }
-              input('Do you want to proceed?')
             }
-            post { cleanup { xcoreCleanSandbox() } }
+            post { cleanup {
+              input message : "Continue?"
+              xcoreCleanSandbox() } }
           }
           // stage("Build Mac runtime") {
           //   agent { label "macos && arm64 && xcode" }

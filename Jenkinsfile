@@ -148,11 +148,11 @@ pipeline {
         steps {
           setupRepo()
           createVenv("requirements.txt")
-          withVenv { sh "pip install -r requirements.txt" }
-          withVenv { withTools(params.TOOLS_VERSION) { createDeviceZip() } }
-          dir("third_party/lib_tflite_micro/build/") {
-            stash name: "release_archive", includes: "release_archive.zip"
-          }
+          // withVenv { sh "pip install -r requirements.txt" }
+          // withVenv { withTools(params.TOOLS_VERSION) { createDeviceZip() } }
+          // dir("third_party/lib_tflite_micro/build/") {
+          //   stash name: "release_archive", includes: "release_archive.zip"
+          // }
         } 
         post {
           unsuccessful { xcoreCleanSandbox() }
@@ -215,8 +215,8 @@ pipeline {
             steps { 
               withVS() {
                 setupRepo()
-                extractDeviceZipAndHeaders()
-                buildXinterpreterAndHostLib()
+                // extractDeviceZipAndHeaders()
+                // buildXinterpreterAndHostLib()
                 createVenv("requirements.txt")
                 withVenv {
                   dir("xformer") {
@@ -237,7 +237,8 @@ pipeline {
                   }
                   bat "rmdir /s /q xformer"
                 }
-              } 
+              }
+              input('Do you want to proceed?')
             }
             post { cleanup { xcoreCleanSandbox() } }
           }

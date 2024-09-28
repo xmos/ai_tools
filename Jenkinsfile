@@ -232,12 +232,10 @@ pipeline {
                     stash name: "windows_wheel", includes: "dist/*"
                   }
                   dir("xformer") {
-                    bat "bazelisk-windows-amd64.exe info server_pid"
+                    bat "bazelisk-windows-amd64.exe shutdown"
                     script {
-                      BAZEL_SERVER_PID = bat(script: "@bazelisk-windows-amd64.exe info server_pid", returnStdout: true).split()[0].trim()
-                      bat "bazelisk-windows-amd64.exe clean --expunge"
-                      bat "bazelisk-windows-amd64.exe shutdown"
-                      bat "taskkill /F /PID \"${BAZEL_SERVER_PID}\""
+                      HANGING_BAZEL_EMBEDDED_JAVA_PID = bat(script: "@ps -W | grep _bzl | tr -s " " | cut -d " " -f 5", returnStdout: true).split()[0].trim()
+                      bat "taskkill /F /PID \"${HANGING_BAZEL_EMBEDDED_JAVA_PID}\""
                     }
                   }
                   bat "rmdir /s /q xformer"

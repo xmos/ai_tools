@@ -223,7 +223,7 @@ pipeline {
                     bat "curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe"
                     script {
                       PYTHON_BIN_PATH = bat(script: "@where python.exe", returnStdout: true).split()[0].trim()
-                      bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build @lib_nn//:nn_lib --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\""
+                      bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\""
                     }
                   }
                   dir("python") { 
@@ -232,6 +232,7 @@ pipeline {
                     stash name: "windows_wheel", includes: "dist/*"
                   }
                   dir("xformer") {
+                    bat "bazelisk-windows-amd64.exe clean --expunge"
                     bat "bazelisk-windows-amd64.exe shutdown"
                     script {
                       HANGING_BAZEL_EMBEDDED_JAVA_PID = bat(script: "@ps -W | grep _bzl | tr -s \" \" | cut -d \" \" -f 5", returnStdout: true).split()[0].trim()

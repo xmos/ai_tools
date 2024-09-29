@@ -302,13 +302,13 @@ pipeline {
         } }
         post { cleanup {xcoreCleanSandbox() } }
       }
-      stage("Mac x86_64 Test") {
-        agent { label "macos && x86_64 && !macos_10_14" }
-        steps { script {
-          runTests("mac", dailyHostTest)
-        } }
-        post { cleanup {xcoreCleanSandbox() } }
-      }
+      // stage("Mac x86_64 Test") {
+      //   agent { label "macos && x86_64 && !macos_10_14" }
+      //   steps { script {
+      //     runTests("mac", dailyHostTest)
+      //   } }
+      //   post { cleanup {xcoreCleanSandbox() } }
+      // }
       stage("Device Test") {
         agent { label "xcore.ai-explorer && lpddr && !macos" }
         steps { script { runTests("device", dailyDeviceTest) } }

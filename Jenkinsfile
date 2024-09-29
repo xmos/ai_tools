@@ -185,6 +185,7 @@ pipeline {
                           --verbose_failures \\
                           --linkopt=-lrt \\
                           --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
+                          --remote_cache=${env.BAZEL_CACHE_URL} \\
                           --//:disable_version_check \\
                           --jobs 8
                       """
@@ -263,6 +264,7 @@ pipeline {
                     sh """
                       ./bazelisk-darwin-arm64 build //:xcore-opt \\
                         --cpu=${cpuFlag} \\
+                        --remote_cache=${env.BAZEL_CACHE_URL} \\
                         --copt=-fvisibility=hidden \\
                         --copt=-mmacosx-version-min=10.15 \\
                         --linkopt=-mmacosx-version-min=10.15 \\
@@ -324,7 +326,7 @@ pipeline {
     //   agent { label "linux && x86_64 && !noAVX2" }
       steps {
       script {
-        if (params.TAG_VERSION != "") {
+        // if (params.TAG_VERSION != "") {
         dir("python") {
           unstash "linux_wheel"
           unstash "mac_wheel"
@@ -340,7 +342,7 @@ password = pypi-AgENdGVzdC5weXBpLm9yZwIkYzA0NjM1NzQtOTdiNi00YWYxLWI5YjAtMDEzYmNk
           }
         }
         }
-      }
+      // }
     } 
     }
       

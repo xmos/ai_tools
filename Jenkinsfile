@@ -84,9 +84,7 @@ def dailyHostTest = {
 }
 
 def runTests(String platform, Closure body) {
-  println "Stage running on: ${env.NODE_NAME}"
-  checkout scm
-  sh "./build.sh -T init"
+  setupRepo()
   createVenv("requirements.txt")
   withVenv {
     sh "pip install -r requirements.txt"

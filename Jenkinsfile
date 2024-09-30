@@ -95,6 +95,8 @@ def runTests(String platform, Closure body) {
         unstash "linux_wheel"
       } else if (platform == "mac") {
         unstash "mac_wheel"
+      } else if (platform == "windows") {
+        unstash "windows_wheel"
       }
       sh "pip install dist/*"
     }
@@ -108,7 +110,7 @@ def runTests(String platform, Closure body) {
       withTools(params.TOOLS_VERSION) {
         body()
       }
-    } else if (platform == "linux" | platform == "mac") {
+    } else if (platform == "linux" | platform == "mac" | platform == "windows") {
       body()
     }
     junit "**/*_junit.xml"
@@ -304,13 +306,20 @@ pipeline {
         } }
         post { cleanup {xcoreCleanSandbox() } }
       }
-      // stage("Mac x86_64 Test") {
-      //   agent { label "macos && x86_64 && !macos_10_14" }
-      //   steps { script {
-      //     runTests("mac", dailyHostTest)
-      //   } }
-      //   post { cleanup {xcoreCleanSandbox() } }
-      // }
+      stage("Mac x86_64 Test") {
+        agent { label "macos && x86_64" }
+        steps { script {
+          runTests("mac", dailyHostTest)
+        } }
+        post { cleanup {xcoreCleanSandbox() } }
+      }
+      stage("Windows Test") {
+        agent { label "ai && windows10" }
+        steps { script {
+          runTests("windows", dailyHostTest)
+        } }
+        post { cleanup {xcoreCleanSandbox() } }
+      }
       stage("Device Test") {
         agent { label "xcore.ai-explorer && lpddr && !macos" }
         steps { script { runTests("device", dailyDeviceTest) } }
@@ -333,7 +342,7 @@ pipeline {
           unstash "windows_wheel"
           withCredentials([usernamePassword(credentialsId: '__CREDID__', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
             sh "pip install twine"
-            sh "twine upload dist/*"
+            sh "twine upload --repository testpypi dist/*"
           }
         }
         }

@@ -331,12 +331,7 @@ pipeline {
           unstash "linux_wheel"
           unstash "mac_wheel"
           unstash "windows_wheel"
-          withVenv {
-            sh '''
-            echo \"[testpypi]
-            username = __token__
-password = pypi-AgENdGVzdC5weXBpLm9yZwIkYzA0NjM1NzQtOTdiNi00YWYxLWI5YjAtMDEzYmNkZGRhM2I0AAIVWzEsWyJ4bW9zLWFpLXRvb2xzIl1dAAIsWzIsWyJjMzgyMzA3MC04YzUwLTRjNzItYjg2My0xMDMwYzM3MGEyMGYiXV0AAAYguE7xU1USBQlZOeAfR5WjOFjAft7IBd9wxZIMFPzkqeE\" >> ~/.pypirc
-            '''
+          withCredentials([usernamePassword(credentialsId: '__CREDID__', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
             sh "pip install twine"
             sh "twine upload dist/*"
           }

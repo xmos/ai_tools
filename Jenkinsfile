@@ -71,16 +71,18 @@ def dailyDeviceTest = {
   runPytestDevice("16x8/", "-n 1", "16x8_5")
 }
 
-def dailyHostTest = {
+def dailyHostTest = { platform ->
   runPytestHost("float32", "-n 8 --tc 1", "float32_1")
   runPytestHost("16x8", "-n 8 --tc 5", "16x8_5")
   runPytestHost("complex_models/8x8", "-n 2 --tc 1", "complex_8x8_5")
   runPytestHost("complex_models/float32", "-n 1 --tc 1", "complex_float32_5")
   runPytestHost("8x8", "-n 8 --tc 1", "8x8_1")
   runPytestHost("8x8", "-n 8", "8x8_5")
-  runPytestHost("8x8", "--compiled -n 8", "compiled_8x8")
   runPytestHost("bnns", "--bnn -n 8", "bnns")
-  runPytestHost("bnns", "--bnn --compiled -n 8", "compiled_bnns")
+  if (platform != "windows") {
+    runPytestHost("8x8", "--compiled -n 8", "compiled_8x8")
+    runPytestHost("bnns", "--bnn --compiled -n 8", "compiled_bnns")
+  }
 }
 
 def runTests(String platform, Closure body) {
@@ -107,10 +109,10 @@ def runTests(String platform, Closure body) {
       sh "cd ${WORKSPACE} && git clone https://github0.xmos.com/xmos-int/xtagctl.git"
       sh "pip install -e ${WORKSPACE}/xtagctl"
       withTools(params.TOOLS_VERSION) {
-        body()
+        body(platform)
       }
     } else if (platform == "linux" | platform == "mac" | platform == "windows") {
-      body()
+      body(platform)
     }
     junit "**/*_junit.xml"
   }
@@ -328,7 +330,8 @@ pipeline {
           }
           cleanup { xcoreCleanSandbox() }
         }
-      } }
+      } 
+      }
     }
     // stage("Publish") { 
     // //   agent { label "linux && x86_64 && !noAVX2" }

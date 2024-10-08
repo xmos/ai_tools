@@ -3,7 +3,7 @@
 
 @Library('xmos_jenkins_shared_library@v0.30.0') _
 
-getApproval()
+// getApproval()
 
 def sh_bat(cmd) {
   if (isUnix()) {
@@ -227,7 +227,7 @@ pipeline {
                       bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\""
                     }
                   }
-                  withEnv(['SETUP_SCM_PRETEND_VERSION='+${env.TAG_VERSION}]) {
+                  withEnv(["SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
                     dir("python") { 
                       bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
                       bat "python setup.py bdist_wheel"
@@ -280,7 +280,7 @@ pipeline {
                 sh "lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt"
               }
               createVenv("requirements.txt")
-              withEnv(['SETUP_SCM_PRETEND_VERSION='+${env.TAG_VERSION}]) {
+              withEnv(["SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
                 dir("python") { withVenv {
                   sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
                   sh "python setup.py bdist_wheel --plat macosx_10_15_universal2"

@@ -132,11 +132,6 @@ pipeline {
       defaultValue: '15.2.1',
       description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
     )
-    string( 
-      name: 'TAG_VERSION',
-      defaultValue: '',
-      description: 'The release version, leave empty to not publish a release'
-    )
   }
 
   options {
@@ -232,10 +227,12 @@ pipeline {
                       bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\""
                     }
                   }
-                  dir("python") { 
-                    bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
-                    bat "python setup.py bdist_wheel"
-                    stash name: "windows_wheel", includes: "dist/*"
+                  withEnv(['SETUP_SCM_PRETEND_VERSION='+${env.TAG_VERSION}]) {
+                    dir("python") { 
+                      bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
+                      bat "python setup.py bdist_wheel"
+                      stash name: "windows_wheel", includes: "dist/*"
+                    }
                   }
                   dir("xformer") {
                     bat "bazelisk-windows-amd64.exe clean --expunge"
@@ -283,17 +280,23 @@ pipeline {
                 sh "lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt"
               }
               createVenv("requirements.txt")
-              dir("python") { withVenv {
-                sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
-                sh "python setup.py bdist_wheel --plat macosx_10_15_universal2"
-                stash name: "mac_wheel", includes: "dist/*"
-              } }
+              withEnv(['SETUP_SCM_PRETEND_VERSION='+${env.TAG_VERSION}]) {
+                dir("python") { withVenv {
+                  sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
+                  sh "python setup.py bdist_wheel --plat macosx_10_15_universal2"
+                  stash name: "mac_wheel", includes: "dist/*"
+                } }
+              }
             }
             post { cleanup { xcoreCleanSandbox() } }
           }
         }
     }
-    stage("Test") { parallel {
+    stage("Test") { 
+      when {
+        expression { env.job_type != 'beta_release' && env.job_type != 'official_release' }
+      }
+      parallel {
       stage("Linux Test") { steps { script {
         runTests("linux", dailyHostTest)
         withVenv {
@@ -336,22 +339,22 @@ pipeline {
       }
     }
     stage("Publish") { 
-    //   agent { label "linux && x86_64 && !noAVX2" }
       steps {
-      script {
-        // if (params.TAG_VERSION != "") {
-        dir("python") {
-          unstash "linux_wheel"
-          unstash "mac_wheel"
-          unstash "windows_wheel"
-          withCredentials([usernamePassword(credentialsId: '__CREDID__', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
-            sh "pip install twine"
-            sh "twine upload --repository testpypi dist/*"
+        when {
+          expression { env.job_type == 'beta_release' || env.job_type == 'official_release' }
+        }
+        script {
+          dir("python") {
+            unstash "linux_wheel"
+            unstash "mac_wheel"
+            unstash "windows_wheel"
+            withCredentials([usernamePassword(credentialsId: '__CREDID__', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
+              sh "pip install twine"
+              sh "twine upload --repository testpypi dist/*"
+            }
           }
         }
-        }
-      // }
-    } 
+      } 
     }
       
     }

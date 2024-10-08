@@ -6,9 +6,9 @@
 
 namespace xformer {
 
-unsigned majorVersion = 1;
+unsigned majorVersion = 0;
 unsigned minorVersion = 3;
-unsigned patchVersion = 1;
+unsigned patchVersion = 3;
 
 } // namespace xformer
 

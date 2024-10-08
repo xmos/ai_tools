@@ -342,15 +342,16 @@ pipeline {
       }
     }
     stage("Publish") { 
+      when {
+        expression { env.job_type == 'beta_release' || env.job_type == 'official_release' }
+      }
       steps {
-        when {
-          expression { env.job_type == 'beta_release' || env.job_type == 'official_release' }
-        }
         script {
           dir("python") {
             unstash "linux_wheel"
             unstash "mac_wheel"
             unstash "windows_wheel"
+            archiveArtifacts artifacts: "dist/*", allowEmptyArchive: true
             withCredentials([usernamePassword(credentialsId: '__CREDID__', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
               sh "pip install twine"
               sh "twine upload --repository testpypi dist/*"

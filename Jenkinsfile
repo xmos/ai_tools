@@ -3,7 +3,10 @@
 
 @Library('xmos_jenkins_shared_library@v0.30.0') _
 
-// getApproval()
+
+if (env.job_type != 'beta_release' && env.job_type != 'official_release') {
+  getApproval()
+}
 
 def sh_bat(cmd) {
   if (isUnix()) {
@@ -140,7 +143,7 @@ pipeline {
     buildDiscarder(xmosDiscardBuildSettings())
   }
   stages { stage("On PR") { 
-    when { branch pattern: "PR-.*", comparator: "REGEXP" }
+    when { anyOf {branch pattern: "PR-.*", comparator: "REGEXP"; expression {env.job_type == 'beta_release' || env.job_type == 'official_release'}}}
     agent { label "linux && x86_64 && !noAVX2" }
     stages {
       stage("Build device runtime") { 

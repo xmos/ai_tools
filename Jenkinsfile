@@ -200,7 +200,15 @@ pipeline {
                       """
                     }
                     dir("python") {
-                      sh "python setup.py bdist_wheel"
+                      script {
+                        if (env.job_type == 'official_release') {
+                          withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
+                            sh "python setup.py bdist_wheel"
+                          }
+                        } else {
+                          sh "python setup.py bdist_wheel"
+                        }
+                      }
                     }
                   }
                 }
@@ -230,12 +238,19 @@ pipeline {
                       bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\""
                     }
                   }
-                  withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
-                    dir("python") { 
-                      bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
-                      bat "python setup.py bdist_wheel"
-                      stash name: "windows_wheel", includes: "dist/*"
+
+                  dir("python") {
+                    bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
+                    script {
+                      if (env.job_type == 'official_release') {
+                        withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
+                          bat "python setup.py bdist_wheel"
+                        }
+                      } else {
+                        bat "python setup.py bdist_wheel"
+                      }
                     }
+                    stash name: "windows_wheel", includes: "dist/*"
                   }
                 }
               }
@@ -286,7 +301,15 @@ pipeline {
               withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
                 dir("python") { withVenv {
                   sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
-                  sh "python setup.py bdist_wheel --plat macosx_10_15_universal2"
+                  script {
+                    if (env.job_type == 'official_release') {
+                      withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
+                        sh "python setup.py bdist_wheel --plat macosx_10_15_universal2"
+                      }
+                    } else {
+                      sh "python setup.py bdist_wheel --plat macosx_10_15_universal2"
+                    }
+                  }
                   stash name: "mac_wheel", includes: "dist/*"
                 } }
               }

@@ -215,7 +215,9 @@ pipeline {
                 withVenv { dir("python") {
                   sh "pip install patchelf auditwheel==5.2.0 --no-cache-dir"
                   sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
-                  stash name: "linux_wheel", includes: "wheelhouse/*"
+                  sh "rm dist/*.whl"
+                  sh "mv wheelhouse/*.whl dist/"
+                  stash name: "linux_wheel", includes: "dist/*"
                 } }
               }
             }

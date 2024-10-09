@@ -168,7 +168,7 @@ pipeline {
               script {
                 USER_ID = sh(script: 'id -u', returnStdout: true).trim()
                 withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
-                  docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION}") {
+                  docker.image('tensorflow/build:2.15-python3.10').inside("-e SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}") {
                     sh "curl -LO https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.sh"
                     sh "chmod +x cmake-3.28.3-linux-x86_64.sh"
                     sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"
@@ -230,7 +230,7 @@ pipeline {
                       bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\""
                     }
                   }
-                  withEnv(["SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
+                  withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
                     dir("python") { 
                       bat "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
                       bat "python setup.py bdist_wheel"
@@ -283,7 +283,7 @@ pipeline {
                 sh "lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt"
               }
               createVenv("requirements.txt")
-              withEnv(["SETUP_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
+              withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
                 dir("python") { withVenv {
                   sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
                   sh "python setup.py bdist_wheel --plat macosx_10_15_universal2"

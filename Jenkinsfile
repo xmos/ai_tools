@@ -375,7 +375,7 @@ pipeline {
             archiveArtifacts artifacts: "dist/*", allowEmptyArchive: true
             withCredentials([usernamePassword(credentialsId: '__CREDID__', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
               sh "pip install twine"
-              sh "twine upload --repository testpypi dist/*"
+              sh "twine upload --repository xmos-ai-tools dist/*"
             }
           }
         }

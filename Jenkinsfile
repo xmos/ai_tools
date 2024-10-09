@@ -215,7 +215,7 @@ pipeline {
                 withVenv { dir("python") {
                   sh "pip install patchelf auditwheel==5.2.0 --no-cache-dir"
                   sh "auditwheel repair --plat manylinux2014_x86_64 dist/*.whl"
-                  stash name: "linux_wheel", includes: "dist/*"
+                  stash name: "linux_wheel", includes: "wheelhouse/*"
                 } }
               }
             }
@@ -375,7 +375,7 @@ pipeline {
             archiveArtifacts artifacts: "dist/*", allowEmptyArchive: true
             withCredentials([usernamePassword(credentialsId: '__CREDID__', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
               sh "pip install twine"
-              sh "twine upload --repository xmos-ai-tools dist/*"
+              sh "twine upload dist/*"
             }
           }
         }

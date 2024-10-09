@@ -298,7 +298,6 @@ pipeline {
                 sh "lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt"
               }
               createVenv("requirements.txt")
-              withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
                 dir("python") { withVenv {
                   sh "pip install wheel setuptools setuptools-scm numpy six --no-cache-dir"
                   script {
@@ -312,7 +311,6 @@ pipeline {
                   }
                   stash name: "mac_wheel", includes: "dist/*"
                 } }
-              }
             }
             post { cleanup { xcoreCleanSandbox() } }
           }

@@ -104,7 +104,7 @@ struct MoveTransposeForwardOverUnaryOpPattern
 
     // Create a new Transpose operation after the unary operation
     auto newTransposeOp = rewriter.create<TFL::TransposeOp>(
-        transposeOp.getLoc(), transposeOutputType, newUnaryOpResult, perm);
+        transposeOp.getLoc(), newUnaryOutputType, newUnaryOpResult, perm);
 
     // Replace the original user operation's result with the new transpose
     // result

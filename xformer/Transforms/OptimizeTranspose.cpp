@@ -104,7 +104,7 @@ struct MoveTransposeForwardOverUnaryOpPattern
 
     // Create a new Transpose operation after the unary operation
     auto newTransposeOp = rewriter.create<TFL::TransposeOp>(
-        transposeOp.getLoc(), newUnaryOutputType, newUnaryOpResult, perm);
+        transposeOp.getLoc(), originalUnaryOutputType, newUnaryOpResult, perm);
 
     // Replace the original user operation's result with the new transpose
     // result
@@ -205,7 +205,7 @@ struct MoveTransposeForwardOverConcatOpPattern
     if (oldAxis < 0 || oldAxis >= rank) {
       return failure(); // Invalid axis
     }
-    int32_t newAxis = invPerm[oldAxis];
+    int32_t newAxis = permVec[oldAxis];
 
     // Collect input types and compute the new result type
     SmallVector<RankedTensorType, 4> inputTypes;
@@ -229,14 +229,7 @@ struct MoveTransposeForwardOverConcatOpPattern
                                         inputTypes[0].getShape().end());
     for (size_t i = 1; i < inputTypes.size(); ++i) {
       auto shape = inputTypes[i].getShape();
-      for (int64_t dim = 0; dim < rank; ++dim) {
-        if (dim == newAxis) {
-          resultShape[dim] += shape[dim];
-        } else if (resultShape[dim] != shape[dim]) {
-          // Dimensions must be equal except for the concatenation axis
-          return failure();
-        }
-      }
+      resultShape[newAxis] += shape[newAxis];
     }
 
     // Create the new ConcatenationOp with the correct result type and axis

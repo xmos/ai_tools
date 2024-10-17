@@ -159,6 +159,11 @@ cl::opt<bool> allowInputModificationOption(
     cl::desc("Allow the compiler to modify input tensor for optimizations."),
     cl::init(false), cl::cat(XformerCategory), cl::Hidden);
 
+cl::opt<bool> mergeTransposeOption(
+    "xcore-merge-transpose",
+    cl::desc("Try to merge transpose and inverse transpose together."),
+    cl::init(true), cl::cat(XformerCategory), cl::Hidden);
+
 cl::opt<bool> convDebugOption("xcore-conv-debug",
                               cl::desc("Enable conv debug prints."),
                               cl::init(false), cl::cat(XformerCategory),

@@ -117,6 +117,39 @@ struct MoveTransposeForwardOverUnaryOpPattern
   }
 };
 
+struct FoldCancellableTransposePattern
+    : public OpRewritePattern<TFL::TransposeOp> {
+  using OpRewritePattern<TFL::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+
+    // Check for invalid types and return
+    // Defining op must be transpose
+    auto transposeOp =
+        dyn_cast_or_null<TFL::TransposeOp>(op.getInput().getDefiningOp());
+    if (!transposeOp) {
+      return failure();
+    }
+
+    // Get transpose permutations
+    DenseIntElementsAttr perm0;
+    DenseIntElementsAttr perm1;
+    if (!matchPattern(op.getPerm(), m_Constant(&perm0)) ||
+        !matchPattern(transposeOp.getPerm(), m_Constant(&perm1))) {
+      return failure();
+    }
+
+    // Do permutation indices cancel each other?
+    if (!TF::AreCancellablePermutations(perm0, perm1)) {
+      return failure();
+    }
+
+    rewriter.replaceOp(op, transposeOp.getInput());
+
+    return success();
+  }
+};
 struct MoveTransposeForwardOverConcatOpPattern
     : public OpRewritePattern<TFL::ConcatenationOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -304,38 +337,6 @@ struct HoistTransposeAbovePadPattern
                                               newTranspose, newPaddingConst);
 
     rewriter.replaceOp(op, newPad.getResult());
-    return success();
-  }
-};
-
-struct FoldCancellableTransposePattern
-    : public OpRewritePattern<TFL::TransposeOp> {
-  using OpRewritePattern<TFL::TransposeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(TFL::TransposeOp transposeOp,
-                                PatternRewriter &rewriter) const override {
-
-    auto inputTransposeOp =
-        transposeOp.getInput().getDefiningOp<TFL::TransposeOp>();
-    if (!inputTransposeOp)
-      return failure();
-
-    // Check if permutations are inverses
-    DenseIntElementsAttr perm1, perm2;
-    if (!matchPattern(transposeOp.getPerm(), m_Constant(&perm1)) ||
-        !matchPattern(inputTransposeOp.getPerm(), m_Constant(&perm2)))
-      return failure();
-
-    if (!TF::AreCancellablePermutations(perm1, perm2))
-      return failure();
-
-    // Replace the outer transpose with the input of the inner transpose
-    rewriter.replaceOp(transposeOp, inputTransposeOp.getInput());
-
-    // Erase the inner transpose if it has no more uses
-    if (inputTransposeOp.use_empty())
-      rewriter.eraseOp(inputTransposeOp);
-
     return success();
   }
 };

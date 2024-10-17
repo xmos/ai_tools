@@ -257,79 +257,69 @@ struct MoveTransposeForwardOverConcatOpPattern
   }
 };
 
-struct HoistTransposeAbovePadPattern
+struct HoistTransposeWCHAbovePadPattern
     : public OpRewritePattern<TFL::TransposeOp> {
   using OpRewritePattern<TFL::TransposeOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TFL::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
-    // Check if the input to TransposeOp is a PadOp
+
+    // Check for invalid types and return
+    // Defining op must be pad
     auto padOp = dyn_cast_or_null<TFL::PadOp>(op.getInput().getDefiningOp());
     if (!padOp) {
       return failure();
     }
 
-    // Get the permutation attribute
-    DenseIntElementsAttr permAttr;
-    if (!matchPattern(op.getPerm(), m_Constant(&permAttr))) {
+    // Get transpose permutation
+    DenseIntElementsAttr perm;
+    if (!matchPattern(op.getPerm(), m_Constant(&perm))) {
       return failure();
     }
-    auto perm = permAttr.getValues<int32_t>();
 
-    // Get the padding attribute
-    DenseIntElementsAttr padAttr;
-    if (!matchPattern(padOp.getPadding(), m_Constant(&padAttr))) {
+    // Confirm transpose permutation is 0,2,3,1 i.e., NWCH
+    // Remnants of Pytorch to TFlite conversion
+    auto permVal = perm.getValues<int32_t>();
+    if (perm.size() != 4 || permVal[0] != 0 || permVal[1] != 2 ||
+        permVal[2] != 3 || permVal[3] != 1) {
       return failure();
     }
-    auto padValues = padAttr.getValues<int32_t>();
 
-    // Get the rank of the tensor
-    auto padInputType = padOp.getInput().getType().dyn_cast<RankedTensorType>();
-    if (!padInputType) {
+    // Get padding val
+    DenseIntElementsAttr pad;
+    if (!matchPattern(padOp.getPadding(), m_Constant(&pad))) {
       return failure();
     }
-    int64_t rank = padInputType.getRank();
 
-    // Reshape the padding values into a matrix of shape [rank, 2]
-    SmallVector<int32_t, 8> paddingMatrix;
-    paddingMatrix.reserve(padValues.size());
-    for (int64_t i = 0; i < padValues.size(); ++i) {
-      paddingMatrix.push_back(padValues[i]);
+    // Confirm padding is only in last two dimensions
+    auto padVal = pad.getValues<int32_t>();
+    if (padVal[{0, 0}] != 0 || padVal[{0, 1}] != 0 || padVal[{1, 0}] != 0 ||
+        padVal[{1, 1}] != 0 || padVal[{2, 0}] != 1 || padVal[{2, 1}] != 1 ||
+        padVal[{3, 0}] != 1 || padVal[{3, 1}] != 1) {
+      return failure();
     }
 
-    // Create a mapping from old dimensions to new dimensions after transpose
-    SmallVector<int32_t, 8> inversePerm(rank);
-    for (int64_t i = 0; i < rank; ++i) {
-      inversePerm[perm[i]] = i;
-    }
-
-    // Permute the padding according to the inverse permutation
-    SmallVector<int32_t, 8> newPaddingValues;
-    newPaddingValues.reserve(paddingMatrix.size());
-    for (int64_t i = 0; i < rank; ++i) {
-      int32_t dim = inversePerm[i];
-      newPaddingValues.push_back(paddingMatrix[dim * 2]);
-      newPaddingValues.push_back(paddingMatrix[dim * 2 + 1]);
-    }
-
-    // Create new TransposeOp before PadOp's input
-    auto newTransposeType = padOp.getInput().getType();
+    // Create new TransposeOp
+    auto padInputShape =
+        padOp.getInput().getType().cast<RankedTensorType>().getShape();
+    auto tranposeResultType = RankedTensorType::get(
+        {padInputShape[0], padInputShape[2], padInputShape[3],
+         padInputShape[1]},
+        padOp.getInput().getType().cast<ShapedType>().getElementType());
     auto newTranspose = rewriter.create<TFL::TransposeOp>(
-        padOp.getLoc(), newTransposeType, padOp.getInput(), op.getPerm());
+        padOp.getLoc(), tranposeResultType, padOp.getInput(), op.getPerm());
 
-    // Create new padding constant
-    auto newPaddingAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({rank, 2}, rewriter.getI32Type()),
-        newPaddingValues);
-    auto newPaddingConst = rewriter.create<arith::ConstantOp>(
-        padOp.getLoc(), newPaddingAttr.getType(), newPaddingAttr);
+    // Create new padding attr with spatial dimensions
+    std::vector<int32_t> paddingValues{0, 0, 1, 1, 1, 1, 0, 0};
+    auto paddingAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({4, 2}, rewriter.getI32Type()), paddingValues);
+    auto paddingOp = rewriter.create<arith::ConstantOp>(
+        padOp->getLoc(), RankedTensorType::get({4, 2}, rewriter.getI32Type()),
+        paddingAttr);
+    auto newPad = rewriter.create<TFL::PadOp>(
+        padOp.getLoc(), op.getOutput().getType(), newTranspose, paddingOp);
 
-    // Create new PadOp after TransposeOp
-    auto newPadType = op.getType();
-    auto newPad = rewriter.create<TFL::PadOp>(padOp.getLoc(), newPadType,
-                                              newTranspose, newPaddingConst);
-
-    rewriter.replaceOp(op, newPad.getResult());
+    rewriter.replaceOp(op, newPad.getOutput());
     return success();
   }
 };
@@ -399,7 +389,7 @@ void OptimizeTranspose::runOnOperation() {
   // Other transpose optimizations
   RewritePatternSet patterns(ctx);
 
-  patterns.insert<HoistTransposeAbovePadPattern>(ctx);
+  patterns.insert<HoistTransposeWCHAbovePadPattern>(ctx);
   patterns.insert<FoldCancellableTransposePattern>(ctx);
   if (allowInputModificationOption) {
     patterns.insert<FoldTransposeWCHToInput>(ctx);

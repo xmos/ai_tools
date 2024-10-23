@@ -24,6 +24,96 @@ struct OptimizeTranspose
   void runOnOperation() override;
 };
 
+struct FoldTransposeIntoFullyConnectedPattern
+    : public OpRewritePattern<TFL::TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    // Match the pattern: fully_connected -> reshape -> transpose
+    auto reshapeOp = transposeOp.getInput().getDefiningOp<TFL::ReshapeOp>();
+    if (!reshapeOp || !reshapeOp->getResult(0).hasOneUse())
+      return failure();
+
+    auto fullyConnectedOp =
+        reshapeOp.getInput().getDefiningOp<TFL::FullyConnectedOp>();
+    if (!fullyConnectedOp || !fullyConnectedOp->getResult(0).hasOneUse())
+      return failure();
+
+    // Get types and shapes
+    auto fcInputType =
+        fullyConnectedOp.getInput().getType().dyn_cast<RankedTensorType>();
+    auto fcOutputType =
+        fullyConnectedOp.getResult(0).getType().dyn_cast<RankedTensorType>();
+    auto reshapeOutputType =
+        reshapeOp.getResult().getType().dyn_cast<RankedTensorType>();
+    auto transposeOutputType =
+        transposeOp.getResult().getType().dyn_cast<RankedTensorType>();
+
+    if (!fcInputType || !fcOutputType || !reshapeOutputType ||
+        !transposeOutputType)
+      return failure();
+
+    // Check if the batch dimension (assumed to be dimension 0) remains
+    // unchanged
+    auto fcOutputShape = fcOutputType.getShape();
+    auto reshapeOutputShape = reshapeOutputType.getShape();
+
+    if (fcOutputShape.empty() || reshapeOutputShape.empty())
+      return failure(); // Expecting non-scalar tensors
+
+    if (fcOutputShape[0] != reshapeOutputShape[0])
+      return failure(); // Batch dimension changed in reshape
+
+    // Check if transpose does not affect the batch dimension
+    DenseIntElementsAttr permAttr;
+    if (!matchPattern(transposeOp.getPerm(), m_Constant(&permAttr)))
+      return failure();
+
+    SmallVector<int64_t, 4> permVec;
+    for (auto val : permAttr.getValues<int32_t>()) {
+      permVec.push_back(static_cast<int64_t>(val));
+    }
+
+    // Check if batch dimension remains at position 0 after transpose
+    if (permVec.empty() || permVec[0] != 0)
+      return failure();
+
+    // Placeholder for transforming the filter and bias
+    // TODO: Adjust the filter and bias to account for the reshape and transpose
+    Value newFilter = fullyConnectedOp.getFilter();
+    Value bias = fullyConnectedOp.getBias();
+
+    // match bias m_Constant and get its value
+    RankedTensorType biasAttr;
+    if (!matchPattern(bias, m_Constant(&biasAttr)))
+      return failure();
+    llvm::outs() << "Bias: " << biasAttr << "\n";
+
+    Value newBias = fullyConnectedOp.getBias();
+
+    // Create new fully connected op with adjusted filter and bias
+    auto newFullyConnectedOp = rewriter.create<TFL::FullyConnectedOp>(
+        fullyConnectedOp.getLoc(),
+        fcOutputType, // Adjusted output type if necessary
+        fullyConnectedOp.getInput(), newFilter, newBias,
+        fullyConnectedOp.getFusedActivationFunctionAttr(),
+        fullyConnectedOp.getWeightsFormatAttr(),
+        fullyConnectedOp.getKeepNumDimsAttr(),
+        fullyConnectedOp.getAsymmetricQuantizeInputsAttr());
+
+    // Create new reshape op with the output type of the original transpose op
+    auto newReshapeOp = rewriter.create<TFL::ReshapeOp>(
+        reshapeOp.getLoc(), transposeOutputType,
+        newFullyConnectedOp.getResult(0), reshapeOp.getShape());
+
+    // Replace the original transpose op with the new reshape op
+    rewriter.replaceOp(transposeOp, newReshapeOp.getResult());
+
+    return success();
+  }
+};
+
 struct MoveTransposeForwardOverUnaryOpPattern
     : public OpRewritePattern<TFL::TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -36,7 +126,8 @@ struct MoveTransposeForwardOverUnaryOpPattern
 
     Operation *userOp = *transposeOp->getUsers().begin();
 
-    // Check if the user operation is a unary op that can commute with transpose
+    // Check if the user operation is a unary op that can commute with
+    // transpose
     if (!isa<TFL::AbsOp, TFL::NegOp, TFL::ReluOp, TFL::Relu6Op, TFL::QuantizeOp,
              TFL::LeakyReluOp, TFL::TanhOp, TFL::LogisticOp>(userOp))
       return failure();
@@ -62,15 +153,15 @@ struct MoveTransposeForwardOverUnaryOpPattern
     if (!originalUnaryOutputType)
       return failure();
 
-    // Create a new output type for the unary op with the same shape as 'input'
-    // and the same element type as the original output type
+    // Create a new output type for the unary op with the same shape as
+    // 'input' and the same element type as the original output type
     auto newUnaryOutputType = RankedTensorType::get(
         transposeInputType.getShape(), originalUnaryOutputType.getElementType(),
         originalUnaryOutputType.getEncoding());
 
     if (auto quantizeOp = dyn_cast<TFL::QuantizeOp>(userOp)) {
-      // For QuantizeOp, create new QuantizeOp with input as 'input' and output
-      // type adjusted
+      // For QuantizeOp, create new QuantizeOp with input as 'input' and
+      // output type adjusted
 
       // Create new QuantizeOp with adjusted output type
       newUnaryOpResult = rewriter.create<TFL::QuantizeOp>(
@@ -351,8 +442,8 @@ struct FoldTransposeWCHToInput : public OpRewritePattern<TFL::TransposeOp> {
       if (blockArg.hasOneUse()) {
         auto funcOp = cast<func::FuncOp>(blockArg.getOwner()->getParentOp());
 
-        // Set function type to the transpose output type as we are changing the
-        // input
+        // Set function type to the transpose output type as we are changing
+        // the input
         FunctionType funcType = funcOp.getFunctionType();
         llvm::SmallVector<Type, 4> newInputTypes(funcType.getInputs().begin(),
                                                  funcType.getInputs().end());
@@ -391,6 +482,7 @@ void OptimizeTranspose::runOnOperation() {
 
   patterns.insert<HoistTransposeWCHAbovePadPattern>(ctx);
   patterns.insert<FoldCancellableTransposePattern>(ctx);
+  patterns.insert<FoldTransposeIntoFullyConnectedPattern>(ctx);
   if (allowInputModificationOption) {
     patterns.insert<FoldTransposeWCHToInput>(ctx);
   }

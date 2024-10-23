@@ -2,7 +2,6 @@
 // XMOS Public License: Version 1
 
 #include "Utils/Util.h"
-#include <iostream>
 
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "llvm/ADT/ArrayRef.h"

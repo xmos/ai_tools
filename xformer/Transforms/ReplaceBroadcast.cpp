@@ -62,6 +62,7 @@ struct ReplaceBroadcastPattern : public OpRewritePattern<TFL::BroadcastToOp> {
 
     std::vector<int32_t> inShapeVec(inShape.begin(), inShape.end());
     std::vector<int32_t> outShapeVec(outShape.begin(), outShape.end());
+
     // if number of dimensions are different, and in shape has fewer dimensions
     // than out shape pad in shape with 1s
     if (inShapeVec.size() < outShapeVec.size())
@@ -82,7 +83,7 @@ struct ReplaceBroadcastPattern : public OpRewritePattern<TFL::BroadcastToOp> {
         if (inShapeVec[i] != outShapeVec[i])
           num_copies *= outShapeVec[i];
         else {
-          if (num_copies != 1) {
+          if (num_copies != 1 && outShapeVec[i] != 1) {
             canBroadcast = false;
             size *= inShapeVec[i];
           } else

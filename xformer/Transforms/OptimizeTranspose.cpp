@@ -3,6 +3,7 @@
 
 #include "Transforms/Options.h"
 
+#include "Utils/Util.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
@@ -58,6 +59,12 @@ struct FoldTransposeIntoFullyConnectedPattern
     // unchanged
     auto fcOutputShape = fcOutputType.getShape();
     auto reshapeOutputShape = reshapeOutputType.getShape();
+    SmallVector<int64_t, 4> reshapeOutputShapeVec(reshapeOutputShape.begin(),
+                                                  reshapeOutputShape.end());
+
+    if (reshapeOutputShape[0] != 1) {
+      return failure();
+    }
 
     if (fcOutputShape.empty() || reshapeOutputShape.empty())
       return failure(); // Expecting non-scalar tensors
@@ -79,10 +86,6 @@ struct FoldTransposeIntoFullyConnectedPattern
     if (permVec.empty() || permVec[0] != 0)
       return failure();
 
-    // Exclude the batch dimension from permVec
-    SmallVector<int64_t, 4> permVecExclBatch(permVec.begin() + 1,
-                                             permVec.end());
-
     // Prepare to transform the filter and bias
     Value filter = fullyConnectedOp.getFilter();
     Value bias = fullyConnectedOp.getBias();
@@ -100,67 +103,15 @@ struct FoldTransposeIntoFullyConnectedPattern
         return failure();
       auto biasShape = biasType.getShape();
 
-      // Get reshape output shape excluding batch dimension
-      SmallVector<int64_t, 4> reshapeShapeExclBatch(
-          reshapeOutputShape.begin() + 1, reshapeOutputShape.end());
-
-      // Compute total number of elements
-      int64_t biasNumElements = biasType.getNumElements();
-      int64_t reshapeNumElements = std::accumulate(
-          reshapeShapeExclBatch.begin(), reshapeShapeExclBatch.end(), 1,
-          std::multiplies<int64_t>());
-
-      if (biasNumElements != reshapeNumElements)
+      SmallVector<int64_t, 4> biasShapeVec(biasShape.begin(), biasShape.end());
+      Value finalBias;
+      if (failed(utils::reshapeTransposeReshape(rewriter, bias,
+                                                reshapeOutputShapeVec, permVec,
+                                                biasShapeVec, finalBias)))
         return failure();
 
-      // Reshape bias to match reshape output shape (excluding batch dimension)
-      auto newShapeType = RankedTensorType::get(
-          {static_cast<int64_t>(reshapeShapeExclBatch.size())},
-          rewriter.getI32Type());
-      auto newShapeAttr = DenseIntElementsAttr::get(
-          newShapeType, llvm::makeArrayRef(reshapeShapeExclBatch));
-      auto newShapeOp = rewriter.create<arith::ConstantOp>(
-          bias.getLoc(), newShapeType, newShapeAttr);
-
-      auto reshapedBiasType = RankedTensorType::get(reshapeShapeExclBatch,
-                                                    biasType.getElementType());
-      auto reshapedBias = rewriter.create<TFL::ReshapeOp>(
-          bias.getLoc(), reshapedBiasType, bias, newShapeOp);
-
-      // Create perm vector excluding batch dimension
-      auto permType =
-          RankedTensorType::get({static_cast<int64_t>(permVecExclBatch.size())},
-                                rewriter.getI32Type());
-      auto permAttr = DenseIntElementsAttr::get(
-          permType, llvm::makeArrayRef(permVecExclBatch));
-      auto permOp = rewriter.create<arith::ConstantOp>(transposeOp.getLoc(),
-                                                       permType, permAttr);
-
-      // Compute transposed shape
-      SmallVector<int64_t, 4> transposedShape;
-      for (auto idx : permVecExclBatch) {
-        transposedShape.push_back(reshapeShapeExclBatch[idx]);
-      }
-      auto transposedBiasType =
-          RankedTensorType::get(transposedShape, biasType.getElementType());
-
-      // Transpose the reshaped bias
-      auto transposedBias = rewriter.create<TFL::TransposeOp>(
-          bias.getLoc(), transposedBiasType, reshapedBias, permOp);
-
-      // Reshape back to original bias shape
-      auto origBiasShapeType = RankedTensorType::get(
-          {static_cast<int64_t>(biasShape.size())}, rewriter.getI32Type());
-      auto origBiasShapeAttr = DenseIntElementsAttr::get(
-          origBiasShapeType, llvm::makeArrayRef(biasShape));
-      auto origBiasShapeConst = rewriter.create<arith::ConstantOp>(
-          bias.getLoc(), origBiasShapeType, origBiasShapeAttr);
-
-      auto finalBias = rewriter.create<TFL::ReshapeOp>(
-          bias.getLoc(), biasType, transposedBias, origBiasShapeConst);
-
       // Update bias
-      bias = finalBias.getResult();
+      bias = finalBias;
     }
 
     // Process filter
@@ -175,102 +126,22 @@ struct FoldTransposeIntoFullyConnectedPattern
       if (!filterType)
         return failure();
       auto filterShape = filterType.getShape();
+      SmallVector<int64_t, 4> filterShapeVec(filterShape.begin(),
+                                             filterShape.end());
 
-      // Treat columns (first axis) as batch
-      SmallVector<int64_t, 4> filterShapeExclBatch(filterShape.begin() + 1,
-                                                   filterShape.end());
+      // same as the shape of the reshape, except for first dimension which
+      // should be the first dimension of the filterShape
+      SmallVector<int64_t, 4> filterOutShapeVec = {filterShape[1]};
+      filterOutShapeVec.insert(filterOutShapeVec.end(),
+                               reshapeOutputShapeVec.begin() + 1,
+                               reshapeOutputShapeVec.end());
 
-      // Get reshape output shape excluding batch dimension
-      SmallVector<int64_t, 4> reshapeShapeExclBatch(
-          reshapeOutputShape.begin() + 1, reshapeOutputShape.end());
-
-      // Compute total number of elements excluding batch dimension
-      int64_t filterNumElements = std::accumulate(filterShapeExclBatch.begin(),
-                                                  filterShapeExclBatch.end(), 1,
-                                                  std::multiplies<int64_t>());
-      int64_t reshapeNumElements = std::accumulate(
-          reshapeShapeExclBatch.begin(), reshapeShapeExclBatch.end(), 1,
-          std::multiplies<int64_t>());
-
-      if (filterNumElements != reshapeNumElements)
+      Value finalFilter;
+      if (failed(utils::reshapeTransposeReshape(rewriter, filter,
+                                                filterOutShapeVec, permVec,
+                                                filterShapeVec, finalFilter)))
         return failure();
-
-      // Reshape filter to match reshape output shape (excluding batch
-      // dimension)
-      auto newShapeType = RankedTensorType::get(
-          {static_cast<int64_t>(reshapeShapeExclBatch.size())},
-          rewriter.getI32Type());
-      auto newShapeAttr = DenseIntElementsAttr::get(
-          newShapeType, llvm::makeArrayRef(reshapeShapeExclBatch));
-      auto newShapeOp = rewriter.create<arith::ConstantOp>(
-          filter.getLoc(), newShapeType, newShapeAttr);
-
-      auto reshapedFilterType = RankedTensorType::get(
-          reshapeShapeExclBatch, filterType.getElementType());
-      auto reshapedFilter = rewriter.create<TFL::ReshapeOp>(
-          filter.getLoc(), reshapedFilterType, filter, newShapeOp);
-
-      // Create perm vector excluding batch dimension
-      auto permType =
-          RankedTensorType::get({static_cast<int64_t>(permVecExclBatch.size())},
-                                rewriter.getI32Type());
-      auto permAttr = DenseIntElementsAttr::get(
-          permType, llvm::makeArrayRef(permVecExclBatch));
-      auto permOp = rewriter.create<arith::ConstantOp>(transposeOp.getLoc(),
-                                                       permType, permAttr);
-
-      // Compute transposed shape
-      SmallVector<int64_t, 4> transposedShape;
-      for (auto idx : permVecExclBatch) {
-        transposedShape.push_back(reshapeShapeExclBatch[idx]);
-      }
-      auto transposedFilterType =
-          RankedTensorType::get(transposedShape, filterType.getElementType());
-
-      // Transpose the reshaped filter
-      auto transposedFilter = rewriter.create<TFL::TransposeOp>(
-          filter.getLoc(), transposedFilterType, reshapedFilter, permOp);
-
-      // Reshape back to original filter shape
-      SmallVector<int64_t, 4> origFilterShapeExclBatch(filterShape.begin() + 1,
-                                                       filterShape.end());
-      auto origFilterShapeType = RankedTensorType::get(
-          {static_cast<int64_t>(origFilterShapeExclBatch.size())},
-          rewriter.getI32Type());
-      auto origFilterShapeAttr = DenseIntElementsAttr::get(
-          origFilterShapeType, llvm::makeArrayRef(origFilterShapeExclBatch));
-      auto origFilterShapeConst = rewriter.create<arith::ConstantOp>(
-          filter.getLoc(), origFilterShapeType, origFilterShapeAttr);
-
-      // Reshape back to original filter shape (excluding batch dimension)
-      auto finalFilterType = RankedTensorType::get(filterShapeExclBatch,
-                                                   filterType.getElementType());
-      auto finalFilter = rewriter.create<TFL::ReshapeOp>(
-          filter.getLoc(), finalFilterType, transposedFilter,
-          origFilterShapeConst);
-
-      // Prepend the batch dimension back to the filter shape
-      SmallVector<int64_t, 4> newFilterShape;
-      newFilterShape.push_back(filterShape[0]); // Batch dimension
-      newFilterShape.append(filterShapeExclBatch.begin(),
-                            filterShapeExclBatch.end());
-
-      auto newFilterType =
-          RankedTensorType::get(newFilterShape, filterType.getElementType());
-
-      // Create a reshape to get back to the original filter shape
-      auto finalFilterShapeType = RankedTensorType::get(
-          {static_cast<int64_t>(newFilterShape.size())}, rewriter.getI32Type());
-      auto finalFilterShapeAttr = DenseIntElementsAttr::get(
-          finalFilterShapeType, llvm::makeArrayRef(newFilterShape));
-      auto finalFilterShapeConst = rewriter.create<arith::ConstantOp>(
-          filter.getLoc(), finalFilterShapeType, finalFilterShapeAttr);
-
-      auto finalFilterReshaped = rewriter.create<TFL::ReshapeOp>(
-          filter.getLoc(), filterType, finalFilter, finalFilterShapeConst);
-
-      // Update filter
-      filter = finalFilterReshaped.getResult();
+      filter = finalFilter;
     }
 
     // Create new fully connected op with adjusted filter and bias
@@ -281,10 +152,18 @@ struct FoldTransposeIntoFullyConnectedPattern
         fullyConnectedOp.getKeepNumDimsAttr(),
         fullyConnectedOp.getAsymmetricQuantizeInputsAttr());
 
+    // create new shape from the shape of the original transpose op
+    auto originalShape =
+        transposeOp.getResult().getType().cast<RankedTensorType>().getShape();
+    SmallVector<int64_t, 4> originalShapeVec(originalShape.begin(),
+                                             originalShape.end());
+    Value newShapeConstOp = utils::createShapeConstOp(
+        rewriter, transposeOp.getLoc(), originalShapeVec);
+
     // Create new reshape op with the output type of the original transpose op
     auto newReshapeOp = rewriter.create<TFL::ReshapeOp>(
         reshapeOp.getLoc(), transposeOutputType,
-        newFullyConnectedOp.getResult(0), reshapeOp.getShape());
+        newFullyConnectedOp.getResult(0), newShapeConstOp);
 
     // Replace the original transpose op with the new reshape op
     rewriter.replaceOp(transposeOp, newReshapeOp.getResult());

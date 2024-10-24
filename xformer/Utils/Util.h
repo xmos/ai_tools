@@ -7,6 +7,7 @@
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 namespace mlir::xcore::utils {
 
@@ -69,6 +70,19 @@ template <typename T> bool checkBinaryCompatibility(T op) {
 int mergeAxes(std::vector<int32_t> &begin, std::vector<int32_t> &size,
               std::vector<int32_t> &inShape, std::vector<int32_t> &outShape,
               int rank);
+
+LogicalResult convertToI32Array(const SmallVectorImpl<int64_t> &input,
+                                SmallVectorImpl<int32_t> &output);
+
+Value createShapeConstOp(PatternRewriter &rewriter, Location loc,
+                         const SmallVectorImpl<int64_t> &shapeVec);
+
+LogicalResult
+reshapeTransposeReshape(PatternRewriter &rewriter, Value tensor,
+                        const SmallVectorImpl<int64_t> &reshapeShape,
+                        const SmallVectorImpl<int64_t> &permVec,
+                        const SmallVectorImpl<int64_t> &origShape,
+                        Value &result);
 } // namespace mlir::xcore::utils
 
 #endif // XFORMER_UTILS_UTIL_H

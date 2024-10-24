@@ -138,4 +138,82 @@ int mergeAxes(std::vector<int32_t> &begin, std::vector<int32_t> &size,
   return rank;
 }
 
+// Converts int64_t vector to int32_t vector, returns failure if any value is
+// out of int32_t range.
+LogicalResult convertToI32Array(const SmallVectorImpl<int64_t> &input,
+                                SmallVectorImpl<int32_t> &output) {
+  for (auto val : input) {
+    if (val > std::numeric_limits<int32_t>::max() ||
+        val < std::numeric_limits<int32_t>::min())
+      return failure();
+    output.push_back(static_cast<int32_t>(val));
+  }
+  return success();
+}
+
+// Creates a constant op for a shape vector.
+Value createShapeConstOp(PatternRewriter &rewriter, Location loc,
+                         const SmallVectorImpl<int64_t> &shapeVec) {
+  SmallVector<int32_t, 4> shapeVecI32;
+  if (failed(convertToI32Array(shapeVec, shapeVecI32)))
+    return nullptr;
+  auto shapeType = RankedTensorType::get(
+      {static_cast<int64_t>(shapeVecI32.size())}, rewriter.getI32Type());
+  auto shapeAttr = DenseIntElementsAttr::get(shapeType, shapeVecI32);
+  return rewriter.create<arith::ConstantOp>(loc, shapeType, shapeAttr);
+}
+
+// Helper function for reshape-transpose-reshape pattern.
+LogicalResult
+reshapeTransposeReshape(PatternRewriter &rewriter, Value tensor,
+                        const SmallVectorImpl<int64_t> &reshapeShape,
+                        const SmallVectorImpl<int64_t> &permVec,
+                        const SmallVectorImpl<int64_t> &origShape,
+                        Value &result) {
+  auto loc = tensor.getLoc();
+  auto tensorType = tensor.getType().cast<RankedTensorType>();
+  auto elementType = tensorType.getElementType();
+
+  // Reshape tensor to reshapeShapeExclBatch.
+  Value newShapeOp = createShapeConstOp(rewriter, loc, reshapeShape);
+  if (!newShapeOp)
+    return failure();
+  auto reshapedType = RankedTensorType::get(reshapeShape, elementType);
+  auto reshapedTensor =
+      rewriter.create<TFL::ReshapeOp>(loc, reshapedType, tensor, newShapeOp);
+
+  // Convert permVecExclBatch to int32_t vector.
+  SmallVector<int32_t, 4> permVecI32;
+  if (failed(convertToI32Array(permVec, permVecI32)))
+    return failure();
+
+  // Create perm op.
+  auto permType = RankedTensorType::get(
+      {static_cast<int64_t>(permVecI32.size())}, rewriter.getI32Type());
+  auto permAttr = DenseIntElementsAttr::get(permType, permVecI32);
+  auto permOp = rewriter.create<arith::ConstantOp>(loc, permType, permAttr);
+
+  // Compute transposed shape.
+  SmallVector<int64_t, 4> transposedShape;
+  for (auto idx : permVec) {
+    if (idx < 0 || idx >= reshapeShape.size())
+      return failure();
+    transposedShape.push_back(reshapeShape[idx]);
+  }
+  auto transposedType = RankedTensorType::get(transposedShape, elementType);
+
+  // Transpose.
+  auto transposedTensor = rewriter.create<TFL::TransposeOp>(
+      loc, transposedType, reshapedTensor, permOp);
+
+  // Reshape back to original shape.
+  Value origShapeOp = createShapeConstOp(rewriter, loc, origShape);
+  if (!origShapeOp)
+    return failure();
+  auto finalTensor = rewriter.create<TFL::ReshapeOp>(
+      loc, tensorType, transposedTensor, origShapeOp);
+
+  result = finalTensor.getResult();
+  return success();
+}
 } // namespace mlir::xcore::utils

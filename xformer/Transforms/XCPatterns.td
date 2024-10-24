@@ -29,7 +29,8 @@ def getLookupTableI16OrFail
     : NativeCodeCall<"getLookupTableI16($_builder, $0.getDefiningOp()); "
                      "if(blob == nullptr){return failure();}">;
 
-foreach activationOp = [TFL_LogisticOp, TFL_TanhOp, TFL_ReluOp] in {
+foreach activationOp =
+    [TFL_LogisticOp, TFL_TanhOp, TFL_ReluOp, TFL_Relu6Op] in {
 def:
   Pat<(activationOp
             : $output TensorOf<[QI16]>:$input),

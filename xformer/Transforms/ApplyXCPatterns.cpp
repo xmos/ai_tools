@@ -137,6 +137,8 @@ DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter,
     fn = approximation_function_elu;
   } else if (isa<TFL::ReluOp>(activationOp)) {
     fn = approximation_function_relu;
+  } else if (isa<TFL::Relu6Op>(activationOp)) {
+    fn = approximation_function_relu6;
   } else {
     llvm_unreachable("Unsupported op!");
   }

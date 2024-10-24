@@ -105,12 +105,12 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   // account
   if (auto fakeConv2DOp = dyn_cast<FakeConv2DOp>(conv2DOp.getOperation())) {
     args.imageRegionSplits = utils::getImageRegionThreadSplits(
-        threadCountOption, args.Y.height, args.Y.width,
+        threadCountOption, args.Y.height, args.Y.width, args.Y.depth,
         fakeConv2DOp.getOutputSubH(), fakeConv2DOp.getOutputSubW(),
         fakeConv2DOp.getOutputStrideH(), fakeConv2DOp.getOutputStrideW());
   } else {
     args.imageRegionSplits = utils::getImageRegionThreadSplits(
-        threadCountOption, args.Y.height, args.Y.width);
+        threadCountOption, args.Y.height, args.Y.width, args.Y.depth);
   }
 
   //
@@ -163,8 +163,19 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   ShapedType weightsType = RankedTensorType::get(
       {static_cast<long long>(weightsData.size())}, rewriter.getIntegerType(8));
   auto weightsAttr = DenseElementsAttr::get<int8_t>(weightsType, weightsData);
-  auto weightsConstantOp =
-      rewriter.create<arith::ConstantOp>(conv2DOp.getLoc(), weightsAttr);
+  Value weightsOrExpand8To16Op;
+  if (args.isI16Conv) {
+    auto wOp =
+        rewriter.create<arith::ConstantOp>(conv2DOp.getLoc(), weightsAttr);
+    ShapedType expandedType =
+        RankedTensorType::get({static_cast<long long>(weightsData.size() * 2)},
+                              rewriter.getIntegerType(8));
+    weightsOrExpand8To16Op =
+        rewriter.create<Expand8To16Op>(conv2DOp.getLoc(), expandedType, wOp);
+  } else {
+    weightsOrExpand8To16Op =
+        rewriter.create<arith::ConstantOp>(conv2DOp.getLoc(), weightsAttr);
+  }
 
   // If FakeConv2DOp, then we want to pass in the partial output tensor, in case
   // it is being used If not, we use a no value op.
@@ -181,10 +192,6 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   Value scratchTensorOp;
   // Create scratch buffer space for all threads
   int32_t scratchBufferSize = scratchByteParam * actualThreadCount;
-  if (args.isI16Conv) {
-    // Create scratch buffer space for expanding weights from i8 to i16
-    scratchBufferSize += weightsData.size() * 2;
-  }
 
   if (scratchBufferSize > 0) {
     ShapedType scratchType =
@@ -201,7 +208,7 @@ ReplaceWithXCConv2DBase<ConcreteType, ConvOpType, ArgsType>::matchAndRewrite(
   // Create the Conv2DV2 Op with the params and kernel type
   auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
       conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.getInput(),
-      weightsConstantOp, mulsBiasesOrThresholdsConstantOp,
+      weightsOrExpand8To16Op, mulsBiasesOrThresholdsConstantOp,
       partialOutputTensorOp, scratchTensorOp,
       rewriter.getStringAttr(kernelTypeEnumParam),
       rewriter.getStringAttr(memcpyFnParam),

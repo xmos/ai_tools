@@ -10,11 +10,11 @@
 
 namespace mlir::xcore::utils {
 
-llvm::SmallVector<std::array<int, 4>>
+llvm::SmallVector<std::array<int, 6>>
 getImageRegionThreadSplits(const int &threadCount, const int &imageHeight,
-                           const int &imageWidth, const int subH = 0,
-                           const int subW = 0, const int strideH = 1,
-                           const int strideW = 1);
+                           const int &imageWidth, const int &imageDepth,
+                           const int subH = 0, const int subW = 0,
+                           const int strideH = 1, const int strideW = 1);
 
 } // namespace mlir::xcore::utils
 

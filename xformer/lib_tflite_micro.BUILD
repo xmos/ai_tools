@@ -42,6 +42,7 @@ filegroup(
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_broadcast.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_mul.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_mean.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_expand_8_to_16.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_binaryi16.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_unaryi16.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_beta_activationf32.cc",

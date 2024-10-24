@@ -12,6 +12,7 @@
 
 namespace mlir::xcore {
 
+std::vector<uint8_t> Expand8To16Op::buildCustomOptions() { return {}; }
 std::vector<uint8_t> FakeScratchBufferOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Bsign8Op::buildCustomOptions() { return {}; }
 
@@ -281,6 +282,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<BinaryI16Op>>(ctx);
   patterns.insert<RewriteToCustomOp<FakeScratchBufferOp>>(ctx);
   patterns.insert<RewriteToCustomOp<FakeSliceOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<Expand8To16Op>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

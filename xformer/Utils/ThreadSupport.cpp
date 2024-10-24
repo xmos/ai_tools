@@ -5,6 +5,8 @@
 
 #include "mlir/Support/LogicalResult.h"
 
+#include "lib_nn/api/nn_op_utils.h"
+
 #include <cmath>
 
 namespace mlir::xcore::utils {
@@ -135,11 +137,39 @@ getSmallDimSplits(llvm::SmallVector<std::array<int, 4>> &imageRegionSplits,
   }
   return success();
 }
+
+llvm::SmallVector<std::array<int, 6>>
+getDepthwiseThreadSplits(const int &numThreads, const int &imageHeight,
+                         const int &imageWidth, const int &imageDepth) {
+  int s[5];
+  int e[5];
+  int tc = calculateThreadSplit(numThreads, imageDepth, s, e, 16);
+
+  llvm::SmallVector<std::array<int, 6>> imageRegionSplits;
+
+  for (int i = 0; i < tc; i++) {
+    imageRegionSplits.push_back(
+        {0, 0, s[i], imageHeight, imageWidth, e[i] - s[i]});
+  }
+
+  return imageRegionSplits;
+}
+
 } // namespace
 
-llvm::SmallVector<std::array<int, 4>> getImageRegionThreadSplits(
-    const int &numThreads, const int &imageHeight, const int &imageWidth,
-    const int subH, const int subW, const int strideH, const int strideW) {
+llvm::SmallVector<std::array<int, 6>>
+getImageRegionThreadSplits(const int &numThreads, const int &imageHeight,
+                           const int &imageWidth, const int &imageDepth,
+                           const int subH, const int subW, const int strideH,
+                           const int strideW) {
+  // Special case for 1x1 convolutions
+  // We try to split these depthwise(channelwise)
+  if (imageHeight == 1 && imageWidth == 1 && subH == 0 && subW == 0 &&
+      strideH == 1 && strideW == 1) {
+    return getDepthwiseThreadSplits(numThreads, imageHeight, imageWidth,
+                                    imageDepth);
+  }
+
   // Decide between height or width as the chosen dimension to split
   //
   // If we can cleanly divide a dimension by numThreads, we choose that one
@@ -163,7 +193,7 @@ llvm::SmallVector<std::array<int, 4>> getImageRegionThreadSplits(
     isHeightChosenDim = alignedImageHeight > alignedImageWidth ? true : false;
   }
 
-  llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
+  llvm::SmallVector<std::array<int, 6>> imageRegionSplits;
   // Handle small dim cases using tables
   // TODO
   // if (dimSize <= 4) {
@@ -216,14 +246,14 @@ llvm::SmallVector<std::array<int, 4>> getImageRegionThreadSplits(
                   ? split - 1
                   : split;
       imageRegionSplits.push_back(
-          {topLeftRow + subH, topLeftColumn, split, imageWidth});
+          {topLeftRow + subH, topLeftColumn, 0, split, imageWidth, imageDepth});
       topLeftRow += split;
     } else {
       split = (topLeftColumn + subW + split > imageWidth && imageWidth % 2 == 1)
                   ? split - 1
                   : split;
-      imageRegionSplits.push_back(
-          {topLeftRow, topLeftColumn + subW, imageHeight, split});
+      imageRegionSplits.push_back({topLeftRow, topLeftColumn + subW, 0,
+                                   imageHeight, split, imageDepth});
       topLeftColumn += split;
     }
   }

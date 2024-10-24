@@ -29,11 +29,11 @@ LogicalResult writeWeightsToFile(const std::string &filename,
                                  bool placeInExternalMemory) {
   if (writeWeightsAsArray) {
     std::ostringstream cOut;
-    cOut << R"(#include <stdint.h>)";
+    cOut << R"(#include <stdint.h>)"
+         << "\n\n";
 
     if (placeInExternalMemory) {
-      cOut << "\n\n"
-           << R"(__attribute__ ((section(".ExtMem.data"))))"
+      cOut << R"(__attribute__ ((section(".ExtMem.data"))))"
            << "\n";
     } else {
       // Weights are to be placed in SRAM tile

@@ -25,8 +25,140 @@ struct OptimizeTranspose
   void runOnOperation() override;
 };
 
-struct FoldTransposeIntoFullyConnectedPattern
-    : public OpRewritePattern<TFL::TransposeOp> {
+struct FoldTrReFCPattern : public OpRewritePattern<TFL::FullyConnectedOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::FullyConnectedOp fcOp,
+                                PatternRewriter &rewriter) const override {
+    // Match the pattern: transpose -> reshape -> fully_connected
+
+    // Check that the input to fully_connected is a reshape
+    auto reshapeOp = fcOp.getInput().getDefiningOp<TFL::ReshapeOp>();
+    if (!reshapeOp || !reshapeOp->hasOneUse())
+      return failure();
+
+    // Check that the input to reshape is a transpose
+    auto transposeOp = reshapeOp.getInput().getDefiningOp<TFL::TransposeOp>();
+    if (!transposeOp || !transposeOp->hasOneUse())
+      return failure();
+
+    // Ensure that the fully_connected op has a single use
+    if (!fcOp->hasOneUse())
+      return failure();
+
+    // Get permutation attribute from transpose
+    DenseIntElementsAttr permAttr;
+    if (!matchPattern(transposeOp.getPerm(), m_Constant(&permAttr)))
+      return failure();
+
+    SmallVector<int64_t, 4> permVec;
+    for (auto val : permAttr.getValues<int32_t>())
+      permVec.push_back(static_cast<int64_t>(val));
+
+    // Get shapes
+    auto reshapeInputType =
+        reshapeOp.getInput().getType().cast<RankedTensorType>();
+    auto reshapeOutputType =
+        reshapeOp.getResult().getType().cast<RankedTensorType>();
+    if (!reshapeInputType || !reshapeOutputType)
+      return failure();
+
+    SmallVector<int64_t, 4> reshapeInputShapeVec(
+        reshapeInputType.getShape().begin(), reshapeInputType.getShape().end());
+    SmallVector<int64_t, 4> reshapeOutputShapeVec(
+        reshapeOutputType.getShape().begin(),
+        reshapeOutputType.getShape().end());
+
+    // Transpose the filter weights
+    Value filter = fcOp.getFilter();
+    Value bias = fcOp.getBias();
+
+    {
+      // Ensure filter is produced by a TFL::QConstOp
+      auto filterQConstOp = filter.getDefiningOp<TFL::QConstOp>();
+      if (!filterQConstOp) {
+        return failure();
+      }
+      // Get filter type and shape
+      auto filterType = filter.getType().dyn_cast<RankedTensorType>();
+      if (!filterType) {
+
+        return failure();
+      }
+      auto filterShape = filterType.getShape();
+      SmallVector<int64_t, 4> filterShapeVec(filterShape.begin(),
+                                             filterShape.end());
+
+      // Compute the reshape shape for the filter
+      // The filter is typically of shape [output_size, input_size]
+      int64_t outputSize = filterShapeVec[0];
+      int64_t inputSize = filterShapeVec[1];
+
+      // Reshape the filter to [output_size] + reshapeInputShapeVec
+      SmallVector<int64_t, 4> reshapedFilterShapeVec(
+          reshapeInputShapeVec.begin() + 1, reshapeInputShapeVec.end());
+      reshapedFilterShapeVec.push_back(outputSize);
+
+      // Prepare permutation vector for the filter
+      // Since the data is transposed before reshape, we need to adjust the
+      // filter accordingly. The first dimension (output_size) remains
+      // unchanged.
+      //
+      SmallVector<int64_t, 4> filterPermVec;
+      for (size_t i = 1; i < permVec.size(); i++) {
+        filterPermVec.push_back(permVec[i] - 1);
+      }
+      filterPermVec.push_back(permVec.size() - 1);
+
+      // Original filter shape vector
+      SmallVector<int64_t, 4> origFilterShapeVec(filterShapeVec.begin(),
+                                                 filterShapeVec.end());
+
+      Value finalFilter;
+      if (failed(utils::reshapeTransposeReshape(
+              rewriter, filter, reshapedFilterShapeVec, filterPermVec,
+              origFilterShapeVec, finalFilter))) {
+
+        return failure();
+      }
+
+      filter = finalFilter;
+    }
+
+    // Bias remains the same; no need to adjust it
+
+    // Create new reshape op (from transpose's input to reshape's output)
+    Value newInput = transposeOp.getInput();
+
+    // Create new shape const op for reshape
+    Value newShapeConstOp = utils::createShapeConstOp(
+        rewriter, reshapeOp.getLoc(), reshapeOutputShapeVec);
+
+    auto newReshapeOp = rewriter.create<TFL::ReshapeOp>(
+        reshapeOp.getLoc(), reshapeOp.getResult().getType(), newInput,
+        newShapeConstOp);
+
+    // Create new fully_connected op with adjusted filter
+    auto newFullyConnectedOp = rewriter.create<TFL::FullyConnectedOp>(
+        fcOp.getLoc(), fcOp.getResult(0).getType(), newReshapeOp.getResult(),
+        filter, bias, fcOp.getFusedActivationFunctionAttr(),
+        fcOp.getWeightsFormatAttr(), fcOp.getKeepNumDimsAttr(),
+        fcOp.getAsymmetricQuantizeInputsAttr());
+
+    // Replace the original fully_connected op with the new one
+    rewriter.replaceOp(fcOp, newFullyConnectedOp.getResults());
+
+    // Erase the old reshape and transpose ops if they are no longer used
+    if (reshapeOp.use_empty())
+      rewriter.eraseOp(reshapeOp);
+    if (transposeOp.use_empty())
+      rewriter.eraseOp(transposeOp);
+
+    return success();
+  }
+};
+
+struct FoldFCReTrPattern : public OpRewritePattern<TFL::TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TFL::TransposeOp transposeOp,
@@ -540,7 +672,8 @@ void OptimizeTranspose::runOnOperation() {
 
   patterns.insert<HoistTransposeWCHAbovePadPattern>(ctx);
   patterns.insert<FoldCancellableTransposePattern>(ctx);
-  patterns.insert<FoldTransposeIntoFullyConnectedPattern>(ctx);
+  patterns.insert<FoldFCReTrPattern>(ctx);
+  patterns.insert<FoldTrReFCPattern>(ctx);
   if (allowInputModificationOption) {
     patterns.insert<FoldTransposeWCHToInput>(ctx);
   }

@@ -41,8 +41,8 @@ struct ReplaceMaxPool2DPattern : public OpRewritePattern<TFL::MaxPool2DOp> {
     auto outputHeight = outputType.getDimSize(1);
     auto outputWidth = outputType.getDimSize(2);
     auto outputDepth = outputType.getDimSize(3);
-    auto splits = utils::getImageRegionThreadSplits(threadCountOption,
-                                                    outputHeight, outputWidth);
+    auto splits = utils::getImageRegionThreadSplits(
+        threadCountOption, outputHeight, outputWidth, outputDepth);
 
     auto actualThreadCount = splits.size();
     // Create a string array attr from a vector of strings
@@ -61,8 +61,8 @@ struct ReplaceMaxPool2DPattern : public OpRewritePattern<TFL::MaxPool2DOp> {
     nn::ImageGeometry Y(outputHeight, outputWidth, outputDepth);
     llvm::SmallVector<std::string> akp;
     for (auto &region : splits) {
-      nn::ImageRegion ir(region[0], region[1], 0, region[2], region[3],
-                         outputDepth);
+      nn::ImageRegion ir(region[0], region[1], region[2], region[3], region[4],
+                         region[5]);
       nn::AbstractKernel ak(Y, ir, VPU_INT8_ACC_PERIOD);
       auto akParams = ak.getParams();
       auto akpStr = std::string((char *)&akParams, sizeof(akParams));

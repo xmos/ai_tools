@@ -230,6 +230,7 @@ cc_library(
         "@llvm-project//mlir:Support",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_import",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
+        "@lib_nn//:nn_lib",
     ],
 ) 
 

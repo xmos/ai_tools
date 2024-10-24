@@ -32,7 +32,7 @@ struct TFLConvArgs {
   nn::ImageGeometry Y;
   nn::ImageGeometry X;
   nn::WindowGeometry K;
-  llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
+  llvm::SmallVector<std::array<int, 6>> imageRegionSplits;
   double quantErrorThreshold;
   bool quantErrorFullCheckEnabled;
   bool isI16Conv;
@@ -53,7 +53,7 @@ struct BConvArgs {
   nn::ImageGeometry Y;
   nn::ImageGeometry X;
   nn::WindowGeometry K;
-  llvm::SmallVector<std::array<int, 4>> imageRegionSplits;
+  llvm::SmallVector<std::array<int, 6>> imageRegionSplits;
   bool isI16Conv;
 };
 
@@ -291,13 +291,14 @@ private:
 };
 
 static llvm::SmallVector<std::string> getAbstractKernelParamsForMultipleThreads(
-    llvm::SmallVector<std::array<int, 4>> imageRegionSplits,
+    llvm::SmallVector<std::array<int, 6>> imageRegionSplits,
     const nn::ImageGeometry &Y, int subH = 0, int subW = 0, int strideH = 1,
     int strideW = 1, int inputOffset = 0) {
   llvm::SmallVector<std::string> abstractKernelParams;
   for (auto &regionsplits : imageRegionSplits) {
-    auto ir = nn::ImageRegion(regionsplits[0], regionsplits[1], 0,
-                              regionsplits[2], regionsplits[3], Y.depth);
+    auto ir =
+        nn::ImageRegion(regionsplits[0], regionsplits[1], regionsplits[2],
+                        regionsplits[3], regionsplits[4], regionsplits[5]);
     nn::AbstractKernel ak(Y, ir, VPU_INT8_ACC_PERIOD, subH, subW, strideH,
                           strideW, inputOffset);
     auto akParams = ak.getParams();

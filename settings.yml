@@ -1,0 +1,16 @@
+# This file relates to internal XMOS infrastructure and should be ignored by users
+
+project: 'ai-tools'
+title: 'AI tools documentation'
+version: 1.0.0
+
+documentation:
+  exclude_patterns_path: docs/exclude-patterns.inc
+  root_doc: docs/rst/index.rst
+  cognidox_part_number: XM-015210-UG
+  latex_secdepth: 3
+  pdfs:
+    docs/rst/index.rst:
+      pdf_title: '{{title}}'
+      pdf_filename: 'ai_tools_v{{version}}'
+

@@ -1,5 +1,5 @@
 Example with two models and learned parameters in flash
-====================================================
+=======================================================
 
 Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 

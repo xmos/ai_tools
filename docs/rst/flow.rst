@@ -9,7 +9,7 @@ It includes:
 * the XCore tflm runtime to run transformed models on device
 
 Installation steps
--------------
+------------------
 
 Perform the following steps once
 
@@ -47,7 +47,7 @@ Perform the following steps once
 
 
 Example applications
-----------------------------
+--------------------
 
 These are 4 example models; in order of complexity
 
@@ -66,7 +66,7 @@ For more examples, see the `examples folder <../../examples/README.rst>`_.
 
 
 More info regarding the generated C++ model files
-----------------------------
+-------------------------------------------------
 
 The model code is compiled to C++ source and header.
 The generated header file contains the simple API to interact with the model.
@@ -87,5 +87,8 @@ Some of the commonly used functions are:
 Integration with sensors
 ------------------------
 
-There are many sensor interfaces, we will soon publish example programs to
-interface to PDM microphones and MIPI/SPI cameras
+In order to integrate with sensors, create separate threads (maybe on a
+separate tile) that input data from a sensor, camera, microphone, etc, and
+a thread that performs the signal pre-processing on it, prior to posting
+the data to the neural network.
+

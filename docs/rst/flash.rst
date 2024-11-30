@@ -119,7 +119,7 @@ The parameter files have to be assembled together into a single flash image
 
 We need a slightly different main.xc:
 
-  .. literalinclude:: ../../examples/app_flash_two_models/src/main.xc
+  .. literalinclude:: ../../examples/app_flash_two_models/src/main.cpp
 
 * Move the output files ``model1.tflite.cpp``, ``model1.tflite.h``,
   ``model2.tflite.cpp`` and ``model2.tflite.h`` into the src directory.

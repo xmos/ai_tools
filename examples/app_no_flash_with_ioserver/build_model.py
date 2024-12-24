@@ -8,8 +8,8 @@ NAMING_PREFIX = "model_"
 xformer.convert(
     TFLITE_MODEL_PATH,
     OPT_MODEL_PATH,
-    {
-        "xcore-thread-count": "5",
-        "xcore-naming-prefix": NAMING_PREFIX,
-    },
+    [
+        ("xcore-thread-count", "5"),
+        ("xcore-naming-prefix", NAMING_PREFIX),
+    ],
 )

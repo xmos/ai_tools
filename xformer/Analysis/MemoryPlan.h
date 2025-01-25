@@ -87,6 +87,12 @@ private:
   int getOffset(Value v, int size, DenseMap<Value, ValueInfo> &valueInfo,
                 ValuesOrderedByOffset &allocatedOffsets);
 
+  bool getValsIfValidOverlappableOp(
+      Operation *o, llvm::DenseMap<Value, std::pair<Value, int>> outInMap,
+      llvm::DenseSet<Value> outputTensorSet,
+      llvm::DenseSet<Value> overlappedWithBranchSet, bool overlapModifyingOps,
+      Value &inVal, Value &outVal);
+
   char getOrdinalCharacter(int i);
 
   DenseMap<Value, ValueInfo> valueInfo;

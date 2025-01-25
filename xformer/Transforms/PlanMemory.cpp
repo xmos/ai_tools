@@ -26,37 +26,46 @@ struct PlanMemory
 };
 
 void PlanMemory::runOnOperation() {
-  if (offlineOffsetsOption) {
-    auto func = getOperation();
+  auto func = getOperation();
 
-    bool unSupportedOpsInGraph = false;
-    func.walk<WalkOrder::PreOrder>([&](Operation *op) {
-      if (llvm::isa<TFL::UnidirectionalSequenceLSTMOp, TFL::WhileOp, TFL::IfOp,
-                    TFL::CallOnceOp>(op)) {
-        unSupportedOpsInGraph = true;
-      }
-    });
+  bool unSupportedOpsInGraph = false;
+  func.walk<WalkOrder::PreOrder>([&](Operation *op) {
+    if (llvm::isa<TFL::UnidirectionalSequenceLSTMOp, TFL::WhileOp, TFL::IfOp,
+                  TFL::CallOnceOp>(op)) {
+      unSupportedOpsInGraph = true;
+    }
+  });
 
-    if (!unSupportedOpsInGraph) {
-      auto module = func->getParentOfType<ModuleOp>();
-      OpBuilder builder(module);
+  if (!unSupportedOpsInGraph) {
+    auto module = func->getParentOfType<ModuleOp>();
+    OpBuilder builder(module);
 
-      auto &m = getAnalysis<MemoryPlan>();
-      int peakMemoryUsedWithOverlap, peakMemoryUsedWithoutOverlap, peakOpId;
-      auto offlineOffsetsWithOverlap = m.getAllocatedOffsets(
-          /*overlapOps=*/true, peakMemoryUsedWithOverlap, peakOpId);
-      auto offlineOffsetsWithoutOverlap = m.getAllocatedOffsets(
-          /*overlapOps=*/false, peakMemoryUsedWithoutOverlap, peakOpId);
+    auto &m = getAnalysis<MemoryPlan>();
+    int peakMemoryUsedWithOverlap, peakMemoryUsedWithoutOverlap, peakOpId;
+    auto offlineOffsetsWithOverlap = m.getAllocatedOffsets(
+        /*overlapModifyingOps=*/true, peakMemoryUsedWithOverlap, peakOpId);
+    if (overlapModifyingOpsOption) {
+      module->setAttr("xc.offsets",
+                      builder.getI32VectorAttr(offlineOffsetsWithOverlap));
       module->setAttr("xc.peakopid", builder.getI32IntegerAttr(peakOpId));
       module->setAttr("xc.peakusage",
-                      builder.getI32IntegerAttr(peakMemoryUsedWithoutOverlap));
+                      builder.getI32IntegerAttr(peakMemoryUsedWithOverlap));
+    } else {
+      auto offlineOffsetsWithoutOverlap = m.getAllocatedOffsets(
+          /*overlapModifyingOps=*/false, peakMemoryUsedWithoutOverlap,
+          peakOpId);
+      module->setAttr("xc.peakopid", builder.getI32IntegerAttr(peakOpId));
 
       if (peakMemoryUsedWithOverlap <= peakMemoryUsedWithoutOverlap) {
         module->setAttr("xc.offsets",
                         builder.getI32VectorAttr(offlineOffsetsWithOverlap));
+        module->setAttr("xc.peakusage",
+                        builder.getI32IntegerAttr(peakMemoryUsedWithOverlap));
       } else {
         module->setAttr("xc.offsets",
                         builder.getI32VectorAttr(offlineOffsetsWithoutOverlap));
+        module->setAttr("xc.peakusage", builder.getI32IntegerAttr(
+                                            peakMemoryUsedWithoutOverlap));
       }
     }
   }

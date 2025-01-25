@@ -182,9 +182,10 @@ cl::opt<bool> convDebugOption("xcore-conv-debug",
                               cl::init(false), cl::cat(XformerCategory),
                               cl::Hidden);
 
-cl::opt<bool> offlineOffsetsOption("xcore-offline-offsets",
-                                   cl::desc("Offline offsets"), cl::init(true),
-                                   cl::cat(XformerCategory), cl::Hidden);
+cl::opt<bool> overlapModifyingOpsOption(
+    "xcore-overlap-modifying-ops",
+    cl::desc("Try to overlap modifying ops in the memory allocator"),
+    cl::init(false), cl::cat(XformerCategory), cl::Hidden);
 
 cl::opt<unsigned> convChannelwiseSplitSizeOption(
     "xcore-conv-channelwise-split-size",

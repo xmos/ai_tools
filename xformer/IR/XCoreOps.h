@@ -24,7 +24,7 @@ class MemoryOverlappable : public TraitBase<ConcreteType, MemoryOverlappable> {
 };
 
 template <typename ConcreteType>
-class NoModifications : public TraitBase<ConcreteType, NoModifications> {};
+class NonModifying : public TraitBase<ConcreteType, NonModifying> {};
 
 } // namespace xcore
 } // namespace OpTrait

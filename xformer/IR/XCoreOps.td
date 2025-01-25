@@ -47,7 +47,7 @@ class XC_Op<string mnemonic, list<Trait> traits = []>
 
 // Trait
 def XC_MemoryOverlappable : NativeOpTrait<"xcore::MemoryOverlappable">;
-def XC_NoModifications : NativeOpTrait<"xcore::NoModifications">;
+def XC_NonModifying : NativeOpTrait<"xcore::NonModifying">;
 
 // Conv2D
 
@@ -444,8 +444,7 @@ def XC_LoadConstantOp
   let results = (outs AnyTensor:$output);
 }
 
-def XC_NoOp
-    : XC_Op<"no_op", [Pure, XC_MemoryOverlappable, XC_NoModifications]> {
+def XC_NoOp : XC_Op<"no_op", [Pure, XC_MemoryOverlappable, XC_NonModifying]> {
   let summary = "No op";
 
   let description = [{No op.}];
@@ -474,8 +473,7 @@ def XC_LoadWeightsOp : XC_Op<"ld_weights", [Pure]> {
 }
 
 def XC_LoadWeightsWaitOp
-    : XC_Op<"ld_weights_wait", [Pure, XC_MemoryOverlappable,
-                                XC_NoModifications]> {
+    : XC_Op<"ld_weights_wait", [Pure, XC_MemoryOverlappable, XC_NonModifying]> {
   let summary = "Load weights wait op";
 
   let description = [{Load weights wait op.}];

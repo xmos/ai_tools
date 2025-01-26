@@ -391,22 +391,24 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapModifyingOps,
       inValActualOffsetMap[chainedInVal] = std::max(
           inValActualOffsetMap[chainedInVal], inOffset + chainedOffset);
       vInfo[chainedInVal].size =
-          std::max(vInfo[outV].size, vInfo[chainedInVal].size -
-                                         inValActualOffsetMap[chainedInVal] +
-                                         inOffset + chainedOffset);
+          std::max(vInfo[outV].size, vInfo[chainedInVal].size + inOffset);
     }
   }
 
   // Debug
   // printf("\n\nDumping overlapped values\n");
   // int k = 0;
-  // for (auto val : outInMap) {
-  //   printf("\n\nval %d\n", k++);
-  //   val.first.dump();
-  //   printf("overlapped onto\n");
-  //   val.second.first.dump();
+  // for (auto op : operations) {
+  //   if (op->hasTrait<OpTrait::xcore::MemoryOverlappable>()) {
+  //     auto outVal = op->getResult(0);
+  //     if (outInMap.count(outVal)) {
+  //       printf("\n\nval %d\n", k++);
+  //       outVal.dump();
+  //       printf("overlapped onto\n");
+  //       outInMap[outVal].first.dump();
+  //     }
+  //   }
   // }
-
   // Confirm that all NoModification ops have been handled
   int cnt = 0;
   // printf("\n\n");
@@ -617,7 +619,8 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapModifyingOps,
                             << ", size = " << valueInfo[i.first].size
                             << ", offset = " << i.second
                             << ", first = " << vInfo[i.first].firstUsed
-                            << ", last = " << vInfo[i.first].lastUsed);
+                            << ", last = " << vInfo[i.first].lastUsed << "\n");
+                            // i.first.dump();
   }
   LLVM_DEBUG(llvm::dbgs() << "\n\nPEAK USED : " << peakUsed << "\n\n");
   LLVM_DEBUG(llvm::dbgs() << "\n\n");

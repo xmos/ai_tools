@@ -42,18 +42,19 @@ void PlanMemory::runOnOperation() {
 
     auto &m = getAnalysis<MemoryPlan>();
     int peakMemoryUsedWithOverlap, peakMemoryUsedWithoutOverlap, peakOpId;
-    auto offlineOffsetsWithOverlap = m.getAllocatedOffsets(
-        /*overlapModifyingOps=*/true, peakMemoryUsedWithOverlap, peakOpId);
-    if (overlapModifyingOpsOption) {
-      module->setAttr("xc.offsets",
-                      builder.getI32VectorAttr(offlineOffsetsWithOverlap));
-      module->setAttr("xc.peakopid", builder.getI32IntegerAttr(peakOpId));
-      module->setAttr("xc.peakusage",
-                      builder.getI32IntegerAttr(peakMemoryUsedWithOverlap));
-    } else {
-      auto offlineOffsetsWithoutOverlap = m.getAllocatedOffsets(
+    auto offlineOffsetsWithoutOverlap = m.getAllocatedOffsets(
           /*overlapModifyingOps=*/false, peakMemoryUsedWithoutOverlap,
           peakOpId);
+    if (!tryOverlapModifyingOpsOption) {
+      module->setAttr("xc.offsets",
+                      builder.getI32VectorAttr(offlineOffsetsWithoutOverlap));
+      module->setAttr("xc.peakopid", builder.getI32IntegerAttr(peakOpId));
+      module->setAttr("xc.peakusage",
+                      builder.getI32IntegerAttr(peakMemoryUsedWithoutOverlap));
+    } else {
+      auto offlineOffsetsWithOverlap = m.getAllocatedOffsets(
+        /*overlapModifyingOps=*/true, peakMemoryUsedWithOverlap, peakOpId);
+
       module->setAttr("xc.peakopid", builder.getI32IntegerAttr(peakOpId));
 
       if (peakMemoryUsedWithOverlap <= peakMemoryUsedWithoutOverlap) {

@@ -215,101 +215,60 @@ void MemoryPlan::buildInputOutputTensorMaps(
   }
 }
 
-std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
+bool MemoryPlan::getValsIfValidOverlappableOp(
+    Operation *o, llvm::DenseMap<Value, std::pair<Value, int>> outInMap,
+    llvm::DenseSet<Value> outputTensorSet,
+    llvm::DenseSet<Value> overlappedWithBranchSet, bool overlapModifyingOps,
+    Value &inVal, Value &outVal) {
+  if (o->hasTrait<OpTrait::xcore::MemoryOverlappable>()) {
+    inVal = o->getOperand(0);
+    outVal = o->getResult(0);
+
+    if (outputTensorSet.contains(outVal)) {
+      // This value is an output tensor that is being same allocated with
+      // input tensor. This would have been handled in the special case.
+      return false;
+    } else if (o->hasTrait<OpTrait::xcore::NonModifying>()) {
+      // These ops don't do modification, so safe to overlap
+      return true;
+    } else if (!overlapModifyingOps) {
+      // Only non modifying ops are overlapped
+      return false;
+    } else if (outInMap.count(outVal)) {
+      // This value has already been added for allocation to an output
+      // tensor in the special case, and so cannot be overlapped with a
+      // modification op
+      return false;
+    } else if ((o->getNumOperands() == 1 && inVal.hasOneUse() &&
+                !valueInfo[inVal].isConstant) ||
+               (o->getNumOperands() > 1 &&
+                (inVal.hasOneUse() && !valueInfo[inVal].isConstant ||
+                 o->getOperand(1).hasOneUse() &&
+                     !valueInfo[o->getOperand(1)].isConstant))) {
+
+      // The inval to this op has been already allocated to a branched op, and
+      // so it is not safe to overlap a modification op
+      if (overlappedWithBranchSet.contains(inVal)) {
+        return false;
+      }
+
+      if (o->getNumOperands() > 1 &&
+          (!inVal.hasOneUse() || valueInfo[inVal].isConstant)) {
+        inVal = o->getOperand(1);
+      }
+      return true;
+    }
+  }
+
+  return false;
+}
+
+std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapModifyingOps,
                                                  int &peakMemoryUsed,
                                                  int &peakOpId) {
   std::vector<int> offsets;
   // Copy of valueInfo
   auto vInfo = valueInfo;
-
-  // Overlap buffers
-  llvm::DenseMap<Value, std::pair<Value, int>> inOutMap;
-  llvm::DenseSet<Operation *> alreadyVisited;
-  if (overlapOps) {
-    for (auto o : operations) {
-
-      // For async loads, use the same buffer for load and wait
-      if (llvm::isa<LoadWeightsWaitOp>(o)) {
-        for (int i = 0; i < o->getNumOperands(); i++) {
-          auto inVal = o->getOperand(i);
-          auto outVal = o->getResult(i);
-          vInfo[outVal].firstUsed = vInfo[inVal].firstUsed;
-          inOutMap[inVal] = {outVal, 0};
-        }
-      }
-
-      // We iterate through overlappable ops which have not been visited yet
-      if (o->hasTrait<OpTrait::xcore::MemoryOverlappable>() &&
-          !alreadyVisited.contains(o)) {
-        auto inVal = o->getOperand(0);
-
-        // We have binary and unary ops as overlappable
-        // For binary ops, we might have to overlap with the second operand
-        // The complicated if condition below is to check for valid one operand
-        // or two operand cases
-        if ((o->getNumOperands() == 1 && inVal.hasOneUse() &&
-             !vInfo[inVal].isConstant) ||
-            (o->getNumOperands() == 2 &&
-             (inVal.hasOneUse() && !vInfo[inVal].isConstant ||
-              o->getOperand(1).hasOneUse() &&
-                  !vInfo[o->getOperand(1)].isConstant))) {
-          // In case of two operands and first operand is invalid, use the
-          // second one
-          if (o->getNumOperands() == 2 &&
-              (!inVal.hasOneUse() || vInfo[inVal].isConstant)) {
-            inVal = o->getOperand(1);
-          }
-
-          alreadyVisited.insert(o);
-          llvm::SmallVector<Value> inputVals;
-          inputVals.push_back(inVal);
-
-          auto outVal = o->getResult(0);
-
-          // Only overlap if the output value size is equal or larger than the
-          // input value size We use the allocated space for the output value to
-          // store the input value
-          if ((utils::getShapedTypeSize(
-                   outVal.getType().dyn_cast<ShapedType>()) >=
-               utils::getShapedTypeSize(
-                   inVal.getType().dyn_cast<ShapedType>()))) {
-            auto nextOp = *outVal.getUsers().begin();
-            // Identify chain of overlappable Ops
-            while (outVal.hasOneUse() && !alreadyVisited.contains(nextOp) &&
-                   nextOp->hasTrait<OpTrait::xcore::MemoryOverlappable>() &&
-                   (utils::getShapedTypeSize(
-                        outVal.getType().dyn_cast<ShapedType>()) >=
-                    utils::getShapedTypeSize(
-                        inVal.getType().dyn_cast<ShapedType>()))) {
-              inVal = outVal;
-              inputVals.push_back(inVal);
-              alreadyVisited.insert(nextOp);
-              outVal = nextOp->getResult(0);
-              nextOp = *outVal.getUsers().begin();
-            }
-
-            // Set first Used of output Val to the first input Val
-            vInfo[outVal].firstUsed = vInfo[inputVals[0]].firstUsed;
-            auto unalignedSizeOutVal = utils::getShapedTypeSize(
-                outVal.getType().dyn_cast<ShapedType>());
-            size_t maxSizeNeeded = 0;
-            for (auto inV : inputVals) {
-              auto unalignedSizeInV = utils::getShapedTypeSize(
-                  inV.getType().dyn_cast<ShapedType>());
-              auto unalignedOffset = unalignedSizeOutVal - unalignedSizeInV;
-              // Align offset up to double word = 8 bytes
-              auto offset = ((unalignedOffset + 7) / 8) * 8;
-              maxSizeNeeded = std::max(vInfo[inV].size + offset, maxSizeNeeded);
-              inOutMap[inV] = {outVal, offset};
-            }
-            // The aligned input val size plus aligned offset might be larger
-            // than aligned output val size
-            vInfo[outVal].size = std::max(vInfo[outVal].size, maxSizeNeeded);
-          }
-        }
-      }
-    }
-  }
 
   // Handle input output tensor same allocations
   llvm::DenseSet<Value> inputTensorSet;
@@ -326,6 +285,153 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
           outputTensorMap[sameAllocationInputOutputTensorOption[i + 1]]);
     }
   }
+
+  // Overlap buffers
+  // When overlapping, (consider special case below) we try to allocate the
+  // input val to an op and then put the output val in the same space. This
+  // means we might have to increase the input val size to accommodate the
+  // output val. We also have to store the actual offset info for the input val,
+  // so that the input val can be stored at the right offset after allocation.
+  //
+  //
+  // For e.g, inval of size 10, outval of size 15
+  // All values have to be aligned
+  // Difference = 15 - 10 = 5
+  // Aligned difference = 5 -> 8
+  // Aligned sizes for inval and outval = 10->16 and 15->16
+  // outInMap[outVal] = {inVal, 8}
+  // Allocated size for inval = 16 + 8 = 24
+  // Actual offset for inval = 8
+  // So if inval is allocated at offset 100, outval will be allocated at 100,
+  // and inVal will be allocated at 108
+  llvm::DenseMap<Value, std::pair<Value, int>> outInMap;
+  llvm::SmallVector<Value> outValList;
+  llvm::DenseSet<Value> overlappedWithBranchSet;
+  llvm::DenseMap<Value, int> inValActualOffsetMap;
+  // Special case:
+  // Only applicable when input/output tensors are same allocated and we want
+  // to fold in a NonModifying Op such as Reshape. In this case, we
+  // allocate the input val to the output tensor instead, as output tensor is
+  // already allocated to same space as the input tensor.
+  for (auto o : operations) {
+    if (o->hasTrait<OpTrait::xcore::NonModifying>()) {
+      auto outVal = o->getResult(0);
+      if (outputTensorSet.contains(outVal)) {
+        auto inVal = o->getOperand(0);
+        outInMap[inVal] = {outVal, 0};
+        // First used is modified as we are allocating in the in to out
+        // direction
+        vInfo[outVal].firstUsed =
+            std::min(vInfo[outVal].firstUsed, vInfo[inVal].firstUsed);
+
+        inValActualOffsetMap[outVal] = 0;
+      }
+    }
+  }
+
+  for (auto o : operations) {
+    // We iterate through overlappable ops
+    Value inVal, outVal;
+    if (getValsIfValidOverlappableOp(o, outInMap, outputTensorSet,
+                                     overlappedWithBranchSet,
+                                     overlapModifyingOps, inVal, outVal)) {
+
+      if (o->hasTrait<OpTrait::xcore::NonModifying>() &&
+          (!inVal.hasOneUse() || overlappedWithBranchSet.contains(inVal))) {
+        overlappedWithBranchSet.insert(outVal);
+      }
+
+      auto unalignedSizeInVal =
+          utils::getShapedTypeSize(inVal.getType().dyn_cast<ShapedType>());
+      auto unalignedSizeOutV =
+          utils::getShapedTypeSize(outVal.getType().dyn_cast<ShapedType>());
+      auto unalignedOffset = unalignedSizeOutV - unalignedSizeInVal;
+      // Align offset up to double word = 8 bytes
+      auto offset = unalignedOffset < 0 ? 0 : ((unalignedOffset + 7) / 8) * 8;
+
+      outInMap[outVal] = {inVal, offset};
+      outValList.push_back(outVal);
+
+      // Set last Used of input Val
+      vInfo[inVal].lastUsed =
+          std::max(vInfo[outVal].lastUsed, vInfo[inVal].lastUsed);
+      // The aligned input val size plus aligned offset might be larger
+      // than aligned output val size
+      // eg in = 10, out = 19
+      vInfo[inVal].size =
+          std::max(vInfo[inVal].size + offset, vInfo[outVal].size);
+
+      inValActualOffsetMap[inVal] = offset;
+    }
+  }
+
+  // Tidy up outInMap
+  // Combine out values overlapping with the same in value
+  //
+  // out1 -> in1
+  // out2 -> out1
+  // =
+  // out2 -> in1
+  for (auto outV : outValList) {
+    auto inVal = outInMap[outV].first;
+    assert(inVal != nullptr);
+    auto inOffset = outInMap[outV].second;
+    // If inVal is another outVal, it's a chain
+    if (outInMap.count(inVal)) {
+      //
+      inValActualOffsetMap.erase(inVal);
+
+      auto chainedInVal = outInMap[inVal].first;
+      auto chainedOffset = outInMap[inVal].second;
+      outInMap[outV] = {chainedInVal, inOffset + chainedOffset};
+
+      // We adjust the inVal parameters to account for the new out value
+      vInfo[chainedInVal].lastUsed =
+          std::max(vInfo[outV].lastUsed, vInfo[chainedInVal].lastUsed);
+      inValActualOffsetMap[chainedInVal] = std::max(
+          inValActualOffsetMap[chainedInVal], inOffset + chainedOffset);
+      vInfo[chainedInVal].size =
+          std::max(vInfo[outV].size, vInfo[chainedInVal].size + inOffset);
+    }
+  }
+
+  // Debug
+  // printf("\n\nDumping overlapped values\n");
+  // int k = 0;
+  // for (auto op : operations) {
+  //   if (op->hasTrait<OpTrait::xcore::MemoryOverlappable>()) {
+  //     auto outVal = op->getResult(0);
+  //     if (outInMap.count(outVal)) {
+  //       printf("\n\nval %d\n", k++);
+  //       outVal.dump();
+  //       printf("overlapped onto\n");
+  //       outInMap[outVal].first.dump();
+  //     }
+  //   }
+  // }
+  // Confirm that all NoModification ops have been handled
+  int cnt = 0;
+  // printf("\n\n");
+  for (auto op : operations) {
+    if (op->hasTrait<OpTrait::xcore::NonModifying>()) {
+      auto inVal = op->getOperand(0);
+      auto outVal = op->getResult(0);
+      if (outputTensorSet.contains(outVal)) {
+        if (!outInMap.count(inVal)) {
+          cnt++;
+          // printf("Not found %d!\n", cnt);
+          // op->dump();
+          // outVal.dump();
+        }
+      } else if (!outInMap.count(outVal)) {
+        cnt++;
+        // printf("Not found %d!\n", cnt);
+        // op->dump();
+        // inVal.dump();
+      }
+    }
+  }
+  assert(cnt == 0 && "All NoModification ops have not been memory allocated!");
 
   // The comparator keeps the buffers ordered by id if their sizes are the
   // same
@@ -347,7 +453,7 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
   // Don't insert same allocation input and output tensors into queue as they
   // are allocated separately
   for (auto v : values) {
-    if (!inOutMap.count(v) && !vInfo[v].isConstant &&
+    if (!outInMap.count(v) && !vInfo[v].isConstant &&
         !outputTensorSet.contains(v) && !inputTensorSet.contains(v)) {
       queue.push({v, vInfo[v].size});
     }
@@ -391,17 +497,37 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
   }
 
   // Patch up overlapped buffers
-  for (auto val : inOutMap) {
-    auto in = val.first;
-    auto out = val.second.first;
-    auto offset = val.second.second;
+  for (auto val : outInMap) {
+    auto out = val.first;
+    auto inVal = val.second.first;
+    auto outValOffset = val.second.second;
 
-    auto it = std::find_if(allocatedValues.begin(), allocatedValues.end(),
-                           [&](const QueueItem &p) { return p.first == out; });
+    auto it =
+        std::find_if(allocatedValues.begin(), allocatedValues.end(),
+                     [&](const QueueItem &p) { return p.first == inVal; });
 
     if (it != allocatedValues.end()) {
       int currentOffset = it->second;
-      allocatedValues.insert({in, currentOffset + offset});
+      allocatedValues.insert(
+          {out, currentOffset + inValActualOffsetMap[inVal] - outValOffset});
+    } else {
+      out.dump();
+      inVal.dump();
+      assert(false);
+    }
+  }
+
+  for (auto val : inValActualOffsetMap) {
+    auto inVal = val.first;
+    auto actualOffset = val.second;
+    auto it =
+        std::find_if(allocatedValues.begin(), allocatedValues.end(),
+                     [&](const QueueItem &p) { return p.first == inVal; });
+
+    if (it != allocatedValues.end()) {
+      int currentOffset = it->second;
+      allocatedValues.erase(it);
+      allocatedValues.insert({inVal, currentOffset + actualOffset});
     } else {
       assert(false);
     }
@@ -421,6 +547,22 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
   std::multiset<QueueItem, decltype(cmp)> allocatedValuesOrderedByID(cmp);
   for (auto i : allocatedValues) {
     allocatedValuesOrderedByID.insert(i);
+  }
+
+  // Create map of value and allocated offsets including patched ones
+  DenseMap<Value, int> valOffsetMap;
+  for (auto i : allocatedValuesOrderedByID) {
+    valOffsetMap[i.first] = i.second;
+  }
+
+  // Confirm that no ops have same offset for input and output
+  for (auto op : operations) {
+    if (op->hasTrait<OpTrait::xcore::NonModifying>()) {
+      auto inVal = op->getOperand(0);
+      auto outVal = op->getResult(0);
+      assert(valOffsetMap[inVal] == valOffsetMap[outVal] &&
+             "NoModification ops must have same allocation offset!");
+    }
   }
 
   // Check if buffers clash
@@ -466,16 +608,19 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapOps,
       maxId++;
       nonConstantAllocatedValues.push_back(i.first);
       nonConstantOffsets.push_back(i.second);
-      size_t currentSize = vInfo[i.first].size + i.second;
+      // valueInfo instead of vInfo as vInfo size has been modified
+      size_t currentSize = valueInfo[i.first].size + i.second;
       if (currentSize >= peakUsed) {
         peakUsed = currentSize;
         peakOpId = maxId;
       }
     }
-    LLVM_DEBUG(llvm::dbgs() << "\nValue " << vInfo[i.first].id << ", size = "
-                            << vInfo[i.first].size << ", offset = " << i.second
+    LLVM_DEBUG(llvm::dbgs() << "\nValue " << vInfo[i.first].id
+                            << ", size = " << valueInfo[i.first].size
+                            << ", offset = " << i.second
                             << ", first = " << vInfo[i.first].firstUsed
-                            << ", last = " << vInfo[i.first].lastUsed);
+                            << ", last = " << vInfo[i.first].lastUsed << "\n");
+                            // i.first.dump();
   }
   LLVM_DEBUG(llvm::dbgs() << "\n\nPEAK USED : " << peakUsed << "\n\n");
   LLVM_DEBUG(llvm::dbgs() << "\n\n");

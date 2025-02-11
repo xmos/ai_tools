@@ -1,6 +1,6 @@
 // RUN: xcore-opt --mlir-io %s --xcore-op-split --xcore-op-split-bottom-op=1 --xcore-op-split-top-op=0 --xcore-op-split-num-splits=4,2 -verify-diagnostics
 
-// expected-error@+1 {{start, end, and numSplits must be the same size}}
+// expected-error@+1 {{Top, bottom, and num splits must have the same number of elements!}}
 func.func @valid(%arg0: tensor<?x256x256x3x!quant.uniform<i8:f32, 0.0039215688593685627:-128>> {tf_saved_model.index_path = ["input_1"]}) -> (tensor<?x4096x!quant.uniform<i8:f32, 3.322536576888524E-5:-128>> {tf_saved_model.index_path = ["flatten"]}) attributes {tf.entry_function = {inputs = "serving_default_input_1:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
   %0 = "tfl.pseudo_qconst"() {qtype = tensor<1x3x3x3x!quant.uniform<i8<-127:127>:f32:3, {0.0023649996146559715,0.0027379693929105997,0.0026506464928388596}>>, value = dense<[[[[76, 120, -127], [36, 127, -64], [71, -62, -125]], [[57, -119, -65], [127, 35, 8], [33, 67, 109]], [[-95, -125, 36], [35, 11, -88], [-115, 10, 125]]]]> : tensor<1x3x3x3xi8>} : () -> tensor<1x3x3x3x!quant.uniform<i8<-127:127>:f32:3, {0.0023649996146559715,0.0027379693929105997,0.0026506464928388596}>>
   %1 = "tfl.pseudo_qconst"() {qtype = tensor<3x!quant.uniform<i32:f32:0, {9.2745085567003116E-6,1.073713519872399E-5,1.0394693163107149E-5}>>, value = dense<0> : tensor<3xi32>} : () -> tensor<3x!quant.uniform<i32:f32:0, {9.2745085567003116E-6,1.073713519872399E-5,1.0394693163107149E-5}>>

@@ -24,13 +24,14 @@ extern llvm::cl::opt<unsigned> convMultiplierFactorOption;
 extern llvm::cl::opt<bool> opSplitTensorArenaOption;
 extern llvm::cl::opt<unsigned> opSplitTargetSizeOption;
 extern llvm::cl::list<unsigned> opSplitBottomOpsOption;
-extern llvm::cl::list<unsigned> opSplitTopOpsOption;
+extern llvm::cl::list<int> opSplitTopOpsOption;
 extern llvm::cl::list<unsigned> opSplitNumSplitsOption;
 extern llvm::cl::opt<bool> allowInputModificationOption;
 extern llvm::cl::opt<bool> mergeTransposeOption;
 extern llvm::cl::opt<bool> convDebugOption;
 extern llvm::cl::opt<bool> overlapConvOption;
 extern llvm::cl::opt<bool> tryOverlapModifyingOpsOption;
+extern llvm::cl::opt<unsigned> livenessPagingOption;
 extern llvm::cl::opt<unsigned> convChannelwiseSplitSizeOption;
 extern llvm::cl::list<std::string> sameAllocationInputOutputTensorOption;
 

@@ -47,6 +47,8 @@ class XC_Op<string mnemonic, list<Trait> traits = []>
 
 // Trait
 def XC_MemoryOverlappable : NativeOpTrait<"xcore::MemoryOverlappable">;
+def XC_OnlyOverlappableWithInput
+    : NativeOpTrait<"xcore::OnlyOverlappableWithInput">;
 def XC_NonModifying : NativeOpTrait<"xcore::NonModifying">;
 def XC_OnlyOverlappableWithInput
     : NativeOpTrait<"xcore::OnlyOverlappableWithInput">;
@@ -484,6 +486,27 @@ def XC_LoadWeightsWaitOp
   let arguments = (ins Variadic<AnyTensor>:$input);
 
   let results = (outs Variadic<AnyTensor>:$output);
+}
+
+def XC_StoreTensorOp : XC_Op<"store_tensor", [Pure]> {
+  let summary = "Store tensor op";
+
+  let description = [{Store tensor op.}];
+
+  let arguments = (ins AnyTensor:$input, I32Attr:$address, I32Attr:$size);
+
+  let results = (outs TensorOf<[I8]>:$output);
+}
+
+def XC_LoadTensorOp : XC_Op<"load_tensor", [Pure]> {
+  let summary = "Load tensor op";
+
+  let description = [{Load tensor op.}];
+
+  let arguments = (ins Variadic<TensorOf<[I8]>>:$input, I32Attr:$address,
+      I32Attr:$size);
+
+  let results = (outs AnyTensor:$output);
 }
 
 def XC_Bsign8Op : XC_Op<"bsign_8", [Pure]> {

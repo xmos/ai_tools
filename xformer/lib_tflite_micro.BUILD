@@ -31,6 +31,7 @@ filegroup(
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_maxpool2d.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_detection_post.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_load_weights_wait.cc",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_load_store_tensor.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_lookup.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_softmax.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_batched_softmax.cc",

@@ -60,6 +60,8 @@ public:
 
   std::vector<Operation *> getOperationsSequence() { return operations; }
 
+  std::vector<Value> getValuesSequence() { return values; }
+
   DenseMap<Value, ValueInfo> getValuesInfoMap() { return valueInfo; }
 
   void buildInputOutputTensorMaps(llvm::StringMap<Value> &inputTensorMap,

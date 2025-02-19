@@ -1,10 +1,6 @@
-#include "IR/XCoreOps.h"
-#include "Transforms/Options.h"
-
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
-#include "tensorflow/lite/kernels/internal/common.h"
 #include "tensorflow/lite/kernels/padding.h"
 
 namespace mlir::xcore {
@@ -25,11 +21,12 @@ struct OptimizeMaxPool2D
   void runOnOperation() override;
 };
 
-struct ConvertMaxPool2DSamePaddingPattern : public OpRewritePattern<TFL::MaxPool2DOp> {
+struct ConvertMaxPool2DSamePaddingPattern
+    : public OpRewritePattern<TFL::MaxPool2DOp> {
   using OpRewritePattern<TFL::MaxPool2DOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TFL::MaxPool2DOp mPoolOp,
-                               PatternRewriter &rewriter) const override {
+                                PatternRewriter &rewriter) const override {
     // Only handle SAME padding case
     if (mPoolOp.getPadding() != "SAME") {
       return failure();
@@ -38,23 +35,27 @@ struct ConvertMaxPool2DSamePaddingPattern : public OpRewritePattern<TFL::MaxPool
     auto inputType = mPoolOp.getInput().getType().dyn_cast<RankedTensorType>();
     auto inputHeight = inputType.getDimSize(1);
     auto inputWidth = inputType.getDimSize(2);
-    
+
     // Calculate padding values using TFLite's padding calculation
     int outHeight, outWidth;
     auto paddingValues = tflite::ComputePaddingHeightWidth(
         mPoolOp.getStrideH(), mPoolOp.getStrideW(),
-        /*dilation_rate_height=*/1, /*dilation_rate_width=*/1,
-        inputHeight, inputWidth,
-        mPoolOp.getFilterHeight(), mPoolOp.getFilterWidth(),
-        kTfLitePaddingSame,
-        &outHeight, &outWidth);
+        /*dilation_rate_height=*/1, /*dilation_rate_width=*/1, inputHeight,
+        inputWidth, mPoolOp.getFilterHeight(), mPoolOp.getFilterWidth(),
+        kTfLitePaddingSame, &outHeight, &outWidth);
 
     // Create padding values tensor
-    std::vector<int32_t> paddingValuesVec{0, 0,                    // batch
-                                      paddingValues.height, paddingValues.height + paddingValues.height_offset,  // height
-                                      paddingValues.width, paddingValues.width + paddingValues.width_offset,    // width
-                                      0, 0};                     // channels
-    RankedTensorType paddingsType = RankedTensorType::get({4, 2}, rewriter.getI32Type());
+    std::vector<int32_t> paddingValuesVec{
+        0,
+        0, // batch
+        paddingValues.height,
+        paddingValues.height + paddingValues.height_offset, // height
+        paddingValues.width,
+        paddingValues.width + paddingValues.width_offset, // width
+        0,
+        0}; // channels
+    RankedTensorType paddingsType =
+        RankedTensorType::get({4, 2}, rewriter.getI32Type());
     Value paddings = rewriter.create<TFL::ConstOp>(
         mPoolOp.getLoc(),
         DenseIntElementsAttr::get(paddingsType, paddingValuesVec));
@@ -62,26 +63,25 @@ struct ConvertMaxPool2DSamePaddingPattern : public OpRewritePattern<TFL::MaxPool
     // Create padded input type
     auto paddedInputType = RankedTensorType::get(
         {inputType.getDimSize(0),
-         inputType.getDimSize(1) + paddingValues.height * 2 + paddingValues.height_offset,
-         inputType.getDimSize(2) + paddingValues.width * 2 + paddingValues.width_offset,
+         inputType.getDimSize(1) + paddingValues.height * 2 +
+             paddingValues.height_offset,
+         inputType.getDimSize(2) + paddingValues.width * 2 +
+             paddingValues.width_offset,
          inputType.getDimSize(3)},
         inputType.getElementType());
 
     // Create pad op
-    auto padOp = rewriter.create<TFL::PadOp>(
-        mPoolOp.getLoc(), paddedInputType,
-        mPoolOp.getInput(), paddings);
+    auto padOp = rewriter.create<TFL::PadOp>(mPoolOp.getLoc(), paddedInputType,
+                                             mPoolOp.getInput(), paddings);
 
     // Create new maxpool with VALID padding
     auto newMaxPool = rewriter.create<TFL::MaxPool2DOp>(
-        mPoolOp.getLoc(),
-        mPoolOp.getType(),
-        padOp.getOutput(),
-        rewriter.getStringAttr("VALID"),  // padding
-        mPoolOp.getStrideWAttr(),         // stride_w
-        mPoolOp.getStrideHAttr(),         // stride_h
-        mPoolOp.getFilterWidthAttr(),     // filter_width
-        mPoolOp.getFilterHeightAttr(),    // filter_height
+        mPoolOp.getLoc(), mPoolOp.getType(), padOp.getOutput(),
+        rewriter.getStringAttr("VALID"),           // padding
+        mPoolOp.getStrideWAttr(),                  // stride_w
+        mPoolOp.getStrideHAttr(),                  // stride_h
+        mPoolOp.getFilterWidthAttr(),              // filter_width
+        mPoolOp.getFilterHeightAttr(),             // filter_height
         mPoolOp.getFusedActivationFunctionAttr()); // fused_activation_function
 
     rewriter.replaceOp(mPoolOp, newMaxPool.getOutput());

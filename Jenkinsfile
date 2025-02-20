@@ -78,8 +78,8 @@ def dailyDeviceTest = {
 def dailyHostTest = { platform ->
   runPytestHost("float32", "-n 8 --tc 1", "float32_1")
   runPytestHost("16x8", "-n 8 --tc 5", "16x8_5")
-  runPytestHost("complex_models/8x8", "-n 2 --tc 1", "complex_8x8_5")
-  runPytestHost("complex_models/float32", "-n 1 --tc 1", "complex_float32_5")
+  runPytestHost("complex_models/8x8", "-n 2 --tc 5", "complex_8x8_5")
+  runPytestHost("complex_models/float32", "-n 1 --tc 5", "complex_float32_5")
   runPytestHost("8x8", "-n 8 --tc 1", "8x8_1")
   runPytestHost("8x8", "-n 8", "8x8_5")
   if (platform != "windows") {

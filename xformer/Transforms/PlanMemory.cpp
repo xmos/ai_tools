@@ -43,8 +43,7 @@ void PlanMemory::runOnOperation() {
     auto &m = getAnalysis<MemoryPlan>();
     int peakMemoryUsedWithOverlap, peakMemoryUsedWithoutOverlap, peakOpId;
     auto offlineOffsetsWithoutOverlap = m.getAllocatedOffsets(
-          /*overlapModifyingOps=*/false, peakMemoryUsedWithoutOverlap,
-          peakOpId);
+        /*overlapModifyingOps=*/false, peakMemoryUsedWithoutOverlap, peakOpId);
     if (!tryOverlapModifyingOpsOption) {
       module->setAttr("xc.offsets",
                       builder.getI32VectorAttr(offlineOffsetsWithoutOverlap));
@@ -53,7 +52,7 @@ void PlanMemory::runOnOperation() {
                       builder.getI32IntegerAttr(peakMemoryUsedWithoutOverlap));
     } else {
       auto offlineOffsetsWithOverlap = m.getAllocatedOffsets(
-        /*overlapModifyingOps=*/true, peakMemoryUsedWithOverlap, peakOpId);
+          /*overlapModifyingOps=*/true, peakMemoryUsedWithOverlap, peakOpId);
 
       module->setAttr("xc.peakopid", builder.getI32IntegerAttr(peakOpId));
 

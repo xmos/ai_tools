@@ -48,6 +48,8 @@ class XC_Op<string mnemonic, list<Trait> traits = []>
 // Trait
 def XC_MemoryOverlappable : NativeOpTrait<"xcore::MemoryOverlappable">;
 def XC_NonModifying : NativeOpTrait<"xcore::NonModifying">;
+def XC_OnlyOverlappableWithInput
+    : NativeOpTrait<"xcore::OnlyOverlappableWithInput">;
 
 // Conv2D
 
@@ -403,7 +405,8 @@ def XC_FakeDepthwiseConv2DOp : XC_Op<"fake_depthwise_conv2d", [Pure]> {
   let results = (outs TensorOf<[QI8, QI16]>:$output);
 }
 
-def XC_LookupOp : XC_Op<"lookup", [Pure, XC_MemoryOverlappable]> {
+def XC_LookupOp : XC_Op<"lookup", [Pure, XC_MemoryOverlappable,
+                                   XC_OnlyOverlappableWithInput]> {
   let summary = "Lookup table op";
 
   let description = [{Lookup table op.}];

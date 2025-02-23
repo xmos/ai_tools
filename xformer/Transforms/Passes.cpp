@@ -34,7 +34,6 @@ void buildXCoreRemainingPassPipeline(OpPassManager &pm) {
   pm.addPass(createApplyTFLPatternsPass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createOptimizeConv2DPass());
-  pm.addPass(createOptimizeMaxPool2DPass());
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(createApplyTFLPatternsPass());
   pm.addPass(createReplaceStridedSlicePass());

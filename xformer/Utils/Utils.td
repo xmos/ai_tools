@@ -46,6 +46,12 @@ def GetDepthwiseConv2DPaddingValues
           "$0.getDefiningOp<TFL::DepthwiseConv2DOp>())",
           2>;
 
+// Get padding values and output type as two return values
+def GetMaxPool2DPaddingValues
+    : NativeCodeCall<"getMaxPool2DPaddingValues<TFL::MaxPool2DOp>($_builder, "
+                     "$0.getDefiningOp<TFL::MaxPool2DOp>())",
+                     2>;
+
 // PyTorch remnant opt
 // Relu(Minimum(x, 127)) -> Relu(x)
 // We can ignore minimum of (x,127) as it doesn't do anything

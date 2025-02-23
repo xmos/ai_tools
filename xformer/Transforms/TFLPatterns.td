@@ -75,6 +75,14 @@ def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI8]>:$input,
                (returnType $ret__1)),
               $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw, $dm)>;
 
+// TFL_Conv2D() with SAME padding -> TFL_Conv2D(Pad())
+def : Pat<(TFL_MaxPool2DOp:$output TensorOf<[QI8, QI16]>:$input, TFL_PAD_Same,
+              $sw, $sh, $fw, $fh, $faf),
+          (TFL_MaxPool2DOp(TFL_PadOp $input,
+               (GetMaxPool2DPaddingValues:$ret__0 $output),
+               (returnType $ret__1)),
+              TFL_PAD_Valid, $sw, $sh, $fw, $fh, $faf)>;
+
 def : Pat<(TFL_ReluOp(TFL_MinimumOp $lhs, $rhs)),
           (TFL_ReluOp $lhs), [(IsSplatAndEqualTo<127> $rhs)]>;
 
@@ -139,26 +147,6 @@ foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
              (HasOnlyChannelPadding $padding_channel_attr),
   ]>;
 }
-
-def : Pat<(TFL_PadOp:$output(TFL_PadOp $input,
-               (Arith_ConstantOp:$padding_spatial_op $padding_spatial_attr)),
-              (TFL_ConstOp:$padding_channel_op $padding_channel_attr)),
-          (TFL_PadOp(TFL_PadOp $input, $padding_channel_op,
-               (returnType(PadChannelOutputType $input, $output))),
-              $padding_spatial_op),
-          [(HasOnlySpatialPadding $padding_spatial_attr),
-           (HasOnlyChannelPadding $padding_channel_attr),
-]>;
-
-def : Pat<(TFL_PadOp:$output(TFL_PadOp $input,
-               (TFL_ConstOp:$padding_spatial_op $padding_spatial_attr)),
-              (Arith_ConstantOp:$padding_channel_op $padding_channel_attr)),
-          (TFL_PadOp(TFL_PadOp $input, $padding_channel_op,
-               (returnType(PadChannelOutputType $input, $output))),
-              $padding_spatial_op),
-          [(HasOnlySpatialPadding $padding_spatial_attr),
-           (HasOnlyChannelPadding $padding_channel_attr),
-]>;
 
 // Replace LQ_Bconv2DOp of SAME padding with a pad_value of one with
 // LQ_Bconv2DOp(TFL_Pad()) of VALID padding. We cannot do this when the

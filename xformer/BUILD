@@ -216,9 +216,6 @@ cc_library(
         "@llvm-project//mlir:QuantOps",
         "@lib_nn//:nn_lib",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:validators",
-        "@org_tensorflow//tensorflow/lite/kernels:kernel_util",
-        "@org_tensorflow//tensorflow/lite/kernels/internal:common",
-        "@org_tensorflow//tensorflow/lite/kernels:padding",
     ],
 ) 
 

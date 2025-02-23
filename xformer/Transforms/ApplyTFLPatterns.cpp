@@ -32,15 +32,12 @@ template <typename T>
 SmallVector<Value, 2>
 getConvPaddingValues(PatternRewriter &rewriter, T conv2DOp,
                      int64_t dilationHeight, int64_t dilationWidth,
-                     int64_t strideHeight, int64_t strideWidth) {
+                     int64_t strideHeight, int64_t strideWidth,
+                     int64_t filterHeight, int64_t filterWidth) {
   auto inputType =
       conv2DOp.getInput().getType().template dyn_cast<RankedTensorType>();
-  auto filterType =
-      conv2DOp.getFilter().getType().template dyn_cast<RankedTensorType>();
   auto inputHeight = inputType.getDimSize(1);
   auto inputWidth = inputType.getDimSize(2);
-  auto filterHeight = filterType.getDimSize(1);
-  auto filterWidth = filterType.getDimSize(2);
 
   // Find padding values
   int64_t newHeight, newWidth;
@@ -90,18 +87,34 @@ getConvPaddingValues(PatternRewriter &rewriter, T conv2DOp,
 template <typename T>
 SmallVector<Value, 2> getConv2DPaddingValues(PatternRewriter &rewriter,
                                              T conv2DOp) {
-  return getConvPaddingValues<T>(rewriter, conv2DOp,
-                                 conv2DOp.getDilationHFactor(),
-                                 conv2DOp.getDilationWFactor(),
-                                 conv2DOp.getStrideH(), conv2DOp.getStrideW());
+  auto filterType =
+      conv2DOp.getFilter().getType().template dyn_cast<RankedTensorType>();
+  auto filterHeight = filterType.getDimSize(1);
+  auto filterWidth = filterType.getDimSize(2);
+  return getConvPaddingValues<T>(
+      rewriter, conv2DOp, conv2DOp.getDilationHFactor(),
+      conv2DOp.getDilationWFactor(), conv2DOp.getStrideH(),
+      conv2DOp.getStrideW(), filterHeight, filterWidth);
+}
+
+template <typename T>
+SmallVector<Value, 2> getMaxPool2DPaddingValues(PatternRewriter &rewriter,
+                                                T maxpoolOp) {
+  return getConvPaddingValues<T>(
+      rewriter, maxpoolOp, 1, 1, maxpoolOp.getStrideH(), maxpoolOp.getStrideW(),
+      maxpoolOp.getFilterHeight(), maxpoolOp.getFilterWidth());
 }
 
 SmallVector<Value, 2> getBConv2DPaddingValues(PatternRewriter &rewriter,
                                               mlir::lq::Bconv2dOp conv2DOp) {
+  auto filterType =
+      conv2DOp.getFilter().getType().template dyn_cast<RankedTensorType>();
+  auto filterHeight = filterType.getDimSize(1);
+  auto filterWidth = filterType.getDimSize(2);
   return getConvPaddingValues<mlir::lq::Bconv2dOp>(
       rewriter, conv2DOp, conv2DOp.getDilationHeightFactor(),
       conv2DOp.getDilationWidthFactor(), conv2DOp.getStrideHeight(),
-      conv2DOp.getStrideWidth());
+      conv2DOp.getStrideWidth(), filterHeight, filterWidth);
 }
 
 struct HoistQuantizeAboveConcatPattern

@@ -202,7 +202,6 @@ pipeline {
                     }
                     dir("python") {
                       script {
-                        sh "pip install setuptools --upgrade"
                         if (env.job_type == 'official_release') {
                           withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
                             sh "python setup.py bdist_wheel"

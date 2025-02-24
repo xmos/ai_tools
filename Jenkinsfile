@@ -167,9 +167,10 @@ pipeline {
             steps {
               extractDeviceZipAndHeaders()
               script {
+                def customImage = docker.build("tensorflow-image-with-updated-pip:${env.BUILD_ID}")
                 USER_ID = sh(script: 'id -u', returnStdout: true).trim()
                 withEnv(['USER='+USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
-                  docker.image('tensorflow/build:2.15-python3.10').inside() {
+                  customImage.inside() {
                     sh "curl -LO https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.sh"
                     sh "chmod +x cmake-3.28.3-linux-x86_64.sh"
                     sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"

@@ -38,7 +38,7 @@ source <name_of_virtualenv>/bin/activate
 # Install xmos-ai-tools from PyPI
 pip3 install xmos-ai-tools --upgrade
 ```
-Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest development version.
+Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest beta version.
 
 <a name="using-xmos-ai-tools-from-python"></a>
 ## Using xmos-ai-tools from Python

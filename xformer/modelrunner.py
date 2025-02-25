@@ -46,12 +46,13 @@ def get_xformed_model(model, args):
             "--xcore-thread-count=" + args.tc,
             "--xcore-weights-file=" + str(params_path),
             # "--lce-translate-tfl",
+            # "--xcore-optimize-maxpool2d",
             # "--xcore-replace-with-conv2dv2",
             # "--xcore-translate-to-customop"
             # "--xcore-op-split-tensor-arena",
-            # "--xcore-op-split-bottom-op=16,24",
-            # "--xcore-op-split-top-op=6,18",
-            # "--xcore-op-split-num-splits=8,6",
+            # "--xcore-op-split-bottom-op=20",
+            # "--xcore-op-split-top-op=0",
+            # "--xcore-op-split-num-splits=5",
             # "--xcore-conv-err-threshold=3.6",
             # "--xcore-offline-offsets=1",
             # "--xcore-overlap=1"
@@ -153,10 +154,11 @@ def test_inference(args):
 
             for i in range(num_of_inputs):
                 k = []
-                step = int((np.iinfo(input_tensor_type[i]).max * 2) / 85)
+                import math
+                step = math.ceil((np.iinfo(input_tensor_type[i]).max * 2) / 85)
                 n = np.iinfo(input_tensor_type[i]).min
                 for j in range(0, np.prod(input_tensor_shape[i])):
-                    if n >= np.iinfo(input_tensor_type[i]).max:
+                    if n > np.iinfo(input_tensor_type[i]).max:
                         n = np.iinfo(input_tensor_type[i]).min
                     k.append(n)
                     n = n + step
@@ -227,11 +229,11 @@ def test_inference(args):
             print("Comparing output number " + str(i) + "...")
             try:
                 print("xformer output")
-                print(xformer_outputs[i])
+                print(xformer_outputs[i].flatten())
                 print("checksum")
                 print(checksum_calc(xformer_outputs[i].flatten().tobytes()))
-                print("compared output")
-                print(outputs[i])
+                print("host output")
+                print(outputs[i].flatten())
                 print("checksum")
                 print(checksum_calc(outputs[i].flatten().tobytes()))
 

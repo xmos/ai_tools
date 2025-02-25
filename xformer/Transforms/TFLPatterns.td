@@ -75,6 +75,25 @@ def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI8]>:$input,
                (returnType $ret__1)),
               $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw, $dm)>;
 
+def getTypeAttrForSingleInt8WithQParamsOf0
+    : NativeCodeCall<"mlir::TypeAttr::get(dyn_cast<mlir::quant::"
+                     "UniformQuantizedType>($0.getType().cast<"
+                     "ShapedType>().getElementType()).castFromExpressedType("
+                     "RankedTensorType::get({}, rewriter.getF32Type())))">;
+def getPadValueOfMinInt8
+    : NativeCodeCall<"DenseElementsAttr::get<int8_t>(RankedTensorType::get({}, "
+                     "rewriter.getIntegerType(8)), {-128})">;
+
+// TFL_MaxPool2D() with SAME padding -> TFL_MaxPool2D(Pad())
+def : Pat<(TFL_MaxPool2DOp:$output TensorOf<[QI8, QI16]>:$input, TFL_PAD_Same,
+              $sw, $sh, $fw, $fh, $faf),
+          (TFL_MaxPool2DOp(TFL_PadV2Op $input,
+               (GetMaxPool2DPaddingValues:$ret__0 $output),
+               (TFL_QConstOp(getTypeAttrForSingleInt8WithQParamsOf0 $output),
+                               (getPadValueOfMinInt8)),
+               (returnType $ret__1)),
+              TFL_PAD_Valid, $sw, $sh, $fw, $fh, $faf)>;
+
 def : Pat<(TFL_ReluOp(TFL_MinimumOp $lhs, $rhs)),
           (TFL_ReluOp $lhs), [(IsSplatAndEqualTo<127> $rhs)]>;
 
@@ -140,25 +159,33 @@ foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
   ]>;
 }
 
-def : Pat<(TFL_PadOp:$output(TFL_PadOp $input,
-               (Arith_ConstantOp:$padding_spatial_op $padding_spatial_attr)),
-              (TFL_ConstOp:$padding_channel_op $padding_channel_attr)),
-          (TFL_PadOp(TFL_PadOp $input, $padding_channel_op,
-               (returnType(PadChannelOutputType $input, $output))),
-              $padding_spatial_op),
-          [(HasOnlySpatialPadding $padding_spatial_attr),
-           (HasOnlyChannelPadding $padding_channel_attr),
-]>;
+def get4To3Shape
+    : NativeCodeCall<"RankedTensorType::get({$0.getType().cast<ShapedType>()."
+                     "getDimSize(0),"
+                     "$0.getType().cast<ShapedType>().getDimSize(1) * "
+                     "$0.getType().cast<ShapedType>().getDimSize(2),"
+                     "$0.getType().cast<ShapedType>().getDimSize(3)}, "
+                     "$0.getType().cast<ShapedType>().getElementType())">;
 
-def : Pat<(TFL_PadOp:$output(TFL_PadOp $input,
-               (TFL_ConstOp:$padding_spatial_op $padding_spatial_attr)),
-              (Arith_ConstantOp:$padding_channel_op $padding_channel_attr)),
-          (TFL_PadOp(TFL_PadOp $input, $padding_channel_op,
-               (returnType(PadChannelOutputType $input, $output))),
-              $padding_spatial_op),
-          [(HasOnlySpatialPadding $padding_spatial_attr),
-           (HasOnlyChannelPadding $padding_channel_attr),
-]>;
+def get4To3ShapeAttr
+    : NativeCodeCall<
+          "DenseIntElementsAttr::get(RankedTensorType::get({3}, "
+          "rewriter.getI32Type()), "
+          "{static_cast<int32_t>($0.getType().cast<ShapedType>().getDimSize(0))"
+          ", "
+          "static_cast<int32_t>($0.getType().cast<ShapedType>().getDimSize(1) "
+          "* $0.getType().cast<ShapedType>().getDimSize(2)), "
+          "static_cast<int32_t>($0.getType().cast<ShapedType>().getDimSize(3))}"
+          ")">;
+
+// Reshape Softmax of rank 4 to rank 3 with a Reshape to combine batches
+def : Pat<(TFL_SoftmaxOp:$output TensorOf<[QI8]>:$input, $beta),
+          (TFL_ReshapeOp(TFL_SoftmaxOp(TFL_ReshapeOp $input,
+                             (TFL_ConstOp(get4To3ShapeAttr $input)),
+                             (returnType(get4To3Shape $input))),
+               $beta, (returnType(get4To3Shape $output))),
+              (TFL_ConstOp(getShapeAttr $output))),
+          [(HasRank<4> $output)]>;
 
 // Replace LQ_Bconv2DOp of SAME padding with a pad_value of one with
 // LQ_Bconv2DOp(TFL_Pad()) of VALID padding. We cannot do this when the

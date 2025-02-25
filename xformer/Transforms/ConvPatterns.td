@@ -18,12 +18,56 @@ def : Pat<(TFL_Conv2DOp:$output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f,
               $sh, $sw, (returnType $output))),
           [(IsZeroPointNotEqualTo<-128> $output)], [], (addBenefit 20)>;
 
+def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI8]>:$input,
+              TensorOf<[QI8]>:$f, TensorOf<[I32, QI32]>:$b, $dh, $dw,
+              TFL_AF_Relu, $wf, $sh, $sw, $dm),
+          (TFL_ReluOp(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw,
+              TFL_AF_None, $wf, $sh, $sw, $dm, (returnType $output))),
+          [(IsZeroPointNotEqualTo<-128> $output)], [], (addBenefit 20)>;
+
 // Unfuse Relu from Conv for QI16
 def : Pat<(TFL_Conv2DOp:$output TensorOf<[QI16]>:$input, TensorOf<[QI8]>:$f,
               AnyTypeOf<[TensorOf<[I32, QI32]>, NoneType]>:$b, $dh, $dw,
               TFL_AF_Relu, $wf, $sh, $sw),
           (TFL_ReluOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $wf,
               $sh, $sw, (returnType $output))),
+          [], [], (addBenefit 20)>;
+
+def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI16]>:$input,
+              TensorOf<[QI8]>:$f, TensorOf<[I32, QI32]>:$b, $dh, $dw,
+              TFL_AF_Relu, $wf, $sh, $sw, $dm),
+          (TFL_ReluOp(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw,
+              TFL_AF_None, $wf, $sh, $sw, $dm, (returnType $output))),
+          [], [], (addBenefit 20)>;
+
+// Unfuse Relu6 for QI8
+def : Pat<(TFL_Conv2DOp:$output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f,
+              AnyTypeOf<[TensorOf<[I32, QI32]>, NoneType]>:$b, $dh, $dw,
+              TFL_AF_Relu6, $wf, $sh, $sw),
+          (TFL_Relu6Op(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $wf,
+              $sh, $sw, (returnType $output))),
+          [(IsZeroPointNotEqualTo<-128> $output)], [], (addBenefit 20)>;
+
+def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI8]>:$input,
+              TensorOf<[QI8]>:$f, TensorOf<[I32, QI32]>:$b, $dh, $dw,
+              TFL_AF_Relu6, $wf, $sh, $sw, $dm),
+          (TFL_Relu6Op(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw,
+              TFL_AF_None, $wf, $sh, $sw, $dm, (returnType $output))),
+          [(IsZeroPointNotEqualTo<-128> $output)], [], (addBenefit 20)>;
+
+// Unfuse Relu6 for QI16
+def : Pat<(TFL_Conv2DOp:$output TensorOf<[QI16]>:$input, TensorOf<[QI8]>:$f,
+              AnyTypeOf<[TensorOf<[I32, QI32]>, NoneType]>:$b, $dh, $dw,
+              TFL_AF_Relu6, $wf, $sh, $sw),
+          (TFL_Relu6Op(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $wf,
+              $sh, $sw, (returnType $output))),
+          [], [], (addBenefit 20)>;
+
+def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI16]>:$input,
+              TensorOf<[QI8]>:$f, TensorOf<[I32, QI32]>:$b, $dh, $dw,
+              TFL_AF_Relu6, $wf, $sh, $sw, $dm),
+          (TFL_Relu6Op(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw,
+              TFL_AF_None, $wf, $sh, $sw, $dm, (returnType $output))),
           [], [], (addBenefit 20)>;
 
 def CreateNoneValue : NativeCodeCall<"$_builder.create<TFL::NoValueOp>($0."

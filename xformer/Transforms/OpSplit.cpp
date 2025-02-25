@@ -696,17 +696,17 @@ struct RaiseSlicePadPattern : public OpRewritePattern<TFL::SliceOp> {
 
   LogicalResult matchAndRewrite(TFL::SliceOp slice,
                                 PatternRewriter &rewriter) const override {
-    // Only raise slices that have been inserted with op split pass
-    if (!(slice->hasAttr(opSplitLabel)))
-      return failure();
-
-    // If slice does not have a defining op, return failure
-    if (!(slice.getInput().getDefiningOp())) {
+    if (!slice.getInput().getDefiningOp() ||
+        !isa<TFL::PadOp>(slice.getInput().getDefiningOp())) {
       return failure();
     }
 
-    if (!isa<TFL::PadOp>(slice.getInput().getDefiningOp())) {
+    if (failed(isRaisableSlice(rewriter, slice))) {
       return failure();
+    }
+
+    if (succeeded(combineSliceWithExisting(rewriter, slice))) {
+      return success();
     }
 
     auto padOriginal = llvm::cast<TFL::PadOp>(slice.getInput().getDefiningOp());
@@ -718,26 +718,26 @@ struct RaiseSlicePadPattern : public OpRewritePattern<TFL::SliceOp> {
     // Get data from pad needed to raise slice
     auto padOriginalInput =
         padOriginal.getInput().getType().template cast<RankedTensorType>();
-    auto inputHeight = padOriginalInput.getDimSize(1);
     auto inputWidth = padOriginalInput.getDimSize(2);
     auto inputChannels = padOriginalInput.getDimSize(3);
 
     auto padOriginalOutput =
         padOriginal.getOutput().getType().template cast<RankedTensorType>();
     auto outputHeight = padOriginalOutput.getDimSize(1);
-    auto outputWidth = padOriginalOutput.getDimSize(2);
     auto outputChannels = padOriginalOutput.getDimSize(3);
 
-    int64_t padVertical, pad;
     int64_t padTop, padBottom, padLeft, padRight;
 
-    padVertical = outputHeight - inputHeight;
-    pad = outputWidth - inputWidth;
-
-    padTop = padVertical / 2;
-    padBottom = padVertical - padTop;
-    padLeft = pad / 2;
-    padRight = pad - padLeft;
+    DenseIntElementsAttr padAttr;
+    if (!matchPattern(padOriginal.getPadding(), m_Constant(&padAttr))) {
+      return failure();
+    }
+    // Keep padding values the same in the last dimension
+    auto padVal = padAttr.getValues<int32_t>();
+    padTop = padVal[{1, 0}];
+    padBottom = padVal[{1, 1}];
+    padLeft = padVal[{2, 0}];
+    padRight = padVal[{2, 1}];
 
     // Get original slice's output height
     auto sliceOutput = slice.getOutput().getType().cast<RankedTensorType>();
@@ -790,14 +790,6 @@ struct RaiseSlicePadPattern : public OpRewritePattern<TFL::SliceOp> {
     // Adjust shape for padding
     auto paddedHeight = newOutputHeight + padTop + padBottom;
     auto paddedWidth = inputWidth + padLeft + padRight;
-
-    DenseIntElementsAttr padAttr;
-    if (!matchPattern(padOriginal.getPadding(), m_Constant(&padAttr))) {
-      return failure();
-    }
-
-    // Keep padding values the same in the last dimension
-    auto padVal = padAttr.getValues<int32_t>();
 
     std::vector<int32_t> paddingValues{0,
                                        0,

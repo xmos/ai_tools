@@ -242,6 +242,7 @@ bool MemoryPlan::getValsIfValidOverlappableOp(
     } else if ((o->getNumOperands() == 1 && inVal.hasOneUse() &&
                 !valueInfo[inVal].isConstant) ||
                (o->getNumOperands() > 1 &&
+                !o->hasTrait<OpTrait::xcore::OnlyOverlappableWithInput>() &&
                 (inVal.hasOneUse() && !valueInfo[inVal].isConstant ||
                  o->getOperand(1).hasOneUse() &&
                      !valueInfo[o->getOperand(1)].isConstant))) {
@@ -620,7 +621,7 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapModifyingOps,
                             << ", offset = " << i.second
                             << ", first = " << vInfo[i.first].firstUsed
                             << ", last = " << vInfo[i.first].lastUsed << "\n");
-                            // i.first.dump();
+    // i.first.dump();
   }
   LLVM_DEBUG(llvm::dbgs() << "\n\nPEAK USED : " << peakUsed << "\n\n");
   LLVM_DEBUG(llvm::dbgs() << "\n\n");

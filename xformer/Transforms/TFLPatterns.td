@@ -159,6 +159,34 @@ foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
   ]>;
 }
 
+def get4To3Shape
+    : NativeCodeCall<"RankedTensorType::get({$0.getType().cast<ShapedType>()."
+                     "getDimSize(0),"
+                     "$0.getType().cast<ShapedType>().getDimSize(1) * "
+                     "$0.getType().cast<ShapedType>().getDimSize(2),"
+                     "$0.getType().cast<ShapedType>().getDimSize(3)}, "
+                     "$0.getType().cast<ShapedType>().getElementType())">;
+
+def get4To3ShapeAttr
+    : NativeCodeCall<
+          "DenseIntElementsAttr::get(RankedTensorType::get({3}, "
+          "rewriter.getI32Type()), "
+          "{static_cast<int32_t>($0.getType().cast<ShapedType>().getDimSize(0))"
+          ", "
+          "static_cast<int32_t>($0.getType().cast<ShapedType>().getDimSize(1) "
+          "* $0.getType().cast<ShapedType>().getDimSize(2)), "
+          "static_cast<int32_t>($0.getType().cast<ShapedType>().getDimSize(3))}"
+          ")">;
+
+// Reshape Softmax of rank 4 to rank 3 with a Reshape to combine batches
+def : Pat<(TFL_SoftmaxOp:$output TensorOf<[QI8]>:$input, $beta),
+          (TFL_ReshapeOp(TFL_SoftmaxOp(TFL_ReshapeOp $input,
+                             (TFL_ConstOp(get4To3ShapeAttr $input)),
+                             (returnType(get4To3Shape $input))),
+               $beta, (returnType(get4To3Shape $output))),
+              (TFL_ConstOp(getShapeAttr $output))),
+          [(HasRank<4> $output)]>;
+
 // Replace LQ_Bconv2DOp of SAME padding with a pad_value of one with
 // LQ_Bconv2DOp(TFL_Pad()) of VALID padding. We cannot do this when the
 // pad_value is zero as detailed below.

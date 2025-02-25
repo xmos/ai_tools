@@ -75,11 +75,22 @@ def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI8]>:$input,
                (returnType $ret__1)),
               $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw, $dm)>;
 
-// TFL_Conv2D() with SAME padding -> TFL_Conv2D(Pad())
+def getTypeAttrForSingleInt8WithQParamsOf0
+    : NativeCodeCall<"mlir::TypeAttr::get(dyn_cast<mlir::quant::"
+                     "UniformQuantizedType>($0.getType().cast<"
+                     "ShapedType>().getElementType()).castFromExpressedType("
+                     "RankedTensorType::get({}, rewriter.getF32Type())))">;
+def getPadValueOfMinInt8
+    : NativeCodeCall<"DenseElementsAttr::get<int8_t>(RankedTensorType::get({}, "
+                     "rewriter.getIntegerType(8)), {-128})">;
+
+// TFL_MaxPool2D() with SAME padding -> TFL_MaxPool2D(Pad())
 def : Pat<(TFL_MaxPool2DOp:$output TensorOf<[QI8, QI16]>:$input, TFL_PAD_Same,
               $sw, $sh, $fw, $fh, $faf),
-          (TFL_MaxPool2DOp(TFL_PadOp $input,
+          (TFL_MaxPool2DOp(TFL_PadV2Op $input,
                (GetMaxPool2DPaddingValues:$ret__0 $output),
+               (TFL_QConstOp(getTypeAttrForSingleInt8WithQParamsOf0 $output),
+                               (getPadValueOfMinInt8)),
                (returnType $ret__1)),
               TFL_PAD_Valid, $sw, $sh, $fw, $fh, $faf)>;
 

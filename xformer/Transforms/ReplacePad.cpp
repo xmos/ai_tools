@@ -32,14 +32,17 @@ struct ReplacePad
   void runOnOperation() override;
 };
 
-struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
-  using OpRewritePattern<TFL::PadOp>::OpRewritePattern;
+template <typename PadOrPadV2Op>
+struct ReplacePadPattern : public OpRewritePattern<PadOrPadV2Op> {
+  using OpRewritePattern<PadOrPadV2Op>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(TFL::PadOp padOp,
+  LogicalResult matchAndRewrite(PadOrPadV2Op padOp,
                                 PatternRewriter &rewriter) const override {
 
-    auto inputType = padOp.getInput().getType().cast<RankedTensorType>();
-    auto outputType = padOp.getOutput().getType().cast<RankedTensorType>();
+    auto inputType =
+        padOp.getInput().getType().template cast<RankedTensorType>();
+    auto outputType =
+        padOp.getOutput().getType().template cast<RankedTensorType>();
 
     if (!inputType.hasStaticShape()) {
       return failure();
@@ -89,9 +92,23 @@ struct ReplacePadPattern : public OpRewritePattern<TFL::PadOp> {
     inShapeVec[rank - 1] *= dtype_size;
 
     int32_t zero_point = 0;
+
     if (elementType.isa<quant::QuantizedType>()) {
-      auto inputQType = elementType.dyn_cast<quant::UniformQuantizedType>();
-      zero_point = BROADCAST_8_TO_32(inputQType.getZeroPoint());
+      if (auto padV2Op = dyn_cast<TFL::PadV2Op>(padOp.getOperation())) {
+        auto pQConstOp = dyn_cast<TFL::QConstOp>(
+            padV2Op.getConstantValues().getDefiningOp());
+        auto attr = pQConstOp.getValue().template cast<DenseElementsAttr>();
+        if (attr.getNumElements() != 1) {
+          return failure();
+        }
+        auto padVector =
+            std::vector<int8_t>{attr.template getValues<int8_t>().begin(),
+                                attr.template getValues<int8_t>().end()};
+        zero_point = BROADCAST_8_TO_32(padVector[0]);
+      } else {
+        auto inputQType = elementType.dyn_cast<quant::UniformQuantizedType>();
+        zero_point = BROADCAST_8_TO_32(inputQType.getZeroPoint());
+      }
     }
 
     int32_t start, pad_size, size, num_copies, end;
@@ -132,7 +149,8 @@ void ReplacePad::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
   RewritePatternSet patterns(ctx);
-  patterns.insert<ReplacePadPattern>(ctx);
+  patterns.insert<ReplacePadPattern<TFL::PadOp>>(ctx);
+  patterns.insert<ReplacePadPattern<TFL::PadV2Op>>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace

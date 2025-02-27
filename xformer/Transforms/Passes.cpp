@@ -31,6 +31,7 @@ void buildXCoreRemainingPassPipeline(OpPassManager &pm) {
   if (opSplitTensorArenaOption) {
     pm.addPass(createOpSplitPass());
   }
+  pm.addPass(createPagingPass());
   pm.addPass(createApplyTFLPatternsPass());
   pm.addPass(createReplaceAvgPoolWithConv2DPass());
   pm.addPass(createOptimizeConv2DPass());

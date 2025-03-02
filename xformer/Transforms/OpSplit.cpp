@@ -8,7 +8,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
-
+#include "tensorflow/compiler/mlir/tensorflow/utils/cluster_util.h"
 #include "tensorflow/core/framework/kernel_shape_util.h"
 
 namespace mlir::xcore {
@@ -90,12 +90,12 @@ LogicalResult isRaisableSlice(PatternRewriter &rewriter, TFL::SliceOp slice) {
 
 LogicalResult combineSliceWithExisting(PatternRewriter &rewriter,
                                        TFL::SliceOp slice) {
-  auto definingOp = slice.getInput().getDefiningOp();
+  Value inp = slice.getInput();
 
   // All other uses of defining op must be slices
   // We currently only opsplit ops with one result
   SmallVector<TFL::SliceOp> sliceOps;
-  for (const mlir::OpOperand &use : definingOp->getResult(0).getUses()) {
+  for (const mlir::OpOperand &use : inp.getUses()) {
     mlir::Operation *op = use.getOwner();
     if (auto sliceOp = dyn_cast_or_null<TFL::SliceOp>(op)) {
       // We only support slices on height dimension
@@ -103,7 +103,7 @@ LogicalResult combineSliceWithExisting(PatternRewriter &rewriter,
       // output
       auto inType = sliceOp.getInput().getType().cast<ShapedType>();
       auto outType = sliceOp.getOutput().getType().cast<ShapedType>();
-      if (!inType.getRank() == 4 ||
+      if (inType.getRank() != 4 ||
           inType.getDimSize(0) != outType.getDimSize(0) ||
           inType.getDimSize(2) != outType.getDimSize(2) ||
           inType.getDimSize(3) != outType.getDimSize(3)) {
@@ -146,7 +146,14 @@ LogicalResult combineSliceWithExisting(PatternRewriter &rewriter,
 
     if (sliceBegin >= candidateBegin &&
         sliceBegin + sliceSize <= candidateBegin + candidateSize) {
+      // This slice can be attached to some slice in the list
       break;
+    } else if (candidateBegin >= sliceBegin &&
+               candidateBegin + candidateSize <= sliceBegin + sliceSize) {
+      // Another slice in the list can be attached to this slice
+      // We cannot modify that slice at this point
+      // So we return success() to come back here again
+      return success();
     }
   }
 
@@ -169,11 +176,18 @@ LogicalResult combineSliceWithExisting(PatternRewriter &rewriter,
       int32_t newSizeAttr[4] = {
           attr.getValues<int32_t>()[0], attr.getValues<int32_t>()[1],
           attr.getValues<int32_t>()[2], attr.getValues<int32_t>()[3]};
+      // We set the insertion point here, in case the slice to be attached is
+      // earlier in execution order. The new slice will be inserted after
+      rewriter.setInsertionPointAfter(sliceOps[i]);
       auto newSlice = createSliceOp(
           rewriter, sliceOps[i].getLoc(), sliceOps[i], newBeginAttr,
           newSizeAttr, slice.getOutput().getType().getElementType());
       newSlice->removeAttr(opSplitLabel);
       rewriter.replaceOp(slice, newSlice.getOutput());
+      // We have to reorder the new slice uses here, in case the slice to be
+      // attached is earlier in execution order. All the subsequent ops in that
+      // opsplit branch is moved in execution order to be after the new slice
+      TF::ReorderOpResultUses(newSlice);
     }
     return success();
   }
@@ -820,6 +834,20 @@ struct RaiseSlicePadPattern : public OpRewritePattern<TFL::SliceOp> {
   }
 };
 
+struct CombineSlicesPattern : public OpRewritePattern<TFL::SliceOp> {
+  using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::SliceOp slice,
+                                PatternRewriter &rewriter) const override {
+
+    if (succeeded(combineSliceWithExisting(rewriter, slice))) {
+      return success();
+    }
+
+    return failure();
+  }
+};
+
 void OpSplit::runOnOperation() {
   auto *ctx = &getContext();
   func::FuncOp func = getOperation();
@@ -899,6 +927,13 @@ void OpSplit::runOnOperation() {
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2), config);
 
+  // Combine slices after op splitting
+  // At the top ops, it's possible that they are slices left to be combined as
+  // those slices have not been raised further.
+  // Combine them here.
+  RewritePatternSet patterns3(ctx);
+  patterns3.insert<CombineSlicesPattern>(ctx);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns3));
 } // void OpSplit::runOnOperation() {
 } // namespace
 

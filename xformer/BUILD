@@ -216,6 +216,7 @@ cc_library(
         "@llvm-project//mlir:QuantOps",
         "@lib_nn//:nn_lib",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:validators",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:cluster_util",
     ],
 ) 
 

@@ -214,6 +214,13 @@ std::vector<uint8_t> Pad3To4Op::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> Pad1To4Op::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("pv", (int32_t)getPadValue()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
@@ -324,6 +331,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<MeanOp>>(ctx);
   patterns.insert<RewriteToCustomOp<MeanI16Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Pad3To4Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<Pad1To4Op>>(ctx);
   patterns.insert<RewriteToCustomOp<SliceOp>>(ctx);
   patterns.insert<RewriteToCustomOp<BroadcastOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);

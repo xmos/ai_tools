@@ -428,6 +428,16 @@ def XC_Pad3To4Op : XC_Op<"pad_3_to_4", [Pure, XC_MemoryOverlappable]> {
   let results = (outs TensorOf<[QI8]>:$output);
 }
 
+def XC_Pad1To4Op : XC_Op<"pad_1_to_4", [Pure, XC_MemoryOverlappable]> {
+  let summary = "Pad 1 to 4 op";
+
+  let description = [{Pad 1 to 4 op.}];
+
+  let arguments = (ins TensorOf<[QI8]>:$input, I32Attr:$pad_value);
+
+  let results = (outs TensorOf<[QI8]>:$output);
+}
+
 def XC_Expand8To16Op : XC_Op<"expand_8_to_16", [Pure]> {
   let summary = "Expand weights from 8 bit to 16 bits op";
 

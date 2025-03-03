@@ -143,16 +143,24 @@ def : Pat<(TFL_MulOp:$output TensorOf<[QI16]>:$input1, TensorOf<[QI16]>:$input2,
 // Pad patterns
 def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
 
-def Has3To4Channel
-    : Constraint<CPred<"$0.getType().cast<ShapedType>().getDimSize(3) == 3 && "
-                       "$1.getType().cast<ShapedType>().getDimSize(3) == 4">>;
+class HasNTo4Channel<int n>
+    : Constraint<
+          CPred<"$0.getType().cast<ShapedType>().getDimSize(3) == "#n#" && "
+                "$1.getType().cast<ShapedType>().getDimSize(3) == 4">>;
 
 foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
   def : Pat<(TFL_PadOp:$output TensorOf<[QI8]>:$input,
                 (constOp:$padding_op $padding_attr)),
             (XC_Pad3To4Op $input, (getPadValue $input)),
             [(HasOnlyChannelPadding $padding_attr),
-             (Has3To4Channel $input, $output),
+             (HasNTo4Channel<3> $input, $output),
+  ]>;
+
+  def : Pat<(TFL_PadOp:$output TensorOf<[QI8]>:$input,
+                (constOp:$padding_op $padding_attr)),
+            (XC_Pad1To4Op $input, (getPadValue $input)),
+            [(HasOnlyChannelPadding $padding_attr),
+             (HasNTo4Channel<1> $input, $output),
   ]>;
 }
 

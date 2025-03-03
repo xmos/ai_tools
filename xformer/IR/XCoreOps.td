@@ -47,8 +47,6 @@ class XC_Op<string mnemonic, list<Trait> traits = []>
 
 // Trait
 def XC_MemoryOverlappable : NativeOpTrait<"xcore::MemoryOverlappable">;
-def XC_OnlyOverlappableWithInput
-    : NativeOpTrait<"xcore::OnlyOverlappableWithInput">;
 def XC_NonModifying : NativeOpTrait<"xcore::NonModifying">;
 def XC_OnlyOverlappableWithInput
     : NativeOpTrait<"xcore::OnlyOverlappableWithInput">;

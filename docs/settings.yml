@@ -7,8 +7,8 @@ version: 1.0.0
 documentation:
   exclude_patterns_path: exclude-patterns.inc
   root_doc: rst/index.rst
+  latex_toc_depth: 1
   cognidox_part_number: XM-015210-UG
-  latex_secdepth: 3
   pdfs:
     rst/index.rst:
       pdf_title: '{{title}}'

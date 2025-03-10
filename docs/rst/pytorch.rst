@@ -1,7 +1,9 @@
 Converting models from Pytorch
 ==============================
 
-Notebook examples for converting MobilenetV2 from PyTorch to Tensorflow Lite 
+There are `python notebook examples
+<https://github.com/xmos/ai_tools/tree/develop/docs/notebooks/pytorch_to_tflite/mobilenet>`_ for
+converting MobilenetV2 from PyTorch to Tensorflow Lite.
 
 .. toctree::
 

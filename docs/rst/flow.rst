@@ -1,3 +1,5 @@
+.. _work_flow:
+
 Work Flow
 =========
 

@@ -22,67 +22,71 @@ MByte/s.
 For each application program
 ----------------------------
 
-* Create a directory ``my_models/app_model_flash_single_core`` inside the working directory
-
-* Copy your ``source_model.tflite`` file to this directory
-
-* Run the graph-transformer::
-
-    xcore-opt source_model.tflite -o model.tflite --xcore-flash-image-file model.params
-
-  This creates four files
+#. Create a directory ``my_models/app_model_flash_single_core`` inside the working directory
+ 
+#. Copy your ``source_model.tflite`` file to this directory
+ 
+#. Run the graph-transformer::
+ 
+     xcore-opt source_model.tflite -o model.tflite --xcore-flash-image-file model.params
+ 
+   This creates four files:
+   
    * ``model.tflite`` - optimized tflite model file
+ 
    * ``model.tflite.cpp`` - optimized C++ model file
+ 
    * ``model.tflite.h`` - C++ header file which provides API
+ 
    * ``model.params`` - A file containing all parameters for this model
-
-  The parameter file has to be made into a flash image (a file that can be
-  written to flash), for this use the ``generate_flash()`` function via the
-  Python interface.
-
-  .. code-block:: Python
-
-    from xmos_ai_tools import xformer as xf
-    xf.generate_flash(
-        output_file="xcore_flash_binary.out",
-        model_files=["model.tflite"],
-        param_files=["model.params"]
-    )
-
-  The flash image .out file can be flashed on XCORE.AI using ``xflash``::
-
-    xflash --data xcore_flash_binary.out --target XCORE-AI-EXPLORER
-
-  Replace the target with the board that yyou use.
-
-* Next create a src directory with the following main.xc file inside it:
-
-  .. literalinclude:: ../../examples/app_flash_single_model/src/main.xc
-
-* Move the output files ``model.tflite.cpp`` and ``model.tflite.h`` into
-  the src directory.
-
-* Create a Makefile with the following lines:
-
-  .. literalinclude:: ../../examples/app_flash_single_model/Makefile
-
-* Create a file ``config.xscope`` with the following lines:
-
-  .. literalinclude:: ../../examples/app_flash_single_model/src/config.xscope
-
-* Source the tools according to your platform (Windows: double click the
-  tools icon; Mac: ``source /Applications/XMOS_XTC_<PATH>/Setenv`` Linux:
-  ``pushd <PATH-TO-TOOLS>; source SetEnv; popd``)
-
-* Run::
-
-    ``xmake``
-
-* Plug an explorer board into your computer and run::
-
-    ``xrun --xscope bin/app.xe``
-
-* This should run the network
+ 
+   The parameter file has to be made into a flash image (a file that can be
+   written to flash), for this use the ``generate_flash()`` function via the
+   Python interface.
+ 
+   .. code-block:: Python
+ 
+     from xmos_ai_tools import xformer as xf
+     xf.generate_flash(
+         output_file="xcore_flash_binary.out",
+         model_files=["model.tflite"],
+         param_files=["model.params"]
+     )
+ 
+   The flash image .out file can be flashed on XCORE.AI using ``xflash``::
+ 
+     xflash --data xcore_flash_binary.out --target XCORE-AI-EXPLORER
+ 
+   Replace the target with the board that yyou use.
+ 
+#. Next create a src directory with the following main.xc file inside it:
+ 
+   .. literalinclude:: ../../examples/app_flash_single_model/src/main.xc
+ 
+#. Move the output files ``model.tflite.cpp`` and ``model.tflite.h`` into
+   the src directory.
+ 
+#. Create a Makefile with the following lines:
+ 
+   .. literalinclude:: ../../examples/app_flash_single_model/Makefile
+ 
+#. Create a file ``config.xscope`` with the following lines:
+ 
+   .. literalinclude:: ../../examples/app_flash_single_model/src/config.xscope
+ 
+#. Source the tools according to your platform (Windows: double click the
+   tools icon; Mac: ``source /Applications/XMOS_XTC_<PATH>/Setenv`` Linux:
+   ``pushd <PATH-TO-TOOLS>; source SetEnv; popd``)
+ 
+#. Run::
+ 
+     ``xmake``
+ 
+#. Plug an explorer board into your computer and run::
+ 
+     ``xrun --xscope bin/app.xe``
+ 
+#. This should run the network
 
 Programs with more than one model
 ---------------------------------

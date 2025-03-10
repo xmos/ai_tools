@@ -14,12 +14,31 @@ include "Utils/Utils.td"
 def : Pat<(quantfork_StatisticsOp $input, $a, $b, $c),
           (replaceWithValue $input)>;
 
+// Fold Reshape with constant ops
+def getReshapedQuantAttr
+    : NativeCodeCall<
+          "$0.cast<DenseElementsAttr>().reshape(quant::QuantizedType::"
+          "castToStorageType($1.getType()).cast<ShapedType>())">;
+
+def getReshapedAttr
+    : NativeCodeCall<"$0.cast<DenseElementsAttr>().reshape($1.getType().cast<"
+                     "ShapedType>())">;
+
+foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
+  def : Pat<(TFL_ReshapeOp:$output(constOp:$input_op $input_attr), $shape),
+            (constOp(getReshapedAttr $input_attr, $output))>;
+}
+
+def : Pat<(TFL_ReshapeOp:$output(TFL_QConstOp:$op $qtype, $attr), $shape),
+          (TFL_QConstOp(getTypeAttrOf1WithQParamsOf0 $op, $output),
+              (getReshapedQuantAttr $attr, $output))>;
+
 // Convert Quantize(Reshape()) -> Reshape(Quantize())
 // This is to merge Quantize with Conv2D if possible
 def : Pat<(TFL_QuantizeOp(TFL_ReshapeOp $input, $shape), $qtype),
-          (TFL_ReshapeOp(TFL_QuantizeOp $input,
-                         (UpdateShapeWithAxis<-1> $qtype, $input)),
-           $shape),
+          (TFL_ReshapeOp
+              (TFL_QuantizeOp $input, (UpdateShapeWithAxis<-1> $qtype, $input)),
+              $shape),
           [(IsQuantizedType<8> $input), (IsQuantizedType<16> $input)]>;
 
 // Fuse Quantize(Quantize()) -> Quantize()
@@ -27,54 +46,73 @@ def : Pat<(TFL_QuantizeOp(TFL_QuantizeOp $input, $qtype1), $qtype2),
           (TFL_QuantizeOp $input, $qtype2)>;
 
 // Fuse Quantize(Conv2D()) -> Conv2D()
-def : Pat<(TFL_QuantizeOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh,
-                          $sw),
-           $qtype),
+def : Pat<(TFL_QuantizeOp
+              (TFL_Conv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw),
+              $qtype),
           (TFL_Conv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw)>;
 
 def : Pat<(TFL_QuantizeOp(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf,
-                          $p, $sh, $sw, $dm),
-           $qtype),
+               $p, $sh, $sw, $dm),
+              $qtype),
           (TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $p, $sh, $sw,
-           $dm)>;
+              $dm)>;
 
 // TFL_Conv2D() with SAME padding -> TFL_Conv2D(Pad())
-def : Pat<(TFL_Conv2DOp: $output TensorOf<[QI8, QI16]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, TFL_PAD_Same, $sh, $sw),
-          (TFL_Conv2DOp (TFL_PadOp $input,
-                        (GetConv2DPaddingValues
-                         : $ret__0 $output),
-                        (returnType $ret__1)), $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw)>;
+def : Pat<(TFL_Conv2DOp:$output TensorOf<[QI8, QI16]>:$input,
+              TensorOf<[QI8]>:$f,
+              AnyTypeOf<[TensorOf<[I32, QI32]>, NoneType]>:$b, $dh, $dw, $faf,
+              TFL_PAD_Same, $sh, $sw),
+          (TFL_Conv2DOp(TFL_PadOp $input,
+               (GetConv2DPaddingValues:$ret__0 $output), (returnType $ret__1)),
+              $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw)>;
 
 // TFL_DepthwiseConv2D() with SAME padding-> TFL_DepthwiseConv2D(Pad())
-def : Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, TensorOf<[I32,QI32]>:$b, $dh, $dw, $faf, TFL_PAD_Same, $sh, $sw, $dm),
-          (TFL_DepthwiseConv2DOp (TFL_PadOp $input,
-                        (GetDepthwiseConv2DPaddingValues
-                         : $ret__0 $output),
-                        (returnType $ret__1)), $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw, $dm)>;
+def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI8]>:$input,
+              TensorOf<[QI8]>:$f, TensorOf<[I32, QI32]>:$b, $dh, $dw, $faf,
+              TFL_PAD_Same, $sh, $sw, $dm),
+          (TFL_DepthwiseConv2DOp(TFL_PadOp $input,
+               (GetDepthwiseConv2DPaddingValues:$ret__0 $output),
+               (returnType $ret__1)),
+              $f, $b, $dh, $dw, $faf, TFL_PAD_Valid, $sh, $sw, $dm)>;
 
-def : Pat<(TFL_ReluOp(TFL_MinimumOp $lhs, $rhs)), (TFL_ReluOp $lhs),
-          [(IsSplatAndEqualTo<127> $rhs)]>;
+def getTypeAttrForSingleInt8WithQParamsOf0
+    : NativeCodeCall<"mlir::TypeAttr::get(dyn_cast<mlir::quant::"
+                     "UniformQuantizedType>($0.getType().cast<"
+                     "ShapedType>().getElementType()).castFromExpressedType("
+                     "RankedTensorType::get({}, rewriter.getF32Type())))">;
+def getPadValueOfMinInt8
+    : NativeCodeCall<"DenseElementsAttr::get<int8_t>(RankedTensorType::get({}, "
+                     "rewriter.getIntegerType(8)), {-128})">;
+
+// TFL_MaxPool2D() with SAME padding -> TFL_MaxPool2D(Pad())
+def : Pat<(TFL_MaxPool2DOp:$output TensorOf<[QI8, QI16]>:$input, TFL_PAD_Same,
+              $sw, $sh, $fw, $fh, $faf),
+          (TFL_MaxPool2DOp(TFL_PadV2Op $input,
+               (GetMaxPool2DPaddingValues:$ret__0 $output),
+               (TFL_QConstOp(getTypeAttrForSingleInt8WithQParamsOf0 $output),
+                               (getPadValueOfMinInt8)),
+               (returnType $ret__1)),
+              TFL_PAD_Valid, $sw, $sh, $fw, $fh, $faf)>;
+
+def : Pat<(TFL_ReluOp(TFL_MinimumOp $lhs, $rhs)),
+          (TFL_ReluOp $lhs), [(IsSplatAndEqualTo<127> $rhs)]>;
 
 // Merge Relu with Conv
-def : Pat<(TFL_ReluOp
-           : $output(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $p,
-                     $sh, $sw)),
+def : Pat<(TFL_ReluOp:$output(TFL_Conv2DOp $input, $f, $b, $dh, $dw,
+              TFL_AF_None, $p, $sh, $sw)),
           (TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_Relu, $p, $sh, $sw)>;
 
 // Unfuse activation functions from binary ops
 // TFL Add, Sub, Mul
 foreach binaryOp = [TFL_AddOp, TFL_SubOp, TFL_MulOp] in {
-  foreach activation = [
-    [TFL_AF_Relu, TFL_ReluOp],
-    [TFL_AF_Relu1, TFL_Relu1Op],
-    [TFL_AF_Relu6, TFL_Relu6Op],
-    [TFL_AF_Tanh, TFL_TanhOp],
-    [TFL_AF_Sign, TFL_SignOp],
+  foreach activation = [[TFL_AF_Relu, TFL_ReluOp], [TFL_AF_Relu1, TFL_Relu1Op],
+                        [TFL_AF_Relu6, TFL_Relu6Op], [TFL_AF_Tanh, TFL_TanhOp],
+                        [TFL_AF_Sign, TFL_SignOp],
   ] in {
-  def:
-    Pat<(binaryOp
-            : $output TensorOf<[QI8, QI16]>:$input1, TensorOf<[QI8, QI16]>:$input2,
-            activation[0]), (activation[1] (binaryOp $input1, $input2, TFL_AF_None, (returnType $output)))>;
+    def : Pat<(binaryOp:$output TensorOf<[QI8, QI16]>:$input1,
+                  TensorOf<[QI8, QI16]>:$input2, activation[0]),
+              (activation[1](binaryOp $input1, $input2, TFL_AF_None,
+                  (returnType $output)))>;
   }
 }
 
@@ -90,67 +128,64 @@ def getShapeAttr
 // Add TFL_BroadcastToOp if necessary
 // TFL Add, Sub, Mul
 foreach binaryOp = [TFL_AddOp, TFL_SubOp, TFL_MulOp] in {
-def:
-  Pat<(binaryOp
-            : $output TensorOf<[QI8, QI16]>:$input1, TensorOf<[QI8,
-            QI16]>:$input2, $activation), (binaryOp (TFL_BroadcastToOp
-            $input1, (TFL_ConstOp(getShapeAttr $output)),(returnType (getTypeOf1WithQParamsOf0 $input1, $output))), $input2, $activation),
+  def : Pat<(binaryOp:$output TensorOf<[QI8, QI16]>:$input1,
+                TensorOf<[QI8, QI16]>:$input2, $activation),
+            (binaryOp(TFL_BroadcastToOp $input1,
+                 (TFL_ConstOp(getShapeAttr $output)),
+                 (returnType(getTypeOf1WithQParamsOf0 $input1, $output))),
+                $input2, $activation),
             [(HasUnequalShape $input1, $output)]>;
 
-def:
-  Pat<(binaryOp
-            : $output TensorOf<[QI8, QI16]>:$input1, TensorOf<[QI8,
-            QI16]>:$input2, $activation), (binaryOp $input1, (TFL_BroadcastToOp
-            $input2, (TFL_ConstOp(getShapeAttr $output)),(returnType (getTypeOf1WithQParamsOf0 $input2, $output))), $activation),
+  def : Pat<(binaryOp:$output TensorOf<[QI8, QI16]>:$input1,
+                TensorOf<[QI8, QI16]>:$input2, $activation),
+            (binaryOp $input1,
+                (TFL_BroadcastToOp $input2, (TFL_ConstOp(getShapeAttr $output)),
+                    (returnType(getTypeOf1WithQParamsOf0 $input2, $output))),
+                $activation),
             [(HasUnequalShape $input2, $output)]>;
 }
 
 // PadChannel(PadSpatial) to PadSpatial(PadChannel)
 // Match cases where arith constant op and tfl constant op are both used
 foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
-def:
-  Pat<(TFL_PadOp
-       : $output(TFL_PadOp $input,
-                 (constOp
-                  : $padding_spatial_op $padding_spatial_attr)),
-         (constOp
-          : $padding_channel_op $padding_channel_attr)),
-      (TFL_PadOp(TFL_PadOp $input, $padding_channel_op,
+  def : Pat<(TFL_PadOp:$output(TFL_PadOp $input,
+                 (constOp:$padding_spatial_op $padding_spatial_attr)),
+                (constOp:$padding_channel_op $padding_channel_attr)),
+            (TFL_PadOp(TFL_PadOp $input, $padding_channel_op,
                  (returnType(PadChannelOutputType $input, $output))),
-       $padding_spatial_op),
-      [
-        (HasOnlySpatialPadding $padding_spatial_attr),
-        (HasOnlyChannelPadding $padding_channel_attr),
-      ]>;
+                $padding_spatial_op),
+            [(HasOnlySpatialPadding $padding_spatial_attr),
+             (HasOnlyChannelPadding $padding_channel_attr),
+  ]>;
 }
 
-def : Pat<(TFL_PadOp
-           : $output(TFL_PadOp $input,
-                     (Arith_ConstantOp
-                      : $padding_spatial_op $padding_spatial_attr)),
-             (TFL_ConstOp
-              : $padding_channel_op $padding_channel_attr)),
-          (TFL_PadOp(TFL_PadOp $input, $padding_channel_op,
-                     (returnType(PadChannelOutputType $input, $output))),
-           $padding_spatial_op),
-          [
-            (HasOnlySpatialPadding $padding_spatial_attr),
-            (HasOnlyChannelPadding $padding_channel_attr),
-          ]>;
+def get4To3Shape
+    : NativeCodeCall<"RankedTensorType::get({$0.getType().cast<ShapedType>()."
+                     "getDimSize(0),"
+                     "$0.getType().cast<ShapedType>().getDimSize(1) * "
+                     "$0.getType().cast<ShapedType>().getDimSize(2),"
+                     "$0.getType().cast<ShapedType>().getDimSize(3)}, "
+                     "$0.getType().cast<ShapedType>().getElementType())">;
 
-def : Pat<(TFL_PadOp
-           : $output(TFL_PadOp $input,
-                     (TFL_ConstOp
-                      : $padding_spatial_op $padding_spatial_attr)),
-             (Arith_ConstantOp
-              : $padding_channel_op $padding_channel_attr)),
-          (TFL_PadOp(TFL_PadOp $input, $padding_channel_op,
-                     (returnType(PadChannelOutputType $input, $output))),
-           $padding_spatial_op),
-          [
-            (HasOnlySpatialPadding $padding_spatial_attr),
-            (HasOnlyChannelPadding $padding_channel_attr),
-          ]>;
+def get4To3ShapeAttr
+    : NativeCodeCall<
+          "DenseIntElementsAttr::get(RankedTensorType::get({3}, "
+          "rewriter.getI32Type()), "
+          "{static_cast<int32_t>($0.getType().cast<ShapedType>().getDimSize(0))"
+          ", "
+          "static_cast<int32_t>($0.getType().cast<ShapedType>().getDimSize(1) "
+          "* $0.getType().cast<ShapedType>().getDimSize(2)), "
+          "static_cast<int32_t>($0.getType().cast<ShapedType>().getDimSize(3))}"
+          ")">;
+
+// Reshape Softmax of rank 4 to rank 3 with a Reshape to combine batches
+def : Pat<(TFL_SoftmaxOp:$output TensorOf<[QI8]>:$input, $beta),
+          (TFL_ReshapeOp(TFL_SoftmaxOp(TFL_ReshapeOp $input,
+                             (TFL_ConstOp(get4To3ShapeAttr $input)),
+                             (returnType(get4To3Shape $input))),
+               $beta, (returnType(get4To3Shape $output))),
+              (TFL_ConstOp(getShapeAttr $output))),
+          [(HasRank<4> $output)]>;
 
 // Replace LQ_Bconv2DOp of SAME padding with a pad_value of one with
 // LQ_Bconv2DOp(TFL_Pad()) of VALID padding. We cannot do this when the
@@ -162,12 +197,9 @@ def : Pat<(TFL_PadOp
 // compute 'same one' padding by default. A correction is needed if we want
 // 'same zero' padding instead -- we have to add or subtract a value to elements
 // at the edge of the output tensor."
-def : Pat<(LQ_Bconv2dOp
-           : $output $input, $f, $m, $b, $t, $cin, $dh, $dw, $faf,
-             ConstantAttr<I32Attr, "1">, TFL_PAD_Same, $sh, $sw),
+def : Pat<(LQ_Bconv2dOp:$output $input, $f, $m, $b, $t, $cin, $dh, $dw, $faf,
+              ConstantAttr<I32Attr, "1">, TFL_PAD_Same, $sh, $sw),
           (LQ_Bconv2dOp(TFL_PadOp $input,
-                        (GetBConv2DPaddingValues
-                         : $ret__0 $output),
-                        (returnType $ret__1)),
-           $f, $m, $b, $t, $cin, $dh, $dw, $faf, ConstantAttr<I32Attr, "0">,
-           TFL_PAD_Valid, $sh, $sw)>;
+               (GetBConv2DPaddingValues:$ret__0 $output), (returnType $ret__1)),
+              $f, $m, $b, $t, $cin, $dh, $dw, $faf, ConstantAttr<I32Attr, "0">,
+              TFL_PAD_Valid, $sh, $sw)>;

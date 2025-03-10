@@ -35,16 +35,16 @@ def optimize_mobilenetv2():
     xformer.convert(
         TFLITE_MODEL_PATH,
         OPT_MODEL_PATH,
-        {
-            "xcore-weights-file": OPT_PARAMS_PATH,
-            "xcore-thread-count": "5",
-            "xcore-naming-prefix": NAMING_PREFIX,
-            "xcore-op-split-tensor-arena": "True",
-            "xcore-op-split-top-op": "0",
-            "xcore-op-split-bottom-op": "10",
-            "xcore-op-split-num-splits": "7",
-            "xcore-conv-err-threshold": "3",
-        },
+        [
+            ("xcore-weights-file", OPT_PARAMS_PATH),
+            ("xcore-thread-count", "5"),
+            ("xcore-naming-prefix", NAMING_PREFIX),
+            ("xcore-op-split-tensor-arena", "True"),
+            ("xcore-op-split-top-op", "0"),
+            ("xcore-op-split-bottom-op", "10"),
+            ("xcore-op-split-num-splits", "7"),
+            ("xcore-conv-err-threshold", "3"),
+        ],
     )
 
     # Generate flash binary

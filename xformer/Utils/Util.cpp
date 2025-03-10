@@ -138,25 +138,13 @@ int mergeAxes(std::vector<int32_t> &begin, std::vector<int32_t> &size,
   return rank;
 }
 
-// Converts int64_t vector to int32_t vector, returns failure if any value is
-// out of int32_t range.
-LogicalResult convertToI32Array(const SmallVectorImpl<int64_t> &input,
-                                SmallVectorImpl<int32_t> &output) {
-  for (auto val : input) {
-    if (val > std::numeric_limits<int32_t>::max() ||
-        val < std::numeric_limits<int32_t>::min())
-      return failure();
-    output.push_back(static_cast<int32_t>(val));
-  }
-  return success();
-}
-
 // Creates a constant op for a shape vector.
 Value createShapeConstOp(PatternRewriter &rewriter, Location loc,
-                         const SmallVectorImpl<int64_t> &shapeVec) {
+                         const SmallVector<int64_t, 4> &shapeVec) {
   SmallVector<int32_t, 4> shapeVecI32;
-  if (failed(convertToI32Array(shapeVec, shapeVecI32)))
-    return nullptr;
+  for (auto val : shapeVec) {
+    shapeVecI32.push_back(static_cast<int32_t>(val));
+  }
   auto shapeType = RankedTensorType::get(
       {static_cast<int64_t>(shapeVecI32.size())}, rewriter.getI32Type());
   auto shapeAttr = DenseIntElementsAttr::get(shapeType, shapeVecI32);
@@ -166,9 +154,9 @@ Value createShapeConstOp(PatternRewriter &rewriter, Location loc,
 // Helper function for reshape-transpose-reshape pattern.
 LogicalResult
 reshapeTransposeReshape(PatternRewriter &rewriter, Value tensor,
-                        const SmallVectorImpl<int64_t> &reshapeShape,
-                        const SmallVectorImpl<int64_t> &permVec,
-                        const SmallVectorImpl<int64_t> &origShape,
+                        const SmallVector<int64_t, 4> &reshapeShape,
+                        const SmallVector<int64_t, 4> &permVec,
+                        const SmallVector<int64_t, 4> &origShape,
                         Value &result) {
   auto loc = tensor.getLoc();
   auto tensorType = tensor.getType().cast<RankedTensorType>();
@@ -184,8 +172,9 @@ reshapeTransposeReshape(PatternRewriter &rewriter, Value tensor,
 
   // Convert permVecExclBatch to int32_t vector.
   SmallVector<int32_t, 4> permVecI32;
-  if (failed(convertToI32Array(permVec, permVecI32)))
-    return failure();
+  for (auto val : permVec) {
+    permVecI32.push_back(static_cast<int32_t>(val));
+  }
 
   // Create perm op.
   auto permType = RankedTensorType::get(

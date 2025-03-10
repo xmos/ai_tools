@@ -1,0 +1,6 @@
+manifest.txt
+model_weights.c
+model_weights.h
+model.tflite.cpp
+model.tflite.h
+model.tflite

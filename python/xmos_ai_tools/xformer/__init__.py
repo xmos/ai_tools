@@ -1,7 +1,7 @@
 import subprocess
 import typing
 from pathlib import Path
-from typing import Union, List, Optional
+from typing import Union, List, Optional, Tuple
 from .flash import generate_flash
 import re
 
@@ -13,12 +13,12 @@ __arena_size = 0
 def convert(
     filename: Union[str, Path],
     outfile: Union[str, Path],
-    params: Optional[typing.Dict[str, Optional[str]]],
+    params: Optional[List[Tuple[str, Optional[str]]]],
 ) -> int:
     args: List[str] = ["xcore-opt", "-o", str(outfile)]
 
     if params is not None:
-        for key, val in params.items():
+        for key, val in params:
             if len(key) > 1:
                 flag: str = "--" + str(key)
             else:

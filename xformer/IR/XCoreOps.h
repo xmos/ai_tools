@@ -23,6 +23,13 @@ template <typename ConcreteType>
 class MemoryOverlappable : public TraitBase<ConcreteType, MemoryOverlappable> {
 };
 
+template <typename ConcreteType>
+class NonModifying : public TraitBase<ConcreteType, NonModifying> {};
+
+template <typename ConcreteType>
+class OnlyOverlappableWithInput
+    : public TraitBase<ConcreteType, OnlyOverlappableWithInput> {};
+
 } // namespace xcore
 } // namespace OpTrait
 } // namespace mlir

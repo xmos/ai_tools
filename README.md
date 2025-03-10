@@ -38,7 +38,7 @@ source <name_of_virtualenv>/bin/activate
 # Install xmos-ai-tools from PyPI
 pip3 install xmos-ai-tools --upgrade
 ```
-Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest development version.
+Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest beta version.
 
 <a name="using-xmos-ai-tools-from-python"></a>
 ## Using xmos-ai-tools from Python
@@ -76,16 +76,16 @@ For example:
 ```python
 from xmos_ai_tools import xformer as xf
 
-xf.convert("example_int8_model.tflite", "xcore_optimised_int8_model.tflite", {
-    "xcore-thread-count": "5",
-})
+xf.convert("example_int8_model.tflite", "xcore_optimised_int8_model.tflite", [
+    ("xcore-thread-count": "5"),
+])
 ```
 
 To create a parameters file and a tflite model suitable for loading to flash, use the "xcore-weights-file" option.
 ```python
-xf.convert("example_int8_model.tflite", "xcore_optimised_int8_flash_model.tflite", {
-    "xcore-weights-file ": "./xcore_params.params",
-})
+xf.convert("example_int8_model.tflite", "xcore_optimised_int8_flash_model.tflite", [
+    ("xcore-weights-file ": "./xcore_params.params"),
+])
 ```
 
 Some of the commonly used configuration options are described [here](docs/rst/options.rst)

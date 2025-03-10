@@ -15,6 +15,7 @@ extern llvm::cl::opt<unsigned> threadCountOption;
 extern llvm::cl::opt<std::string> weightsFilenameOption;
 extern llvm::cl::opt<unsigned> loadExternallyIfLargerOption;
 extern llvm::cl::opt<bool> weightsAsArrayOption;
+extern llvm::cl::opt<bool> asyncLoadWeightsOption;
 extern llvm::cl::opt<bool> weightsInExternalMemory;
 extern llvm::cl::opt<unsigned> maxLoadExternalSizeOption;
 extern llvm::cl::opt<double> convQuantErrorThresholdOption;
@@ -29,8 +30,10 @@ extern llvm::cl::opt<bool> allowInputModificationOption;
 extern llvm::cl::opt<bool> mergeTransposeOption;
 extern llvm::cl::opt<bool> convDebugOption;
 extern llvm::cl::opt<bool> overlapConvOption;
-extern llvm::cl::opt<bool> offlineOffsetsOption;
+extern llvm::cl::opt<bool> tryOverlapModifyingOpsOption;
 extern llvm::cl::opt<unsigned> convChannelwiseSplitSizeOption;
+extern llvm::cl::list<std::string> sameAllocationInputOutputTensorOption;
+
 } // namespace xcore
 } // namespace mlir
 

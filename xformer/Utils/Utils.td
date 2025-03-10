@@ -7,8 +7,8 @@ def isBetaFloatEnabled : Constraint<CPred<"isBetaFloatEnabled()">>;
 
 // Check that bytes per pixel is a multiple of n
 class HasMultipleOfNBytesPerPixel<int n>
-    : Constraint<CPred<
-          "$0.getType().cast<ShapedType>().getDimSize(3) % " #n #" == 0">>;
+    : Constraint<
+          CPred<"$0.getType().cast<ShapedType>().getDimSize(3) % "#n#" == 0">>;
 
 def HasOnlyChannelPadding
     : Constraint<CPred<
@@ -26,11 +26,11 @@ def HasOnlySpatialPadding
 class UpdateShapeWithAxis<int i>
     : NativeCodeCall<
           "quant::CastQuantizedTypeAttrFromExpressedType($_builder, $0, "
-          "quant::QuantizedType::castToExpressedType($1.getType()), " #i #")">;
+          "quant::QuantizedType::castToExpressedType($1.getType()), "#i#")">;
 
 class IsQuantizedType<int n>
     : Constraint<CPred<
-          "utils::isNBitSignedQType<" #n #">($0.getType().cast<ShapedType>()."
+          "utils::isNBitSignedQType<"#n#">($0.getType().cast<ShapedType>()."
           "getElementType())">>;
 
 // Get padding values and output type as two return values
@@ -46,6 +46,12 @@ def GetDepthwiseConv2DPaddingValues
           "$0.getDefiningOp<TFL::DepthwiseConv2DOp>())",
           2>;
 
+// Get padding values and output type as two return values
+def GetMaxPool2DPaddingValues
+    : NativeCodeCall<"getMaxPool2DPaddingValues<TFL::MaxPool2DOp>($_builder, "
+                     "$0.getDefiningOp<TFL::MaxPool2DOp>())",
+                     2>;
+
 // PyTorch remnant opt
 // Relu(Minimum(x, 127)) -> Relu(x)
 // We can ignore minimum of (x,127) as it doesn't do anything
@@ -55,18 +61,18 @@ class IsSplatAndEqualTo<int n>
                 "dyn_cast<TFL::QConstOp>($0.getDefiningOp()).getValue()."
                 "cast<DenseElementsAttr>().isSplat() && "
                 "dyn_cast<TFL::QConstOp>($0.getDefiningOp()).getValue()."
-                "cast<DenseElementsAttr>().getSplatValue<int8_t>() == " #n>>;
+                "cast<DenseElementsAttr>().getSplatValue<int8_t>() == "#n>>;
 
 class IsZeroPointNotEqualTo<int n>
     : Constraint<
           CPred<"dyn_cast<mlir::quant::UniformQuantizedType>($0.getType().cast<"
-                "ShapedType>().getElementType()).getZeroPoint() != " #n>>;
+                "ShapedType>().getElementType()).getZeroPoint() != "#n>>;
 
 // Get the dimension size as integer attr.
 class GetDimAsI32<int n>
     : NativeCodeCall<
           "$_builder.getIntegerAttr($_builder.getIntegerType(32), "
-          "$0.getType().cast<RankedTensorType>().getDimSize(" #n #"))">;
+          "$0.getType().cast<RankedTensorType>().getDimSize("#n#"))">;
 
 def getTypeOf1WithQParamsOf0
     : NativeCodeCall<
@@ -89,7 +95,7 @@ def HasSpatialAxisForMean
           "$0.cast<DenseIntElementsAttr>().getValues<int32_t>()[1] == 2)">>;
 
 class HasRank<int n>
-    : Constraint<CPred<"$0.getType().cast<ShapedType>().getRank() == " #n>>;
+    : Constraint<CPred<"$0.getType().cast<ShapedType>().getRank() == "#n>>;
 
 def getExpandedShape
     : NativeCodeCall<"RankedTensorType::get({1, 1, "

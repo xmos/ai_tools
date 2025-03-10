@@ -11,9 +11,64 @@ include "Utils/Utils.td"
 // Unfuse Relu from Conv if output zero point is not -128 for QI8 output
 // XC Conv assumes there is no RELU, or that if there is one, it is being
 // clamped to -128 Add benefit so that this pattern runs first
-def:
-Pat<(TFL_Conv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, TFL_AF_Relu, $wf, $sh, $sw),
-  (TFL_ReluOp (TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $wf, $sh, $sw, (returnType $output))), [(IsZeroPointNotEqualTo<-128> $output)], [], (addBenefit 20)>;
+def : Pat<(TFL_Conv2DOp:$output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f,
+              AnyTypeOf<[TensorOf<[I32, QI32]>, NoneType]>:$b, $dh, $dw,
+              TFL_AF_Relu, $wf, $sh, $sw),
+          (TFL_ReluOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $wf,
+              $sh, $sw, (returnType $output))),
+          [(IsZeroPointNotEqualTo<-128> $output)], [], (addBenefit 20)>;
+
+def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI8]>:$input,
+              TensorOf<[QI8]>:$f, TensorOf<[I32, QI32]>:$b, $dh, $dw,
+              TFL_AF_Relu, $wf, $sh, $sw, $dm),
+          (TFL_ReluOp(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw,
+              TFL_AF_None, $wf, $sh, $sw, $dm, (returnType $output))),
+          [(IsZeroPointNotEqualTo<-128> $output)], [], (addBenefit 20)>;
+
+// Unfuse Relu from Conv for QI16
+def : Pat<(TFL_Conv2DOp:$output TensorOf<[QI16]>:$input, TensorOf<[QI8]>:$f,
+              AnyTypeOf<[TensorOf<[I32, QI32]>, NoneType]>:$b, $dh, $dw,
+              TFL_AF_Relu, $wf, $sh, $sw),
+          (TFL_ReluOp(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $wf,
+              $sh, $sw, (returnType $output))),
+          [], [], (addBenefit 20)>;
+
+def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI16]>:$input,
+              TensorOf<[QI8]>:$f, TensorOf<[I32, QI32]>:$b, $dh, $dw,
+              TFL_AF_Relu, $wf, $sh, $sw, $dm),
+          (TFL_ReluOp(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw,
+              TFL_AF_None, $wf, $sh, $sw, $dm, (returnType $output))),
+          [], [], (addBenefit 20)>;
+
+// Unfuse Relu6 for QI8
+def : Pat<(TFL_Conv2DOp:$output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f,
+              AnyTypeOf<[TensorOf<[I32, QI32]>, NoneType]>:$b, $dh, $dw,
+              TFL_AF_Relu6, $wf, $sh, $sw),
+          (TFL_Relu6Op(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $wf,
+              $sh, $sw, (returnType $output))),
+          [(IsZeroPointNotEqualTo<-128> $output)], [], (addBenefit 20)>;
+
+def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI8]>:$input,
+              TensorOf<[QI8]>:$f, TensorOf<[I32, QI32]>:$b, $dh, $dw,
+              TFL_AF_Relu6, $wf, $sh, $sw, $dm),
+          (TFL_Relu6Op(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw,
+              TFL_AF_None, $wf, $sh, $sw, $dm, (returnType $output))),
+          [(IsZeroPointNotEqualTo<-128> $output)], [], (addBenefit 20)>;
+
+// Unfuse Relu6 for QI16
+def : Pat<(TFL_Conv2DOp:$output TensorOf<[QI16]>:$input, TensorOf<[QI8]>:$f,
+              AnyTypeOf<[TensorOf<[I32, QI32]>, NoneType]>:$b, $dh, $dw,
+              TFL_AF_Relu6, $wf, $sh, $sw),
+          (TFL_Relu6Op(TFL_Conv2DOp $input, $f, $b, $dh, $dw, TFL_AF_None, $wf,
+              $sh, $sw, (returnType $output))),
+          [], [], (addBenefit 20)>;
+
+def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI16]>:$input,
+              TensorOf<[QI8]>:$f, TensorOf<[I32, QI32]>:$b, $dh, $dw,
+              TFL_AF_Relu6, $wf, $sh, $sw, $dm),
+          (TFL_Relu6Op(TFL_DepthwiseConv2DOp $input, $f, $b, $dh, $dw,
+              TFL_AF_None, $wf, $sh, $sw, $dm, (returnType $output))),
+          [], [], (addBenefit 20)>;
 
 def CreateNoneValue : NativeCodeCall<"$_builder.create<TFL::NoValueOp>($0."
                                      "getLoc(), $_builder.getUnitAttr())">;
@@ -31,23 +86,29 @@ def IsConstOp
                 "dyn_cast_or_null<TFL::QConstOp>($0.getDefiningOp())">>;
 
 // TFL_Conv2D() -> XC_FakeConv2D()
-def :
-Pat<(TFL_Conv2DOp: $output TensorOf<[QI8, QI16]>:$input, TensorOf<[QI8]>:$f, AnyTypeOf<[TensorOf<[I32,QI32]>, NoneType]>:$b, $dh, $dw, $faf, $wf, $sh, $sw),
-          (XC_FakeConv2DOp $input, $f, $b, (CreateNoneValue $input), $dh, $dw, $faf, $wf, (CreateNoneValue $input), $sh, $sw, ConstantAttr<I32Attr, "0">, ConstantAttr<I32Attr, "0">, ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "0">),[
-              (HasMultipleOfNBytesPerPixel<4> $input),
-              (HasMultipleOfNBytesPerPixel<4> $output),
-              (HasEqualChannels $input, $f),
-              (IsConstOp $f),
-              ]>;
+def : Pat<(TFL_Conv2DOp:$output TensorOf<[QI8, QI16]>:$input,
+              TensorOf<[QI8]>:$f,
+              AnyTypeOf<[TensorOf<[I32, QI32]>, NoneType]>:$b, $dh, $dw, $faf,
+              $wf, $sh, $sw),
+          (XC_FakeConv2DOp $input, $f, $b, (CreateNoneValue $input), $dh, $dw,
+              $faf, $wf, (CreateNoneValue $input), $sh, $sw,
+              ConstantAttr<I32Attr, "0">, ConstantAttr<I32Attr, "0">,
+              ConstantAttr<I32Attr, "1">, ConstantAttr<I32Attr, "1">,
+              ConstantAttr<I32Attr, "0">),
+          [(HasMultipleOfNBytesPerPixel<4> $input),
+           (HasMultipleOfNBytesPerPixel<4> $output),
+           (HasEqualChannels $input, $f), (IsConstOp $f),
+]>;
 
 // TFL_DepthwiseConv2D() -> XC_FakeDepthwiseConv2D()
-def :
-Pat<(TFL_DepthwiseConv2DOp: $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$f, TensorOf<[I32,QI32]>:$b, $dh, $dw, $faf, $wf, $sh, $sw, $dm),
-          (XC_FakeDepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $wf, (CreateNoneValue $input), $sh, $sw, $dm),[
-              (HasMultipleOfNBytesPerPixel<4> $input),
-              (HasMultipleOfNBytesPerPixel<4> $output),
-              (IsConstOp $f),
-              ]>;
+def : Pat<(TFL_DepthwiseConv2DOp:$output TensorOf<[QI8]>:$input,
+              TensorOf<[QI8]>:$f, TensorOf<[I32, QI32]>:$b, $dh, $dw, $faf, $wf,
+              $sh, $sw, $dm),
+          (XC_FakeDepthwiseConv2DOp $input, $f, $b, $dh, $dw, $faf, $wf,
+              (CreateNoneValue $input), $sh, $sw, $dm),
+          [(HasMultipleOfNBytesPerPixel<4> $input),
+           (HasMultipleOfNBytesPerPixel<4> $output), (IsConstOp $f),
+]>;
 
 def getCompressedFloats : NativeCodeCall<"getCompressedFloats($_builder, $0)">;
 
@@ -59,18 +120,20 @@ def Hasfw5fh2
                        "$0.getType().cast<ShapedType>().getDimSize(2) == 2">>;
 
 // F32 TFL_Conv2D() -> XC_Beta_ConvF32()
-def :
-Pat<(TFL_Conv2DOp: $output TensorOf<[F32]>:$input, TensorOf<[F32]>:$f, TensorOf<[F32]>:$b, $dh, $dw, $faf, $wf, ConstantAttr<I32Attr, "2">, ConstantAttr<I32Attr, "1">),
+def : Pat<(TFL_Conv2DOp:$output TensorOf<[F32]>:$input, TensorOf<[F32]>:$f,
+              TensorOf<[F32]>:$b, $dh, $dw, $faf, $wf,
+              ConstantAttr<I32Attr, "2">, ConstantAttr<I32Attr, "1">),
           (XC_Beta_ConvF32Op $input, $f, $b),
           [(Hasfw5fh2 $f), (isBetaFloatEnabled)]>;
 
 // // F32 TFL_TransposeConv2D() -> XC_Beta_TransposeConvF32()
-def :
-Pat<(TFL_TransposeConvOp: $output $outshape, TensorOf<[F32]>:$f, TensorOf<[F32]>:$input, TensorOf<[F32]>:$b, $wf, ConstantAttr<I32Attr, "2">, ConstantAttr<I32Attr, "1">, $faf),
+def : Pat<(TFL_TransposeConvOp:$output $outshape, TensorOf<[F32]>:$f,
+              TensorOf<[F32]>:$input, TensorOf<[F32]>:$b, $wf,
+              ConstantAttr<I32Attr, "2">, ConstantAttr<I32Attr, "1">, $faf),
           (XC_Beta_TransposeConvF32Op $input, $f, $b),
           [(Hasfw5fh2 $f), (isBetaFloatEnabled)]>;
 
 // // F32 TFL_FullyConnected() -> XC_Beta_FcF32()
-def :
-Pat<(TFL_FullyConnectedOp: $output TensorOf<[F32]>:$input, TensorOf<[F32]>:$f, $b, $faf, $wf, $knd, $aqi),
+def : Pat<(TFL_FullyConnectedOp:$output TensorOf<[F32]>:$input,
+              TensorOf<[F32]>:$f, $b, $faf, $wf, $knd, $aqi),
           (XC_Beta_FcF32Op $input, $f), [(isBetaFloatEnabled)]>;

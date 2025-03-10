@@ -1,6 +1,7 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
+#include "Analysis/MemoryPlan.h"
 #include "IR/XCoreOps.h"
 #include "Transforms/Options.h"
 #include "Utils/FileIO.h"
@@ -70,6 +71,7 @@ struct WriteWeightsPattern : public OpRewritePattern<LoadConstantOp> {
     // load is not from external memory.
     // External memory loads have to be aligned to 32 bytes/256 bits for max
     // speed
+    LoadWeightsOpType opType = LoadWeightsOpType::Sync;
     if (loadOp.getResult().hasOneUse() && !weightsInExternalMemory) {
       auto use = loadOp->use_begin();
       Operation *ownerOp = use->getOwner();
@@ -93,7 +95,7 @@ struct WriteWeightsPattern : public OpRewritePattern<LoadConstantOp> {
 
       auto loadWeightsOp = rewriter.create<LoadWeightsOp>(
           loadOp.getLoc(), outputTypes, address,
-          rewriter.getArrayAttr(dataSizes), /*in_ddr=*/false);
+          rewriter.getArrayAttr(dataSizes), stringifyLoadWeightsOpType(opType));
 
       for (int i = 0; i < opNums.size(); i++) {
         ownerOp->setOperand(opNums[i], loadWeightsOp.getResult(i));
@@ -111,10 +113,11 @@ struct WriteWeightsPattern : public OpRewritePattern<LoadConstantOp> {
         auto toBePaddedSize = alignedSize - loadOpData.size();
         // Pad with zeros
         tensorData.insert(tensorData.end(), toBePaddedSize, 0);
+        opType = LoadWeightsOpType::DDR;
       }
       auto loadWeightsOp = rewriter.create<LoadWeightsOp>(
           loadOp.getLoc(), loadOp.getType(), address,
-          rewriter.getArrayAttr(dataSizes), /*in_ddr=*/weightsInExternalMemory);
+          rewriter.getArrayAttr(dataSizes), stringifyLoadWeightsOpType(opType));
       rewriter.replaceOp(loadOp, loadWeightsOp.getOutput());
 
       // Find all uses of loadWeightsOp and find the first Owner op
@@ -139,6 +142,34 @@ private:
   std::vector<std::vector<char>> *tensorsVec_;
 };
 
+struct LowerToAsyncLoadsPattern : public OpRewritePattern<LoadWeightsOp> {
+  LowerToAsyncLoadsPattern(MLIRContext *context)
+      : OpRewritePattern<LoadWeightsOp>(context) {}
+
+  LogicalResult matchAndRewrite(LoadWeightsOp loadWeightsOp,
+                                PatternRewriter &rewriter) const override {
+    if (loadWeightsOp.getOpType() !=
+        stringifyLoadWeightsOpType(LoadWeightsOpType::Sync)) {
+      return failure();
+    }
+
+    // We use loadWeightsOp.getResultTypes() as Load Weights op can have
+    // variadic number of results
+    auto loadWeightsAsyncOp = rewriter.create<LoadWeightsOp>(
+        loadWeightsOp.getLoc(), loadWeightsOp.getResultTypes(),
+        loadWeightsOp.getAddress(), loadWeightsOp.getSizes(),
+        stringifyLoadWeightsOpType(LoadWeightsOpType::Async));
+
+    auto loadWeightsWaitOp = rewriter.create<LoadWeightsWaitOp>(
+        loadWeightsAsyncOp.getLoc(), loadWeightsAsyncOp.getResultTypes(),
+        loadWeightsAsyncOp.getResults());
+
+    rewriter.replaceOp(loadWeightsOp, loadWeightsWaitOp.getOutput());
+
+    return success();
+  }
+};
+
 void WriteWeights::runOnOperation() {
   func::FuncOp f = getOperation();
   if (weightsFilenameOption.empty()) {
@@ -154,7 +185,36 @@ void WriteWeights::runOnOperation() {
   std::vector<std::vector<char>> tensorsVec;
   RewritePatternSet patterns(ctx);
   patterns.insert<WriteWeightsPattern>(&tensorsVec, ctx);
+  if (asyncLoadWeightsOption) {
+    patterns.insert<LowerToAsyncLoadsPattern>(ctx);
+  }
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+
+  // Reorder async load to be before previous convolution
+  // so that the compute can be overlapped with the load
+  auto &m = getAnalysis<MemoryPlan>();
+  auto opIdMap = m.getOperationsIDMap();
+  auto ops = m.getOperationsSequence();
+
+  llvm::SetVector<int> convOpIds;
+  for (auto o : ops) {
+    if (llvm::isa<Conv2DV2Op>(o)) {
+      convOpIds.insert(opIdMap[o]);
+    }
+  }
+
+  for (auto o : ops) {
+    if (llvm::isa<LoadWeightsOp>(o)) {
+      auto ldOp = dyn_cast<LoadWeightsOp>(o);
+      if (ldOp.getOpType() ==
+          stringifyLoadWeightsOpType(LoadWeightsOpType::Async)) {
+        int idx = llvm::lower_bound(convOpIds, opIdMap[o]) - convOpIds.begin();
+        if (idx > 0) {
+          o->moveBefore(ops[convOpIds[idx - 1]]);
+        }
+      }
+    }
+  }
 
   if (failed(utils::writeWeightsToFile(weightsFilenameOption, tensorsVec,
                                        weightsAsArrayOption,

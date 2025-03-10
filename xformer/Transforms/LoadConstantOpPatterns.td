@@ -16,14 +16,11 @@ def IsNotUsedByLoadConstantOp
     : Constraint<CPred<"isNotUsedByLoadConstantOp($0)">>;
 
 foreach constOp = [Arith_ConstantOp, TFL_ConstOp] in {
-def:
-  Pat<(constOp
-       : $op $attr),
-      (XC_LoadConstantOp(constOp $attr)),
-      [(IsNotUsedByLoadConstantOp $op), (ShouldBeLoadedExternally $attr)]>;
+  def : Pat<(constOp:$op $attr), (XC_LoadConstantOp(constOp $attr)),
+            [(IsNotUsedByLoadConstantOp $op),
+             (ShouldBeLoadedExternally $attr)]>;
 }
 
-def : Pat<(TFL_QConstOp
-           : $op $qtype, $attr),
+def : Pat<(TFL_QConstOp:$op $qtype, $attr),
           (XC_LoadConstantOp(TFL_QConstOp $qtype, $attr)),
           [(IsNotUsedByLoadConstantOp $op), (ShouldBeLoadedExternally $attr)]>;

@@ -36,6 +36,13 @@ namespace mlir::xcore {
 // and -help) will be hidden.
 static cl::OptionCategory XformerCategory("Xformer options");
 
+llvm::cl::list<std::string> sameAllocationInputOutputTensorOption(
+    "xcore-same-allocation-input-output-tensor",
+    cl::desc("Allocate this input and output tensor in the same memory "
+             "location. This helps avoiding a memcopy from output to input in "
+             "case of recurrent networks. The first tensor must be the input."),
+    cl::CommaSeparated, cl::cat(XformerCategory));
+
 cl::opt<bool> enableMemoryAnalysisOption(
     "xcore-run-memory-analysis",
     cl::desc("Run memory analysis to aid in operation splitting."),
@@ -83,6 +90,12 @@ cl::opt<bool> weightsInExternalMemory(
     "xcore-weights-in-external-memory",
     cl::desc("Annotate the generated weights array with an attribute to place "
              "it in external memory."),
+    cl::init(false), cl::cat(XformerCategory));
+
+cl::opt<bool> asyncLoadWeightsOption(
+    "xcore-async-load-weights",
+    cl::desc("Enable loading weights from flash asynchronously. This does not "
+             "affect loads from external memory."),
     cl::init(false), cl::cat(XformerCategory));
 
 cl::opt<unsigned> loadExternallyIfLargerOption(
@@ -169,9 +182,10 @@ cl::opt<bool> convDebugOption("xcore-conv-debug",
                               cl::init(false), cl::cat(XformerCategory),
                               cl::Hidden);
 
-cl::opt<bool> offlineOffsetsOption("xcore-offline-offsets",
-                                   cl::desc("Offline offsets"), cl::init(true),
-                                   cl::cat(XformerCategory), cl::Hidden);
+cl::opt<bool> tryOverlapModifyingOpsOption(
+    "xcore-try-overlap-modifying-ops",
+    cl::desc("Try to overlap modifying ops in the memory allocator"),
+    cl::init(true), cl::cat(XformerCategory), cl::Hidden);
 
 cl::opt<unsigned> convChannelwiseSplitSizeOption(
     "xcore-conv-channelwise-split-size",
@@ -470,8 +484,14 @@ int main(int argc, char **argv) {
   if (mlir::xcore::weightsInExternalMemory.getNumOccurrences() > 0 &&
       mlir::xcore::weightsAsArrayOption.getNumOccurrences() == 0) {
     return failedMessage(
-        "Please specify the xcore-write-weights-as-array"
-        "when using the xcore-weights-in-external-memory option!");
+        "Please specify xcore-write-weights-as-array"
+        " when using the xcore-weights-in-external-memory option!");
+  }
+
+  if (mlir::xcore::weightsInExternalMemory.getNumOccurrences() > 0 &&
+      mlir::xcore::asyncLoadWeightsOption.getNumOccurrences() > 0) {
+    return failedMessage("Please don't specify xcore-weights-in-external-memory"
+                         " when using the xcore-async-load-weights option!");
   }
 
   if (mlir::xcore::loadExternallyIfLargerOption.getNumOccurrences() > 0 &&
@@ -493,6 +513,24 @@ int main(int argc, char **argv) {
   if (mlir::xcore::threadCountOption < 1 ||
       mlir::xcore::threadCountOption > 5) {
     return failedMessage("Please specify a thread count between one and five!");
+  }
+
+  llvm::DenseMap<int, int> positionCountMap;
+  for (int i = 0; i < mlir::xcore::sameAllocationInputOutputTensorOption.size();
+       i++) {
+    int pos = mlir::xcore::sameAllocationInputOutputTensorOption.getPosition(i);
+    if (positionCountMap.count(pos)) {
+      positionCountMap[pos]++;
+    } else {
+      positionCountMap[pos] = 1;
+    }
+  }
+  for (auto i : positionCountMap) {
+    if (i.second != 2) {
+      return failedMessage(
+          "Please specify two tensors, an input tensor and output tensor for "
+          "each of xcore-same-allocation-input-output-tensor options!");
+    }
   }
 
   if (failed(isCompatibleVersion(

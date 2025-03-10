@@ -76,7 +76,7 @@ class AbstractXFRunner(AbstractRunner):
         with open(input_file, "wb") as fd:
             fd.write(model)
         output_file = self._dir_path / "model.tflite"
-        hyper_params = {"xcore-thread-count": thread_count}
+        hyper_params = [("xcore-thread-count", thread_count)]
         xformer.convert(input_file, output_file, hyper_params)
         with open(output_file, "rb") as fd:
             model = fd.read()

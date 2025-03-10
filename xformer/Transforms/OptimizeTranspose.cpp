@@ -140,6 +140,107 @@ struct FoldTrReFCPattern : public OpRewritePattern<TFL::FullyConnectedOp> {
   }
 };
 
+struct FoldDoubleTransposePattern : public OpRewritePattern<TFL::TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(TFL::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    // Ensure the TransposeOp has a single use
+    if (!transposeOp->hasOneUse())
+      return failure();
+    // Check if the user operation is a transpose op
+    Operation *userOp = *transposeOp->getUsers().begin();
+    auto userTransposeOp = dyn_cast<TFL::TransposeOp>(userOp);
+    if (!userTransposeOp)
+      return failure();
+    // Get the permutation used in the transposes
+    DenseIntElementsAttr perm0;
+    DenseIntElementsAttr perm1;
+    if (!matchPattern(transposeOp.getPerm(), m_Constant(&perm0)) ||
+        !matchPattern(userTransposeOp.getPerm(), m_Constant(&perm1)))
+      return failure();
+
+    SmallVector<int32_t, 4> permVec;
+    for (auto val : perm1.getValues<int32_t>()) {
+      permVec.push_back(perm0.getValues<int32_t>()[val]);
+    }
+    // Create perm constant op
+    auto permType = RankedTensorType::get(
+        {static_cast<int64_t>(permVec.size())}, rewriter.getIntegerType(32));
+
+    auto permAttr = DenseIntElementsAttr::get(permType, permVec);
+    auto permConstOp =
+        rewriter.create<TFL::ConstOp>(transposeOp.getLoc(), permType, permAttr);
+
+    // Create new transposeOp
+    auto newTransposeOp = rewriter.create<TFL::TransposeOp>(
+        transposeOp.getLoc(), userTransposeOp.getType(), transposeOp.getInput(),
+        permConstOp.getResult());
+
+    rewriter.replaceOp(userOp, newTransposeOp.getResult());
+    rewriter.eraseOp(transposeOp);
+    return success();
+  }
+};
+
+// Replace TransposeOp with ReshapeOp if equivalent
+// Transpose is equivalent to reshape if we only permute consecutive dimensions
+// and only one of those permuted dimensions isn't of size 1
+struct FoldTransposeToReshapePattern
+    : public OpRewritePattern<TFL::TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(TFL::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    DenseIntElementsAttr perm;
+    if (!matchPattern(transposeOp.getPerm(), m_Constant(&perm)))
+      return failure();
+
+    SmallVector<int32_t, 4> permVec;
+    for (auto val : perm.getValues<int32_t>()) {
+      permVec.push_back(val);
+    }
+    // get input shape
+    auto inputType =
+        transposeOp.getInput().getType().dyn_cast<RankedTensorType>();
+    if (!inputType)
+      return failure();
+    ArrayRef<int64_t> inputShape = inputType.getShape();
+    for (size_t i = 0; i < permVec.size(); ++i) {
+      if (permVec[i] == i)
+        continue;
+      // check if all shapes between i and permVec[i] are 1, except for at most
+      // one
+      int s = permVec[i] < i ? permVec[i] : i;
+      int e = permVec[i] < i ? i : permVec[i];
+      bool foundNonOne = false;
+      for (size_t j = s; j <= e; ++j) {
+        if (inputShape[j] != 1) {
+          if (foundNonOne)
+            return failure();
+          foundNonOne = true;
+        }
+      }
+    }
+    // get output shape
+    auto outputType =
+        transposeOp.getResult().getType().dyn_cast<RankedTensorType>();
+    // convert to small vector
+    SmallVector<int64_t, 4> outputShape;
+    for (auto val : outputType.getShape()) {
+      outputShape.push_back(val);
+    }
+    // Create new shape constant op
+    auto newShapeConstOp =
+        utils::createShapeConstOp(rewriter, transposeOp.getLoc(), outputShape);
+    // assume transpose can be replaced with reshape
+    auto reshapeOp = rewriter.create<TFL::ReshapeOp>(
+        transposeOp.getLoc(), transposeOp.getType(), transposeOp.getInput(),
+        newShapeConstOp);
+
+    rewriter.replaceOp(transposeOp, reshapeOp.getResult());
+    return success();
+  }
+};
+
 struct FoldFCReTrPattern : public OpRewritePattern<TFL::TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -367,39 +468,6 @@ struct MoveTransposeForwardOverUnaryOpPattern
   }
 };
 
-struct FoldCancellableTransposePattern
-    : public OpRewritePattern<TFL::TransposeOp> {
-  using OpRewritePattern<TFL::TransposeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(TFL::TransposeOp op,
-                                PatternRewriter &rewriter) const override {
-
-    // Check for invalid types and return
-    // Defining op must be transpose
-    auto transposeOp =
-        dyn_cast_or_null<TFL::TransposeOp>(op.getInput().getDefiningOp());
-    if (!transposeOp) {
-      return failure();
-    }
-
-    // Get transpose permutations
-    DenseIntElementsAttr perm0;
-    DenseIntElementsAttr perm1;
-    if (!matchPattern(op.getPerm(), m_Constant(&perm0)) ||
-        !matchPattern(transposeOp.getPerm(), m_Constant(&perm1))) {
-      return failure();
-    }
-
-    // Do permutation indices cancel each other?
-    if (!TF::AreCancellablePermutations(perm0, perm1)) {
-      return failure();
-    }
-
-    rewriter.replaceOp(op, transposeOp.getInput());
-
-    return success();
-  }
-};
 struct MoveTransposeForwardOverConcatOpPattern
     : public OpRewritePattern<TFL::ConcatenationOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -494,8 +562,8 @@ struct MoveTransposeForwardOverConcatOpPattern
     auto permType = RankedTensorType::get(
         {static_cast<int64_t>(permVec.size())}, rewriter.getIntegerType(32));
     auto permAttr = DenseIntElementsAttr::get(permType, permVec);
-    auto permConstOp = rewriter.create<arith::ConstantOp>(concatOp.getLoc(),
-                                                          permType, permAttr);
+    auto permConstOp =
+        rewriter.create<TFL::ConstOp>(concatOp.getLoc(), permType, permAttr);
 
     // Create the new TransposeOp with the original output type
     auto newTransposeOp = rewriter.create<TFL::TransposeOp>(
@@ -563,7 +631,7 @@ struct HoistTransposeWCHAbovePadPattern
     std::vector<int32_t> paddingValues{0, 0, 1, 1, 1, 1, 0, 0};
     auto paddingAttr = DenseIntElementsAttr::get(
         RankedTensorType::get({4, 2}, rewriter.getI32Type()), paddingValues);
-    auto paddingOp = rewriter.create<arith::ConstantOp>(
+    auto paddingOp = rewriter.create<TFL::ConstOp>(
         padOp->getLoc(), RankedTensorType::get({4, 2}, rewriter.getI32Type()),
         paddingAttr);
     auto newPad = rewriter.create<TFL::PadOp>(
@@ -629,9 +697,10 @@ void OptimizeTranspose::runOnOperation() {
 
   // Try to merge transpose -> ops -> inverse transpose
   RewritePatternSet mergePatterns(ctx);
-  mergePatterns.insert<MoveTransposeForwardOverUnaryOpPattern,
-                       MoveTransposeForwardOverConcatOpPattern,
-                       FoldCancellableTransposePattern>(ctx);
+  mergePatterns
+      .insert<MoveTransposeForwardOverUnaryOpPattern,
+              MoveTransposeForwardOverConcatOpPattern,
+              FoldDoubleTransposePattern, FoldTransposeToReshapePattern>(ctx);
   if (mergeTransposeOption) {
     (void)applyPatternsAndFoldGreedily(func, std::move(mergePatterns));
   }
@@ -640,7 +709,8 @@ void OptimizeTranspose::runOnOperation() {
   RewritePatternSet patterns(ctx);
 
   patterns.insert<HoistTransposeWCHAbovePadPattern>(ctx);
-  patterns.insert<FoldCancellableTransposePattern>(ctx);
+  patterns.insert<FoldDoubleTransposePattern>(ctx);
+  patterns.insert<FoldTransposeToReshapePattern>(ctx);
   // TODO - enable after transpose permutation fix
   // patterns.insert<FoldFCReTrPattern>(ctx);
   // patterns.insert<FoldTrReFCPattern>(ctx);

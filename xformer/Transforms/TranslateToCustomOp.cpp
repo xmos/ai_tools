@@ -12,9 +12,11 @@
 
 namespace mlir::xcore {
 
+std::vector<uint8_t> NoOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Expand8To16Op::buildCustomOptions() { return {}; }
 std::vector<uint8_t> FakeScratchBufferOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Bsign8Op::buildCustomOptions() { return {}; }
+std::vector<uint8_t> LoadWeightsWaitOp::buildCustomOptions() { return {}; }
 
 std::vector<uint8_t> UnaryI16Op::buildCustomOptions() {
   flexbuffers::Builder fbb;
@@ -150,22 +152,49 @@ std::vector<uint8_t> ConcatOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> TransposeOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  auto rootMap = fbb.StartMap();
+  auto tShapeVec = fbb.StartVector("s");
+  auto tShape = getTShape().cast<ArrayAttr>();
+  for (int i = 0; i < 4; ++i) {
+    fbb.Int(tShape[i].cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(tShapeVec, false, false);
+  auto offsetsVec = fbb.StartVector("o");
+  auto offsets = getOffsets().cast<ArrayAttr>();
+  for (int j = 0; j < 4; ++j) {
+    fbb.Int(offsets[j].cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(offsetsVec, false, false);
+  fbb.EndMap(rootMap);
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> LoadWeightsOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   auto rootMap = fbb.StartMap();
-  fbb.Int("addr", (int32_t)getAddress());
-  auto sizesVec = fbb.StartVector("sizes");
+  fbb.Int("a", (int32_t)getAddress());
+  auto sizesVec = fbb.StartVector("s");
   for (int i = 0; i < getSizes().cast<ArrayAttr>().size(); ++i) {
     fbb.Int(getSizes().cast<ArrayAttr>()[i].cast<IntegerAttr>().getInt());
   }
   fbb.EndVector(sizesVec, false, false);
-  fbb.Bool("ddr", (bool)getInDdr());
+  fbb.Int("t", (int32_t)(symbolizeLoadWeightsOpType(getOpType()).value()));
   fbb.EndMap(rootMap);
   fbb.Finish();
   return fbb.GetBuffer();
 }
 
 std::vector<uint8_t> Pad3To4Op::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("pv", (int32_t)getPadValue()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
+std::vector<uint8_t> Pad1To4Op::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() { fbb.Int("pv", (int32_t)getPadValue()); });
   fbb.Finish();
@@ -282,10 +311,12 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<MeanOp>>(ctx);
   patterns.insert<RewriteToCustomOp<MeanI16Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Pad3To4Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<Pad1To4Op>>(ctx);
   patterns.insert<RewriteToCustomOp<SliceOp>>(ctx);
   patterns.insert<RewriteToCustomOp<BroadcastOp>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
   patterns.insert<RewriteToCustomOp<ConcatOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<TransposeOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ActivationF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ConcatF32Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Beta_ConvF32Op>>(ctx);
@@ -296,6 +327,8 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<FakeScratchBufferOp>>(ctx);
   patterns.insert<RewriteToCustomOp<FakeSliceOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Expand8To16Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<LoadWeightsWaitOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<NoOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

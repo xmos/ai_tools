@@ -31,6 +31,7 @@ extern llvm::cl::opt<bool> mergeTransposeOption;
 extern llvm::cl::opt<bool> convDebugOption;
 extern llvm::cl::opt<bool> overlapConvOption;
 extern llvm::cl::opt<bool> tryOverlapModifyingOpsOption;
+extern llvm::cl::opt<bool> enablePagingOption;
 extern llvm::cl::opt<unsigned> livenessPagingOption;
 extern llvm::cl::opt<unsigned> convChannelwiseSplitSizeOption;
 extern llvm::cl::list<std::string> sameAllocationInputOutputTensorOption;

@@ -186,6 +186,10 @@ cl::opt<bool> tryOverlapModifyingOpsOption(
     cl::desc("Try to overlap modifying ops in the memory allocator"),
     cl::init(true), cl::cat(XformerCategory), cl::Hidden);
 
+cl::opt<bool> enablePagingOption("xcore-enable-paging",
+                                 cl::desc("Enable paging."), cl::init(false),
+                                 cl::cat(XformerCategory), cl::Hidden);
+
 cl::opt<unsigned>
     livenessPagingOption("xcore-liveness-range-for-paging",
                          cl::desc("Control the first used and last used range "
@@ -491,6 +495,12 @@ int main(int argc, char **argv) {
     return failedMessage(
         "Please specify xcore-write-weights-as-array"
         " when using the xcore-weights-in-external-memory option!");
+  }
+
+  if (mlir::xcore::enablePagingOption.getNumOccurrences() > 0 &&
+      mlir::xcore::weightsInExternalMemory.getNumOccurrences() == 0) {
+    return failedMessage("Please specify xcore-weights-in-external-memory"
+                         " when using the xcore-enable-paging option!");
   }
 
   if (mlir::xcore::weightsInExternalMemory.getNumOccurrences() > 0 &&

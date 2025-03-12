@@ -12,7 +12,7 @@ LogicalResult writeDataToFile(const std::string &filename, std::string data);
 
 LogicalResult writeWeightsToFile(const std::string &filename,
                                  std::vector<std::vector<char>> tensorsVec,
-                                 bool writeWeightsAsArray,
+                                 int pagingSize, bool writeWeightsAsArray,
                                  bool placeInExternalMemory);
 
 LogicalResult getFlatBufferStringFromMLIR(

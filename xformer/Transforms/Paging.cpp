@@ -260,7 +260,9 @@ void Paging::runOnOperation() {
       address += size;
     }
   }
-  printf("\nDDR size = %d", address);
+  llvm::outs() << "\nExternal memory size : " << address << "\n";
+  auto module = func->getParentOfType<ModuleOp>();
+  module->setAttr("xc.paging_size", builder.getI32IntegerAttr(address));
   RewritePatternSet patterns5(ctx);
   patterns5.insert<CombineLoadSliceToPartialLoadPattern>(ctx);
   // patterns5.insert<CombineSliceStoreToPartialStorePattern>(ctx);

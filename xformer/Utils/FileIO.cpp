@@ -25,11 +25,13 @@ LogicalResult writeDataToFile(const std::string &filename, std::string data) {
 
 LogicalResult writeWeightsToFile(const std::string &filename,
                                  std::vector<std::vector<char>> tensorsVec,
-                                 bool writeWeightsAsArray,
+                                 int pagingSize, bool writeWeightsAsArray,
                                  bool placeInExternalMemory) {
   if (writeWeightsAsArray) {
     std::ostringstream cOut;
     cOut << R"(#include <stdint.h>)"
+         << "\n"
+         << R"(#include ")" << filename << R"(.h")"
          << "\n\n";
 
     if (placeInExternalMemory) {
@@ -42,7 +44,7 @@ LogicalResult writeWeightsToFile(const std::string &filename,
       tensorsVec.insert(tensorsVec.begin(), tileHeader);
     }
 
-    cOut << "const int8_t weights[] = {\n";
+    cOut << "const int8_t weights[WEIGHTS_SIZE + PAGING_SIZE] = {\n";
     int lineEnding = 0;
     int weightsSize = 0;
     for (auto const &tensor : tensorsVec) {
@@ -70,6 +72,8 @@ LogicalResult writeWeightsToFile(const std::string &filename,
 
 #define WEIGHTS_SIZE ()"
          << weightsSize << R"(U)
+#define PAGING_SIZE ()"
+         << pagingSize << R"(U)
 
 #endif // WEIGHTSGEN_H
 )";

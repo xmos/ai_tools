@@ -216,8 +216,13 @@ void WriteWeights::runOnOperation() {
     }
   }
 
+  int pagingSize = 0;
+  if (enablePagingOption) {
+    auto module = func->getParentOfType<ModuleOp>();
+    pagingSize = module->getAttrOfType<IntegerAttr>("xc.paging_size").getInt();
+  }
   if (failed(utils::writeWeightsToFile(weightsFilenameOption, tensorsVec,
-                                       weightsAsArrayOption,
+                                       pagingSize, weightsAsArrayOption,
                                        weightsInExternalMemory))) {
     f.emitError("Failed to write weights to file!");
     signalPassFailure();

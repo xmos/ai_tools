@@ -377,9 +377,11 @@ pipeline {
             unstash "mac_wheel"
             unstash "windows_wheel"
             archiveArtifacts artifacts: "dist/*", allowEmptyArchive: true
-            withCredentials([usernamePassword(credentialsId: '__CREDID__', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
-              sh "pip install twine"
-              sh "twine upload dist/*"
+            withVenv {
+              withCredentials([usernamePassword(credentialsId: '__CREDID__', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
+                sh "pip install twine"
+                sh "twine upload dist/*"
+              }
             }
           }
         }

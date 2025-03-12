@@ -497,12 +497,6 @@ int main(int argc, char **argv) {
         " when using the xcore-weights-in-external-memory option!");
   }
 
-  if (mlir::xcore::enablePagingOption.getNumOccurrences() > 0 &&
-      mlir::xcore::weightsInExternalMemory.getNumOccurrences() == 0) {
-    return failedMessage("Please specify xcore-weights-in-external-memory"
-                         " when using the xcore-enable-paging option!");
-  }
-
   if (mlir::xcore::weightsInExternalMemory.getNumOccurrences() > 0 &&
       mlir::xcore::asyncLoadWeightsOption.getNumOccurrences() > 0) {
     return failedMessage("Please don't specify xcore-weights-in-external-memory"

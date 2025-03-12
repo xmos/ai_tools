@@ -53,15 +53,16 @@ void add_lib_vision_ops(
 
 extern "C" {
 
-DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
+DLLEXPORT inference_engine *new_interpreter(size_t max_arena_size, size_t external_memory_size) {
   inference_engine *ie =
       (inference_engine *)calloc(sizeof(inference_engine), 1);
-  uint32_t *model_content = (uint32_t *)calloc(max_model_size, 1);
+  uint32_t *tensor_arena = (uint32_t *)calloc(max_arena_size, 1);
+  uint32_t *external_memory = (uint32_t *)calloc(external_memory_size, 1);
 
   struct tflite_micro_objects *s0 = new struct tflite_micro_objects;
 
-  auto *resolver = inference_engine_initialize(ie, model_content,
-                                               max_model_size, nullptr, 0, s0);
+  auto *resolver = inference_engine_initialize(ie, tensor_arena,
+    max_arena_size, external_memory, external_memory_size, s0);
 
   resolver->AddDequantize();
   resolver->AddSoftmax();
@@ -96,7 +97,8 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_model_size) {
 
 DLLEXPORT void delete_interpreter(inference_engine *ie) {
   // inference_engine_unload_model(ie);
-  free(ie->memory_primary);
+  free(ie->tensor_arena);
+  free(ie->external_memory);
   free(ie->xtflm);
   free(ie);
 }
@@ -106,9 +108,9 @@ DLLEXPORT int initialize(inference_engine *ie, const char *model_content,
   // We need to keep a copy of the model content
   inference_engine_unload_model(ie);
   uint32_t *m = (uint32_t *)model_content;
-  memcpy(ie->memory_primary, m, model_content_size);
+  memcpy(ie->tensor_arena, m, model_content_size);
   int r = inference_engine_load_model(
-      ie, model_content_size, ie->memory_primary, (void *)param_content);
+      ie, model_content_size, ie->tensor_arena, (void *)param_content);
   return kTfLiteOk;
 }
 

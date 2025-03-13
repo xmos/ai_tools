@@ -157,10 +157,9 @@ cl::list<unsigned>
                            cl::desc("Manual override Op split, bottom op."),
                            cl::CommaSeparated, cl::cat(XformerCategory));
 
-cl::list<unsigned>
-    opSplitTopOpsOption("xcore-op-split-top-op",
-                        cl::desc("Manual override Op split, top op."),
-                        cl::CommaSeparated, cl::cat(XformerCategory));
+cl::list<int> opSplitTopOpsOption("xcore-op-split-top-op",
+                                  cl::desc("Manual override Op split, top op."),
+                                  cl::CommaSeparated, cl::cat(XformerCategory));
 
 cl::list<unsigned> opSplitNumSplitsOption(
     "xcore-op-split-num-splits",
@@ -186,6 +185,16 @@ cl::opt<bool> tryOverlapModifyingOpsOption(
     "xcore-try-overlap-modifying-ops",
     cl::desc("Try to overlap modifying ops in the memory allocator"),
     cl::init(true), cl::cat(XformerCategory), cl::Hidden);
+
+cl::opt<bool> enablePagingOption("xcore-enable-paging",
+                                 cl::desc("Enable paging."), cl::init(false),
+                                 cl::cat(XformerCategory), cl::Hidden);
+
+cl::opt<unsigned>
+    livenessPagingOption("xcore-liveness-range-for-paging",
+                         cl::desc("Control the first used and last used range "
+                                  "over which paging is applied"),
+                         cl::init(30), cl::cat(XformerCategory), cl::Hidden);
 
 cl::opt<unsigned> convChannelwiseSplitSizeOption(
     "xcore-conv-channelwise-split-size",

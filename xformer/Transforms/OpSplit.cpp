@@ -1,6 +1,7 @@
 //  Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
+#include "Analysis/MemoryPlan.h"
 #include "IR/XCoreOps.h"
 #include "Transforms/Options.h"
 #include "Utils/Util.h"
@@ -214,11 +215,11 @@ struct OpSplitPattern : public OpRewritePattern<TargetOp> {
 
     // Output type must be QI8
     if (!utils::isNBitSignedQType<8>(
-            utils::getValElementType(targetOp.getOutput())))
+            utils::getValElementType(targetOp.getResult())))
       return failure();
 
     // Data from target op needed later
-    auto targetOutput = targetOp.getOutput();
+    auto targetOutput = targetOp.getResult();
     auto outputType =
         targetOutput.getType().template dyn_cast<RankedTensorType>();
     int32_t outputHeight = outputType.getDimSize(1);
@@ -268,6 +269,7 @@ struct OpSplitPattern : public OpRewritePattern<TargetOp> {
     auto concatOp = rewriter.create<TFL::ConcatenationOp>(
         targetReplacement.getLoc(), targetOutput.getType(), sliceOps, 1,
         "NONE");
+    concatOp->setAttr(opSplitLabel, rewriter.getUnitAttr());
 
     // Replace target op with [cloned target op -> slices -> concat]
     rewriter.replaceOp(targetOp, concatOp.getOutput());
@@ -417,6 +419,368 @@ struct RaiseFakeSliceToSliceMeanPattern : public OpRewritePattern<FakeSliceOp> {
   }
 };
 
+// struct RaiseSliceToInputPattern : public OpRewritePattern<TFL::SliceOp> {
+//   using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
+
+//   LogicalResult matchAndRewrite(TFL::SliceOp slice,
+//                                 PatternRewriter &rewriter) const override {
+//     auto f = slice->getParentOfType<func::FuncOp>();
+//     // If slice does not have a defining op, return failure
+//     if (!slice.getInput().getDefiningOp() ||
+//         !isa<TFLOp>(slice.getInput().getDefiningOp())) {
+//       return failure();
+//     }
+
+//     if (failed(isRaisableSlice(rewriter, slice))) {
+//       return failure();
+//     }
+
+//     if (succeeded(combineSliceWithExisting(rewriter, slice))) {
+//       return success();
+//     }
+
+//     if (isa<TFL::ConcatenationOp>(slice.getInput().getDefiningOp())) {
+//       // assert if concat axis is batch as that is where we opsplit
+//       // return failure();
+//     }
+
+//     if (isa<TFL::StridedSliceOp>(slice.getInput().getDefiningOp())) {
+//       // assert if slice axis is batch as that is where we opsplit
+//       // return failure();
+//     }
+
+//     auto opOriginal = llvm::cast<TFLOp>(slice.getInput().getDefiningOp());
+
+//     DenseElementsAttr beginAttr, sizeAttr;
+//     if (!matchPattern(slice.getBegin(), m_Constant(&beginAttr))) {
+//       return failure();
+//     }
+//     if (!matchPattern(slice.getSize(), m_Constant(&sizeAttr))) {
+//       return failure();
+//     }
+
+//     auto sliceOutShape = utils::getValShape(slice.getOutput());
+//     auto opReplacement = llvm::cast<TFLOp>(rewriter.clone(*opOriginal));
+//     RankedTensorType opReplacementType = RankedTensorType::get(
+//         sliceOutShape, utils::getValElementType(opOriginal.getResult()));
+//     opReplacement->getResult(0).setType(opReplacementType);
+
+//     auto outputType =
+//         opOriginal.getResult().getType().template cast<RankedTensorType>();
+//     auto getSliceOp = [&](int argNo, Value arg) -> Value {
+//       auto argType = arg.getType().cast<RankedTensorType>();
+//       if (1 /*utils::hasSameShape(argType, outputType)*/) {
+//         rewriter.setInsertionPoint(opReplacement);
+//         // auto newSlice = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
+
+//         // int32_t beginAttr[4] = {
+//         // 0, static_cast<int32_t>(newEndIndex - newOutputHeight), 0, 0};
+//         auto argShape = argType.getShape();
+//         int32_t newBeginAttr[4] = {beginAttr.getValues<int32_t>()[0],
+//                                    beginAttr.getValues<int32_t>()[1],
+//                                    beginAttr.getValues<int32_t>()[2],
+//                                    beginAttr.getValues<int32_t>()[3]};
+//         int32_t newSizeAttr[4] = {1, static_cast<int32_t>(sliceOutShape[1]),
+//                                   static_cast<int32_t>(argShape[2]),
+//                                   static_cast<int32_t>(argShape[3])};
+//         auto newSlice =
+//             createSliceOp(rewriter, slice.getLoc(), arg, newBeginAttr,
+//                           newSizeAttr, utils::getValElementType(arg));
+
+//         // newSlice.setOperand(0, arg);
+//         // RankedTensorType newSliceType = RankedTensorType::get(
+//         //     {sliceOutShape[0], sliceOutShape[1], argShape[2],
+//         argShape[3]},
+//         //     utils::getValElementType(arg));
+//         // newSlice->getResult(0).setType(newSliceType);
+//         return newSlice;
+//       } else {
+//         auto fakeSlice = dyn_cast_or_null<FakeSliceOp>(arg.getDefiningOp());
+//         if (!fakeSlice) {
+//           rewriter.setInsertionPoint(opOriginal);
+//           auto newFsOp =
+//               rewriter.create<FakeSliceOp>(arg.getLoc(), arg.getType(), arg);
+
+//           llvm::SmallVector<mlir::Attribute> beginVals;
+//           beginVals.push_back(beginAttr);
+//           newFsOp->setAttr("begin", rewriter.getArrayAttr(beginVals));
+
+//           llvm::SmallVector<mlir::Attribute> sizeVals;
+//           sizeVals.push_back(sizeAttr);
+//           newFsOp->setAttr("size", rewriter.getArrayAttr(sizeVals));
+
+//           auto opReplacement =
+//           llvm::cast<TFLOp>(rewriter.clone(*opOriginal));
+//           opReplacement->setOperand(argNo, newFsOp);
+//           opOriginal.getResult().replaceAllUsesWith(opReplacement);
+//           rewriter.eraseOp(opOriginal);
+//           return newFsOp;
+//         } else {
+//           auto begin = fakeSlice->getAttr("begin").cast<mlir::ArrayAttr>();
+//           llvm::SmallVector<mlir::Attribute> beginVals = {
+//               begin.getValue().begin(), begin.getValue().end()};
+//           beginVals.push_back(beginAttr);
+//           fakeSlice->setAttr("begin", rewriter.getArrayAttr(beginVals));
+
+//           auto size = fakeSlice->getAttr("size").cast<mlir::ArrayAttr>();
+//           llvm::SmallVector<mlir::Attribute> sizeVals = {
+//               size.getValue().begin(), size.getValue().end()};
+//           sizeVals.push_back(sizeAttr);
+//           fakeSlice->setAttr("size", rewriter.getArrayAttr(sizeVals));
+//         }
+//         return fakeSlice;
+//       }
+//     };
+
+//     // Create new slices for above op
+//     int numOperands = opOriginal.getNumOperands();
+//     if (isa<TFL::StridedSliceOp>(slice.getInput().getDefiningOp())) {
+//       // assert if slice axis is batch as that is where we opsplit
+//       // return failure();
+//       numOperands = 1;
+//     }
+//     for (int i = 0; i < numOperands; i++) {
+//       auto sliceOp = getSliceOp(i, opOriginal->getOperand(i));
+//       opReplacement->setOperand(i, sliceOp);
+//     }
+
+//     // replace slice with new slice -> new op
+//     rewriter.replaceOp(slice, opReplacement.getResult());
+
+//     return success();
+//   }
+// };
+
+template <typename TFLOp>
+struct RaiseSlicePattern : public OpRewritePattern<TFL::SliceOp> {
+  using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::SliceOp slice,
+                                PatternRewriter &rewriter) const override {
+    auto f = slice->getParentOfType<func::FuncOp>();
+    // If slice does not have a defining op, return failure
+    if (!slice.getInput().getDefiningOp() ||
+        !isa<TFLOp>(slice.getInput().getDefiningOp())) {
+      return failure();
+    }
+
+    if (failed(isRaisableSlice(rewriter, slice))) {
+      return failure();
+    }
+
+    if (succeeded(combineSliceWithExisting(rewriter, slice))) {
+      return success();
+    }
+
+    if (isa<TFL::ConcatenationOp>(slice.getInput().getDefiningOp())) {
+      // assert if concat axis is batch as that is where we opsplit
+      // return failure();
+    }
+
+    if (isa<TFL::StridedSliceOp>(slice.getInput().getDefiningOp())) {
+      // assert if slice axis is batch as that is where we opsplit
+      // return failure();
+    }
+
+    auto opOriginal = llvm::cast<TFLOp>(slice.getInput().getDefiningOp());
+
+    DenseElementsAttr beginAttr, sizeAttr;
+    if (!matchPattern(slice.getBegin(), m_Constant(&beginAttr))) {
+      return failure();
+    }
+    if (!matchPattern(slice.getSize(), m_Constant(&sizeAttr))) {
+      return failure();
+    }
+
+    auto sliceOutShape = utils::getValShape(slice.getOutput());
+    auto opReplacement = llvm::cast<TFLOp>(rewriter.clone(*opOriginal));
+    RankedTensorType opReplacementType = RankedTensorType::get(
+        sliceOutShape, utils::getValElementType(opOriginal.getResult()));
+    opReplacement->getResult(0).setType(opReplacementType);
+
+    auto outputType =
+        opOriginal.getResult().getType().template cast<RankedTensorType>();
+    auto getSliceOp = [&](int argNo, Value arg) -> Value {
+      auto argType = arg.getType().cast<RankedTensorType>();
+      if (1 /*utils::hasSameShape(argType, outputType)*/) {
+        rewriter.setInsertionPoint(opReplacement);
+        // auto newSlice = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
+
+        // int32_t beginAttr[4] = {
+        // 0, static_cast<int32_t>(newEndIndex - newOutputHeight), 0, 0};
+        auto argShape = argType.getShape();
+        int32_t newBeginAttr[4] = {beginAttr.getValues<int32_t>()[0],
+                                   beginAttr.getValues<int32_t>()[1],
+                                   beginAttr.getValues<int32_t>()[2],
+                                   beginAttr.getValues<int32_t>()[3]};
+        int32_t newSizeAttr[4] = {1, static_cast<int32_t>(sliceOutShape[1]),
+                                  static_cast<int32_t>(argShape[2]),
+                                  static_cast<int32_t>(argShape[3])};
+        auto newSlice =
+            createSliceOp(rewriter, slice.getLoc(), arg, newBeginAttr,
+                          newSizeAttr, utils::getValElementType(arg));
+
+        // newSlice.setOperand(0, arg);
+        // RankedTensorType newSliceType = RankedTensorType::get(
+        //     {sliceOutShape[0], sliceOutShape[1], argShape[2], argShape[3]},
+        //     utils::getValElementType(arg));
+        // newSlice->getResult(0).setType(newSliceType);
+        return newSlice;
+      } else {
+        auto fakeSlice = dyn_cast_or_null<FakeSliceOp>(arg.getDefiningOp());
+        if (!fakeSlice) {
+          rewriter.setInsertionPoint(opOriginal);
+          auto newFsOp =
+              rewriter.create<FakeSliceOp>(arg.getLoc(), arg.getType(), arg);
+
+          llvm::SmallVector<mlir::Attribute> beginVals;
+          beginVals.push_back(beginAttr);
+          newFsOp->setAttr("begin", rewriter.getArrayAttr(beginVals));
+
+          llvm::SmallVector<mlir::Attribute> sizeVals;
+          sizeVals.push_back(sizeAttr);
+          newFsOp->setAttr("size", rewriter.getArrayAttr(sizeVals));
+
+          auto opReplacement = llvm::cast<TFLOp>(rewriter.clone(*opOriginal));
+          opReplacement->setOperand(argNo, newFsOp);
+          opOriginal.getResult().replaceAllUsesWith(opReplacement);
+          rewriter.eraseOp(opOriginal);
+          return newFsOp;
+        } else {
+          auto begin = fakeSlice->getAttr("begin").cast<mlir::ArrayAttr>();
+          llvm::SmallVector<mlir::Attribute> beginVals = {
+              begin.getValue().begin(), begin.getValue().end()};
+          beginVals.push_back(beginAttr);
+          fakeSlice->setAttr("begin", rewriter.getArrayAttr(beginVals));
+
+          auto size = fakeSlice->getAttr("size").cast<mlir::ArrayAttr>();
+          llvm::SmallVector<mlir::Attribute> sizeVals = {
+              size.getValue().begin(), size.getValue().end()};
+          sizeVals.push_back(sizeAttr);
+          fakeSlice->setAttr("size", rewriter.getArrayAttr(sizeVals));
+        }
+        return fakeSlice;
+      }
+    };
+
+    // Create new slices for above op
+    int numOperands = opOriginal.getNumOperands();
+    if (isa<TFL::StridedSliceOp>(slice.getInput().getDefiningOp())) {
+      // assert if slice axis is batch as that is where we opsplit
+      // return failure();
+      numOperands = 1;
+    }
+    for (int i = 0; i < numOperands; i++) {
+      auto sliceOp = getSliceOp(i, opOriginal->getOperand(i));
+      opReplacement->setOperand(i, sliceOp);
+    }
+
+    // replace slice with new slice -> new op
+    rewriter.replaceOp(slice, opReplacement.getResult());
+
+    return success();
+  }
+};
+
+template <typename UnaryOp>
+struct RaiseSliceUnaryPattern : public OpRewritePattern<TFL::SliceOp> {
+  using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::SliceOp slice,
+                                PatternRewriter &rewriter) const override {
+    auto f = slice->getParentOfType<func::FuncOp>();
+    // If slice does not have a defining op, return failure
+    if (!slice.getInput().getDefiningOp() ||
+        !isa<UnaryOp>(slice.getInput().getDefiningOp())) {
+      return failure();
+    }
+
+    if (failed(isRaisableSlice(rewriter, slice))) {
+      return failure();
+    }
+
+    if (succeeded(combineSliceWithExisting(rewriter, slice))) {
+      return success();
+    }
+
+    auto opOriginal = llvm::cast<UnaryOp>(slice.getInput().getDefiningOp());
+
+    DenseElementsAttr beginAttr, sizeAttr;
+    if (!matchPattern(slice.getBegin(), m_Constant(&beginAttr))) {
+      return failure();
+    }
+    if (!matchPattern(slice.getSize(), m_Constant(&sizeAttr))) {
+      return failure();
+    }
+
+    auto sliceOutShape = utils::getValShape(slice.getOutput());
+    auto opReplacement = llvm::cast<UnaryOp>(rewriter.clone(*opOriginal));
+    RankedTensorType opReplacementType = RankedTensorType::get(
+        sliceOutShape, utils::getValElementType(opOriginal.getResult()));
+    opReplacement->getResult(0).setType(opReplacementType);
+
+    auto outputType =
+        opOriginal.getResult().getType().template cast<RankedTensorType>();
+    auto getSliceOp = [&](int argNo, Value arg) -> Value {
+      auto argType = arg.getType().cast<RankedTensorType>();
+      if (utils::hasSameShape(argType, outputType)) {
+        rewriter.setInsertionPoint(opReplacement);
+        auto newSlice = llvm::cast<TFL::SliceOp>(rewriter.clone(*slice));
+        newSlice.setOperand(0, arg);
+        RankedTensorType newSliceType =
+            RankedTensorType::get(sliceOutShape, utils::getValElementType(arg));
+        newSlice->getResult(0).setType(newSliceType);
+        return newSlice;
+      } else {
+        auto fakeSlice = dyn_cast_or_null<FakeSliceOp>(arg.getDefiningOp());
+        if (!fakeSlice) {
+          rewriter.setInsertionPoint(opOriginal);
+          auto newFsOp =
+              rewriter.create<FakeSliceOp>(arg.getLoc(), arg.getType(), arg);
+
+          llvm::SmallVector<mlir::Attribute> beginVals;
+          beginVals.push_back(beginAttr);
+          newFsOp->setAttr("begin", rewriter.getArrayAttr(beginVals));
+
+          llvm::SmallVector<mlir::Attribute> sizeVals;
+          sizeVals.push_back(sizeAttr);
+          newFsOp->setAttr("size", rewriter.getArrayAttr(sizeVals));
+
+          auto opReplacement = llvm::cast<UnaryOp>(rewriter.clone(*opOriginal));
+          opReplacement->setOperand(argNo, newFsOp);
+          opOriginal.getResult().replaceAllUsesWith(opReplacement);
+          rewriter.eraseOp(opOriginal);
+          return newFsOp;
+        } else {
+          auto begin = fakeSlice->getAttr("begin").cast<mlir::ArrayAttr>();
+          llvm::SmallVector<mlir::Attribute> beginVals = {
+              begin.getValue().begin(), begin.getValue().end()};
+          beginVals.push_back(beginAttr);
+          fakeSlice->setAttr("begin", rewriter.getArrayAttr(beginVals));
+
+          auto size = fakeSlice->getAttr("size").cast<mlir::ArrayAttr>();
+          llvm::SmallVector<mlir::Attribute> sizeVals = {
+              size.getValue().begin(), size.getValue().end()};
+          sizeVals.push_back(sizeAttr);
+          fakeSlice->setAttr("size", rewriter.getArrayAttr(sizeVals));
+        }
+        return fakeSlice;
+      }
+    };
+
+    // Create new slices for above op
+    // auto sliceLHS = getSliceOp(0, opOriginal.getLhs());
+    auto sliceRHS = getSliceOp(0, opOriginal->getOperand(0));
+    // opReplacement.setOperand(0, sliceLHS);
+    opReplacement->setOperand(0, sliceRHS);
+
+    // replace slice with new slice -> new op
+    rewriter.replaceOp(slice, opReplacement.getResult());
+
+    return success();
+  }
+};
+
 template <typename BinaryOp>
 struct RaiseSliceBinaryPattern : public OpRewritePattern<TFL::SliceOp> {
   using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
@@ -518,7 +882,7 @@ struct RaiseSliceBinaryPattern : public OpRewritePattern<TFL::SliceOp> {
 };
 
 template <typename ConvOp>
-struct RaiseSlicePattern : public OpRewritePattern<TFL::SliceOp> {
+struct RaiseSliceConvPattern : public OpRewritePattern<TFL::SliceOp> {
   using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TFL::SliceOp slice,
@@ -855,14 +1219,33 @@ void OpSplit::runOnOperation() {
   auto &startOps = opSplitBottomOpsOption;
   auto &endOps = opSplitTopOpsOption;
   auto &numSplits = opSplitNumSplitsOption;
+  bool splitSingleInput = false;
 
   // Check if the sizes of startOps, endOps, and numSplits are equal
   if (!(startOps.size() == endOps.size() &&
         endOps.size() == numSplits.size())) {
     // If they are not, emit an error message and signal pass failure
-    func.emitError("start, end, and numSplits must be the same size");
+    func.emitError(
+        "Top, bottom, and num splits must have the same number of elements!");
     signalPassFailure();
     return;
+  }
+
+  for (int i = 0; i < endOps.size(); ++i) {
+    if (endOps[i] < -1) {
+      func.emitError(
+          "Top node can only be -1 (for splitting input) and larger!");
+      signalPassFailure();
+      return;
+    } else if (endOps[i] == -1) {
+      FunctionType funcType = func.getFunctionType();
+      if (funcType.getInputs().size() != 1) {
+        func.emitError("Input can be split (top node can be specified as -1) "
+                       "when there is only one input!");
+        signalPassFailure();
+      }
+      splitSingleInput = true;
+    }
   }
 
   OpBuilder builder(func);
@@ -901,6 +1284,9 @@ void OpSplit::runOnOperation() {
   patterns1.insert<OpSplitPattern<TFL::AddOp>>(ctx);
   patterns1.insert<OpSplitPattern<TFL::MulOp>>(ctx);
   patterns1.insert<OpSplitPattern<TFL::PadOp>>(ctx);
+  patterns1.insert<OpSplitPattern<TFL::LogisticOp>>(ctx);
+  patterns1.insert<OpSplitPattern<TFL::StridedSliceOp>>(ctx);
+  patterns1.insert<OpSplitPattern<TFL::ConcatenationOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns1));
 
@@ -913,11 +1299,17 @@ void OpSplit::runOnOperation() {
   GreedyRewriteConfig config;
   config.maxIterations = 50;
 
+  // patterns2.insert<RaiseSliceBinaryPattern<TFL::AddOp>>(ctx);
+
+  patterns2.insert<RaiseSlicePattern<TFL::ConcatenationOp>>(ctx);
+  patterns2.insert<RaiseSlicePattern<TFL::StridedSliceOp>>(ctx);
+
+  patterns2.insert<RaiseSliceUnaryPattern<TFL::LogisticOp>>(ctx);
   patterns2.insert<RaiseSliceBinaryPattern<TFL::AddOp>>(ctx);
   patterns2.insert<RaiseSliceBinaryPattern<TFL::MulOp>>(ctx);
   patterns2.insert<RaiseSlicePadPattern>(ctx);
-  patterns2.insert<RaiseSlicePattern<TFL::Conv2DOp>>(ctx);
-  patterns2.insert<RaiseSlicePattern<TFL::DepthwiseConv2DOp>>(ctx);
+  patterns2.insert<RaiseSliceConvPattern<TFL::Conv2DOp>>(ctx);
+  patterns2.insert<RaiseSliceConvPattern<TFL::DepthwiseConv2DOp>>(ctx);
 
   patterns2.insert<RaiseFakeSlicePattern<TFL::FullyConnectedOp>>(ctx);
   patterns2.insert<RaiseFakeSlicePattern<TFL::LogisticOp>>(ctx);
@@ -926,7 +1318,6 @@ void OpSplit::runOnOperation() {
   patterns2.insert<RaiseFakeSliceToSliceMeanPattern>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns2), config);
-
   // Combine slices after op splitting
   // At the top ops, it's possible that they are slices left to be combined as
   // those slices have not been raised further.

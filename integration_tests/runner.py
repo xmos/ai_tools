@@ -68,7 +68,7 @@ class AbstractRefRunner(AbstractRunner):
 
 
 class AbstractXFRunner(AbstractRunner):
-    def __init__(self, model, thread_count=5):
+    def __init__(self, model, thread_count, compiler_flags=None):
         temp_dir = tempfile.TemporaryDirectory(suffix=str(os.getpid()))
         self._temp_dir = temp_dir
         self._dir_path = Path(temp_dir.name)
@@ -77,6 +77,8 @@ class AbstractXFRunner(AbstractRunner):
             fd.write(model)
         output_file = self._dir_path / "model.tflite"
         hyper_params = [("xcore-thread-count", thread_count)]
+        if compiler_flags:
+            hyper_params += compiler_flags
         xformer.convert(input_file, output_file, hyper_params)
         with open(output_file, "rb") as fd:
             model = fd.read()
@@ -137,7 +139,7 @@ class TFLiteInterpreter(AbstractRefRunner):
 
 
 class XFHostRuntime(AbstractXFRunner):
-    def __init__(self, model_content, thread_count=5):
+    def __init__(self, model_content, thread_count):
         path_var = os.path.dirname(rt.__file__)
         super().__init__(model_content, thread_count)
         self._model_exe_path = self._dir_path / "a.out"
@@ -179,7 +181,7 @@ class XFHostRuntime(AbstractXFRunner):
 
 
 class XFDeviceRuntime(AbstractXFRunner):
-    def __init__(self, model_content, thread_count=5):
+    def __init__(self, model_content, thread_count):
         super().__init__(model_content, thread_count)
         # compile model, two dirs because xmake
         dst_dir = self._dir_path / "device_test"
@@ -206,8 +208,8 @@ class XFDeviceRuntime(AbstractXFRunner):
 
 
 class XFHostInterpreter(AbstractXFRunner):
-    def __init__(self, model_content, thread_count=5):
-        super().__init__(model_content, thread_count)
+    def __init__(self, model_content, thread_count, compiler_flags):
+        super().__init__(model_content, thread_count, compiler_flags)
 
     def predict(self, inputs):
         self._interpreter.reset()
@@ -233,6 +235,7 @@ def run_cmd(cmd, working_dir=None):
 
 def get_params(model_path: Path) -> dict:
     params = {}
+    params["COMPILER_FLAGS"] = ""
     params["MAX_ABS_ERROR"] = MAX_ABS_ERROR
     params["ABS_AVG_ERROR"] = ABS_AVG_ERROR
     params["AVG_ABS_ERROR"] = AVG_ABS_ERROR
@@ -297,7 +300,7 @@ def test_model(request: FixtureRequest, filename: str) -> None:
     elif opt_dict["device"]:
         xf_runner = XFDeviceRuntime(model_content, opt_dict["tc"])
     else:
-        xf_runner = XFHostInterpreter(model_content, opt_dict["tc"])
+        xf_runner = XFHostInterpreter(model_content, opt_dict["tc"], params["COMPILER_FLAGS"])
 
     # Run tests
     num_fails = run_out_count = run_out_err = run_out_abs_err = test = max_abs_err = 0

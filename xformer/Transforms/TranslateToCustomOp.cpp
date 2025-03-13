@@ -50,6 +50,26 @@ std::vector<uint8_t> LookupOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> SoftmaxOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> BatchedSoftmaxOp::buildCustomOptions() { return {}; }
 
+std::vector<uint8_t> StoreTensorOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() {
+    fbb.Int("a", (int32_t)getAddress());
+    fbb.Int("s", (int32_t)getSize());
+  });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
+std::vector<uint8_t> LoadTensorOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() {
+    fbb.Int("a", (int32_t)getAddress());
+    fbb.Int("s", (int32_t)getSize());
+  });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 std::vector<uint8_t> AddOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
   fbb.Map([&]() {
@@ -329,6 +349,8 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<Expand8To16Op>>(ctx);
   patterns.insert<RewriteToCustomOp<LoadWeightsWaitOp>>(ctx);
   patterns.insert<RewriteToCustomOp<NoOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<StoreTensorOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<LoadTensorOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

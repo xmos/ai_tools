@@ -30,10 +30,10 @@ of options and their value.
 .. code-block:: Python
 
   xf.convert("example_int8_model.tflite", "xcore_optimized_int8_model.tflite", 
-             params = {
-                "xcore-thread-count": 4,
-                "xcore-reduce-memory": None,
-             }
+             params = [
+                ("xcore-thread-count": 4),
+                ("xcore-reduce-memory": None),
+             ]
             )
 
 The possible options are described below in the command line interface section. If the default operation is intended this third argument can be "None".

@@ -127,8 +127,9 @@ class TFLMHostInterpreter:
         @param model_index  The model to target, for interpreters that support multiple models
         running concurrently. Defaults to 0 for use with a single model.
         """
-        max_model_size = 50000000
-        self.obj = lib.new_interpreter(max_model_size, max_model_size)
+        max_arena_size = 50000000
+        external_memory_size = 50000000
+        self.obj = lib.new_interpreter(max_arena_size, external_memory_size)
         currentModel = None
 
         for model in self.models:

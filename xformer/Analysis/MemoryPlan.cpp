@@ -35,9 +35,14 @@ void MemoryPlan::build() {
   };
 
   for (BlockArgument argument : funcOp.getArguments()) {
-    valueInfo.insert(
-        {argument,
-         {valueInfo.size(), getAlignedValueSize(argument), false, -1, -1}});
+    bool isExternallyAllocated = false;
+    // If the input is externally allocated, then it won't have any uses
+    if (argument.use_empty()) {
+      isExternallyAllocated = true;
+    }
+    valueInfo.insert({argument,
+                      {valueInfo.size(), getAlignedValueSize(argument),
+                       /*isConstantOp=*/false, -1, -1, isExternallyAllocated}});
     values.push_back(argument);
   }
 
@@ -60,13 +65,31 @@ void MemoryPlan::build() {
       operations.push_back(op);
     }
 
+    // If this is an output tensor which is externally stored, then we don't
+    // want to allocate that
+    if (llvm::isa<StoreTensorOp>(op)) {
+      if (op->getNumResults() == 1 && op->getResult(0).hasOneUse() &&
+          llvm::isa<func::ReturnOp>(*op->getResult(0).user_begin())) {
+        auto result = op->getResult(0);
+        assert(valueInfo.count(result) == 0);
+        valueInfo.insert(
+            {result,
+             {valueInfo.size(), getAlignedValueSize(result), isConstantOp, -1,
+              -1, /*isExternallyAllocated=*/true}});
+        values.push_back(result);
+        return;
+      }
+    }
+
     for (Value result : op->getResults()) {
       if (result.getType().isa<NoneType>()) {
         continue;
       }
-      valueInfo.insert({result,
-                        {valueInfo.size(), getAlignedValueSize(result),
-                         isConstantOp, -1, -1}});
+      assert(valueInfo.count(result) == 0);
+      valueInfo.insert(
+          {result,
+           {valueInfo.size(), getAlignedValueSize(result), isConstantOp, -1, -1,
+            /*isExternallyAllocated=*/false}});
       values.push_back(result);
     }
   });
@@ -455,7 +478,8 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapModifyingOps,
   // are allocated separately
   for (auto v : values) {
     if (!outInMap.count(v) && !vInfo[v].isConstant &&
-        !outputTensorSet.contains(v) && !inputTensorSet.contains(v)) {
+        !vInfo[v].isExternallyAllocated && !outputTensorSet.contains(v) &&
+        !inputTensorSet.contains(v)) {
       queue.push({v, vInfo[v].size});
     }
   }
@@ -535,8 +559,13 @@ std::vector<int> MemoryPlan::getAllocatedOffsets(const bool overlapModifyingOps,
   }
 
   // Insert -1 offset for constant values
+  // -111 is an offset used to denote externally allocated tensor
+  // This is declared for the runtime in greedy_memory_planner.h as
+  // kXcoreOfflinePlannedBuffer
   for (auto v : values) {
-    if (vInfo[v].isConstant) {
+    if (vInfo[v].isExternallyAllocated) {
+      allocatedValues.insert({v, -111});
+    } else if (vInfo[v].isConstant) {
       allocatedValues.insert({v, -1});
     }
   }

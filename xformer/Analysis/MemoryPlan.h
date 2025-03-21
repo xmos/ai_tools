@@ -20,6 +20,7 @@ struct ValueInfo {
   bool isConstant;
   int firstUsed;
   int lastUsed;
+  bool isExternallyAllocated;
 };
 
 // Represents an analysis for memory planning of a given FuncOp for a model.

@@ -36,6 +36,22 @@ namespace mlir::xcore {
 // and -help) will be hidden.
 static cl::OptionCategory XformerCategory("Xformer options");
 
+llvm::cl::list<std::string> loadInputExternallyOption(
+    "xcore-load-input-tensors-externally",
+    cl::desc(
+        "Place the specified input tensors in external memory. This is "
+        "useful when input tensors are larger than what would fit in SRAM. The "
+        "format is \"input_tensor_name_1,input_tensor_name_2,...\""),
+    cl::CommaSeparated, cl::cat(XformerCategory));
+
+llvm::cl::list<std::string> storeOutputExternallyOption(
+    "xcore-store-output-tensors-externally",
+    cl::desc("Place the specified output tensors in external memory. This is "
+             "useful when output tensors are larger than what would fit in "
+             "SRAM. The "
+             "format is \"output_tensor_name_1,output_tensor_name_2,...\""),
+    cl::CommaSeparated, cl::cat(XformerCategory));
+
 llvm::cl::list<std::string> sameAllocationInputOutputTensorOption(
     "xcore-same-allocation-input-output-tensor",
     cl::desc("Allocate this input and output tensor in the same memory "
@@ -290,7 +306,7 @@ static LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
           return failure();
         }
 
-        if (auto attr = moduleClone->getAttr("xc.peakusage")) {
+        if (auto attr = moduleClone->getAttr(kMetadataXCPeakUsage)) {
           peakUsage = attr.cast<mlir::IntegerAttr>().getInt();
         } else {
           return failure();
@@ -334,7 +350,7 @@ static LogicalResult runPassPipeline(const PassPipelineCLParser &passPipeline,
             return failure();
           }
 
-          if (auto attr = moduleClone->getAttr("xc.peakusage")) {
+          if (auto attr = moduleClone->getAttr(kMetadataXCPeakUsage)) {
             peakUsage = attr.cast<mlir::IntegerAttr>().getInt();
           } else {
             return failure();
@@ -515,7 +531,7 @@ int main(int argc, char **argv) {
        !(mlir::xcore::opSplitTopOpsOption.empty()) ||
        !(mlir::xcore::opSplitNumSplitsOption.empty()))) {
     return failedMessage(
-        "Target size option cannot be used with start, end, and "
+        "Target size option cannot be used with top, bottom, and "
         "numSplits options");
   }
 
@@ -614,9 +630,9 @@ int main(int argc, char **argv) {
   if (!outputFilename.empty()) {
     // Translate MLIR to flatbuffer string
     // Prepare metadata
-    auto module = mod.get();
+    auto modul = mod.get();
 
-    struct shared_config::xcore_metadata sharedCfg;
+    struct shared_config::xcore_metadata_t sharedCfg;
     // Store version info
     sharedCfg.lib_nn_major_version = lib_nn::major_version;
     sharedCfg.lib_nn_minor_version = lib_nn::minor_version;
@@ -629,8 +645,53 @@ int main(int argc, char **argv) {
     sharedCfg.xformer_patch_version = xformer::patchVersion;
     // Store number of threads needed to execute the model
     sharedCfg.required_thread_count = mlir::xcore::threadCountOption;
-    auto bufferData =
-        std::string((char *)&sharedCfg, sizeof(shared_config::xcore_metadata));
+    // By default, there are no externally allocated tensors
+    sharedCfg.num_external_input_tensors = 0;
+    sharedCfg.num_external_output_tensors = 0;
+    auto bufferData = std::string((char *)&sharedCfg,
+                                  sizeof(shared_config::xcore_metadata_t));
+
+    // If there are externally allocated tensors, we mark them in the metadata
+    if (mlir::xcore::loadInputExternallyOption.size() > 0 ||
+        mlir::xcore::storeOutputExternallyOption.size() > 0) {
+      sharedCfg.num_external_input_tensors =
+          modul
+              ->getAttrOfType<mlir::IntegerAttr>(
+                  kMetadataXCNumExternalInputTensors)
+              .getInt();
+      sharedCfg.num_external_output_tensors =
+          modul
+              ->getAttrOfType<mlir::IntegerAttr>(
+                  kMetadataXCNumExternalOutputTensors)
+              .getInt();
+      DenseIntElementsAttr vecattr;
+      std::vector<int> tensorsData;
+      if (modul->hasAttr(kMetadataXCNumExternalInputTensorsData)) {
+        vecattr = modul->getAttrOfType<mlir::DenseIntElementsAttr>(
+            kMetadataXCNumExternalInputTensorsData);
+        tensorsData = std::vector<int>{vecattr.getValues<int32_t>().begin(),
+                                       vecattr.getValues<int32_t>().end()};
+        assert(tensorsData.size() < shared_config::xcoreMaxNumOfTensors * 3 &&
+               "Externally allocated input tensors exceeds max number!");
+        memcpy(&sharedCfg.external_input_tensors_data,
+               (char *)tensorsData.data(), tensorsData.size() * 4);
+      }
+      if (modul->hasAttr(kMetadataXCNumExternalOutputTensorsData)) {
+        vecattr = modul->getAttrOfType<mlir::DenseIntElementsAttr>(
+            kMetadataXCNumExternalOutputTensorsData);
+        tensorsData = std::vector<int>{vecattr.getValues<int32_t>().begin(),
+                                       vecattr.getValues<int32_t>().end()};
+        assert(tensorsData.size() < shared_config::xcoreMaxNumOfTensors * 3 &&
+               "Externally allocated output tensors exceeds max number!");
+        memcpy(&sharedCfg.external_output_tensors_data,
+               (char *)tensorsData.data(), tensorsData.size() * 4);
+      }
+      bufferData = std::string((char *)&sharedCfg,
+                               sizeof(shared_config::xcore_metadata_t));
+    }
+    // Align to sixteen bytes as metadata value has to be 16-byte aligned
+    // buffer
+    bufferData.resize(((bufferData.size() + 15) / 16) * 16);
 
     std::map<std::string, std::string> metadata;
     auto xcoreConfigMetadata =
@@ -641,7 +702,7 @@ int main(int argc, char **argv) {
     // std::vector<int> offline_offsets = {
     //    73728, -1, -1, -1, -1, -1, -1, 0, 129024, 73728, 166272, 132096,
     //    73728, 153984, 132096, 73728, 132096, 73728, 0, 52224, 0};
-    if (auto attr = module->getAttr("xc.offsets")) {
+    if (auto attr = modul->getAttr(kMetadataXCOffsets)) {
       auto offline_offsets = std::vector<int>{
           attr.cast<mlir::DenseIntElementsAttr>().getValues<int32_t>().begin(),
           attr.cast<mlir::DenseIntElementsAttr>().getValues<int32_t>().end()};
@@ -685,7 +746,7 @@ int main(int argc, char **argv) {
 
     std::string flatBufferString;
     if (failed(xcore::utils::getFlatBufferStringFromMLIR(
-            module, metadata, dontMinifyEnabled, flatBufferString))) {
+            modul, metadata, dontMinifyEnabled, flatBufferString))) {
       return failedMessage("Failed to obtain flatbuffer string from MLIR!");
     }
 

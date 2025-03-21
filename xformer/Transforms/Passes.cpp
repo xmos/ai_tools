@@ -15,7 +15,7 @@ void buildXCorePreOpSplitPassPipeline(OpPassManager &pm) {
   // Run pass from LCE to convert Larq ops which are in TFL custom op format to
   // Larq dialect
   pm.addPass(mlir::TFL::CreateTranslateToLCEPass());
-  pm.addPass(createVerifySameAllocationTensorsPass());
+  pm.addPass(createVerifyInputOutputTensorOptionsPass());
   // Convert dynamic shapes in batch dimension to static
   pm.addPass(createRemoveDynamicShapePass());
 }

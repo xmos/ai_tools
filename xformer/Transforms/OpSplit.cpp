@@ -1219,7 +1219,6 @@ void OpSplit::runOnOperation() {
   auto &startOps = opSplitBottomOpsOption;
   auto &endOps = opSplitTopOpsOption;
   auto &numSplits = opSplitNumSplitsOption;
-  bool splitSingleInput = false;
 
   // Check if the sizes of startOps, endOps, and numSplits are equal
   if (!(startOps.size() == endOps.size() &&
@@ -1229,23 +1228,6 @@ void OpSplit::runOnOperation() {
         "Top, bottom, and num splits must have the same number of elements!");
     signalPassFailure();
     return;
-  }
-
-  for (int i = 0; i < endOps.size(); ++i) {
-    if (endOps[i] < -1) {
-      func.emitError(
-          "Top node can only be -1 (for splitting input) and larger!");
-      signalPassFailure();
-      return;
-    } else if (endOps[i] == -1) {
-      FunctionType funcType = func.getFunctionType();
-      if (funcType.getInputs().size() != 1) {
-        func.emitError("Input can be split (top node can be specified as -1) "
-                       "when there is only one input!");
-        signalPassFailure();
-      }
-      splitSingleInput = true;
-    }
   }
 
   OpBuilder builder(func);
@@ -1298,8 +1280,6 @@ void OpSplit::runOnOperation() {
   // failure.
   GreedyRewriteConfig config;
   config.maxIterations = 50;
-
-  // patterns2.insert<RaiseSliceBinaryPattern<TFL::AddOp>>(ctx);
 
   patterns2.insert<RaiseSlicePattern<TFL::ConcatenationOp>>(ctx);
   patterns2.insert<RaiseSlicePattern<TFL::StridedSliceOp>>(ctx);

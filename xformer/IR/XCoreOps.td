@@ -503,7 +503,7 @@ def XC_StoreTensorOp : XC_Op<"store_tensor", [Pure]> {
 
   let arguments = (ins AnyTensor:$input, I32Attr:$address, I32Attr:$size);
 
-  let results = (outs TensorOf<[I8]>:$output);
+  let results = (outs AnyTensor:$output);
 }
 
 def XC_LoadTensorOp : XC_Op<"load_tensor", [Pure]> {
@@ -511,8 +511,8 @@ def XC_LoadTensorOp : XC_Op<"load_tensor", [Pure]> {
 
   let description = [{Load tensor op.}];
 
-  let arguments = (ins Variadic<TensorOf<[I8]>>:$input, I32Attr:$address,
-      I32Attr:$size);
+  let arguments = (ins Variadic<AnyTypeOf<[TensorOf<[I8]>, NoneType]>>:$input,
+      I32Attr:$address, I32Attr:$size);
 
   let results = (outs AnyTensor:$output);
 }

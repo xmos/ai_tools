@@ -1,5 +1,6 @@
 MAX_ABS_ERROR: 3.0
 COMPILER_FLAGS:
+  - ["xcore-naming-prefix", "model_mobilenetv2_paging"]
   - ["xcore-op-split-top-op", "0,7"]
   - ["xcore-op-split-bottom-op", "6,14"]
   - ["xcore-op-split-num-splits", "8,4"]

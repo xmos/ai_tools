@@ -35,6 +35,8 @@ extern llvm::cl::opt<bool> enablePagingOption;
 extern llvm::cl::opt<unsigned> livenessPagingOption;
 extern llvm::cl::opt<unsigned> convChannelwiseSplitSizeOption;
 extern llvm::cl::list<std::string> sameAllocationInputOutputTensorOption;
+extern llvm::cl::list<std::string> loadInputExternallyOption;
+extern llvm::cl::list<std::string> storeOutputExternallyOption;
 
 } // namespace xcore
 } // namespace mlir

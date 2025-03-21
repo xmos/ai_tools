@@ -181,10 +181,143 @@ struct ReorderLoadStorePattern : public OpRewritePattern<StoreTensorOp> {
   }
 };
 
+struct RaiseSliceLoadTensorInputPattern
+    : public OpRewritePattern<TFL::SliceOp> {
+  using OpRewritePattern<TFL::SliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::SliceOp slice,
+                                PatternRewriter &rewriter) const override {
+    auto f = slice->getParentOfType<func::FuncOp>();
+    // If slice does not have a defining op, return failure
+    if (!slice.getInput().getDefiningOp() ||
+        !isa<LoadTensorOp>(slice.getInput().getDefiningOp())) {
+      return failure();
+    }
+
+    auto opOriginal =
+        llvm::cast<LoadTensorOp>(slice.getInput().getDefiningOp());
+
+    DenseElementsAttr beginAttr, sizeAttr;
+    if (!matchPattern(slice.getBegin(), m_Constant(&beginAttr))) {
+      return failure();
+    }
+    if (!matchPattern(slice.getSize(), m_Constant(&sizeAttr))) {
+      return failure();
+    }
+
+    auto sliceOutShape = utils::getValShape(slice.getOutput());
+    auto opReplacement = llvm::cast<LoadTensorOp>(rewriter.clone(*opOriginal));
+    RankedTensorType opReplacementType = RankedTensorType::get(
+        sliceOutShape, utils::getValElementType(opOriginal.getResult()));
+    opReplacement->getResult(0).setType(opReplacementType);
+
+    auto outputType =
+        opOriginal.getResult().getType().template cast<RankedTensorType>();
+
+    // replace slice with new slice -> new op
+    rewriter.replaceOp(slice, opReplacement.getResult());
+
+    return success();
+  }
+};
+
 void Paging::runOnOperation() {
   auto func = getOperation();
+  auto module = func->getParentOfType<ModuleOp>();
   auto *ctx = &getContext();
   OpBuilder builder(func);
+
+  auto &mem = getAnalysis<MemoryPlan>();
+  llvm::StringMap<Value> inputTensorMap, outputTensorMap;
+  mem.buildInputOutputTensorMaps(inputTensorMap, outputTensorMap);
+
+  int address = 0;
+  if (loadInputExternallyOption.size() > 0) {
+    llvm::DenseSet<int> inputArgIndexSet;
+    for (int i = 0; i < loadInputExternallyOption.size(); i = i + 1) {
+      for (int j = 0; j < func.getNumArguments(); j++) {
+        if (inputTensorMap[loadInputExternallyOption[i]] ==
+            func.getArgument(j)) {
+          inputArgIndexSet.insert(j);
+        }
+      }
+    }
+    std::vector<int> externalInputTensorsData;
+    module->setAttr(kMetadataXCNumExternalInputTensors,
+                    builder.getI32IntegerAttr(inputArgIndexSet.size()));
+
+    for (auto index : inputArgIndexSet) {
+      BlockArgument inp = func.getArgument(index);
+      builder.setInsertionPointToStart(inp.getOwner());
+      auto noValueOp = builder.create<TFL::NoValueOp>(
+          inp.getLoc(), builder.getNoneType(), builder.getUnitAttr());
+      llvm::SmallVector<Value> ops;
+      ops.push_back(noValueOp);
+      int size = utils::getShapedTypeSize(inp.getType().dyn_cast<ShapedType>());
+      auto loadOp = builder.create<LoadTensorOp>(inp.getLoc(), inp.getType(),
+                                                 ops, address, size);
+      inp.replaceAllUsesWith(loadOp);
+
+      // TODO
+      externalInputTensorsData.push_back(index);
+      externalInputTensorsData.push_back(address);
+      externalInputTensorsData.push_back(size);
+
+      // TODO
+      address += size;
+    }
+    assert(externalInputTensorsData.size() == inputArgIndexSet.size() * 3);
+    if (externalInputTensorsData.size()) {
+      module->setAttr(kMetadataXCNumExternalInputTensorsData,
+                      builder.getI32VectorAttr(externalInputTensorsData));
+    }
+  }
+
+  if (storeOutputExternallyOption.size() > 0) {
+    llvm::DenseSet<int> outputIndexSet;
+    for (int i = 0; i < storeOutputExternallyOption.size(); i = i + 1) {
+      auto term = func.back().getTerminator();
+      for (int j = 0; j < term->getNumOperands(); j++) {
+        if (outputTensorMap[storeOutputExternallyOption[i]] ==
+            term->getOperand(j)) {
+          outputIndexSet.insert(j);
+        }
+      }
+    }
+    std::vector<int> externalOutputTensorsData;
+    module->setAttr(kMetadataXCNumExternalOutputTensors,
+                    builder.getI32IntegerAttr(outputIndexSet.size()));
+
+    auto term = func.back().getTerminator();
+    for (auto index : outputIndexSet) {
+      auto op = term->getOperand(index);
+      builder.setInsertionPointAfterValue(op);
+
+      int size = utils::getShapedTypeSize(op.getType().dyn_cast<ShapedType>());
+      auto storeOp = builder.create<StoreTensorOp>(op.getLoc(), op.getType(),
+                                                   op, address, size);
+      term->setOperand(index, storeOp);
+
+      // TODO
+      externalOutputTensorsData.push_back(index);
+      externalOutputTensorsData.push_back(address);
+      externalOutputTensorsData.push_back(size);
+
+      // TODO
+      address += size;
+    }
+
+    // TOD
+    assert(externalOutputTensorsData.size() == outputIndexSet.size() * 3);
+    if (externalOutputTensorsData.size()) {
+      module->setAttr(kMetadataXCNumExternalOutputTensorsData,
+                      builder.getI32VectorAttr(externalOutputTensorsData));
+    }
+  }
+
+  RewritePatternSet patterns1(ctx);
+  patterns1.insert<CombineLoadSliceToPartialLoadPattern>(ctx);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns1));
 
   // TODO
   // Try store_tensor and load_tensor ops
@@ -203,8 +336,8 @@ void Paging::runOnOperation() {
   // patterns5.insert<ReorderLoadStorePattern>(ctx);
   // (void)applyPatternsAndFoldGreedily(func, std::move(patterns5));
 
-  // Reorder async load to be before previous convolution
-  // so that the compute can be overlapped with the load
+  // Insert store_tensor and load_tensor based on liveness range for paging
+  getAnalysisManager().clear();
   auto &m = getAnalysis<MemoryPlan>();
   auto opIdMap = m.getOperationsIDMap();
   auto ops = m.getOperationsSequence();
@@ -213,13 +346,11 @@ void Paging::runOnOperation() {
 
   llvm::SetVector<int> convOpIds;
 
-  int address = 0;
-
   for (auto v : values) {
-    // if v is not constant
-    // if first used and last used if more than ten
-    // go through all uses of value
-    // insert store tensor after value creation and then load tensor before each
+    // If v is not constant
+    // If first used and last used is more than livenessPagingOption
+    // Go through all uses of value
+    // Insert store tensor after value creation and then load tensor before each
     // use
     if (!vInfoMap[v].isConstant &&
         vInfoMap[v].lastUsed - vInfoMap[v].firstUsed > livenessPagingOption) {
@@ -227,14 +358,12 @@ void Paging::runOnOperation() {
       // DenseMap<OpOperand*, Type> opTypeMap;
       SmallVector<OpOperand *> uses;
       for (mlir::OpOperand &use : v.getUses()) {
-        // opTypeMap[&use] = use.get().getType();
         uses.push_back(&use);
       }
 
       auto dummyResultType =
           RankedTensorType::get({1}, builder.getIntegerType(8));
 
-      // SmallVector<Value> storeOps;
       Value storeOp;
       int size = utils::getShapedTypeSize(v.getType().dyn_cast<ShapedType>());
 
@@ -261,17 +390,11 @@ void Paging::runOnOperation() {
     }
   }
   llvm::outs() << "\nExternal memory size : " << address << "\n";
-  auto module = func->getParentOfType<ModuleOp>();
   module->setAttr("xc.paging_size", builder.getI32IntegerAttr(address));
   RewritePatternSet patterns5(ctx);
   patterns5.insert<CombineLoadSliceToPartialLoadPattern>(ctx);
   // patterns5.insert<CombineSliceStoreToPartialStorePattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns5));
-
-  // move input to ddr
-  // add pass to add one load tensor at input
-  // if load tensor is immediately followed by a store tensor of the same size
-  // other load tensors, remove the first load tensor
 }
 } // namespace
 

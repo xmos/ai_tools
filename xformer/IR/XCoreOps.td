@@ -503,7 +503,7 @@ def XC_StoreTensorOp : XC_Op<"store_tensor", [Pure]> {
 
   let arguments = (ins AnyTensor:$input, I32Attr:$address, I32Attr:$size);
 
-  let results = (outs TensorOf<[I8]>:$output);
+  let results = (outs AnyTensor:$output);
 }
 
 def XC_LoadTensorOp : XC_Op<"load_tensor", [Pure]> {

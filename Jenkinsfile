@@ -88,7 +88,7 @@ def dailyHostTest = { platform ->
     // TODO - fix compiled tests on Windows
     runPytestHost("8x8", "--compiled -n 8", "compiled_8x8")
     runPytestHost("bnns", "--bnn --compiled -n 8", "compiled_bnns")
-    runPytestHost("complex_models/8x8/test_mobilenet_v2", "--compiled -n 8", "compiled_mobilenetv2)
+    runPytestHost("complex_models/8x8/test_mobilenet_v2", "--compiled -n 8", "compiled_mobilenetv2")
   }
 }
 

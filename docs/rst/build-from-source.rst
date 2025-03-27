@@ -1,8 +1,8 @@
 Compiling xmos-ai-tools from source
-======================
+===================================
 
 Requirements:
-#############
+-------------
 
 * Install version 15 or later of the `XMOS tools <https://www.xmos.ai/software-tools/>`_ from your preferred location and activate it by sourcing ``SetEnv`` in the installation root.
 
@@ -23,7 +23,7 @@ Requirements:
     pip install -r ./requirements.txt
 
 Building:
-#########
+---------
 
 * Clone submodules and apply patch to ``tflite-micro``::
 

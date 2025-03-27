@@ -1,12 +1,5 @@
-Deploying inference on the edge using XCORE.AI
-==============================================
-
-This document gives an introduction how to use trained models on XCORE.AI.
-XCORE.AI is a cross-over processor by XMOS, capable of real-time IO, and
-fast execution of neural networks.
-
 Model suitability
------------------
+=================
 
 The first question that you will have is "can I run my model on your
 device". The answer depends on the model and the economic constraints of
@@ -15,7 +8,7 @@ variables of the model, then the characteristics of the XCORE device, and
 then some rules of thumb.
 
 Model characteristics
-+++++++++++++++++++++
+---------------------
 
 Not all models are suitable to be ran on the edge, or indeed execute on
 XCORE.AI. In general a model is characterised by the amount of memory that
@@ -23,15 +16,27 @@ is needed, the amount of compute, and the type of compute.
 
 Memory required:
 
-* The number of learned parameters, also known as the number of
-  coefficients in the network. A small number is beneficial to run on the
+* The size and number of learned parameters, also known as the
+  coefficients of the model. A small size is beneficial to run on the
   edge, but a larger number may be required to achieve the desired
   inferencing accuracy.
+
+  Note that there is a difference between the *number* and *size* of the
+  parameters. Typically a trained model uses four bytes for each
+  parameters, but after quantisation it only uses one byte for each
+  parameter, meaning that the same number of parameters fits in a quarter
+  of the space.
 
 * The space required for the *tensor arena*. The tensor arena is the
   scratch memory that is needed to store the temporary values used by the
   network, whilst evaluating the network. The tools that we provide will
   help you by calculating this number.
+
+  The space is determined by the complexity of the model and by the
+  accuracy at which the model is executed. Some networks are designed to
+  keep more temporary tensors alive and therefore require more space. You
+  may choose to execute a network that is recurrant in nature at a higher
+  accuracy, requiring more space.
 
 * The size of the model excluding the learned parameters. This stores
   information on how the graph is connected, quantisation parameters,
@@ -59,7 +64,7 @@ that surround the model.
 
 
 XCORE.AI characteristics
-++++++++++++++++++++++++
+------------------------
 
 XCORE.AI is an embedded device, and as such there are constraints as to the
 size an complexity of the models that can be executed. Multiple xcore.ai
@@ -92,7 +97,7 @@ radar devices, or other sensors. A wide variety of protocols are available
 to communicate with devices or actuators.
 
 What models fit on XCORE.AI?
-++++++++++++++++++++++++++++
+----------------------------
 
 There is no hard limit on the number of parameters for a model, but larger
 models do slow down. Very small models (say, 100 kByte) are held in
@@ -104,21 +109,20 @@ execution (frame rate) may be lower than desired. Large models may be
 stored in external LPDDR memory which is fast but has a slightly higher BOM
 cost.
 
-The size of the tensor arena can be a bottle-neck. For optimal execution,
+The size of the tensor arena can be a bottleneck. For optimal execution,
 the tensor arena is held in internal memory, which limits the tensor arena
 to a few hundred kbytes in size. The XMOS AI tools have methods of
 minimising the required tensor arena. Larger tensor arenas can be stored in
 external memory, if the BOM cost can sustain adding an external LPDDR
 memory. This removes most limits on the size of the tensor arena.
 
-The thurd part that needs to be stored somewhere is the architecture of the
+The third part that needs to be stored somewhere is the architecture of the
 model. This can either go in internal or external memory; it cannot be
 stored in flash.
 
 Finally memory is also required to store the code that executes the
 operators. The size of the code is around 100-200 kByte - depending on the
-number of different operators that are used, whether compilation is used
-(less memory) or a full interpreter (more memory), and whether code other
+number of different operators that are used, and whether code other
 than AI code is present.
 
 We support most operators and types that are in TensorFlow Lite
@@ -126,15 +130,17 @@ for Micro; but only a subset of those operators have been optimized to run
 on the device. The list of operators supported are TensorFlow Lite for 
 Microcontrollers operations listed `here <https://github.com/tensorflow/tflite-micro/blob/f474248365ad48654ba8a27ac5bf49a6afbb80e7/tensorflow/lite/micro/all_ops_resolver.cc>`_, except the following operations:
 - ``assign_variable``, ``call once``, ``if``, ``read variable``, ``var_handle``, ``while``.
+
 Convolutional networks with int8 datatypes typically run at
 high speed. It is fine for some operations to execute as float32. As long
 as the very large convolutions use int8 encodings the model is typically
-executed efficiently. We do support dense layers, but the nature of dense
+executed efficiently. The tools support dense layers, but the nature of dense
 layers means that every multiplication needs its own learned parameter
 which means that the execution speed of large dense layers may be limited
 by the speed of backing store where the parameters come from.
 
-In addition to the common types we support highly efficient execution of
+In addition to the common int8, int16, and float
+types we support highly efficient execution of
 1-bit networks (also known as binarised neural networks or XNOR networks).
 These can execute at a rate of up to 256 GMacc/s.
 
@@ -143,7 +149,7 @@ large systems to very small systems. We show the use cases of a few systems
 below.
 
 XCORE.AI with 64Mbyte LPDDR memory
-``````````````````````````````````
+----------------------------------
 
 This system has very little contraints. It can execute large models that
 are held in external memory, and the tensor arena can either be held in
@@ -163,7 +169,7 @@ network, and it can be used to run large networks before they are optimized
 down into smaller networks.
 
 XCORE.AI without external memory
-````````````````````````````````
+--------------------------------
 
 Without external memory, there are fewer options as to where the store the
 model and the data. In particular, the tensor arena must be stored in
@@ -182,7 +188,7 @@ implementing the operators), the tensor arena, and the model architecture.
 These three should sum up to no more than 512 kByte.
 
 Using multiple processors
-`````````````````````````
+-------------------------
 
 In XCORE.AI each processor has 512 kBytes of memory; that means that there
 are various ways in which the model can be split over two or more
@@ -201,114 +207,4 @@ processors. Examples of splits are:
   occupies a processor. This means that each processor only stores part
   of the tensor arena. The current version of xcore-opt has no automated
   support for this.
-
-How to prepare a network for XCORE.AI
--------------------------------------
-
-The general approach to encoding a problem that incorporates a trained
-network on an XCORE.AI chip is as follows:
-
-  #. You train your network as normal, using for example Keras.
-
-  #. You quantize your network to ``int8`` and convert it to TensorFlow
-     Lite. Partial support for ``16x8`` is also implemented.
-     You can keep the occasional float operation in the network.
-
-  #. You optimize your network for XCORE.AI
-
-  #. You evaluate and deploy your network on XCORE.AI
-
-Several components are being used in this process:
-
-  * A *training framework*. This can be any training framework that is
-    available as long as there is a way to produce TensorFlow Lite on the
-    output. This may be through, for example, exporting to ONNX.
-
-  * A *quantizer*. The post training quantization step takes your
-    network and a set of representative data, and transforms all operators
-    to operate on low-precision integers. Rather than operating on floating
-    point values (16- or 32-bit floating point numbers), the network will be
-    operating on signed bytes (8-bit integers in the range [-128..127]).
-
-    In order to compute an appropriate mapping from floating point values
-    to integer values, you need to provide a representative dataset to be used
-    during the transformation, and this will ensure that intermediate
-    values use the full range of int8 values.
-
-    Typically we use the TensorFlow Lite quantizer to perform this step,
-    and the output of this step is a *flatbuffer* that contains the
-    architecture of the model and all the coefficients.
-
-  * An *xcore transformer*. It takes a flatbuffer from the previous step,
-    and converts it into a flatbuffer that has been optimized for the
-    XCORE. Note that this step is not required, and the flatbuffer can be
-    executed "as is", but this execution will be painfully slow. The xcore
-    transformer simply produces an xcore-specific flatbuffer given a
-    generic flatbuffer, using operators optimized for xcore.
-
-  * An *xcore.ai compiler*. It takes a flatbuffer and compiles it to C++, which 
-    then be compiled to a binary to be executed on the xcore.
-
-The xcore transformer, compiler, and run-time support can all be installed
-with a single pip command: . They can be used
-through a python interface or from the command line as required.
-
-
-Operators
----------
-
-Virtually all tensorflow-lite-for-micro operators are supported
-with the exception of Variables, While, and If. Only very few operators
-have been optimised to run efficiently on XCORE; those that typically
-account for 99% of the execution time. 
-
-Optimized operators
-+++++++++++++++++++
-
-The following operators can be optimized by the xcore optimizer into an
-equivalent faster or more memory efficient operator:
-
-* Conv2D
-
-* Conv2DDepthwise
-
-* Conv2DTranspose
-
-* FullyConnected
-
-* MaxPool2D
-
-* AvgPool2D
-
-* Add
-
-* Mul
-
-* Concatenate
-
-* Pad
-
-* Slice or StridedSlice with a stride of 1
-
-* Tanh, Sigmoid, Hardswish, Relu
-
-We are always interested to know of operators that take on a large
-proportion of your model.
-
-Constraints on operators
-++++++++++++++++++++++++
-
-Some xcore optimizable operators have constraints on them which dictate
-situations where they can not be optimized. In particular:
-
-* Make sure that each convolution outputs a multiple of FOUR channels.
-
-* For optimal speed, the number of input channels should be a multiple of
-  16, otherwise 4.
-
-* For a first image convolution that typically has three channels (YUV,
-  RGB), the graph transformer will insert a fast pad from three to four.
-
-* For a convolution, execution is fast when the bias term is reasonably
-  close to zero.
 

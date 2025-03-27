@@ -1,5 +1,5 @@
 Documentation
--------------
+=============
 
 ## Index
 - [Run models on XCORE.AI](docs/rst/flow.rst)

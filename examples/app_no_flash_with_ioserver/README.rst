@@ -1,5 +1,5 @@
 Example without flash and using ioserver to communicate with the model from host
-======================
+================================================================================
 
 Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 

@@ -1,5 +1,5 @@
 MobilenetV2 example with flash
-==================
+==============================
 
 Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 

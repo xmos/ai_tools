@@ -179,7 +179,8 @@ DenseElementsAttr getLookupTableI16(PatternRewriter &rewriter, Operation *op) {
   return getLookupTableI16(rewriter, op, op, op);
 }
 
-DenseElementsAttr getLookupTableI8(PatternRewriter &rewriter, Operation *op) {
+DenseElementsAttr getLookupTableI8(PatternRewriter &rewriter, Operation *op,
+                                   FloatAttr leakyReluAlpha) {
   llvm::SmallVector<int8_t, 0> inputVector;
   inputVector.resize(256);
 
@@ -231,6 +232,10 @@ DenseElementsAttr getLookupTableI8(PatternRewriter &rewriter, Operation *op) {
     std::for_each(
         dequantizedVector.begin(), dequantizedVector.end(),
         [](double &x) { x = x * std::min(std::max(x + 3, 0.0), 6.0) / 6; });
+  } else if (isa<TFL::LeakyReluOp>(op)) {
+    auto alpha = leakyReluAlpha.getValueAsDouble();
+    std::for_each(dequantizedVector.begin(), dequantizedVector.end(),
+                  [&](double &x) { x = std::max(alpha * x, x); });
   } else {
     llvm_unreachable("Unsupported op!");
   }

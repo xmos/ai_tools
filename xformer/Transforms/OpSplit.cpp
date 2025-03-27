@@ -915,11 +915,25 @@ struct RaiseSliceConvPattern : public OpRewritePattern<TFL::SliceOp> {
     auto outputHeight = convOriginalOutput.getDimSize(1);
     auto outputChannels = convOriginalOutput.getDimSize(3);
 
-    auto filterType = convOriginal.getFilter()
-                          .getType()
-                          .template dyn_cast<RankedTensorType>();
-    auto filterHeight = filterType.getDimSize(1);
-    auto filterWidth = filterType.getDimSize(2);
+    int filterHeight, filterWidth;
+    if (auto op =
+            dyn_cast<TFL::MaxPool2DOp>(slice.getInput().getDefiningOp())) {
+      filterHeight = op.getFilterHeight();
+      filterWidth = op.getFilterWidth();
+    } else if (auto op =
+                   dyn_cast<TFL::Conv2DOp>(slice.getInput().getDefiningOp())) {
+      auto filterType =
+          op.getFilter().getType().template dyn_cast<RankedTensorType>();
+      filterHeight = filterType.getDimSize(1);
+      filterWidth = filterType.getDimSize(2);
+    }
+    if (auto op = dyn_cast<TFL::DepthwiseConv2DOp>(
+            slice.getInput().getDefiningOp())) {
+      auto filterType =
+          op.getFilter().getType().template dyn_cast<RankedTensorType>();
+      filterHeight = filterType.getDimSize(1);
+      filterWidth = filterType.getDimSize(2);
+    }
 
     auto strideHeight = convOriginal.getStrideH();
     auto strideWidth = convOriginal.getStrideW();
@@ -1050,11 +1064,11 @@ struct RaiseSliceConvPattern : public OpRewritePattern<TFL::SliceOp> {
     // else connect to pad op
     if (convOriginal.getPadding() == "VALID") {
       // Connect new conv's input to new slice
-      convReplacement.setOperand(0, sliceReplacement);
+      convReplacement->setOperand(0, sliceReplacement);
 
     } else if (convOriginal.getPadding() == "SAME") {
       // Connect new conv's input to pad op
-      convReplacement.setOperand(0, padOp);
+      convReplacement->setOperand(0, padOp);
 
       // Change padding on cloned conv to valid since
       // padding was extracted to pad op
@@ -1261,6 +1275,9 @@ void OpSplit::runOnOperation() {
 
   RewritePatternSet patterns1(ctx);
 
+  patterns1.insert<OpSplitPattern<TFL::MaxPool2DOp>>(ctx);
+  patterns1.insert<OpSplitPattern<TFL::LeakyReluOp>>(ctx);
+
   patterns1.insert<OpSplitPattern<TFL::Conv2DOp>>(ctx);
   patterns1.insert<OpSplitPattern<TFL::DepthwiseConv2DOp>>(ctx);
   patterns1.insert<OpSplitPattern<TFL::AddOp>>(ctx);
@@ -1283,11 +1300,13 @@ void OpSplit::runOnOperation() {
 
   patterns2.insert<RaiseSlicePattern<TFL::ConcatenationOp>>(ctx);
   patterns2.insert<RaiseSlicePattern<TFL::StridedSliceOp>>(ctx);
-
+  patterns2.insert<RaiseSliceUnaryPattern<TFL::LeakyReluOp>>(ctx);
   patterns2.insert<RaiseSliceUnaryPattern<TFL::LogisticOp>>(ctx);
   patterns2.insert<RaiseSliceBinaryPattern<TFL::AddOp>>(ctx);
   patterns2.insert<RaiseSliceBinaryPattern<TFL::MulOp>>(ctx);
   patterns2.insert<RaiseSlicePadPattern>(ctx);
+
+  patterns2.insert<RaiseSliceConvPattern<TFL::MaxPool2DOp>>(ctx);
   patterns2.insert<RaiseSliceConvPattern<TFL::Conv2DOp>>(ctx);
   patterns2.insert<RaiseSliceConvPattern<TFL::DepthwiseConv2DOp>>(ctx);
 

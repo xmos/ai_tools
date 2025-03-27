@@ -20,6 +20,7 @@ struct ValueInfo {
   bool isConstant;
   int firstUsed;
   int lastUsed;
+  bool isExternallyAllocated;
 };
 
 // Represents an analysis for memory planning of a given FuncOp for a model.
@@ -59,6 +60,8 @@ public:
   DenseMap<Operation *, size_t> getOperationsIDMap() { return operationIds; }
 
   std::vector<Operation *> getOperationsSequence() { return operations; }
+
+  std::vector<Value> getValuesSequence() { return values; }
 
   DenseMap<Value, ValueInfo> getValuesInfoMap() { return valueInfo; }
 

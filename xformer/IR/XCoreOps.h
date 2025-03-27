@@ -39,4 +39,16 @@ class OnlyOverlappableWithInput
 
 constexpr int CONCAT_OP_MAX_INPUTS = 13;
 
+constexpr char kMetadataXCOffsets[] = "xc.offsets";
+constexpr char kMetadataXCPeakOpId[] = "xc.peak_op_id";
+constexpr char kMetadataXCPeakUsage[] = "xc.peak_usage";
+constexpr char kMetadataXCNumExternalInputTensors[] =
+    "xc.num_external_input_tensors";
+constexpr char kMetadataXCNumExternalOutputTensors[] =
+    "xc.num_external_output_tensors";
+constexpr char kMetadataXCNumExternalInputTensorsData[] =
+    "xc.num_external_input_tensors_data";
+constexpr char kMetadataXCNumExternalOutputTensorsData[] =
+    "xc.num_external_output_tensors_data";
+
 #endif // XFORMER_IR_XCOREOPS_H

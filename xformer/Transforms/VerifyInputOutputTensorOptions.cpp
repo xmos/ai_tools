@@ -13,10 +13,10 @@
 namespace mlir::xcore {
 
 namespace {
-struct VerifySameAllocationTensors
-    : public PassWrapper<VerifySameAllocationTensors,
+struct VerifyInputOutputTensorOptions
+    : public PassWrapper<VerifyInputOutputTensorOptions,
                          OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(VerifySameAllocationTensors)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(VerifyInputOutputTensorOptions)
 
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<TFL::TFLDialect>();
@@ -26,9 +26,70 @@ struct VerifySameAllocationTensors
   void runOnOperation() override;
 };
 
-void VerifySameAllocationTensors::runOnOperation() {
+void VerifyInputOutputTensorOptions::runOnOperation() {
   auto func = getOperation();
   auto *ctx = &getContext();
+
+  auto &m = getAnalysis<MemoryPlan>();
+  llvm::StringMap<Value> inputTensorMap, outputTensorMap;
+  m.buildInputOutputTensorMaps(inputTensorMap, outputTensorMap);
+
+  auto verifyExternalOption = [&](llvm::cl::list<std::string> &option,
+                                  llvm::StringMap<Value> &tensorMap,
+                                  std::string inOrOutStr) {
+    bool succeeded = true;
+    if (option.size() > 0) {
+      // Check names of tensors
+      for (int i = 0; i < option.size(); i = i + 1) {
+        if (!tensorMap.count(option[i])) {
+          func.emitError() << option[i] << " not present in " << inOrOutStr
+                           << " tensors. Please check the name!";
+          succeeded = false;
+        }
+      }
+      if (!succeeded) {
+        return succeeded;
+      }
+
+      succeeded = true;
+      if (sameAllocationInputOutputTensorOption.size() > 0) {
+        llvm::StringMap<int> loadExternalTensorMap;
+        for (int i = 0; i < option.size(); i = i + 1) {
+          loadExternalTensorMap[option[i]] = 1;
+        }
+        for (int i = 0; i < sameAllocationInputOutputTensorOption.size();
+             i = i + 2) {
+          if (loadExternalTensorMap.count(
+                  sameAllocationInputOutputTensorOption[i])) {
+            func.emitError()
+                << "Cannot specify the same " << inOrOutStr << " tensor "
+                << sameAllocationInputOutputTensorOption[i]
+                << " in both --xcore-load-" << inOrOutStr
+                << "-tensors-externally "
+                   "and --xcore-same-allocation-input-output-tensor "
+                << "options!";
+            succeeded = false;
+          }
+        }
+        if (!succeeded) {
+          return succeeded;
+        }
+      }
+    }
+    return succeeded;
+  };
+
+  if (!verifyExternalOption(loadInputExternallyOption, inputTensorMap,
+                            "input")) {
+    signalPassFailure();
+    return;
+  }
+
+  if (!verifyExternalOption(storeOutputExternallyOption, outputTensorMap,
+                            "output")) {
+    signalPassFailure();
+    return;
+  }
 
   if (sameAllocationInputOutputTensorOption.size() > 0) {
 
@@ -155,12 +216,12 @@ void VerifySameAllocationTensors::runOnOperation() {
 }
 } // namespace
 
-// Creates an instance of the VerifySameAllocationTensors pass.
+// Creates an instance of the VerifyInputOutputTensorOptions pass.
 std::unique_ptr<OperationPass<func::FuncOp>>
-createVerifySameAllocationTensorsPass() {
-  return std::make_unique<VerifySameAllocationTensors>();
+createVerifyInputOutputTensorOptionsPass() {
+  return std::make_unique<VerifyInputOutputTensorOptions>();
 }
 
-static PassRegistration<VerifySameAllocationTensors> pass;
+static PassRegistration<VerifyInputOutputTensorOptions> pass;
 
 } // namespace mlir::xcore

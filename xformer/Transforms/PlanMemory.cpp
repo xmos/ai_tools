@@ -45,27 +45,28 @@ void PlanMemory::runOnOperation() {
     auto offlineOffsetsWithoutOverlap = m.getAllocatedOffsets(
         /*overlapModifyingOps=*/false, peakMemoryUsedWithoutOverlap, peakOpId);
     if (!tryOverlapModifyingOpsOption) {
-      module->setAttr("xc.offsets",
+      module->setAttr(kMetadataXCOffsets,
                       builder.getI32VectorAttr(offlineOffsetsWithoutOverlap));
-      module->setAttr("xc.peakopid", builder.getI32IntegerAttr(peakOpId));
-      module->setAttr("xc.peakusage",
+      module->setAttr(kMetadataXCPeakOpId, builder.getI32IntegerAttr(peakOpId));
+      module->setAttr(kMetadataXCPeakUsage,
                       builder.getI32IntegerAttr(peakMemoryUsedWithoutOverlap));
     } else {
       auto offlineOffsetsWithOverlap = m.getAllocatedOffsets(
           /*overlapModifyingOps=*/true, peakMemoryUsedWithOverlap, peakOpId);
 
-      module->setAttr("xc.peakopid", builder.getI32IntegerAttr(peakOpId));
+      module->setAttr(kMetadataXCPeakOpId, builder.getI32IntegerAttr(peakOpId));
 
       if (peakMemoryUsedWithOverlap <= peakMemoryUsedWithoutOverlap) {
-        module->setAttr("xc.offsets",
+        module->setAttr(kMetadataXCOffsets,
                         builder.getI32VectorAttr(offlineOffsetsWithOverlap));
-        module->setAttr("xc.peakusage",
+        module->setAttr(kMetadataXCPeakUsage,
                         builder.getI32IntegerAttr(peakMemoryUsedWithOverlap));
       } else {
-        module->setAttr("xc.offsets",
+        module->setAttr(kMetadataXCOffsets,
                         builder.getI32VectorAttr(offlineOffsetsWithoutOverlap));
-        module->setAttr("xc.peakusage", builder.getI32IntegerAttr(
-                                            peakMemoryUsedWithoutOverlap));
+        module->setAttr(
+            kMetadataXCPeakUsage,
+            builder.getI32IntegerAttr(peakMemoryUsedWithoutOverlap));
       }
     }
   }

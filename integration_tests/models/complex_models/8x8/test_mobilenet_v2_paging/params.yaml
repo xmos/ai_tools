@@ -5,5 +5,6 @@ COMPILER_FLAGS:
   - ["xcore-op-split-bottom-op", "6,14"]
   - ["xcore-op-split-num-splits", "8,4"]
   - ["xcore-op-split-tensor-arena", "True"]
+  - [xcore-conv-channelwise-split-size, "70000"]
   - ["xcore-liveness-range-for-paging", "5"]
   - ["xcore-enable-paging", "True"]

@@ -254,6 +254,8 @@ void Paging::runOnOperation() {
       llvm::SmallVector<Value> ops;
       ops.push_back(noValueOp);
       int size = utils::getShapedTypeSize(inp.getType().dyn_cast<ShapedType>());
+      // Align address to four
+      address = ((address + 3) / 4) * 4;
       auto loadOp = builder.create<LoadTensorOp>(inp.getLoc(), inp.getType(),
                                                  ops, address, size);
       inp.replaceAllUsesWith(loadOp);
@@ -294,6 +296,8 @@ void Paging::runOnOperation() {
       builder.setInsertionPointAfterValue(op);
 
       int size = utils::getShapedTypeSize(op.getType().dyn_cast<ShapedType>());
+      // Align address to four
+      address = ((address + 3) / 4) * 4;
       auto storeOp = builder.create<StoreTensorOp>(op.getLoc(), op.getType(),
                                                    op, address, size);
       term->setOperand(index, storeOp);
@@ -367,6 +371,8 @@ void Paging::runOnOperation() {
       Value storeOp;
       int size = utils::getShapedTypeSize(v.getType().dyn_cast<ShapedType>());
 
+      // Align address to four
+      address = ((address + 3) / 4) * 4;
       if (auto blockArg = v.dyn_cast<BlockArgument>()) {
         builder.setInsertionPointToStart(blockArg.getOwner());
         storeOp = builder.create<StoreTensorOp>(v.getLoc(), dummyResultType, v,

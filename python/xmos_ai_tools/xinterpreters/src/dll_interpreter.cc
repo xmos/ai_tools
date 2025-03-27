@@ -49,6 +49,7 @@ void add_lib_vision_ops(
   resolver->AddShape();
   resolver->AddElu();
   resolver->AddBroadcastTo();
+  resolver->AddLeakyRelu();
 }
 
 extern "C" {

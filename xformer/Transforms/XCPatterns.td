@@ -16,13 +16,18 @@ def : Pat<(TFL_ReshapeOp $input, $shape), (XC_NoOp $input)>;
 // Activation lowering patterns
 // Activation lookup i8
 def getLookupTableI8
-    : NativeCodeCall<"getLookupTableI8($_builder, $0.getDefiningOp())">;
+    : NativeCodeCall<"getLookupTableI8($_builder, $0.getDefiningOp(), $1)">;
 
 foreach activationOp = [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp,
                         TFL_HardSwishOp] in {
   def : Pat<(activationOp:$output TensorOf<[QI8]>:$input),
-            (XC_LookupOp $input, (Arith_ConstantOp(getLookupTableI8 $output)))>;
+            (XC_LookupOp $input, (Arith_ConstantOp(getLookupTableI8 $output,
+                                     ConstantAttr<F32Attr, "0">)))>;
 }
+
+def : Pat<(TFL_LeakyReluOp:$output TensorOf<[QI8]>:$input, $alpha),
+          (XC_LookupOp $input, (Arith_ConstantOp(getLookupTableI8 $output,
+                                   $alpha)))>;
 
 // Activation lookup i16
 def getLookupTableI16OrFail

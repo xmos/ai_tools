@@ -558,6 +558,20 @@ int main(int argc, char **argv) {
     }
   }
 
+  if (mlir::xcore::loadInputExternallyOption.getNumOccurrences() > 0 &&
+      !mlir::xcore::enablePagingOption) {
+    return failedMessage(
+        "Please enable the xcore-enable-paging option when specifying the "
+        "xcore-load-input-tensors-externally option!");
+  }
+
+  if (mlir::xcore::storeOutputExternallyOption.getNumOccurrences() > 0 &&
+      !mlir::xcore::enablePagingOption) {
+    return failedMessage(
+        "Please enable the xcore-enable-paging option when specifying the "
+        "xcore-store-output-tensors-externally option!");
+  }
+
   if (failed(isCompatibleVersion(
           versionLibTfliteMicro, lib_tflite_micro::major_version,
           lib_tflite_micro::minor_version, lib_tflite_micro::patch_version))) {
@@ -654,16 +668,20 @@ int main(int argc, char **argv) {
     // If there are externally allocated tensors, we mark them in the metadata
     if (mlir::xcore::loadInputExternallyOption.size() > 0 ||
         mlir::xcore::storeOutputExternallyOption.size() > 0) {
-      sharedCfg.num_external_input_tensors =
-          modul
-              ->getAttrOfType<mlir::IntegerAttr>(
-                  kMetadataXCNumExternalInputTensors)
-              .getInt();
-      sharedCfg.num_external_output_tensors =
-          modul
-              ->getAttrOfType<mlir::IntegerAttr>(
-                  kMetadataXCNumExternalOutputTensors)
-              .getInt();
+      if (modul->hasAttr(kMetadataXCNumExternalInputTensorsData)) {
+        sharedCfg.num_external_input_tensors =
+            modul
+                ->getAttrOfType<mlir::IntegerAttr>(
+                    kMetadataXCNumExternalInputTensors)
+                .getInt();
+      }
+      if (modul->hasAttr(kMetadataXCNumExternalOutputTensors)) {
+        sharedCfg.num_external_output_tensors =
+            modul
+                ->getAttrOfType<mlir::IntegerAttr>(
+                    kMetadataXCNumExternalOutputTensors)
+                .getInt();
+      }
       DenseIntElementsAttr vecattr;
       std::vector<int> tensorsData;
       if (modul->hasAttr(kMetadataXCNumExternalInputTensorsData)) {

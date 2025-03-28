@@ -72,7 +72,8 @@ def dailyDeviceTest = {
   runPytestDevice("complex_models/8x8/test_cnn_classifier", "-n 1", "cnn_classifier_5")
   runPytestDevice("8x8/test_softmax", "-n 1 --device", "softmax_5")
   runPytestDevice("8x8/test_detection_postprocess", "-n 1", "detection_postprocess_5")
-  runPytestDevice("16x8/", "-n 1", "16x8_5")
+  runPytestDevice("16x8/test_conv2d", "-n 1", "16x8_conv2d_5")
+  runPytestDevice("16x8/test_transpose_conv", "-n 1", "16x8_transpose_conv_5")
 }
 
 def dailyHostTest = { platform ->

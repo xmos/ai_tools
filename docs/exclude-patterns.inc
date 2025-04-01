@@ -8,3 +8,4 @@ notebooks/optimise_for_xcore.ipynb
 notebooks/pytorch_to_tflite/LSTM/mnist_lstm.ipynb
 notebooks/pytorch_to_tflite/YOLOv8/pytorch_to_tflite.ipynb
 rst/arena_sharing.rst
+doc/*

@@ -236,6 +236,8 @@ DenseElementsAttr getLookupTableI8(PatternRewriter &rewriter, Operation *op,
     auto alpha = leakyReluAlpha.getValueAsDouble();
     std::for_each(dequantizedVector.begin(), dequantizedVector.end(),
                   [&](double &x) { x = std::max(alpha * x, x); });
+  } else if (isa<TFL::QuantizeOp>(op)) {
+    // We don't need to do anything here
   } else {
     llvm_unreachable("Unsupported op!");
   }

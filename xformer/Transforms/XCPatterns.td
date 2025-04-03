@@ -29,6 +29,10 @@ def : Pat<(TFL_LeakyReluOp:$output TensorOf<[QI8]>:$input, $alpha),
           (XC_LookupOp $input, (Arith_ConstantOp(getLookupTableI8 $output,
                                    $alpha)))>;
 
+def : Pat<(TFL_QuantizeOp:$output TensorOf<[QI8]>:$input, $qtype),
+          (XC_LookupOp $input, (Arith_ConstantOp(getLookupTableI8 $output,
+                                   ConstantAttr<F32Attr, "0">)))>;
+
 // Activation lookup i16
 def getLookupTableI16OrFail
     : NativeCodeCall<"getLookupTableI16($_builder, $0.getDefiningOp()); "

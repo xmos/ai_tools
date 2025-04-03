@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/mlir/lite/flatbuffer_export.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_import.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 namespace mlir::xcore::utils {
@@ -31,7 +32,8 @@ LogicalResult writeWeightsToFile(const std::string &filename,
     std::ostringstream cOut;
     cOut << R"(#include <stdint.h>)"
          << "\n"
-         << R"(#include ")" << filename << R"(.h")"
+         << R"(#include ")" << llvm::sys::path::filename(filename).str()
+         << R"(.h")"
          << "\n\n";
 
     if (placeInExternalMemory) {

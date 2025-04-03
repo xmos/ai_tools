@@ -158,7 +158,7 @@ def test_inference(args):
                 step = math.ceil((np.iinfo(input_tensor_type[i]).max * 2) / 85)
                 n = np.iinfo(input_tensor_type[i]).min
                 for j in range(0, np.prod(input_tensor_shape[i])):
-                    if n > np.iinfo(input_tensor_type[i]).max:
+                    if n >= np.iinfo(input_tensor_type[i]).max + 1:
                         n = np.iinfo(input_tensor_type[i]).min
                     k.append(n)
                     n = n + step

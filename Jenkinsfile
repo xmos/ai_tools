@@ -193,7 +193,8 @@ pipeline {
                           --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
                           --remote_cache=${env.BAZEL_CACHE_URL} \\
                           --//:disable_version_check \\
-                          --jobs 8
+                          --jobs 8 \\
+                          --define SETUPTOOLS_SCM_VERSION=`python -m setuptools_scm -c ../python/pyproject.toml`
                       """
                       sh """
                         ./bazelisk-linux-amd64 test //Test:all \\
@@ -241,7 +242,7 @@ pipeline {
                     script {
                       bat "bazelisk-windows-amd64.exe clean --expunge"
                       PYTHON_BIN_PATH = bat(script: "@where python.exe", returnStdout: true).split()[0].trim()
-                      bat "bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\""
+                      bat "for /f %i in ('python -m setuptools_scm -c ..\\python\\pyproject.toml') do bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\" --define SETUPTOOLS_SCM_VERSION=%i"
                     }
                   }
 
@@ -294,7 +295,8 @@ pipeline {
                         --copt=-mmacosx-version-min=10.15 \\
                         --linkopt=-mmacosx-version-min=10.15 \\
                         --linkopt=-dead_strip \\
-                        --//:disable_version_check
+                        --//:disable_version_check \\
+                        --define SETUPTOOLS_SCM_VERSION=`python -m setuptools_scm -c ../python/pyproject.toml`
                       mv bazel-bin/xcore-opt ${outputName}
                     """
                   }

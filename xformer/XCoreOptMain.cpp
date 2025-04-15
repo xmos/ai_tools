@@ -802,5 +802,7 @@ int main(int argc, char **argv) {
     }
   }
 
+  std::cout<< SETUPTOOLS_SCM_VERSION << "\n";
+
   return 0;
 }

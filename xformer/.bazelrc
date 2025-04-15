@@ -15,6 +15,10 @@ build --features=-force_no_whole_archive
 # Auto pick OS-specific config
 build --enable_platform_specific_config
 
+# Default define for SETUPTOOLS_SCM_VERSION
+# Use --define SETUPTOOLS_SCM_VERSION=$(python -m setuptools_scm -c ../python/pyproject.toml)
+build --define SETUPTOOLS_SCM_VERSION="Not_built_with_version_info!"
+
 # Avoid hitting command line argument limit
 build:macos --features=archive_param_file
 

@@ -270,4 +270,5 @@ cc_binary(
             ":version_check_output",
         ],
     }),
+    local_defines = ['SETUPTOOLS_SCM_VERSION=\\\"$(SETUPTOOLS_SCM_VERSION)\\\"'],
 )

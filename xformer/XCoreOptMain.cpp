@@ -415,8 +415,7 @@ static LogicalResult isCompatibleVersion(cl::opt<std::string> &version,
 }
 
 static void PrintVersion(raw_ostream &OS) {
-  OS << xformer::majorVersion << "." << xformer::minorVersion << "."
-     << xformer::patchVersion << '\n';
+  OS << SETUPTOOLS_SCM_VERSION << '\n';
 }
 
 int main(int argc, char **argv) {
@@ -777,7 +776,12 @@ int main(int argc, char **argv) {
     // Invoke tflmc and get info
     std::stringstream tflmcSourceString, tflmcHeaderString;
     try {
+      std::string argsString;
+      for (int i = 1; i < argc; i++) {
+        argsString.append(argv[i]).append(" ");
+      }
       tflmc::TFLMC_Compiler compiler(flatBufferString.data(), &sharedCfg,
+                                     SETUPTOOLS_SCM_VERSION, argsString,
                                      tflmcPrefixOption, tflmcPrintEnabled);
       llvm::outs() << "Tensor arena size : " << compiler.getTensorArenaSize()
                    << "\n";

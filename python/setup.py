@@ -86,12 +86,6 @@ package_files.update(device_files)
 
 setup(
     name="xmos_ai_tools",
-    use_scm_version={
-        "root": "../",
-        "relative_to": __file__,
-        "local_scheme": "no-local-version",
-    },
-    setup_requires=["setuptools_scm"],
     author="XMOS",
     author_email="support@xmos.com",
     license="LICENSE.txt",

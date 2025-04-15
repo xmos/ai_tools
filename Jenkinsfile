@@ -194,7 +194,7 @@ pipeline {
                           --remote_cache=${env.BAZEL_CACHE_URL} \\
                           --//:disable_version_check \\
                           --jobs 8 \\
-                          --define SETUPTOOLS_SCM_VERSION=$(python -m setuptools_scm -c ../python/pyproject.toml)
+                          --define SETUPTOOLS_SCM_VERSION=\$(python -m setuptools_scm -c ../python/pyproject.toml)
                       """
                       sh """
                         ./bazelisk-linux-amd64 test //Test:all \\
@@ -296,7 +296,7 @@ pipeline {
                         --linkopt=-mmacosx-version-min=10.15 \\
                         --linkopt=-dead_strip \\
                         --//:disable_version_check \\
-                        --define SETUPTOOLS_SCM_VERSION=$(python -m setuptools_scm -c ../python/pyproject.toml)
+                        --define SETUPTOOLS_SCM_VERSION=\$(python -m setuptools_scm -c ../python/pyproject.toml)
                       mv bazel-bin/xcore-opt ${outputName}
                     """
                   }

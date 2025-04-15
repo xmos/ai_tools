@@ -183,7 +183,6 @@ pipeline {
                       // directly here as we want to specify the compiler
                       sh "PATH=${CMAKE_PATH}:${env.PATH} CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
                       dir('xformer') {
-                        sh 'pip install setuptools_scm'
                         sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64'
                         sh 'chmod +x bazelisk-linux-amd64'
                         sh """
@@ -282,6 +281,7 @@ pipeline {
                 // TODO: Fix this, use a rule for the fat binary instead of manually combining
                 createVenv('requirements.txt')
                 dir('xformer') { withVenv {
+                    sh 'pip install wheel setuptools setuptools-scm numpy six --no-cache-dir'
                     sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64'
                     sh 'chmod +x bazelisk-darwin-arm64'
                     script {
@@ -307,7 +307,6 @@ pipeline {
                     sh 'lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt'
                 } }
                 dir('python') { withVenv {
-                    sh 'pip install wheel setuptools setuptools-scm numpy six --no-cache-dir'
                     script {
                       if (env.job_type == 'official_release') {
                         withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {

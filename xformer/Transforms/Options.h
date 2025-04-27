@@ -9,6 +9,11 @@
 namespace mlir {
 namespace xcore {
 
+enum TargetArch {
+  XS3A,
+  VX4A,
+};
+
 extern llvm::cl::opt<unsigned> quadraticLookupErrorOption;
 extern llvm::cl::opt<bool> enableBetaFloatOption;
 extern llvm::cl::opt<unsigned> threadCountOption;
@@ -37,6 +42,7 @@ extern llvm::cl::opt<unsigned> convChannelwiseSplitSizeOption;
 extern llvm::cl::list<std::string> sameAllocationInputOutputTensorOption;
 extern llvm::cl::list<std::string> loadInputExternallyOption;
 extern llvm::cl::list<std::string> storeOutputExternallyOption;
+extern llvm::cl::opt<TargetArch> targetArchOption;
 
 } // namespace xcore
 } // namespace mlir

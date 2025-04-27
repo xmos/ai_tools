@@ -69,8 +69,9 @@ struct WriteWeightsPattern : public OpRewritePattern<LoadConstantOp> {
 
     // We try to combine loads to one op if the load has only one use or if the
     // load is not from external memory.
-    // External memory loads have to be aligned to 32 bytes/256 bits for max
-    // speed
+    // The source address for external memory loads have to be aligned to 32
+    // bytes/256 bits for max speed For DDR, we are padding data to 32 bytes
+    // alignment, so that the next load starts at a 32 byte aligned address
     LoadWeightsOpType opType = LoadWeightsOpType::Sync;
     if (loadOp.getResult().hasOneUse() && !weightsInExternalMemory) {
       auto use = loadOp->use_begin();

@@ -358,8 +358,6 @@ void Paging::runOnOperation() {
     // use
     if (!vInfoMap[v].isConstant &&
         vInfoMap[v].lastUsed - vInfoMap[v].firstUsed > livenessPagingOption) {
-
-      // DenseMap<OpOperand*, Type> opTypeMap;
       SmallVector<OpOperand *> uses;
       for (mlir::OpOperand &use : v.getUses()) {
         uses.push_back(&use);

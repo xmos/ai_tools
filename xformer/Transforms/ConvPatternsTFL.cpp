@@ -313,8 +313,8 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
       quantizer.quantise_activation(mulAndBiases,
                                     targetArchOption == XS3A
-                                        ? nn::vlmul_shr_t::XS3A
-                                        : nn::vlmul_shr_t::VX4A,
+                                        ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                        : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
                                     convDebugOption);
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
@@ -325,8 +325,8 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
         quantizer.quantise_activation(mulAndBiases,
                                       targetArchOption == XS3A
-                                          ? nn::vlmul_shr_t::XS3A
-                                          : nn::vlmul_shr_t::VX4A,
+                                          ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                          : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
                                       convDebugOption);
 
     quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(
@@ -628,8 +628,8 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
       quantizer.quantise_activation(mulAndBiases,
                                     targetArchOption == XS3A
-                                        ? nn::vlmul_shr_t::XS3A
-                                        : nn::vlmul_shr_t::VX4A,
+                                        ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                        : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
                                     convDebugOption);
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
@@ -640,8 +640,8 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
         quantizer.quantise_activation(mulAndBiases,
                                       targetArchOption == XS3A
-                                          ? nn::vlmul_shr_t::XS3A
-                                          : nn::vlmul_shr_t::VX4A,
+                                          ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                          : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
                                       convDebugOption);
 
     quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(

@@ -653,8 +653,8 @@ int main(int argc, char **argv) {
     struct shared_config::xcore_metadata_t sharedCfg;
     // Store target arch
     sharedCfg.target_arch = mlir::xcore::targetArchOption == mlir::xcore::XS3A
-                                ? nn_target_arch_t::XS3A
-                                : nn_target_arch_t::VX4A;
+                                ? nn_target_arch_t::TARGET_ARCH_XS3A
+                                : nn_target_arch_t::TARGET_ARCH_VX4A;
     // Store version info
     sharedCfg.lib_nn_major_version = lib_nn::major_version;
     sharedCfg.lib_nn_minor_version = lib_nn::minor_version;

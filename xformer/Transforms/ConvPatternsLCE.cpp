@@ -373,8 +373,8 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectInt8Params(
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
       quantizer.quantise_activation(mulAndBiases,
                                     targetArchOption == XS3A
-                                        ? nn::vlmul_shr_t::XS3A
-                                        : nn::vlmul_shr_t::VX4A,
+                                        ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                        : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
                                     false);
 
   auto serialisedOffsetsMultipliersAndBiases =
@@ -435,8 +435,8 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
       quantizer.quantise_activation(mulAndBiases,
                                     targetArchOption == XS3A
-                                        ? nn::vlmul_shr_t::XS3A
-                                        : nn::vlmul_shr_t::VX4A,
+                                        ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                        : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
                                     false);
 
   auto serialisedOffsetsMultipliersAndBiases =

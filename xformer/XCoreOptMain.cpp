@@ -36,6 +36,11 @@ namespace mlir::xcore {
 // and -help) will be hidden.
 static cl::OptionCategory XformerCategory("Xformer options");
 
+llvm::cl::opt<TargetArch> targetArchOption(
+    "xcore-target-arch", cl::desc("Choose target architecture:"),
+    cl::values(clEnumVal(XS3A, "XS3A"), clEnumVal(VX4A, "VX4A")),
+    cl::init(XS3A), cl::cat(XformerCategory));
+
 llvm::cl::list<std::string> loadInputExternallyOption(
     "xcore-load-input-tensors-externally",
     cl::desc(
@@ -646,6 +651,10 @@ int main(int argc, char **argv) {
     auto modul = mod.get();
 
     struct shared_config::xcore_metadata_t sharedCfg;
+    // Store target arch
+    sharedCfg.target_arch = mlir::xcore::targetArchOption == mlir::xcore::XS3A
+                                ? nn_target_arch_t::TARGET_ARCH_XS3A
+                                : nn_target_arch_t::TARGET_ARCH_VX4A;
     // Store version info
     sharedCfg.lib_nn_major_version = lib_nn::major_version;
     sharedCfg.lib_nn_minor_version = lib_nn::minor_version;

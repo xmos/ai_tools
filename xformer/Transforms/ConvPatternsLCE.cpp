@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "Transforms/ConvPatterns.h"
+#include "Transforms/Options.h"
 #include "Utils/Util.h"
 
 namespace mlir::xcore {
@@ -370,7 +371,11 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidDirectInt8Params(
       receptiveVolume, args.outputDepth, rw);
   auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
-      quantizer.quantise_activation(mulAndBiases, false);
+      quantizer.quantise_activation(mulAndBiases,
+                                    targetArchOption == XS3A
+                                        ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                        : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
+                                    false);
 
   auto serialisedOffsetsMultipliersAndBiases =
       nn::OutputTransformFn::serialise_memory(accuOverlaps, qp.multipliers,
@@ -428,7 +433,11 @@ LogicalResult ReplaceBConv2DPattern::getBConv2DValidIndirectInt8Params(
       receptiveVolume, args.outputDepth, rw);
   auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
-      quantizer.quantise_activation(mulAndBiases, false);
+      quantizer.quantise_activation(mulAndBiases,
+                                    targetArchOption == XS3A
+                                        ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                        : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
+                                    false);
 
   auto serialisedOffsetsMultipliersAndBiases =
       nn::OutputTransformFn::serialise_memory(accuOverlaps, qp.multipliers,

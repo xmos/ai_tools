@@ -24,6 +24,7 @@ filegroup(
 filegroup(
     name = "XTFLIB_KERNEL_SOURCES",
     srcs = [
+        "lib_tflite_micro/src/thread_call_host_emulation.c",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_common.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_custom_options.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_bsign.cc",

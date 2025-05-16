@@ -1,5 +1,5 @@
 // Things to optimise if this is too slow:
-// - build device runtime in parallel with host runtimes, use mutex before combining into wheel
+// -build device runtime in parallel with host runtimes, use mutex before combining into wheel
 
 @Library('xmos_jenkins_shared_library@v0.30.0') _
 

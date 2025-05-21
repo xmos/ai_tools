@@ -19,8 +19,8 @@ def build_and_run_example():
         writer.writerow([arena_size])
     subprocess.run(["xmake"], check=True, cwd=TEST_DIR)
     subprocess.run(["xflash", "--target", "XCORE-AI-EXPLORER", "--id", "0", "--data", "xcore_flash_binary.out"], check=True, cwd=TEST_DIR)
-    result = subprocess.run(["xrun", "--xscope", "--id", "0", "bin/app_mobilenetv2.xe"], check=True, cwd=TEST_DIR, stderr=subprocess.PIPE, text=True)
-    return result.stderr
+    result = subprocess.run(["xrun", "--xscope", "--id", "0", "bin/app_mobilenetv2.xe"], check=True, cwd=TEST_DIR, capture_output=True, text=True)
+    return result.stdout
 
 def test_example_output(build_and_run_example):
     expected_keyword = "LION"

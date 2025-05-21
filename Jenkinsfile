@@ -1,5 +1,5 @@
 // Things to optimise if this is too slow:
-// - build device runtime in parallel with host runtimes, use mutex before combining into wheel
+// -build device runtime in parallel with host runtimes, use mutex before combining into wheel
 
 @Library('xmos_jenkins_shared_library@v0.30.0') _
 
@@ -134,7 +134,7 @@ pipeline {
   parameters { // Available to modify on the job page within Jenkins if starting a build
     string( // use to try different tools versions
       name: 'TOOLS_VERSION',
-      defaultValue: '15.2.1',
+      defaultValue: '15.3.1',
       description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
     )
   }

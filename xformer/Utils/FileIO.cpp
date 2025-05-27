@@ -37,7 +37,11 @@ LogicalResult writeWeightsToFile(const std::string &filename,
          << "\n\n";
 
     if (placeInExternalMemory) {
-      cOut << R"(__attribute__ ((section(".ExtMem.data"))))"
+      cOut << R"(#ifdef __xcore__)"
+           << "\n"
+           << R"(__attribute__ ((section(".ExtMem.data"))))"
+           << "\n"
+           << "#endif"
            << "\n";
     } else {
       // Weights are to be placed in SRAM tile

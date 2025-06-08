@@ -15,7 +15,7 @@ uint8_t tensor_arena[LARGEST_TENSOR_ARENA_SIZE] __attribute__((aligned(8))) =
     LION_IMAGE;
 #define LION_CLASS 291
 
-void init(unsigned flash_data) { model_init((void *)flash_data); }
+void init_cpp(void* flash_data) { model_init(flash_data); }
 
 void run() {
   int8_t *p = model_input(0)->data.int8;
@@ -45,7 +45,7 @@ void run() {
 }
 
 extern "C" {
-void model_init(unsigned flash_data) { init(flash_data); }
+void init(void * flash_data) { init_cpp(flash_data); }
 
 void inference() { run(); }
 }

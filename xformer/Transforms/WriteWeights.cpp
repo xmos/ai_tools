@@ -57,6 +57,15 @@ struct WriteWeightsPattern : public OpRewritePattern<LoadConstantOp> {
     return tensorData;
   }
 
+  // Helper function to pad tensor data to 32-byte alignment
+  void padTensorDataToDDRAlignment(std::vector<char> &tensorData,
+                                   LoadWeightsOpType &opType) const {
+    auto alignedSize = ((tensorData.size() + 31) / 32) * 32;
+    auto toBePaddedSize = alignedSize - tensorData.size();
+    // Pad with zeros
+    tensorData.insert(tensorData.end(), toBePaddedSize, 0);
+  }
+
   LogicalResult matchAndRewrite(LoadConstantOp loadOp,
                                 PatternRewriter &rewriter) const override {
     std::vector<char> tensorData;
@@ -73,7 +82,7 @@ struct WriteWeightsPattern : public OpRewritePattern<LoadConstantOp> {
     // bytes/256 bits for max speed For DDR, we are padding data to 32 bytes
     // alignment, so that the next load starts at a 32 byte aligned address
     LoadWeightsOpType opType = LoadWeightsOpType::Sync;
-    if (loadOp.getResult().hasOneUse() && !weightsInExternalMemory) {
+    if (loadOp.getResult().hasOneUse()) {
       auto use = loadOp->use_begin();
       Operation *ownerOp = use->getOwner();
 
@@ -93,6 +102,10 @@ struct WriteWeightsPattern : public OpRewritePattern<LoadConstantOp> {
           opNums.push_back(i);
         }
       }
+      padTensorDataToDDRAlignment(tensorData, opType);
+      if (weightsInExternalMemory) {
+        opType = LoadWeightsOpType::DDR;
+      }
 
       auto loadWeightsOp = rewriter.create<LoadWeightsOp>(
           loadOp.getLoc(), outputTypes, address,
@@ -108,12 +121,8 @@ struct WriteWeightsPattern : public OpRewritePattern<LoadConstantOp> {
       std::vector<char> loadOpData = getTensorData(loadOp);
       dataSizes.push_back(rewriter.getI32IntegerAttr(loadOpData.size()));
       tensorData.insert(tensorData.end(), loadOpData.begin(), loadOpData.end());
+      padTensorDataToDDRAlignment(tensorData, opType);
       if (weightsInExternalMemory) {
-        // Pad tensordata to 32 bytes alignment
-        auto alignedSize = ((loadOpData.size() + 31) / 32) * 32;
-        auto toBePaddedSize = alignedSize - loadOpData.size();
-        // Pad with zeros
-        tensorData.insert(tensorData.end(), toBePaddedSize, 0);
         opType = LoadWeightsOpType::DDR;
       }
       auto loadWeightsOp = rewriter.create<LoadWeightsOp>(

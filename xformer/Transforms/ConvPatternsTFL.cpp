@@ -311,7 +311,11 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
   // Try group OT
   auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
-      quantizer.quantise_activation(mulAndBiases, convDebugOption);
+      quantizer.quantise_activation(mulAndBiases,
+                                    targetArchOption == XS3A
+                                        ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                        : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
+                                    convDebugOption);
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulAndBiases, qp, args.quantErrorFullCheckEnabled);
@@ -319,7 +323,11 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
     // Try channelwise OT
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
-        quantizer.quantise_activation(mulAndBiases, convDebugOption);
+        quantizer.quantise_activation(mulAndBiases,
+                                      targetArchOption == XS3A
+                                          ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                          : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
+                                      convDebugOption);
 
     quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(
         mulAndBiases, qp, true);
@@ -618,7 +626,11 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
   // Try group OT
   auto quantizer = nn::OutputTransformFnInt8_Group::Quantizer();
   nn::OutputTransformFnInt8_Group::QuantisationParams qp =
-      quantizer.quantise_activation(mulAndBiases, convDebugOption);
+      quantizer.quantise_activation(mulAndBiases,
+                                    targetArchOption == XS3A
+                                        ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                        : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
+                                    convDebugOption);
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
       mulAndBiases, qp, args.quantErrorFullCheckEnabled);
@@ -626,7 +638,11 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
     // Try channelwise OT
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
     nn::OutputTransformFnInt8_Channelwise::QuantisationParams qp =
-        quantizer.quantise_activation(mulAndBiases, convDebugOption);
+        quantizer.quantise_activation(mulAndBiases,
+                                      targetArchOption == XS3A
+                                          ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                          : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
+                                      convDebugOption);
 
     quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(
         mulAndBiases, qp, true);

@@ -77,14 +77,14 @@ For example:
 from xmos_ai_tools import xformer as xf
 
 xf.convert("example_int8_model.tflite", "xcore_optimised_int8_model.tflite", [
-    ("xcore-thread-count": "5"),
+    ("xcore-thread-count", "5"),
 ])
 ```
 
 To create a parameters file and a tflite model suitable for loading to flash, use the "xcore-weights-file" option.
 ```python
 xf.convert("example_int8_model.tflite", "xcore_optimised_int8_flash_model.tflite", [
-    ("xcore-weights-file ": "./xcore_params.params"),
+    ("xcore-weights-file ", "./xcore_params.params"),
 ])
 ```
 

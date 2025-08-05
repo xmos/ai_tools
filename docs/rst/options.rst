@@ -24,15 +24,15 @@ using:
   from xmos_ai_tools import xformer
 
 The main method in xformer is convert, which requires an path to an input model,
-an output path, and a list of parameters. The list of parameters should be a dictionary
-of options and their value. 
+an output path, and a list of parameters. The parameters should be a list of tuple, 
+with first item the option name and second item the corresponding value. 
 
 .. code-block:: Python
 
   xf.convert("example_int8_model.tflite", "xcore_optimized_int8_model.tflite", 
              params = [
-                ("xcore-thread-count": 4),
-                ("xcore-reduce-memory": None),
+                ("xcore-thread-count", 4),
+                ("xcore-reduce-memory", None),
              ]
             )
 

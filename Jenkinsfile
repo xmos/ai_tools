@@ -128,7 +128,7 @@ pipeline {
   agent none
   environment {
     REPO = 'ai_tools'
-    BAZEL_CACHE_URL = 'http://srv-bri-bld-cache.xmos.local'
+    BAZEL_CACHE_URL = 'http://srv-bri-bld-cache.xmos.local:8085'
     BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
   }
   parameters { // Available to modify on the job page within Jenkins if starting a build

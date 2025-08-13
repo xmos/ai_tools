@@ -41,6 +41,10 @@ struct ReplaceMaxPool2DPattern : public OpRewritePattern<TFL::MaxPool2DOp> {
     auto outputHeight = outputType.getDimSize(1);
     auto outputWidth = outputType.getDimSize(2);
     auto outputDepth = outputType.getDimSize(3);
+    // Input depth must be multiple of four
+    if (inputDepth % 4 != 0) {
+      return failure();
+    }
     auto splits = utils::getImageRegionThreadSplits(
         threadCountOption, outputHeight, outputWidth, outputDepth);
 

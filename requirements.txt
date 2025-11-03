@@ -1,5 +1,5 @@
-# python_version 3.9
-# pip_version 22.*
+# python_version 3.11
+# pip_version 25.*
 
 tensorflow==2.15.0; sys_platform != 'darwin' and platform_machine != 'arm64'
 tensorflow==2.11.0; sys_platform == 'darwin' and platform_machine == 'x86_64'

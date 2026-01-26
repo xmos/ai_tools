@@ -186,6 +186,7 @@ pipeline {
                         sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64'
                         sh 'chmod +x bazelisk-linux-amd64'
                         sh """
+                        rm -rf /var/tmp/_bazel_jenkins/install/*
                         ./bazelisk-linux-amd64 build //:xcore-opt \\
                           --verbose_failures \\
                           --linkopt=-lrt \\
@@ -196,6 +197,7 @@ pipeline {
                           --define SETUPTOOLS_SCM_VERSION=\$(python -m setuptools_scm -c ../python/pyproject.toml)
                       """
                         sh '''
+                        rm -rf /var/tmp/_bazel_jenkins/install/*
                         ./bazelisk-linux-amd64 test //Test:all \\
                           --verbose_failures \\
                           --test_output=errors \\
@@ -289,7 +291,8 @@ pipeline {
                         def cpuFlag = arch == 'arm64' ? 'darwin_arm64' : 'darwin_x86_64'
                         def outputName = "xcore-opt-${arch}"
                         sh """
-                      ./bazelisk-darwin-arm64 build //:xcore-opt \\
+                        rm -rf /var/tmp/_bazel_jenkins/install/*
+                        ./bazelisk-darwin-arm64 build //:xcore-opt \\
                         --cpu=${cpuFlag} \\
                         --remote_cache=${env.BAZEL_CACHE_URL} \\
                         --copt=-fvisibility=hidden \\

@@ -131,7 +131,11 @@ create_zip() {
   mkdir -p build
   cd build
   if [ "$1" = "xcore" ]; then
-    cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+    if xcc --version | grep -q 'XTC version: 99.99.99'; then
+      cmake .. --toolchain=$(which xcc)/../../build/xcommon_cmake/xcore_xs.cmake
+    else
+      cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake
+    fi
   else
     cmake .. -DLIB_NAME=x86tflitemicro
   fi

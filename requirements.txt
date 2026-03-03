@@ -18,3 +18,4 @@ larq-compute-engine==0.13.0
 PyYAML==6.0
 h5py>=3.6.0
 setuptools_scm
+setuptools

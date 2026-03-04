@@ -6,6 +6,8 @@ Requirements:
 
 * Install version 15 or later of the `XMOS tools <https://www.xmos.ai/software-tools/>`_ from your preferred location and activate it by sourcing ``SetEnv`` in the installation root.
 
+* Install Bazel 6.1.0 (recommended) or later `Bazel Install https://bazel.build/install?hl=es-419`. Verify installation using ``bazel --version``.
+
 * `CMake 3.23 <https://cmake.org/download/>`_ or newer is required for building libraries and test firmware.
 
 * Clone the repository::

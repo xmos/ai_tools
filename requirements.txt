@@ -8,9 +8,9 @@ numpy<2; sys_platform == 'darwin' and platform_machine == 'x86_64'
 numpy>=1.20
 pkgconfig==1.5.5
 protobuf
-pytest==7.0.1
-pytest-xdist==2.5.0
-pytest-rerunfailures==10.2
+pytest
+pytest-xdist
+pytest-rerunfailures
 flatbuffers>=2.0
 tflite==2.10.0
 pyusb>=1.2.1

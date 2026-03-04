@@ -1,7 +1,7 @@
 // Things to optimise if this is too slow:
 // -build device runtime in parallel with host runtimes, use mutex before combining into wheel
 
-@Library('xmos_jenkins_shared_library@v0.30.0') _
+@Library('xmos_jenkins_shared_library@v0.46.0') _
 
 if (env.job_type != 'beta_release' && env.job_type != 'official_release') {
   getApproval()

@@ -24,9 +24,24 @@ def setupRepo() {
 
 def createDeviceZip() {
   dir('xformer') { sh './version_check.sh' }
-  dir('third_party/lib_tflite_micro/build') {
-    sh 'cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake'
-    sh 'make create_zip -j8'
+  dir('third_party/lib_tflite_micro') {
+
+    withTools(params.TOOLS_VX4_VERSION) {
+      dir('build_vx4b') {
+        sh 'cmake .. --toolchain=$XMOS_CMAKE_PATH/xcore_xs.cmake'
+        sh 'make -j8'
+      }
+    }
+
+    withTools(params.TOOLS_VERSION) {
+      dir('build') {
+        sh 'cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake'
+        sh 'make project-install -j8'
+        sh 'mv lib/libxtflitemicro.a lib/libxtflitemicro_xs3a.a'
+        sh 'mv ../build_vx4b/libxtflitemicro.a lib/libxtflitemicro_vx4b.a'
+        sh 'cmake -E tar cfv release_archive.zip --format=zip  include/ lib/'
+      }
+    }
   }
 }
 
@@ -137,6 +152,11 @@ pipeline {
       defaultValue: '15.3.1',
       description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
     )
+    string(
+      name: 'TOOLS_VX4_VERSION',
+      defaultValue: '-j --repo arch_vx_slipgate -b master -a XTC 112',
+      description: 'The XTC Slipgate tools version'
+    )
   }
 
   options {
@@ -151,9 +171,8 @@ pipeline {
         stage('Build device runtime') {
           steps {
             setupRepo()
-            createVenv('requirements.txt')
-            withVenv { sh 'pip install -r requirements.txt' }
-            withVenv { withTools(params.TOOLS_VERSION) { createDeviceZip() } }
+            createVenv(reqFile: 'requirements.txt')
+            withVenv { createDeviceZip() }
             dir('third_party/lib_tflite_micro/build/') {
               stash name: 'release_archive', includes: 'release_archive.zip'
             }

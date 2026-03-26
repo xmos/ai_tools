@@ -11,6 +11,7 @@
 Pipfile.lock
 ai_tools_venv/*
 xformer/.venv
+**.venv**
 
 # Build cruft
 **/.lock*
@@ -32,6 +33,7 @@ compile_commands.json
 wheels/
 python/xmos_ai_tools/runtime/lib
 python/xmos_ai_tools/runtime/include
+build_vx4b
 
 # Test cruft
 **/.pytest_cache/*

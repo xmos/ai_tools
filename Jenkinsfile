@@ -164,6 +164,7 @@ pipeline {
     skipDefaultCheckout()
     buildDiscarder(xmosDiscardBuildSettings())
   }
+
   stages { stage('On PR') {
       when { anyOf { branch pattern: 'PR-.*', comparator: 'REGEXP'; expression { env.job_type == 'beta_release' || env.job_type == 'official_release' } } }
       agent { label 'linux && x86_64 && !noAVX2' }

@@ -228,6 +228,8 @@ struct EraseDoubleTransposePattern : public OpRewritePattern<TFL::TransposeOp> {
         // And erase the inverse transpose ops
         rewriter.eraseOp(userTransposeOp);
         IRModified = true;
+      } else {
+        allUserErased = false;
       }
     }
 

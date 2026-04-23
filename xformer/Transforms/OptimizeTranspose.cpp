@@ -187,43 +187,60 @@ struct EraseDoubleTransposePattern : public OpRewritePattern<TFL::TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(TFL::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
+    bool IRModified = false;
     // Get the permutation used in the transposes
     DenseIntElementsAttr perm0;
-    if (!matchPattern(transposeOp.getPerm(), m_Constant(&perm0)))
+    if (!matchPattern(transposeOp.getPerm(), m_Constant(&perm0))) {
       return failure();
+    }
 
     SmallVector<Operation *> users(transposeOp->user_begin(), transposeOp->user_end());
+    bool allUserErased = true;
     for (Operation *userOp : users) {
       // Check if the user operation is a transpose op
       auto userTransposeOp = dyn_cast<TFL::TransposeOp>(userOp);
       if (!userTransposeOp) {
-        return failure();
+        allUserErased = false;
+        continue;
       }
 
       // Get the permutation used in the user transposes
       DenseIntElementsAttr perm1;
-      if (!matchPattern(userTransposeOp.getPerm(), m_Constant(&perm1)))
-        return failure();
+      if (!matchPattern(userTransposeOp.getPerm(), m_Constant(&perm1))) {
+        allUserErased = false;
+        continue;
+      }
 
       // Check if this is the inverse of parent transpose
       int32_t correspondingDim = 0;
+      bool userIsInverseTranspose = true;
       for (auto val : perm1.getValues<int32_t>()) {
         if (correspondingDim != perm0.getValues<int32_t>()[val]) {
-          return failure();
+          userIsInverseTranspose = false;
+          break;
         }
         correspondingDim += 1;
       }
+
+      if (userIsInverseTranspose) {
+        // Can bypass this transpose -> inverse transpose pair
+        rewriter.replaceAllUsesWith(userTransposeOp.getResult(), transposeOp.getInput());
+        // And erase the inverse transpose ops
+        rewriter.eraseOp(userTransposeOp);
+        IRModified = true;
+      }
     }
 
-    // Reaching this stage means all user ops are exact inverse transpose ops
-    // Removing all of them
-    for (Operation *userOp : users) {
-      auto userTransposeOp = dyn_cast<TFL::TransposeOp>(userOp);
-      rewriter.replaceAllUsesWith(userTransposeOp.getResult(), transposeOp.getInput());
-      rewriter.eraseOp(userOp);
+    if (allUserErased) {
+      // All user ops are the equivant inverse transpose ops
+      // Remove the transpose ops
+      rewriter.eraseOp(transposeOp);
+      IRModified = true;
     }
-    rewriter.eraseOp(transposeOp);
-    return success();
+    if (IRModified) {
+      return success();
+    }
+    return failure();    
   }
 };
 
@@ -765,9 +782,11 @@ void OptimizeTranspose::runOnOperation() {
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 
-  // Erase double transpose optimizations
+  // Erase double transpose optimizations and merge if there is leftover
   RewritePatternSet erasePatterns(ctx);
   erasePatterns.insert<EraseDoubleTransposePattern>(ctx);
+  erasePatterns.insert<FoldDoubleTransposePattern>(ctx);
+  erasePatterns.insert<FoldTransposeToReshapePattern>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(erasePatterns));
 }

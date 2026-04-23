@@ -182,6 +182,51 @@ struct FoldDoubleTransposePattern : public OpRewritePattern<TFL::TransposeOp> {
   }
 };
 
+// Erase Transpose and Inverse Transpose pair that the input dimension and output dimension are the same
+struct EraseDoubleTransposePattern : public OpRewritePattern<TFL::TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(TFL::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    // Get the permutation used in the transposes
+    DenseIntElementsAttr perm0;
+    if (!matchPattern(transposeOp.getPerm(), m_Constant(&perm0)))
+      return failure();
+
+    SmallVector<Operation *> users(transposeOp->user_begin(), transposeOp->user_end());
+    for (Operation *userOp : users) {
+      // Check if the user operation is a transpose op
+      auto userTransposeOp = dyn_cast<TFL::TransposeOp>(userOp);
+      if (!userTransposeOp) {
+        return failure();
+      }
+
+      // Get the permutation used in the user transposes
+      DenseIntElementsAttr perm1;
+      if (!matchPattern(userTransposeOp.getPerm(), m_Constant(&perm1)))
+        return failure();
+
+      // Check if this is the inverse of parent transpose
+      int32_t correspondingDim = 0;
+      for (auto val : perm1.getValues<int32_t>()) {
+        if (correspondingDim != perm0.getValues<int32_t>()[val]) {
+          return failure();
+        }
+        correspondingDim += 1;
+      }
+    }
+
+    // Reaching this stage means all user ops are exact inverse transpose ops
+    // Removing all of them
+    for (Operation *userOp : users) {
+      auto userTransposeOp = dyn_cast<TFL::TransposeOp>(userOp);
+      rewriter.replaceAllUsesWith(userTransposeOp.getResult(), transposeOp.getInput());
+      rewriter.eraseOp(userOp);
+    }
+    rewriter.eraseOp(transposeOp);
+    return success();
+  }
+};
+
 // Replace TransposeOp with ReshapeOp if equivalent
 // Transpose is equivalent to reshape if we only permute consecutive dimensions
 // and only one of those permuted dimensions isn't of size 1
@@ -719,6 +764,12 @@ void OptimizeTranspose::runOnOperation() {
   }
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+
+  // Erase double transpose optimizations
+  RewritePatternSet erasePatterns(ctx);
+  erasePatterns.insert<EraseDoubleTransposePattern>(ctx);
+
+  (void)applyPatternsAndFoldGreedily(func, std::move(erasePatterns));
 }
 } // namespace
 

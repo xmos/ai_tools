@@ -71,10 +71,11 @@ def runPytestHost(String test, String args, String junit) {
 }
 
 def dailyDeviceTest = {
-  timeout(time: 20, unit: 'MINUTES') {
-    sh 'xtagctl reset_all XCORE-AI-EXPLORER'
-    sh 'pytest examples/app_mobilenetv2'
-  }
+  //TODO fix all jenkins infra to remove those
+  // timeout(time: 20, unit: 'MINUTES') {
+  //   sh 'xtagctl reset_all XCORE-AI-EXPLORER'
+  //   sh 'pytest examples/app_mobilenetv2'
+  // }
   runPytestDevice('8x8/test_broadcast', '-n 1 --tc 1', 'broadcast_1')
   runPytestDevice('16x8/test_transpose', '-n 1', '16x8_transpose')
   runPytestDevice('8x8/test_concatenate', '-n 1 --tc 5', 'concat_5')

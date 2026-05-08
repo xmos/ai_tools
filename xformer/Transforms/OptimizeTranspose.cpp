@@ -575,6 +575,94 @@ struct MoveTransposeForwardOverConcatOpPattern
   }
 };
 
+struct MoveTransposeForwardOverSliceOpPattern
+    : public OpRewritePattern<TFL::SliceOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TFL::SliceOp sliceOp,
+                                PatternRewriter &rewriter) const override {
+    // Get input operands
+    auto input = sliceOp.getInput();
+
+    // Check if input is TransposeOps
+    auto transposeOp = input.getDefiningOp<TFL::TransposeOp>();
+    if (!transposeOp)
+      return failure();
+
+    // Ensure that the TransposeOps has a single use
+    if (!transposeOp->hasOneUse())
+      return failure();
+
+    // Get transpose permutation attribute
+    DenseIntElementsAttr permAttr;
+    if (!matchPattern(transposeOp.getPerm(), m_Constant(&permAttr)))
+      return failure();
+
+    // Get slice begin attribute
+    DenseIntElementsAttr beginAttr;
+    if (!matchPattern(sliceOp.getBegin(), m_Constant(&beginAttr)))
+      return failure();
+
+    // Get slice size attribute
+    DenseIntElementsAttr sizeAttr;
+    if (!matchPattern(sliceOp.getSize(), m_Constant(&sizeAttr)))
+      return failure();
+
+    SmallVector<int32_t, 4> newBeginVec(beginAttr.size());
+    SmallVector<int32_t, 4> newSizeVec(sizeAttr.size());
+    SmallVector<int64_t, 4> newSliceShapeVec(sizeAttr.size());
+    int64_t index = 0;
+    for (auto dim: permAttr.getValues<int32_t>()) {
+      newBeginVec[dim] = beginAttr.getValues<int32_t>()[index];
+      newSizeVec[dim] = sizeAttr.getValues<int32_t>()[index];
+      newSliceShapeVec[dim] = sizeAttr.getValues<int32_t>()[index];
+      index += 1;
+    }
+
+    // Create new begin constant op
+    auto beginType = RankedTensorType::get(
+        {static_cast<int64_t>(newBeginVec.size())}, rewriter.getIntegerType(32));
+    auto newBeginAttr = DenseIntElementsAttr::get(beginType, newBeginVec);
+    auto newBeginConstOp =
+        rewriter.create<TFL::ConstOp>(sliceOp.getLoc(), beginType, newBeginAttr);
+
+    // Create new size constant op
+    auto sizeType = RankedTensorType::get(
+        {static_cast<int64_t>(newSizeVec.size())}, rewriter.getIntegerType(32));
+    auto newSizeAttr = DenseIntElementsAttr::get(sizeType, newSizeVec);
+    auto newSizeConstOp =
+        rewriter.create<TFL::ConstOp>(sliceOp.getLoc(), sizeType, newSizeAttr);
+
+    // Create the permutation constant with correct data types
+    auto permType = RankedTensorType::get(
+        {static_cast<int64_t>(permAttr.size())}, rewriter.getIntegerType(32));
+    auto permConstOp =
+        rewriter.create<TFL::ConstOp>(sliceOp.getLoc(), permType, permAttr);
+
+    // Create new sliceOp with the correct result type and axis
+    auto inputType = transposeOp.getInput().getType().dyn_cast<RankedTensorType>();
+    if (!inputType) {
+      return failure();
+    }
+    auto elementType = inputType.getElementType();
+    auto newSliceType = RankedTensorType::get(newSliceShapeVec, elementType);
+    auto newSliceOp = rewriter.create<TFL::SliceOp>(
+        sliceOp.getLoc(), newSliceType, transposeOp.getInput(), 
+        newBeginConstOp.getResult(), newSizeConstOp.getResult());
+
+    // Create new transposeOp
+    auto newTransposeOp = rewriter.create<TFL::TransposeOp>(
+        sliceOp.getLoc(), sliceOp.getType(), newSliceOp.getResult(),
+        permConstOp.getResult());
+
+    rewriter.replaceAllUsesWith(sliceOp.getResult(), newTransposeOp.getResult());
+    rewriter.eraseOp(sliceOp);
+    rewriter.eraseOp(transposeOp);
+
+    return success();
+  }
+};
+
 struct HoistTransposeWCHAbovePadPattern
     : public OpRewritePattern<TFL::TransposeOp> {
   using OpRewritePattern<TFL::TransposeOp>::OpRewritePattern;
@@ -700,6 +788,7 @@ void OptimizeTranspose::runOnOperation() {
   mergePatterns
       .insert<MoveTransposeForwardOverUnaryOpPattern,
               MoveTransposeForwardOverConcatOpPattern,
+              MoveTransposeForwardOverSliceOpPattern,
               FoldDoubleTransposePattern, FoldTransposeToReshapePattern>(ctx);
   if (mergeTransposeOption) {
     (void)applyPatternsAndFoldGreedily(func, std::move(mergePatterns));

@@ -33,6 +33,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createPagingPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createApplyTFLPatternsPass();
 std::unique_ptr<OperationPass<func::FuncOp>>
 createVerifyInputOutputTensorOptionsPass();
+std::unique_ptr<OperationPass<func::FuncOp>> createOptimizeUnaryFloatOpPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createRemoveDynamicShapePass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceAddSubPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createReplaceMulPass();

@@ -23,12 +23,11 @@ def setupRepo() {
 }
 
 def createDeviceZip() {
-  dir('xformer') { sh './version_check.sh' }
   dir('third_party/lib_tflite_micro') {
 
     withTools(params.TOOLS_VX4_VERSION) {
       dir('build_vx4b') {
-        sh 'cmake .. --toolchain=$XMOS_CMAKE_PATH/xcore_xs.cmake'
+        sh 'cmake .. --toolchain=$XMOS_CMAKE_PATH/xcore_xs.cmake -DENABLE_SIZE_OPT=ON'
         sh 'make -j8'
       }
     }
@@ -146,7 +145,9 @@ pipeline {
     REPO = 'ai_tools'
     BAZEL_CACHE_URL = 'http://srv-bri-bld-cache.xmos.local:8080'
     BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
+    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev40"
   }
+
   parameters { // Available to modify on the job page within Jenkins if starting a build
     string( // use to try different tools versions
       name: 'TOOLS_VERSION',

@@ -1,6 +1,11 @@
 xmos ai_tools change log
 ========================
 
+1.4.3.dev40
+-----------
+
+  * ADDED: CMake option (`ENABLE_SIZE_OPT`) to optimize `libtflitemicro.a` size on Vx4.
+  
 1.4.3.dev39
 -----------
 

@@ -40,129 +40,6 @@ void calculateOutputScaleAndZeroPoint(
   *outputScale = f0 / (n0 - static_cast<double>(*outputZeroPoint));
 }
 
-struct MoveDequantForwardAndReplaceSqrtPattern
-    : public OpRewritePattern<TFL::DequantizeOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(TFL::DequantizeOp dequantOp,
-                                PatternRewriter &rewriter) const override {
-    TFL::SqrtOp sqrtOp = nullptr;
-    func::ReturnOp returnOp = nullptr;
-    // Ensure the DequantizeOp has a single use, we can accept if other use is ReturnOp
-    for (auto *user : dequantOp.getResult().getUsers()) {
-      if (isa<TFL::SqrtOp>(user) && sqrtOp == nullptr)
-        sqrtOp = dyn_cast<TFL::SqrtOp>(user);
-      else if (isa<func::ReturnOp>(user) && returnOp == nullptr)
-        returnOp = dyn_cast<func::ReturnOp>(user);
-      else{
-        return failure();
-      }
-    }
-
-    if (sqrtOp == nullptr) return failure();
-
-    if (returnOp) {
-      // Verify that returnOp belongs to the entry function
-      auto funcOp = returnOp->getParentOfType<func::FuncOp>();
-      auto module = funcOp->getParentOfType<ModuleOp>();
-      if (!funcOp || !module) return failure();
-    }
-
-    llvm::SmallVector<int8_t, 0> inputVector;
-    inputVector.resize(256);
-
-    // The inputvector has 256 input values in the following order,
-    // 0, 1, 2... -> 127 and
-    // -128, -127, -126... -> -1
-    std::iota(inputVector.begin(), inputVector.begin() + 128, 0);
-    std::iota(inputVector.begin() + 128, inputVector.end(), -128);
-
-    // Get input scale and zero point
-    RankedTensorType inputType =
-        dequantOp.getInput().getType().dyn_cast<RankedTensorType>();
-    auto inputQType =
-        inputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
-    double inputScale = inputQType.getScale();
-    int64_t inputZeroPoint = inputQType.getZeroPoint();
-
-    // Dequantize the input vector
-    llvm::SmallVector<double, 0> dequantizedVector;
-    std::transform(
-      inputVector.begin(), inputVector.end(), std::back_inserter(dequantizedVector), 
-      [&](int8_t n) {
-        return static_cast<double>(
-            (static_cast<int32_t>(n) - inputZeroPoint) * inputScale);
-      });
-
-    // Apply sqrt function to the dequantized vector
-    std::for_each(
-      dequantizedVector.begin(), dequantizedVector.end(),
-      [](double &x) { x = std::sqrt(x); });
-
-    // Calculate the output scale and output zero point
-    int64_t outputZeroPoint;
-    double outputScale;
-    calculateOutputScaleAndZeroPoint(
-      dequantizedVector[127], dequantizedVector[128],
-      inputVector[127], inputVector[128],
-      &outputZeroPoint, &outputScale);
-
-    // Quantize to create the result vector
-    llvm::SmallVector<uint8_t, 0> resultVector;
-    std::transform(
-        dequantizedVector.begin(), dequantizedVector.end(),
-        std::back_inserter(resultVector), [&](double n) {
-          int32_t t =
-              static_cast<int32_t>(round(n / outputScale)) + outputZeroPoint;
-          return static_cast<uint8_t>(std::max(
-              {std::min({(int32_t)t, (int32_t)INT8_MAX}), (int32_t)INT8_MIN}));
-        });
-
-    ShapedType lookupTableType = RankedTensorType::get(
-        {256}, rewriter.getIntegerType(8, /*signed=*/false));
-    auto lookupTableAttr =
-        DenseElementsAttr::get<uint8_t>(lookupTableType, resultVector);
-        
-    // create arith constantop for lookup op here
-    auto lookupConstOp = rewriter.create<arith::ConstantOp>(
-      dequantOp.getLoc(), lookupTableAttr);
-
-    // create lookup table op here
-    UniformQuantizedType newSqrtResultQType = UniformQuantizedType::get(
-      true, rewriter.getIntegerType(8), rewriter.getF32Type(),
-      outputScale, outputZeroPoint, 
-      QuantizedType::getDefaultMinimumForInteger(/*isSigned=*/true, 8),
-      QuantizedType::getDefaultMaximumForInteger(/*isSigned=*/true, 8));
-
-    auto newSqrtResultType = RankedTensorType::get(
-        inputType.getShape(), newSqrtResultQType);
-
-    auto newSqrtOp = rewriter.create<LookupOp>(
-      dequantOp.getLoc(), newSqrtResultType, dequantOp.getInput(), lookupConstOp);
-
-    // Create a new dequantize operation after the sqrt operation
-    auto newDequantizeOp = rewriter.create<TFL::DequantizeOp>(
-        dequantOp.getLoc(), sqrtOp.getResult().getType(), newSqrtOp.getResult());
-
-    rewriter.replaceOp(dequantOp, newSqrtOp.getResult());
-    rewriter.replaceOp(sqrtOp, newDequantizeOp.getResult());
-
-    if (returnOp) {
-      // Update function signature
-      auto funcOp = returnOp->getParentOfType<func::FuncOp>();
-      // Build new function type using the return operands (now quantized)
-      auto newFuncType = FunctionType::get(
-          getContext(),
-          funcOp.getArgumentTypes(),
-          llvm::to_vector<4>(returnOp->getOperandTypes())   // converts to SmallVector<Type>
-      );
-      funcOp.setType(newFuncType);
-    }
-
-    return success();
-  }
-};
-
 struct MoveDequantForwardOverUnaryOpPattern
     : public OpRewritePattern<TFL::DequantizeOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -173,7 +50,7 @@ struct MoveDequantForwardOverUnaryOpPattern
     func::ReturnOp returnOp = nullptr;
     // Ensure the DequantizeOp has a single use, we can accept if other use is ReturnOp
     for (auto *user : dequantOp.getResult().getUsers()) {
-      if (isa<TFL::AbsOp, TFL::NegOp, TFL::LogOp, TFL::LogisticOp, TFL::SumOp>(user) 
+      if (isa<TFL::AbsOp, TFL::NegOp, TFL::SumOp>(user)
         && userOp == nullptr)
         userOp = user;
       else if (isa<func::ReturnOp>(user) && returnOp == nullptr)
@@ -244,14 +121,6 @@ struct MoveDequantForwardOverUnaryOpPattern
       // NegOp require input and output type the same
       newUnaryOpResult =
           rewriter.create<TFL::NegOp>(loc, inputType, input);
-    } else if (auto logisticOp = dyn_cast<TFL::LogisticOp>(userOp)) {
-      // LogisticOp require input and output type the same
-      newUnaryOpResult =
-          rewriter.create<TFL::LogisticOp>(loc, inputType, input);
-    } else if (auto logOp = dyn_cast<TFL::LogOp>(userOp)) {
-      // LogOp require input and output type the same
-      newUnaryOpResult =
-          rewriter.create<TFL::LogisticOp>(loc, inputType, input);
     } else if (auto sumOp = dyn_cast<TFL::SumOp>(userOp)) {
       auto axes = sumOp.getAxes();
       auto keepDim = sumOp.getKeepDimsAttr();
@@ -487,31 +356,58 @@ LookupOp CreateLookupOp(
   int64_t inputZeroPoint = inputQType.getZeroPoint();
 
   // Dequantize the input vector
-  llvm::SmallVector<double, 0> dequantizedVector;
+  llvm::SmallVector<double, 0> dequantizedInputVector;
   std::transform(
-    inputVector.begin(), inputVector.end(), std::back_inserter(dequantizedVector), 
+    inputVector.begin(), inputVector.end(), std::back_inserter(dequantizedInputVector), 
     [&](int8_t n) {
       return static_cast<double>(
           (static_cast<int32_t>(n) - inputZeroPoint) * inputScale);
     });
 
-  // Apply func to the dequantized vector
-  std::for_each(
-    dequantizedVector.begin(), dequantizedVector.end(),
-    func);
+  // Apply func to the dequantized input vector and store the result in a new vector
+  llvm::SmallVector<double, 0> dequantizedOutputVector;
+  std::transform(
+    dequantizedInputVector.begin(), dequantizedInputVector.end(), std::back_inserter(dequantizedOutputVector), 
+    [&](double n) {
+      func(n);
+      return n;
+    });
+
+  double max_element_value = std::numeric_limits<double>::lowest();
+  double min_element_value = std::numeric_limits<double>::max();
+  for (int i = 0; i < dequantizedOutputVector.size(); i++) {
+    double value = dequantizedOutputVector[i];
+    if (!std::isnan(value) && !std::isinf(value)) {
+      if (value > max_element_value) {
+        max_element_value = value;
+      }
+      if (value < min_element_value) {
+        min_element_value = value;
+      }
+    }
+  }
+  // Fix -INF, INF, and NaN values in dequantizedOutputVector
+  for (auto &d : dequantizedOutputVector) {
+    if (std::isnan(d)) {
+      d = 0.0;
+    } else if (std::isinf(d)) {
+      d = (d > 0) ? max_element_value : min_element_value;
+    }
+  }
 
   // Calculate the output scale and output zero point
   int64_t outputZeroPoint;
   double outputScale;
   calculateOutputScaleAndZeroPoint(
-    dequantizedVector[127], dequantizedVector[128],
-    inputVector[127], inputVector[128],
+    max_element_value, min_element_value,
+    QuantizedType::getDefaultMaximumForInteger(/*isSigned=*/true, 8),
+    QuantizedType::getDefaultMinimumForInteger(/*isSigned=*/true, 8),
     &outputZeroPoint, &outputScale);
 
   // Quantize to create the result vector
   llvm::SmallVector<uint8_t, 0> resultVector;
   std::transform(
-      dequantizedVector.begin(), dequantizedVector.end(),
+      dequantizedOutputVector.begin(), dequantizedOutputVector.end(),
       std::back_inserter(resultVector), [&](double n) {
         int32_t t =
             static_cast<int32_t>(round(n / outputScale)) + outputZeroPoint;
@@ -543,57 +439,6 @@ LookupOp CreateLookupOp(
 
   return newOp;
 }
-
-/**
- * Fold X -> Dequant \
- *                    => Div -> Quant -> Z
- *      Y -> Dequant /
- * into
- *                X \
- *                   => Mul -> Z
- *      Y -> Lookup /
- * Where Lookup ops turn Y into 1/Y 
- */ 
-struct FoldDequantDivQuantOpPattern
-    : public OpRewritePattern<TFL::DivOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(TFL::DivOp divOp,
-                                PatternRewriter &rewriter) const override {
-    // Ensure the DivOp lhs is a Dequantize Op
-    TFL::DequantizeOp lhsDequantOp = 
-      dyn_cast_or_null<TFL::DequantizeOp>(divOp.getLhs().getDefiningOp());
-    if (!lhsDequantOp)
-      return failure();
-    // Ensure the DivOp rhs is a Dequantize Op
-    TFL::DequantizeOp rhsDequantOp = 
-      dyn_cast_or_null<TFL::DequantizeOp>(divOp.getRhs().getDefiningOp());
-    if (!rhsDequantOp)
-      return failure();
-    // Ensure the DivOp has a single use
-    if (!divOp->hasOneUse())
-      return failure();
-    // Ensure after DivOp is Quantize Op
-    TFL::QuantizeOp quantOp = dyn_cast_or_null<TFL::QuantizeOp>(*divOp->getUsers().begin());
-    if (!quantOp)
-      return failure();
-
-    auto lookupOp = CreateLookupOp(
-      [](double &x) { x = 1.0/x; },
-      rhsDequantOp.getLoc(), rhsDequantOp.getInput(), rhsDequantOp.getResult(), rewriter);
-    
-    auto mulOp = rewriter.create<TFL::MulOp>(
-      divOp.getLoc(), quantOp.getResult().getType(),
-      lhsDequantOp.getInput(), lookupOp.getResult(), divOp.getFusedActivationFunction());
-
-    rewriter.replaceOp(quantOp, mulOp.getResult());
-    rewriter.eraseOp(divOp);
-    rewriter.eraseOp(lhsDequantOp);
-    rewriter.eraseOp(rhsDequantOp);
-
-    return failure();
-  }
-};
 
 // Fold Dequant -> Quant into Quant
 struct FoldDequantQuantPairPattern
@@ -633,11 +478,9 @@ void OptimizeUnaryFloatOp::runOnOperation() {
 
   RewritePatternSet patterns(ctx);
 
-  patterns.insert<MoveDequantForwardAndReplaceSqrtPattern>(ctx);
   patterns.insert<MoveDequantForwardOverUnaryOpPattern>(ctx);
   patterns.insert<MoveDequantForwardOverSameInputOpPattern>(ctx);
   patterns.insert<FoldDequantMulQuantOpPattern>(ctx);
-  patterns.insert<FoldDequantDivQuantOpPattern>(ctx);
   patterns.insert<FoldDequantQuantPairPattern>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));

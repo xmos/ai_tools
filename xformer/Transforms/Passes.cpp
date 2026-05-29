@@ -48,6 +48,7 @@ void buildXCoreRemainingPassPipeline(OpPassManager &pm) {
   pm.addPass(createReplaceMaxPoolPass());
   pm.addPass(createReplaceMulPass());
   pm.addPass(createReplaceMeanPass());
+  pm.addPass(createReplaceBatchMatMulPass());
   pm.addPass(createReplaceSumPass());
   pm.addPass(createReplaceTransposeConvPass());
   pm.addPass(createReplaceConv2DPass());

@@ -5,6 +5,7 @@
 #define XFORMER_TRANSFORMS_CONVPATTERNS_H
 
 #include "IR/XCoreOps.h"
+#include "Transforms/Options.h"
 
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
 #include "lib_nn/api/AbstractKernel.hpp"
@@ -17,6 +18,12 @@
 
 namespace mlir {
 namespace xcore {
+
+// Returns the VLMUL_SHR variant for the currently selected target arch
+inline nn_vlmul_shr_t getVlmulShr() {
+  return targetArchOption == XS3A ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                  : nn_vlmul_shr_t::VLMUL_SHR_VX4A;
+}
 
 struct TFLConvArgs {
   Operation *convOp;

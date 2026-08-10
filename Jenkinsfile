@@ -246,6 +246,7 @@ pipeline {
                       sh 'rm dist/*.whl'
                       sh 'mv wheelhouse/*.whl dist/'
                       stash name: 'linux_wheel', includes: 'dist/*'
+                      archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
                 } }
                 }
               }
@@ -281,6 +282,7 @@ pipeline {
                         }
                       }
                       stash name: 'windows_wheel', includes: 'dist/*'
+                      archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
                     }
                   }
                 }
@@ -342,6 +344,7 @@ pipeline {
                       }
                     }
                     stash name: 'mac_wheel', includes: 'dist/*'
+                    archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
                 } }
               }
               post { cleanup { xcoreCleanSandbox() } }

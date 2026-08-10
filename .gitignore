@@ -119,3 +119,5 @@ examples/app_yolov8_classification/yolov8n-cls.onnx
 examples/app_yolov8_classification/yolov8n-cls.pt
 examples/app_yolov8_classification/yolov8n-cls_saved_model/
 examples/app_mobilenetv2/arena_sizes.csv
+
+!CHANGELOG.rst

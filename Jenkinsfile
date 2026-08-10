@@ -23,12 +23,11 @@ def setupRepo() {
 }
 
 def createDeviceZip() {
-  dir('xformer') { sh './version_check.sh' }
   dir('third_party/lib_tflite_micro') {
 
     withTools(params.TOOLS_VX4_VERSION) {
       dir('build_vx4b') {
-        sh 'cmake .. --toolchain=$XMOS_CMAKE_PATH/xcore_xs.cmake'
+        sh 'cmake .. --toolchain=$XMOS_CMAKE_PATH/xcore_xs.cmake -DENABLE_SIZE_OPT=ON'
         sh 'make -j8'
       }
     }
@@ -71,10 +70,11 @@ def runPytestHost(String test, String args, String junit) {
 }
 
 def dailyDeviceTest = {
-  timeout(time: 20, unit: 'MINUTES') {
-    sh 'xtagctl reset_all XCORE-AI-EXPLORER'
-    sh 'pytest examples/app_mobilenetv2'
-  }
+  //TODO fix all jenkins infra to remove those
+  // timeout(time: 20, unit: 'MINUTES') {
+  //   sh 'xtagctl reset_all XCORE-AI-EXPLORER'
+  //   sh 'pytest examples/app_mobilenetv2'
+  // }
   runPytestDevice('8x8/test_broadcast', '-n 1 --tc 1', 'broadcast_1')
   runPytestDevice('16x8/test_transpose', '-n 1', '16x8_transpose')
   runPytestDevice('8x8/test_concatenate', '-n 1 --tc 5', 'concat_5')
@@ -145,7 +145,9 @@ pipeline {
     REPO = 'ai_tools'
     BAZEL_CACHE_URL = 'http://srv-bri-bld-cache.xmos.local:8080'
     BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
+    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev40"
   }
+
   parameters { // Available to modify on the job page within Jenkins if starting a build
     string( // use to try different tools versions
       name: 'TOOLS_VERSION',

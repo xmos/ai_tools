@@ -1,13 +1,20 @@
+import numpy as np
+
 from xmos_ai_tools import xformer
 from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2
 from save_mobilenet import save_quantized_mobilenet
-import numpy as np
+from pathlib import Path
 
 HEIGHT, WIDTH, CHANNELS = 160, 160, 3
-TFLITE_MODEL_PATH = "mobilenetv2.tflite"
-OPT_MODEL_PATH = "src/model.tflite"
-OPT_PARAMS_PATH = "src/model_flash.params"
+
+CWD = Path(__file__).parent
+
+TFLITE_MODEL_PATH = CWD / "mobilenetv2.tflite"
+OPT_MODEL_PATH = CWD / "src/model.tflite"
+OPT_PARAMS_PATH = CWD / "src/model_flash.params"
+OPT_WEIGHTS_PATH = CWD / "xcore_flash_binary.out"
+
 NAMING_PREFIX = "model_"
 ALPHA_VALUE = 1.0
 
@@ -49,7 +56,7 @@ def optimize_mobilenetv2():
 
     # Generate flash binary
     xformer.generate_flash(
-        output_file="xcore_flash_binary.out",
+        output_file=OPT_WEIGHTS_PATH,
         model_files=[OPT_MODEL_PATH],
         param_files=[OPT_PARAMS_PATH],
     )

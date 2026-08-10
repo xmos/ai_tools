@@ -147,10 +147,7 @@ struct ReplaceFCWithConv2DPattern
       squeezedShapeType = RankedTensorType::get({3}, rewriter.getI32Type());
     } else {
       for (int r = 0; r < result0Type.getRank() - 1; ++r) {
-        squeezedOutputShapeVector.push_back(
-          result0Type.isDynamicDim(r)
-            ? 1
-            : result0Type.getShape()[r]);
+        squeezedOutputShapeVector.push_back(result0Type.getShape()[r]);
         squeezedReshapeConstantVector.push_back(
           static_cast<int>(
             result0Type.isDynamicDim(r)

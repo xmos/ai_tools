@@ -336,7 +336,7 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
         mulAndBiases, qp,
         targetArchOption == XS3A ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
                                  : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
-        args.quantErrorFullCheckEnabled);
+        true);
 
     if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
@@ -657,7 +657,7 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
         mulAndBiases, qp,
         targetArchOption == XS3A ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
                                  : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
-        args.quantErrorFullCheckEnabled);
+        true);
     if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
       msg << std::endl

@@ -318,7 +318,10 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
                                     convDebugOption);
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
-      mulAndBiases, qp, args.quantErrorFullCheckEnabled);
+      mulAndBiases, qp,
+      targetArchOption == XS3A ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                               : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
+      args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
     // Try channelwise OT
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
@@ -330,7 +333,10 @@ LogicalResult ReplaceConv2DPattern::getOutputTransformParams(
                                       convDebugOption);
 
     quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(
-        mulAndBiases, qp, true);
+        mulAndBiases, qp,
+        targetArchOption == XS3A ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                 : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
+        args.quantErrorFullCheckEnabled);
 
     if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
@@ -633,7 +639,10 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
                                     convDebugOption);
 
   double quantError = nn::OutputTransformFnInt8::get_quant_error(
-      mulAndBiases, qp, args.quantErrorFullCheckEnabled);
+      mulAndBiases, qp,
+      targetArchOption == XS3A ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                               : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
+      args.quantErrorFullCheckEnabled);
   if (quantError > args.quantErrorThreshold) {
     // Try channelwise OT
     auto quantizer = nn::OutputTransformFnInt8_Channelwise::Quantizer();
@@ -645,7 +654,10 @@ LogicalResult ReplaceDepthwiseConv2DPattern::getOutputTransformParams(
                                       convDebugOption);
 
     quantError = nn::OutputTransformFnInt8_Channelwise::get_quant_error(
-        mulAndBiases, qp, true);
+        mulAndBiases, qp,
+        targetArchOption == XS3A ? nn_vlmul_shr_t::VLMUL_SHR_XS3A
+                                 : nn_vlmul_shr_t::VLMUL_SHR_VX4A,
+        args.quantErrorFullCheckEnabled);
     if (quantError > args.quantErrorThreshold) {
       std::stringstream msg;
       msg << std::endl

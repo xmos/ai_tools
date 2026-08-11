@@ -8,6 +8,8 @@
 #include "Utils/FileIO.h"
 #include "Version.h"
 
+#include <limits>
+
 #include "lib_nn/api/version.h"
 #include "lib_tflite_micro/api/version.h"
 #include "lib_tflite_micro/api/xcore_shared_config.h"
@@ -162,6 +164,18 @@ cl::opt<unsigned> convMultiplierFactorOption(
              "minimum multiplier."
              "(default = UINT32_MAX)."),
     cl::init(UINT32_MAX), cl::cat(XformerCategory), cl::Hidden);
+
+// This option mirrors xcore-conv-err-threshold, but for FullyConnected ops.
+// Defaults to leaving every FC lowered to an XCore Conv2D (matching prior
+// behaviour); set a finite value to keep FC ops whose output transform
+// quantization error exceeds it as reference TFL FullyConnected ops instead
+// (higher precision, at the cost of speed for that op).
+cl::opt<double> fcQuantErrorThresholdOption(
+    "xcore-fc-err-threshold",
+    cl::desc("Defaults to TFL FullyConnected ops if channel quantization "
+             "error is more than the provided threshold "
+             "(default = no threshold, all FC ops are optimized)."),
+    cl::init(std::numeric_limits<double>::max()), cl::cat(XformerCategory));
 
 cl::opt<bool> opSplitTensorArenaOption(
     "xcore-op-split-tensor-arena",

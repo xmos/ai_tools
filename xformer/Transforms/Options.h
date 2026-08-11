@@ -26,6 +26,7 @@ extern llvm::cl::opt<unsigned> maxLoadExternalSizeOption;
 extern llvm::cl::opt<double> convQuantErrorThresholdOption;
 extern llvm::cl::opt<bool> convForceErrorCheckOption;
 extern llvm::cl::opt<unsigned> convMultiplierFactorOption;
+extern llvm::cl::opt<double> fcQuantErrorThresholdOption;
 extern llvm::cl::opt<bool> opSplitTensorArenaOption;
 extern llvm::cl::opt<unsigned> opSplitTargetSizeOption;
 extern llvm::cl::list<unsigned> opSplitBottomOpsOption;

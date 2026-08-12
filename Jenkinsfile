@@ -143,7 +143,7 @@ pipeline {
   agent none
   environment {
     REPO = 'ai_tools'
-    BAZEL_CACHE_URL = 'http://srv-bri-bld-cache.xmos.local:8080'
+    BAZEL_CACHE_URL = 'http://srv-bri-bld-cache.xmos.local:8085'
     BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
     SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev40"
   }

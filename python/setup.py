@@ -41,9 +41,11 @@ XTFLM_INTERPRETER_LIBS = [
 ]
 
 # xtflm_interpreter requires numpy
+# ioserver requires pyusb
 REQUIRED_PACKAGES = [
     "numpy<2.0",
     "tflite>=2.4.0",
+    "pyusb>=1.2.1",
 ]
 
 # Force platform specific wheel.

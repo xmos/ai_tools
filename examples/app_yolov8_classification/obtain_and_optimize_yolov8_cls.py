@@ -1,25 +1,138 @@
+import os
+import sys
+import tempfile
+from importlib.metadata import version
+from pathlib import Path
+
+os.environ.setdefault("YOLO_AUTOINSTALL", "False")
+
 from xmos_ai_tools import xformer
-from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 from ultralytics import YOLO
 import numpy as np
+
+try:
+    from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
+except ImportError as exc:
+    if "opcode2name" not in str(exc):
+        raise
+    import tflite
+    from tflite.utils import opcode2name
+
+    sys.modules.pop("xmos_ai_tools.xinterpreters.host_interpreter", None)
+    sys.modules.pop("xmos_ai_tools.xinterpreters", None)
+    tflite.opcode2name = opcode2name
+    from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 
 HEIGHT, WIDTH = 160, 160
 TFLITE_MODEL_PATH = "yolov8n-cls_saved_model/yolov8n-cls_full_integer_quant.tflite"
 OPT_MODEL_PATH = "src/model.tflite"
 OPT_PARAMS_PATH = "src/model_flash.params"
 NAMING_PREFIX = "model_"
+SAMPLE_IMAGE_PATH = "lion.bin"
+
+
+def _check_installed_dependencies():
+    protobuf_version = version("protobuf")
+    if protobuf_version != "4.25.5":
+        raise RuntimeError(
+            "This example requires protobuf==4.25.5 for onnx2tf. "
+            f"Found protobuf=={protobuf_version}; run `python -m pip install -r requirements.txt` before rerunning."
+        )
+
+
+def _tensor_type_name(tensor_type):
+    from tflite.TensorType import TensorType
+
+    for name, value in TensorType.__dict__.items():
+        if name.isupper() and value == tensor_type:
+            return name
+    return f"UNKNOWN({tensor_type})"
+
+
+def _check_tflite_micro_compatible(tflite_model_path):
+    from tflite.BuiltinOperator import BuiltinOperator
+    from tflite.Model import Model
+    from tflite.TensorType import TensorType
+
+    model = Model.GetRootAsModel(bytearray(Path(tflite_model_path).read_bytes()), 0)
+    failures = []
+
+    for subgraph_index in range(model.SubgraphsLength()):
+        subgraph = model.Subgraphs(subgraph_index)
+        for operator_index in range(subgraph.OperatorsLength()):
+            operator = subgraph.Operators(operator_index)
+            operator_code = model.OperatorCodes(operator.OpcodeIndex()).BuiltinCode()
+            if operator_code != BuiltinOperator.CONV_2D:
+                continue
+
+            checks = [
+                ("input", operator.Inputs(0), {TensorType.INT8}),
+                ("filter", operator.Inputs(1), {TensorType.INT8}),
+                ("output", operator.Outputs(0), {TensorType.INT8}),
+            ]
+            if operator.InputsLength() > 2 and operator.Inputs(2) >= 0:
+                checks.append(("bias", operator.Inputs(2), {TensorType.INT32}))
+
+            for role, tensor_index, expected_types in checks:
+                tensor_type = subgraph.Tensors(tensor_index).Type()
+                if tensor_type not in expected_types:
+                    expected = ", ".join(_tensor_type_name(value) for value in expected_types)
+                    failures.append(
+                        f"subgraph {subgraph_index} operator {operator_index} CONV_2D {role} "
+                        f"tensor is {_tensor_type_name(tensor_type)}, expected {expected}"
+                    )
+
+    if failures:
+        details = "\n".join(f"  - {failure}" for failure in failures[:10])
+        raise RuntimeError(
+            "The exported TFLite model contains hybrid Conv2D tensors, which TFLite Micro cannot compile.\n"
+            f"{details}"
+        )
+
+
+def _write_calibration_data(calibration_data_path):
+    data = Path(SAMPLE_IMAGE_PATH).read_bytes()
+    image = np.frombuffer(data, dtype=np.uint8).reshape(1, HEIGHT, WIDTH, 3).astype(np.float32)
+    np.save(calibration_data_path, image)
+
+
+def _convert_onnx_to_int8_tflite(onnx_model_path):
+    import onnx2tf
+
+    output_folder = Path(TFLITE_MODEL_PATH).parent
+    output_folder.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(suffix=".npy") as calibration_data_file:
+        _write_calibration_data(calibration_data_file.name)
+        onnx2tf.convert(
+            input_onnx_file_path=onnx_model_path,
+            output_folder_path=str(output_folder),
+            output_integer_quantized_tflite=True,
+            custom_input_op_name_np_data_path=[
+                ["images", calibration_data_file.name, [[[[0, 0, 0]]]], [[[[255, 255, 255]]]]]
+            ],
+            input_quant_dtype="int8",
+            output_quant_dtype="int8",
+            quant_type="per-channel",
+            tflite_backend="tf_converter",
+            not_use_onnxsim=True,
+            verbosity="error",
+        )
+    if not Path(TFLITE_MODEL_PATH).is_file() or Path(TFLITE_MODEL_PATH).stat().st_size == 0:
+        raise RuntimeError(f"Expected full-int8 TFLite model was not generated: {TFLITE_MODEL_PATH}")
 
 ###############################################
 # Creating and converting an YoloV8 cls model #
 ###############################################
 
 # Load a model
+_check_installed_dependencies()
 model = YOLO("yolov8n-cls.pt")  # load an official model
 
 # Export the model
-_format = "tflite"
-
-model.export(format=_format, imgsz=(HEIGHT, WIDTH), int8=True)
+ONNX_MODEL_PATH = model.export(format="onnx", imgsz=(HEIGHT, WIDTH), opset=20, simplify=True)
+_convert_onnx_to_int8_tflite(ONNX_MODEL_PATH)
+_check_tflite_micro_compatible(TFLITE_MODEL_PATH)
 
 # Convert the model to XCore optimized TFLite via xformer:
 # There are various ways to configure the compiler to optimize the model,
@@ -47,7 +160,7 @@ xformer.generate_flash(
 #######################################################################
 
 # Sample image of a lion (ImageNet class 291)
-with open("lion.bin", "rb") as f:
+with open(SAMPLE_IMAGE_PATH, "rb") as f:
     data = f.read()
 
 input_array = np.frombuffer(data, dtype=np.uint8)

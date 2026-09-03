@@ -72,7 +72,7 @@ print_detections(detections)
 # The app must be running on xcore so that it can be connected via USB
 # Providing output details is optional
 ie = IOServer(output_details=(output_details,))
-ie.connect()
+ie.connect(timeout=10.0)
 
 input_data = img_to_arr("human.jpg", input_details)
 ie.write_input_tensor(input_data.tobytes())

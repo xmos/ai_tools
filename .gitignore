@@ -77,9 +77,17 @@ xformer/model_maker/*.tflite
 examples/app_no_flash/model.tflite
 examples/app_no_flash/src/model.tflite.cpp
 examples/app_no_flash/src/model.tflite.h
+examples/app_profiling/model.tflite
+examples/app_profiling/src/model.tflite.cpp
+examples/app_profiling/src/model.tflite.h
 examples/app_no_flash_with_ioserver/src/model.tflite
 examples/app_no_flash_with_ioserver/src/model.tflite.cpp
 examples/app_no_flash_with_ioserver/src/model.tflite.h
+examples/app_single_model_on_two_tiles/src/model.tflite
+examples/app_single_model_on_two_tiles/src/model.tflite.cpp
+examples/app_single_model_on_two_tiles/src/model.tflite.h
+examples/app_single_model_on_two_tiles/src/model_weights.c
+examples/app_single_model_on_two_tiles/src/model_weights.h
 examples/app_flash_single_model/model.params
 examples/app_flash_single_model/model.tflite
 examples/app_flash_single_model/src/model.tflite.cpp
@@ -118,6 +126,12 @@ examples/app_yolov8_classification/xcore_flash_binary.out
 examples/app_yolov8_classification/yolov8n-cls.onnx
 examples/app_yolov8_classification/yolov8n-cls.pt
 examples/app_yolov8_classification/yolov8n-cls_saved_model/
+examples/app_yolov8_classification/calibration_image_sample_data_20x128x128x3_float32.npy
+examples/app_yolov8_classification/yolov8n-cls_calibration.npy
+examples/audio_network/model_audioi16.tflite
+examples/audio_network/src/model_audioi16.tflite
+examples/audio_network/src/model_audioi16.tflite.cpp
+examples/audio_network/src/model_audioi16.tflite.h
 examples/app_mobilenetv2/arena_sizes.csv
 
 !CHANGELOG.rst

@@ -31,6 +31,11 @@ Perform the following steps once
 
   Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest development version.
 
+  Some older pre-release wheels may expect the ``opcode2name`` helper in the old ``tflite`` package layout.
+  If you use the host interpreter with one of those wheels and see an ``opcode2name`` import error,
+  either upgrade to a newer ``xmos-ai-tools`` build containing the compatibility fix,
+  or constrain ``tflite`` with ``pip3 install "tflite>=2.4.0,<=2.10.0"``.
+
   Installing ``xmos-ai-tools`` will make the xcore-opt binary available in your shell to use directly.
 
 * Obtain the tool-chain from http://www.xmos.ai/tools and install it according to the platform instructions.
@@ -45,7 +50,9 @@ Perform the following steps once
 
     export XMOS_AITOOLSLIB_PATH=$(python -c "import xmos_ai_tools.runtime as rt; import os; print(os.path.dirname(rt.__file__))")
 
-  Optionally, you may add the relevant ``export`` command in ``venv/bin/activate`` (for pip) or a script in ``($CONDA_PREFIX)/etc/conda/activate.d/`` (for conda), to automatically set the environment variable upon activating your virtual environment.
+  Optionally, you may add the relevant ``export`` command in ``venv/bin/activate`` (for pip) or
+  a script in ``($CONDA_PREFIX)/etc/conda/activate.d/`` (for conda),
+  to automatically set the environment variable upon activating your virtual environment.
 
 
 Example applications

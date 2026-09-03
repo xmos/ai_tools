@@ -7,8 +7,8 @@ This is an example with two networks, but these two share a scratch memory.
 
 The differences with ``app_flash_two_models`` example are minimal:
 
-* The shared-arena defined ``-DSHARED_TENSOR_ARENA`` has been added to the
-  Makefile;
+* The shared-arena define ``-DSHARED_TENSOR_ARENA`` has been added to the
+  CMake build;
 
 * In main.cpp a shared tensor arena is declared::
 
@@ -28,13 +28,17 @@ In order to compile and run this example follow these steps::
             vww_quant2.tflite -o model2.tflite
   mv model1.tflite.cpp model1.tflite.h src
   mv model2.tflite.cpp model2.tflite.h src
-  xmake
+  # For XS3 (XCORE.AI)
+  cmake -G "Unix Makefiles" -B build
+  # For VX4 (XCORE-400), use this configure command instead
+  cmake -G "Unix Makefiles" -B build -DAPP_HW_TARGET=XK-EVK-XU416
+  xmake -C build
   python -c 'from xmos_ai_tools import xformer as xf; xf.generate_flash(
         output_file="xcore_flash_binary.out",
         model_files=["model1.tflite", "model2.tflite"],
         param_files=["model1.params", "model2.params"]
   )'
-  xflash --target XCORE-AI-EXPLORER --data xcore_flash_binary.out
+  xflash --target XK-EVK-XU316 --data xcore_flash_binary.out
   xrun --xscope bin/app_flash_two_models_one_arena.xe
 
 This should print::

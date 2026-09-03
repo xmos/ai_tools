@@ -1,3 +1,4 @@
+#include <platform.h>
 #include <xcore/chanend.h>
 #include <xcore/channel.h>
 #include <xcore/parallel.h>

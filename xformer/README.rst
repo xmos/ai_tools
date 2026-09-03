@@ -7,7 +7,7 @@ driven by the most complex dependency (Tensorflow).
 Note before the first step ensure that you are in the conda venv as 
 mentioned [here](https://github.com/xmos/ai_tools#readme) and 
 have followed all steps including installing the necessary Python 
-packages from `requirements.txt`.
+packages from the top-level `requirements.txt`.
 
 Also note that submodules need to be cloned and tflite-micro needs to be patched before building `xformer`.
 The following command should be run from this repo's root:

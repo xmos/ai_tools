@@ -5,7 +5,6 @@ OPTIMIZED_MODEL_PATH = "src/model.tflite"
 
 OPTIMIZED_MODEL_PATH = "src/model.tflite"
 WEIGHT_PARAMS_PATH = "src/model_weights"
-FLASH_IMAGE_PATH = "src/xcore_flash_binary.out"
 print("Generating app cpp files for model...")
 xformer.convert(
     TFLITE_MODEL_PATH,
@@ -32,12 +31,5 @@ xformer.convert(
     ],
 )
 xformer.print_optimization_report()
-
-# # Generate flash image to be flashed using xflash
-# xformer.generate_flash(
-#     output_file=FLASH_IMAGE_PATH,
-#     model_files=[OPTIMIZED_MODEL_PATH],
-#     param_files=[WEIGHT_PARAMS_PATH],
-# )
 
 print("Done!")

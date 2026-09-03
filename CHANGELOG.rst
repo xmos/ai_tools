@@ -1,6 +1,12 @@
 xmos ai_tools change log
 ========================
 
+UNRELEASED
+----------
+
+  * CHANGED: Updated examples to use the xcommon cmake build system.
+  * REMOVED: The app_flash_4 and app_no_flash_with_ioserver examples.
+
 1.4.3.dev40
 -----------
 

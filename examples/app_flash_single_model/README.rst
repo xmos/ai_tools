@@ -7,30 +7,33 @@ In order to compile and run this example follow these steps::
 
   xcore-opt --xcore-weights-file=model.params vww_quant.tflite -o model.tflite
   mv model.tflite.cpp model.tflite.h src
-  xmake
+  # For XS3 (XCORE.AI)
+  cmake -G "Unix Makefiles" -B build
+  # For VX4 (XCORE-400), use this configure command instead
+  cmake -G "Unix Makefiles" -B build -DAPP_HW_TARGET=XK-EVK-XU416
+  xmake -C build
   python -c 'from xmos_ai_tools import xformer as xf; xf.generate_flash(
         output_file="xcore_flash_binary.out",
         model_files=["model.tflite"],
         param_files=["model.params"]
   )'
-  xflash --target XCORE-AI-EXPLORER --data xcore_flash_binary.out
+  xflash --target XK-EVK-XU316 --data xcore_flash_binary.out
   xrun --xscope bin/app_flash_single_model.xe
 
-This should print::
+When run, the program should print something similar to::
 
   No human (9%)
   Human (98%)
 
-The difference with the version in ``../app_no_flash`` is that we have sent
-the learned parameters into flash memory; this has significantly reduced
-the size of the model. We can see this by looking at the size of the files::
+The difference with the version in ``../app_no_flash`` is that the learned
+parameters have been placed into flash memory.
+Doing so has significantly reduced the size of the model.
+We can see this by looking at the size of the files::
 
   % ls -l model.*
   -rw-r--r--  1 henk  staff  224576 18 Jul 11:07 model.params
   -rw-r--r--  1 henk  staff   20032 18 Jul 11:07 model.tflite
 
-The model.params file needs to be made into a flash image, which is what
-the python command does. Finally, before we execute it, we must program the
-flash with the learned parameters, which is what ``xflash`` is for.
-
-
+The python command makes the model.params file into a flash image.
+Finally, before running the program, the ``xflash`` command places the
+learned parameters into Flash memory on the XK-EVK-XU316 board.

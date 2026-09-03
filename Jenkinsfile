@@ -112,6 +112,7 @@ def runTests(String platform, Closure body) {
   createVenv('requirements.txt')
   withVenv {
     sh 'pip install -r requirements.txt'
+    sh 'pip install -r integration_tests/requirements.txt'
     dir('python') {
       if (platform == 'linux' | platform == 'device') {
         unstash 'linux_wheel'
@@ -136,6 +137,89 @@ def runTests(String platform, Closure body) {
       body(platform)
     }
     junit '**/*_junit.xml'
+  }
+}
+
+def generateExampleSources() {
+  dir('examples/app_no_flash') {
+    sh 'xcore-opt vww_quant.tflite -o model.tflite'
+    sh 'mv -f model.tflite.cpp model.tflite.h src/'
+  }
+
+  dir('examples/app_flash_single_model') {
+    sh 'xcore-opt --xcore-weights-file=model.params vww_quant.tflite -o model.tflite'
+    sh 'mv -f model.tflite.cpp model.tflite.h src/'
+    sh '''python -c 'from xmos_ai_tools import xformer as xf; xf.generate_flash(
+      output_file="xcore_flash_binary.out",
+      model_files=["model.tflite"],
+      param_files=["model.params"]
+    )'
+    '''
+  }
+
+  ['app_flash_two_models', 'app_flash_two_models_one_arena'].each { example ->
+    dir("examples/${example}") {
+      sh '''xcore-opt --xcore-weights-file=model1.params \
+        --xcore-naming-prefix=model1_ \
+        vww_quant1.tflite -o model1.tflite'''
+      sh '''xcore-opt --xcore-weights-file=model2.params \
+        --xcore-naming-prefix=model2_ \
+        vww_quant2.tflite -o model2.tflite'''
+      sh 'mv -f model1.tflite.cpp model1.tflite.h src/'
+      sh 'mv -f model2.tflite.cpp model2.tflite.h src/'
+      sh '''python -c 'from xmos_ai_tools import xformer as xf; xf.generate_flash(
+        output_file="xcore_flash_binary.out",
+        model_files=["model1.tflite", "model2.tflite"],
+        param_files=["model1.params", "model2.params"]
+      )'
+      '''
+    }
+  }
+
+  dir('examples/app_profiling') {
+    sh 'xcore-opt vww_quant.tflite -o model.tflite'
+    sh 'mv -f model.tflite.cpp model.tflite.h src/'
+  }
+
+  dir('examples/app_single_model_on_two_tiles') {
+    sh 'python generate_optimized_cpp_for_xcore.py'
+  }
+
+  dir('examples/app_mobilenetv2') {
+    sh 'python obtain_and_optimize_mobilenetv2.py'
+  }
+
+  dir('examples/app_audio_network') {
+    sh 'xcore-opt denoise_16x8.tflite -o model_audioi16.tflite --xcore-thread-count=5'
+    sh 'mv -f model_audioi16.tflite.cpp model_audioi16.tflite.h src/'
+  }
+
+  dir('examples/app_yolov8_classification') {
+    sh 'python -m pip install -r requirements.txt'
+    sh 'python obtain_and_optimize_yolov8_cls.py'
+  }
+}
+
+def buildExamples() {
+  setupRepo()
+  createVenv(reqFile: 'requirements.txt')
+  withVenv {
+    sh 'python -m pip install -r requirements.txt'
+    dir('python') {
+      unstash 'linux_wheel'
+      sh 'python -m pip install dist/*'
+    }
+    def aitoolsLibPath = sh(script: 'python -c "import xmos_ai_tools.runtime as rt; import os; print(os.path.dirname(rt.__file__))"', returnStdout: true).trim()
+    withEnv(["XMOS_AITOOLSLIB_PATH=${aitoolsLibPath}"]) {
+      withTools(params.TOOLS_VERSION) {
+        sh 'rm -rf ../lib_xud'
+        generateExampleSources()
+        dir('examples') {
+          sh 'cmake -G "Unix Makefiles" -B build'
+          sh 'xmake -C build'
+        }
+      }
+    }
   }
 }
 
@@ -350,6 +434,15 @@ pipeline {
               post { cleanup { xcoreCleanSandbox() } }
             }
           }
+        }
+        stage('Build examples') {
+          when {
+            expression { env.job_type != 'beta_release' && env.job_type != 'official_release' }
+          }
+          steps {
+            script { buildExamples() }
+          }
+          post { unsuccessful { xcoreCleanSandbox() } }
         }
         stage('Test') {
           when {

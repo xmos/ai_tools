@@ -1,20 +1,12 @@
 # python_version 3.11
 # pip_version 25.*
 
-tensorflow==2.15.0; sys_platform != 'darwin' and platform_machine != 'arm64'
-tensorflow==2.11.0; sys_platform == 'darwin' and platform_machine == 'x86_64'
-tensorflow-macos==2.15.0; sys_platform == 'darwin' and platform_machine == 'arm64'
-numpy<2; sys_platform == 'darwin' and platform_machine == 'x86_64'
-numpy>=1.20
-pkgconfig==1.5.5
+tensorflow==2.15.0
+numpy>=1.20,<2.0
 protobuf
-pytest
-pytest-xdist
-pytest-rerunfailures
 flatbuffers>=2.0
-tflite==2.10.0
+tflite==2.10.0 # Investigate if it is available on Windows
 pyusb>=1.2.1
 larq-compute-engine==0.13.0
-PyYAML==6.0
 h5py>=3.6.0
 setuptools_scm

@@ -55,7 +55,7 @@ bazelisk-linux-amd64
 # tmp files
 *~
 *.*~
-*log*
+*.log
 release_archive.zip
 
 # Models/training
@@ -73,51 +73,31 @@ xformer/model_maker/*.tflite
 **/notebooks/**/*.jpg
 **/notebooks/**/*.txt.*
 
-# £xamples
-examples/app_no_flash/model.tflite
-examples/app_no_flash/src/model.tflite.cpp
-examples/app_no_flash/src/model.tflite.h
-examples/app_no_flash_with_ioserver/src/model.tflite
-examples/app_no_flash_with_ioserver/src/model.tflite.cpp
-examples/app_no_flash_with_ioserver/src/model.tflite.h
+# Examples
+
+# Generated model artifacts
+examples/**/model*.tflite*
+examples/**/model_weights.*
 examples/app_flash_single_model/model.params
-examples/app_flash_single_model/model.tflite
-examples/app_flash_single_model/src/model.tflite.cpp
-examples/app_flash_single_model/src/model.tflite.h
-examples/app_flash_single_model/xcore_flash_binary.out
+
+# Flash artifacts
+examples/**/xcore_flash_binary.out
 examples/app_flash_two_models/model1.params
-examples/app_flash_two_models/model1.tflite
 examples/app_flash_two_models/model2.params
-examples/app_flash_two_models/model2.tflite
-examples/app_flash_two_models/src/model1.tflite.cpp
-examples/app_flash_two_models/src/model1.tflite.h
-examples/app_flash_two_models/src/model2.tflite.cpp
-examples/app_flash_two_models/src/model2.tflite.h
-examples/app_flash_two_models/xcore_flash_binary.out
 examples/app_flash_two_models_one_arena/model1.params
-examples/app_flash_two_models_one_arena/model1.tflite
 examples/app_flash_two_models_one_arena/model2.params
-examples/app_flash_two_models_one_arena/xcore_flash_binary.out
-examples/app_flash_two_models_one_arena/model2.tflite
-examples/app_flash_two_models_one_arena/src/model1.tflite.cpp
-examples/app_flash_two_models_one_arena/src/model1.tflite.h
-examples/app_flash_two_models_one_arena/src/model2.tflite.cpp
-examples/app_flash_two_models_one_arena/src/model2.tflite.h
-examples/app_flash_two_models_one_arena/xcore_flash_binary.out
-examples/app_mobilenetv2/src/model.tflite
-examples/app_mobilenetv2/src/model.tflite.cpp
-examples/app_mobilenetv2/src/model.tflite.h
 examples/app_mobilenetv2/src/model_flash.params
-examples/app_mobilenetv2/xcore_flash_binary.out
-examples/app_mobilenetv2/mobilenetv2.tflite
-examples/app_yolov8_classification/src/model.tflite
-examples/app_yolov8_classification/src/model.tflite.cpp
-examples/app_yolov8_classification/src/model.tflite.h
 examples/app_yolov8_classification/src/model_flash.params
-examples/app_yolov8_classification/xcore_flash_binary.out
-examples/app_yolov8_classification/yolov8n-cls.onnx
-examples/app_yolov8_classification/yolov8n-cls.pt
-examples/app_yolov8_classification/yolov8n-cls_saved_model/
+
+# YOLOv8 artifacts
+examples/app_yolov8_classification/yolov8n-cls*
+examples/app_yolov8_classification/calibration*.npy
+
+# Audio model artifacts
+examples/app_audio_network/model_audioi16.tflite*
+
+# MobileNetV2 artifacts
+examples/app_mobilenetv2/mobilenetv2.tflite
 examples/app_mobilenetv2/arena_sizes.csv
 
 !CHANGELOG.rst

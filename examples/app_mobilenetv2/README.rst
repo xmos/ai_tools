@@ -6,8 +6,12 @@ Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 In order to compile and run this example follow these steps::
 
   python obtain_and_optimize_mobilenetv2.py
-  xmake
-  xflash --target XCORE-AI-EXPLORER --data xcore_flash_binary.out
+  # For XS3 (XCORE.AI)
+  cmake -G "Unix Makefiles" -B build
+  # For VX4 (XCORE-400), use this configure command instead
+  cmake -G "Unix Makefiles" -B build -DAPP_HW_TARGET=XK-EVK-XU416
+  xmake -C build
+  xflash --target XK-EVK-XU316 --data xcore_flash_binary.out
   xrun --xscope bin/app_mobilenetv2.xe
 
 In the example, we inference the model with a sample image of a LION. 

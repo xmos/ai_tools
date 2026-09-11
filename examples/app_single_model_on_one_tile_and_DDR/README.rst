@@ -21,7 +21,7 @@ Run the following commands in the current directory.
     cmake -G "Unix Makefiles" -B build
     xmake -C build
     # run
-    xrun --xscope bin/app_ddr.xe
+    xrun --xscope bin/app_single_model_on_one_tile_and_ddr.xe
 
 
 Output

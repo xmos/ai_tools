@@ -102,22 +102,26 @@ def _convert_onnx_to_int8_tflite(onnx_model_path):
     output_folder = Path(TFLITE_MODEL_PATH).parent
     output_folder.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.NamedTemporaryFile(suffix=".npy") as calibration_data_file:
-        _write_calibration_data(calibration_data_file.name)
-        onnx2tf.convert(
-            input_onnx_file_path=onnx_model_path,
-            output_folder_path=str(output_folder),
-            output_integer_quantized_tflite=True,
-            custom_input_op_name_np_data_path=[
-                ["images", calibration_data_file.name, [[[[0, 0, 0]]]], [[[[255, 255, 255]]]]]
-            ],
-            input_quant_dtype="int8",
-            output_quant_dtype="int8",
-            quant_type="per-channel",
-            tflite_backend="tf_converter",
-            not_use_onnxsim=True,
-            verbosity="error",
-        )
+    with tempfile.NamedTemporaryFile(suffix=".npy", delete=False) as calibration_data_file:
+        calibration_data_path = calibration_data_file.name
+        try:
+            _write_calibration_data(calibration_data_path)
+            onnx2tf.convert(
+                input_onnx_file_path=onnx_model_path,
+                output_folder_path=str(output_folder),
+                output_integer_quantized_tflite=True,
+                custom_input_op_name_np_data_path=[
+                    ["images", calibration_data_path, [[[[0, 0, 0]]]], [[[[255, 255, 255]]]]]
+                ],
+                input_quant_dtype="int8",
+                output_quant_dtype="int8",
+                quant_type="per-channel",
+                tflite_backend="tf_converter",
+                not_use_onnxsim=True,
+                verbosity="error",
+            )
+        finally:
+            Path(calibration_data_path).unlink(missing_ok=True)
     if not Path(TFLITE_MODEL_PATH).is_file() or Path(TFLITE_MODEL_PATH).stat().st_size == 0:
         raise RuntimeError(f"Expected full-int8 TFLite model was not generated: {TFLITE_MODEL_PATH}")
 

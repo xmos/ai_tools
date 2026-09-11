@@ -8,8 +8,8 @@ set(APP_HW_TARGET src/XCORE-AI-EXPLORER-800.xn)
 set(APP_XSCOPE_SRCS src/config.xscope)
 
 set(APP_INCLUDES src)
-set(APP_XC_SRCS src/main.cpp)
 set(APP_CXX_SRCS
+  src/main.cpp
   src/model.tflite.cpp
 )
 

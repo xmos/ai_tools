@@ -58,6 +58,11 @@ elseif(APP_BUILD_ARCH STREQUAL "vx4b")
 	list(APPEND XMOS_AITOOLSLIB_DEFINITIONS "__VX4A__")
 	set(XMOS_AITOOLSLIB_COMPILE_OPTIONS -Wfptrgroup -ffunction-sections -fdata-sections -Os)
 	set(XMOS_AITOOLSLIB_LINK_OPTIONS -lxc -Wl,--gc-sections)
+elseif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL XCORE_XS)
+	# CMAKE_SYSTEM_PROCESSOR will be defined to be XCORE_XS
+	# by xcommon_cmake regardless of the target architectire
+	# hardcode to xs3a for now
+	set(XMOS_AITOOLSLIB_LIBRARIES "${lib_path}/libxtflitemicro_xs3a.a")
 else()
 	set(XMOS_AITOOLSLIB_LIBRARIES "${lib_path}/libhost_xtflitemicro.a")
 endif()

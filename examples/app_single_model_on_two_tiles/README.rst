@@ -8,7 +8,7 @@ In order to compile and run this example follow these steps::
   python generate_optimized_cpp_for_xcore.py
   cmake -G "Unix Makefiles" -B build
   xmake -C build
-  xrun --xscope bin/app_device.xe
+  xrun --xscope bin/app_single_model_on_two_tiles.xe
 
 When run, the program should print a considerable number of lines
 concluding with something similar to::

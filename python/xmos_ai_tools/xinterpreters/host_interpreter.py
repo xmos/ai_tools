@@ -5,7 +5,10 @@ import ctypes
 from typing import Optional, Dict, Any, List
 from tflite.Model import Model
 from tflite.TensorType import TensorType
-from tflite import opcode2name
+try:
+    from tflite import opcode2name
+except ImportError:
+    from tflite.utils import opcode2name
 from enum import Enum
 
 import numpy as np

@@ -40,6 +40,11 @@ pip3 install xmos-ai-tools --upgrade
 ```
 Use ``pip3 install xmos-ai-tools --pre --upgrade`` instead if you want to install the latest beta version.
 
+Some older pre-release wheels may expect the ``opcode2name`` helper in the old ``tflite`` package layout.
+If you use the host interpreter with one of those wheels and see an ``opcode2name`` import error,
+either upgrade to a newer ``xmos-ai-tools`` build containing the compatibility fix,
+or constrain ``tflite`` with ``pip3 install "tflite>=2.4.0,<=2.10.0"``.
+
 <a name="using-xmos-ai-tools-from-python"></a>
 ## Using xmos-ai-tools from Python
 

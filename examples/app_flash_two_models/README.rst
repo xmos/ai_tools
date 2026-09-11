@@ -17,7 +17,8 @@ In order to compile and run this example follow these steps::
             vww_quant2.tflite -o model2.tflite
   mv model1.tflite.cpp model1.tflite.h src
   mv model2.tflite.cpp model2.tflite.h src
-  xmake
+  cmake -G "Unix Makefiles" -B build
+  xmake -C build
   python -c 'from xmos_ai_tools import xformer as xf; xf.generate_flash(
         output_file="xcore_flash_binary.out",
         model_files=["model1.tflite", "model2.tflite"],
@@ -30,5 +31,3 @@ This should print::
 
   No human (9%)
   Human (98%)
-
-

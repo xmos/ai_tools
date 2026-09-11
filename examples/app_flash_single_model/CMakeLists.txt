@@ -1,31 +1,18 @@
 cmake_minimum_required(VERSION 3.21)
 include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
-project(app_single_model_on_one_tile_and_ddr)
+project(app_flash_single_model)
 
-# hw and xscope
+set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../..)
+
 set(APP_HW_TARGET src/XCORE-AI-EXPLORER-800.xn)
 set(APP_XSCOPE_SRCS src/config.xscope)
 
-# export model and sources
-execute_process(
-  COMMAND python generate_optimized_cpp_for_xcore.py
-  WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-)
-set(APP_INCLUDES 
-  src
-)
-
-set(APP_XC_SRCS "")
-
-set(APP_C_SRCS
-  src/model_weights.c
-)
+set(APP_INCLUDES src)
 set(APP_CXX_SRCS
-  src/model.tflite.cpp
   src/main.cpp
+  src/model.tflite.cpp
 )
 
-# Base flags
 list(APPEND APP_COMPILER_FLAGS
   -O3
   -g
@@ -34,13 +21,10 @@ list(APPEND APP_COMPILER_FLAGS
   -fxscope
   -mcmodel=large
   -Wno-xcore-fptrgroup
-  -lquadflash 
-  # -DTFLMC_XCORE_PROFILE
+  -lquadflash
 )
 
-# dependencies and register
 set(APP_DEPENDENT_MODULES "")
 XMOS_REGISTER_APP()
 
-# Custom libs
 include(${CMAKE_CURRENT_LIST_DIR}/../aitools.cmake)

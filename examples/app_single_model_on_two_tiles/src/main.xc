@@ -1,11 +1,14 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <platform.h>
-#include "tile_ram_server.h"
+#include "flash_server.h"
 
 #define NUMBER_OF_MODELS 1
 #include "model_weights.h"
 
+extern const int8_t weights[];
+extern void tile_ram_server(chanend c_tile_ram_clients[], flash_t headers[],
+                            int n_tile_ram_clients, const int8_t * unsafe data);
 extern void model_init(chanend f);
 extern void inference();
 
@@ -15,7 +18,10 @@ int main(void) {
     par {
         on tile[0]: {
             flash_t headers[NUMBER_OF_MODELS];
-            tile_ram_server(c_flash_or_tile, headers, NUMBER_OF_MODELS, tile_server_weights);
+            unsafe {
+                const int8_t * unsafe weights_ptr = weights;
+                tile_ram_server(c_flash_or_tile, headers, NUMBER_OF_MODELS, weights_ptr);
+            }
         }
 
         on tile[1]: {

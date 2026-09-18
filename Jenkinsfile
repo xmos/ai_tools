@@ -204,21 +204,14 @@ def buildExamples() {
   setupRepo()
   createVenv(reqFile: 'requirements.txt')
   withVenv {
-    sh 'python -m pip install -r requirements.txt'
     dir('python') {
       unstash 'linux_wheel'
       sh 'python -m pip install dist/*'
     }
-    def aitoolsLibPath = sh(script: 'python -c "import xmos_ai_tools.runtime as rt; import os; print(os.path.dirname(rt.__file__))"', returnStdout: true).trim()
-    withEnv(["XMOS_AITOOLSLIB_PATH=${aitoolsLibPath}"]) {
-      withTools(params.TOOLS_VERSION) {
-        sh 'rm -rf ../lib_xud'
-        generateExampleSources()
-        dir('examples') {
-          sh 'cmake -G "Unix Makefiles" -B build'
-          sh 'xmake -C build'
-        }
-      }
+    sh 'rm -rf ../lib_xud'
+    generateExampleSources()
+    dir('examples') {
+      xcoreBuild()
     }
   }
 }

@@ -96,7 +96,7 @@ build_xformer() {
     bazel_compile_commands
   fi
   cd xformer
-  bazel_cmd="bazel build --jobs $NUM_PROCS //:xcore-opt"
+  bazel_cmd="bazel build --jobs $NUM_PROCS //:xcore-opt --//:disable_version_check"
   if [ "$MACHINE_ARCH" = "arm" ]; then
     bazel_cmd+=" --cpu=darwin_arm64"
   fi

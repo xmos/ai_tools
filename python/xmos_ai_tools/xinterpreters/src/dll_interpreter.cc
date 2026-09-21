@@ -90,6 +90,11 @@ DLLEXPORT inference_engine *new_interpreter(size_t max_arena_size, size_t extern
   resolver->AddIf();
   resolver->AddWhile();
   resolver->AddCallOnce();
+  resolver->AddAbs();
+  resolver->AddLog();
+  resolver->AddSqrt();
+  resolver->AddDiv();
+  resolver->AddBatchMatMul();
   tflite_micro::ops::micro::xcore::RegisterXCOps(resolver);
   add_lib_vision_ops(resolver);
 

@@ -18,9 +18,7 @@ endif()
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   set(BUILD_FLAGS "/O2")
 else()
-  set(BUILD_FLAGS
-              # "-g"
-              "-O3")
+  set(BUILD_FLAGS "-O3")
 endif()
 
 
@@ -28,10 +26,15 @@ if(DEFINED ENV{CMAKE_ENABLE_DARWIN_TARGET_ARM64})
   set(BUILD_FLAGS ${BUILD_FLAGS} "-target" "arm64-apple-macos11")
 endif()
 
-set(TOP_DIR
-  "${CMAKE_CURRENT_SOURCE_DIR}/../../../third_party/lib_tflite_micro")
+set(TOP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../third_party/lib_tflite_micro")
 
 include(${TOP_DIR}/cmakefiles/xtflm.cmake)
+
+if(MSVC)
+  target_compile_options(lib_nn PRIVATE /Zi /UNDEBUG)
+else()
+  target_compile_options(lib_nn PRIVATE -g -UNDEBUG)
+endif()
 
 #**********************
 # Build host library
@@ -66,7 +69,8 @@ target_compile_definitions(host_xtflitemicro PUBLIC
 )
 
 target_include_directories(host_xtflitemicro
-    PRIVATE ${ALL_INCLUDES}
+  PRIVATE ${ALL_INCLUDES}
+  PRIVATE "${LIB_NN_SOURCE_DIR}/api"
 )
 
 set(INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../runtime/lib")
@@ -103,6 +107,7 @@ list(APPEND ALL_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 target_include_directories(xtflm_python
   PRIVATE ${ALL_INCLUDES}
+  PRIVATE "${LIB_NN_SOURCE_DIR}/api"
 )
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -114,4 +119,3 @@ else() # must be Windows
 endif()
 
 install(TARGETS xtflm_python DESTINATION ${INSTALL_DIR})
-

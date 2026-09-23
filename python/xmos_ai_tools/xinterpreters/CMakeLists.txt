@@ -87,6 +87,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   target_link_libraries(xtflm_python stdc++ m pthread)
 endif()
+target_link_libraries(xtflm_python PRIVATE lib_nn)
 
 set(DEFINTIONS
     "__xtflm_conf_h_exists__"

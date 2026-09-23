@@ -1,9 +1,3 @@
 [submodule "third_party/lib_tflite_micro"]
 	path = third_party/lib_tflite_micro
 	url = git@github.com:xmos/lib_tflite_micro.git
-[submodule "third_party/lib_nn"]
-	path = third_party/lib_nn
-	url = git@github.com:xmos/lib_nn.git
-[submodule "third_party/lib_xud"]
-	path = third_party/lib_xud
-	url = git@github.com:xmos/lib_xud.git

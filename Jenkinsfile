@@ -25,22 +25,19 @@ def setupRepo() {
 def createDeviceZip() {
   dir('third_party/lib_tflite_micro') {
 
+    // build device runtime (vx4)
     withTools(params.TOOLS_VX4_VERSION) {
-      dir('build_vx4b') {
-        sh 'cmake .. --toolchain=$XMOS_CMAKE_PATH/xcore_xs.cmake -DENABLE_SIZE_OPT=ON'
-        sh 'make -j8'
-      }
+      sh 'make build_vx4'
     }
-
     withTools(params.TOOLS_VERSION) {
-      dir('build') {
-        sh 'cmake .. --toolchain=../lib_tflite_micro/submodules/xmos_cmake_toolchain/xs3a.cmake'
-        sh 'make project-install -j8'
-        sh 'mv lib/libxtflitemicro.a lib/libxtflitemicro_xs3a.a'
-        sh 'mv ../build_vx4b/libxtflitemicro.a lib/libxtflitemicro_vx4b.a'
-        sh 'cmake -E tar cfv release_archive.zip --format=zip  include/ lib/'
-      }
+      sh 'make build_xs3'
     }
+    // Stage headers and package both device libraries using the XS3 toolchain.
+    withTools(params.TOOLS_VERSION) {
+      sh 'make build_install'
+    }
+    // Native build is a host-side compile check, not part of the device archive.
+    sh 'make build'
   }
 }
 
@@ -253,7 +250,7 @@ pipeline {
             setupRepo()
             createVenv(reqFile: 'requirements.txt')
             withVenv { createDeviceZip() }
-            dir('third_party/lib_tflite_micro/build/') {
+            dir('third_party/lib_tflite_micro/build_xs3/') {
               stash name: 'release_archive', includes: 'release_archive.zip'
             }
           }

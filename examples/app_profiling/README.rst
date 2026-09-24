@@ -5,8 +5,7 @@ Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 
 In order to compile and run this example, follow these steps::
 
-  xcore-opt vww_quant.tflite -o model.tflite
-  mv model.tflite.cpp model.tflite.h src
+  python export.py
   # For XS3 (XCORE.AI)
   cmake -G "Unix Makefiles" -B build
   # For VX4 (XCORE-400), use this configure command instead
@@ -158,15 +157,17 @@ warning emitted by the graph transformer::
 
 The transformer identified that the reference operator had a much higher
 accuracy than the optimised operator, and it reverted to the reference
-operator.  By changing the threshold, the graph transformer will choose the
-optimised operator::
+operator.  Add the threshold to ``params`` in ``export.py``::
 
-  xcore-opt vww_quant.tflite -o model.tflite --xcore-conv-err-threshold=0.5
-  mv model.tflite.cpp model.tflite.h src
+  params = [("xcore-conv-err-threshold", 0.5)]
+
+Then regenerate, rebuild, and run::
+
+  python export.py
   xmake -C build
   xrun --xscope bin/app_profiling.xe
 
-Moving the source files, recompiling and executing again yields the following
+Recompiling and executing again yields the following
 profiling output::
 
   Cumulative times for invoke()...
@@ -185,15 +186,18 @@ optimised convolution twice more than previously, accounting for an extra 556
 microseconds; the optimised operator is 80 times faster than the reference
 implementation.
 
-As a final optimisation, parallelise the execution.  To do this, tell the
-graph-transformer to generate code that uses five threads::
+As a final optimisation, parallelise the execution.  Add a thread-count option
+to ``params`` in ``export.py``::
 
-  xcore-opt vww_quant.tflite -o model.tflite --xcore-conv-err-threshold=0.5 --xcore-thread-count=5
-  mv model.tflite.cpp model.tflite.h src
+  params = [("xcore-conv-err-threshold", 0.5), ("xcore-thread-count", 5)]
+
+Regenerate, rebuild, and run::
+
+  python export.py
   xmake -C build
   xrun --xscope bin/app_profiling.xe
 
-Moving the files, recompiling, and rerunning the code yields::
+Recompiling and rerunning the code yields::
 
   Cumulative times for invoke()...
   1     OP_XC_pad_3_to_4                 26993        0.27ms

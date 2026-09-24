@@ -43,7 +43,8 @@ def createDeviceZip() {
 
 def buildXinterpreterAndHostLib() {
   dir('python/xmos_ai_tools/xinterpreters') {
-    sh_bat 'make xinterpreters'
+    sh_bat 'cmake -S . -B build'
+    sh_bat 'cmake --build build --target install --parallel 8 --config Release'
   }
 }
 
@@ -267,13 +268,8 @@ pipeline {
                   USER_ID = sh(script: 'id -u', returnStdout: true).trim()
                   withEnv(['USER=' + USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
                     customImage.inside() {
-                      sh 'curl -LO https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.sh'
-                      sh 'chmod +x cmake-3.28.3-linux-x86_64.sh'
-                      sh "bash cmake-3.28.3-linux-x86_64.sh --skip-license --prefix=${env.WORKSPACE}"
-                      sh './bin/cmake --version'
-                      CMAKE_PATH = sh(script: 'pwd', returnStdout: true).trim() + '/bin'
                       sh 'git describe --tags'
-                      withEnv(["PATH+LOCAL_CMAKE=${CMAKE_PATH}", 'CC=/dt9/usr/bin/gcc', 'CXX=/dt9/usr/bin/g++']) {
+                      withEnv(['CC=/dt9/usr/bin/gcc', 'CXX=/dt9/usr/bin/g++']) {
                         buildXinterpreterAndHostLib()
                       }
                       dir('xformer') {
@@ -282,21 +278,16 @@ pipeline {
                         sh """
                         rm -rf /var/tmp/_bazel_jenkins/install/*
                         ./bazelisk-linux-amd64 build //:xcore-opt \\
-                          --verbose_failures \\
-                          --linkopt=-lrt \\
+                          --config=ci_linux \\
                           --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
                           --remote_cache=${env.BAZEL_CACHE_URL} \\
-                          --//:disable_version_check \\
-                          --jobs 8 \\
                           --define SETUPTOOLS_SCM_VERSION=\$(python -m setuptools_scm -c ../python/pyproject.toml)
                       """
                         sh '''
                         rm -rf /var/tmp/_bazel_jenkins/install/*
                         ./bazelisk-linux-amd64 test //Test:all \\
-                          --verbose_failures \\
-                          --test_output=errors \\
-                          --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain"  \\
-                          --//:disable_version_check
+                          --config=ci_linux \\
+                          --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain"
                       '''
                       }
                       dir('python') {
@@ -339,7 +330,7 @@ pipeline {
                       script {
                         bat 'bazelisk-windows-amd64.exe clean --expunge'
                         PYTHON_BIN_PATH = bat(script: '@where python.exe', returnStdout: true).split()[0].trim()
-                        bat "for /f %%i in ('python -m setuptools_scm -c ..\\python\\pyproject.toml') do bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --//:disable_version_check --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\" --jobs=6 --local_ram_resources=8192 --define SETUPTOOLS_SCM_VERSION=%%i"
+                        bat "for /f %%i in ('python -m setuptools_scm -c ..\\python\\pyproject.toml') do bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --config=ci_windows --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\" --define SETUPTOOLS_SCM_VERSION=%%i"
                       }
                     }
 
@@ -389,13 +380,9 @@ pipeline {
                         sh """
                         rm -rf /var/tmp/_bazel_jenkins/install/*
                         ./bazelisk-darwin-arm64 build //:xcore-opt \\
+                        --config=ci_macos \\
                         --cpu=${cpuFlag} \\
                         --remote_cache=${env.BAZEL_CACHE_URL} \\
-                        --copt=-fvisibility=hidden \\
-                        --copt=-mmacosx-version-min=10.15 \\
-                        --linkopt=-mmacosx-version-min=10.15 \\
-                        --linkopt=-dead_strip \\
-                        --//:disable_version_check \\
                         --define SETUPTOOLS_SCM_VERSION=\$(python -m setuptools_scm -c ../python/pyproject.toml)
                       mv bazel-bin/xcore-opt ${outputName}
                     """

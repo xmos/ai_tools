@@ -130,3 +130,20 @@ build:ubsan --action_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 
 # Put user-specific options in .bazelrc.user
 try-import %workspace%/.bazelrc.user
+
+# CI build options; keep machine-specific paths and the SCM version on the command line.
+build:ci_linux --//:disable_version_check
+build:ci_linux --verbose_failures
+build:ci_linux --linkopt=-lrt
+build:ci_linux --jobs=8
+test:ci_linux  --test_output=errors
+
+build:ci_macos --//:disable_version_check
+build:ci_macos --copt=-fvisibility=hidden
+build:ci_macos --copt=-mmacosx-version-min=10.15
+build:ci_macos --linkopt=-mmacosx-version-min=10.15
+build:ci_macos --linkopt=-dead_strip
+
+build:ci_windows --//:disable_version_check
+build:ci_windows --jobs=6
+build:ci_windows --local_ram_resources=8192

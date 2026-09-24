@@ -1,10 +1,8 @@
-.PHONY: install clean test
+.PHONY: xinterpreters clean
 
-JOBS := $(shell nproc --ignore=1)
-
-install:
-	cmake -B build
-	make -j$(JOBS) -C build install
+xinterpreters:
+	cmake -S . -B build
+	cmake --build build --target install --parallel 8 --config Release
 
 clean:
 	rm -rf build

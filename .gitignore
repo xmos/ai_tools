@@ -101,3 +101,7 @@ examples/app_mobilenetv2/mobilenetv2.tflite
 examples/app_mobilenetv2/arena_sizes.csv
 
 !CHANGELOG.rst
+
+# deps
+third_party/lib_nn
+third_party/lib_xud

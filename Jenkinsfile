@@ -42,9 +42,8 @@ def createDeviceZip() {
 }
 
 def buildXinterpreterAndHostLib() {
-  dir('python/xmos_ai_tools/xinterpreters/build') {
-    sh_bat 'cmake ..'
-    sh_bat 'cmake --build . -t install --parallel 8 --config Release'
+  dir('python/xmos_ai_tools/xinterpreters') {
+    sh_bat 'make xinterpreters'
   }
 }
 
@@ -274,10 +273,9 @@ pipeline {
                       sh './bin/cmake --version'
                       CMAKE_PATH = sh(script: 'pwd', returnStdout: true).trim() + '/bin'
                       sh 'git describe --tags'
-                      // Build Xinterpreter and Host lib
-                      // Instead of using buildXinterpreterAndHostLib(), we are building it
-                      // directly here as we want to specify the compiler
-                      sh "PATH=${CMAKE_PATH}:${env.PATH} CC=/dt9/usr/bin/gcc CXX=/dt9/usr/bin/g++ ./build.sh -T xinterpreter-nozip -b"
+                      withEnv(["PATH+LOCAL_CMAKE=${CMAKE_PATH}", 'CC=/dt9/usr/bin/gcc', 'CXX=/dt9/usr/bin/g++']) {
+                        buildXinterpreterAndHostLib()
+                      }
                       dir('xformer') {
                         sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64'
                         sh 'chmod +x bazelisk-linux-amd64'

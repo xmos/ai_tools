@@ -60,6 +60,7 @@ target_sources(host_xtflitemicro
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(BUILD_FLAGS ${BUILD_FLAGS} "-fPIC")
+  set_target_properties(lib_nn PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 target_compile_options(host_xtflitemicro PRIVATE ${BUILD_FLAGS})
 

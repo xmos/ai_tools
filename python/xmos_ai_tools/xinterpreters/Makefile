@@ -1,10 +1,11 @@
+.PHONY: install clean test
+
+JOBS := $(shell nproc --ignore=1)
+
 install:
-	mkdir -p build
-	(cd build && cmake .. && make install -j4)
+	cmake -B build
+	make -j$(JOBS) -C build install
 
 clean:
 	rm -rf build
 	rm -rf libs
-
-test:
-	(cd tests && make test)

@@ -55,61 +55,19 @@ def extractDeviceZipAndHeaders() {
   }
 }
 
-def runPytestDevice(String test, String args, String junit) {
-  timeout(time: 60, unit: 'MINUTES') {
-    sh 'xtagctl reset_all XCORE-AI-EXPLORER'
-    sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args} --device --junitxml=integration_tests/integration_device_${junit}_junit.xml"
-  }
-}
-
-def runPytestHost(String test, String args, String junit) {
-  sh "pytest integration_tests/runner.py --models_path integration_tests/models/${test} ${args} --junitxml=integration_tests/integration_host_${junit}_junit.xml"
-}
-
 def dailyDeviceTest = {
-  //TODO fix all jenkins infra to remove those
-  // timeout(time: 20, unit: 'MINUTES') {
-  //   sh 'xtagctl reset_all XCORE-AI-EXPLORER'
-  //   sh 'pytest examples/app_mobilenetv2'
-  // }
-  runPytestDevice('8x8/test_broadcast', '-n 1 --tc 1', 'broadcast_1')
-  runPytestDevice('16x8/test_transpose', '-n 1', '16x8_transpose')
-  runPytestDevice('8x8/test_concatenate', '-n 1 --tc 5', 'concat_5')
-  runPytestDevice('8x8/test_mean', '-n 1 --tc 1', 'mean_1')
-  runPytestDevice('16x8/test_mean', '-n 1 --tc 1', '16x8_mean_1')
-  runPytestDevice('8x8/test_lstm', '-n 1 --tc 1', 'lstm_1')
-  runPytestDevice('8x8/test_lstm', '-n 1', 'lstm_5')
-  runPytestDevice('complex_models/8x8/test_cnn_classifier', '-n 1 --tc 1', 'cnn_classifier_1')
-  runPytestDevice('complex_models/8x8/test_cnn_classifier', '-n 1', 'cnn_classifier_5')
-  runPytestDevice('8x8/test_softmax', '-n 1 --device', 'softmax_5')
-  runPytestDevice('8x8/test_detection_postprocess', '-n 1', 'detection_postprocess_5')
-  runPytestDevice('16x8/test_conv2d', '-n 1', '16x8_conv2d_5')
-  runPytestDevice('16x8/test_transpose_conv', '-n 1', '16x8_transpose_conv_5')
+  sh 'pytest integration_tests/test_runner.py -k daily_device --device -n 1 --junitxml=integration_tests/integration_device_junit.xml'
 }
 
 def dailyHostTest = { platform ->
-  runPytestHost('float32', '-n 8 --tc 1', 'float32_1')
-  runPytestHost('16x8', '-n 8 --tc 5', '16x8_5')
-  runPytestHost('complex_models/8x8', '-n 2 --tc 5', 'complex_8x8_5')
-  runPytestHost('complex_models/float32', '-n 1 --tc 5', 'complex_float32_5')
-  runPytestHost('8x8', '-n 8 --tc 1', '8x8_1')
-  runPytestHost('8x8', '-n 8', '8x8_5')
-  if (platform != 'windows') {
-    // TODO - fix bnn tests on Windows
-    runPytestHost('bnns', '--bnn -n 8', 'bnns')
-    // TODO - fix compiled tests on Windows
-    runPytestHost('8x8', '--compiled -n 8', 'compiled_8x8')
-    runPytestHost('bnns', '--bnn --compiled -n 8', 'compiled_bnns')
-    runPytestHost('complex_models/8x8/test_mobilenet_v2', '--compiled -n 8', 'compiled_mobilenetv2')
-  }
+  sh 'pytest integration_tests/test_runner.py -k daily_host -n 2 --junitxml=integration_tests/integration_host_junit.xml'
 }
 
 def runTests(String platform, Closure body) {
   setupRepo()
-  createVenv('requirements.txt')
+  createVenv(reqFile:'requirements.txt')
   withVenv {
-    sh 'pip install -r requirements.txt'
-    sh 'pip install -r integration_tests/requirements.txt'
+    sh_bat 'pip install -r integration_tests/requirements.txt'
     sh_bat 'python -m pytest -q integration_tests/test_version_check.py'
     dir('python') {
       if (platform == 'linux' | platform == 'device') {
@@ -156,13 +114,12 @@ pipeline {
   agent none
   environment {
     REPO = 'ai_tools'
-    BAZEL_CACHE_URL = 'http://srv-bri-bld-cache.xmos.local:8080'
     BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
     SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev40"
   }
 
-  parameters { // Available to modify on the job page within Jenkins if starting a build
-    string( // use to try different tools versions
+  parameters {
+    string(
       name: 'TOOLS_VERSION',
       defaultValue: '15.3.1',
       description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
@@ -219,7 +176,6 @@ pipeline {
                         ./bazelisk-linux-amd64 build //:xcore-opt \\
                           --config=ci_linux \\
                           --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
-                          --remote_cache=${env.BAZEL_CACHE_URL} \\
                           --define SETUPTOOLS_SCM_VERSION=\$(python -m setuptools_scm -c ../python/pyproject.toml)
                       """
                         sh '''
@@ -269,7 +225,7 @@ pipeline {
                       script {
                         bat 'bazelisk-windows-amd64.exe clean --expunge'
                         PYTHON_BIN_PATH = bat(script: '@where python.exe', returnStdout: true).split()[0].trim()
-                        bat "for /f %%i in ('python -m setuptools_scm -c ..\\python\\pyproject.toml') do bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --config=ci_windows --remote_cache=${env.BAZEL_CACHE_URL} --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\" --define SETUPTOOLS_SCM_VERSION=%%i"
+                        bat "for /f %%i in ('python -m setuptools_scm -c ..\\python\\pyproject.toml') do bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --config=ci_windows --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\" --define SETUPTOOLS_SCM_VERSION=%%i"
                       }
                     }
 
@@ -321,7 +277,6 @@ pipeline {
                         ./bazelisk-darwin-arm64 build //:xcore-opt \\
                         --config=ci_macos \\
                         --cpu=${cpuFlag} \\
-                        --remote_cache=${env.BAZEL_CACHE_URL} \\
                         --define SETUPTOOLS_SCM_VERSION=\$(python -m setuptools_scm -c ../python/pyproject.toml)
                       mv bazel-bin/xcore-opt ${outputName}
                     """

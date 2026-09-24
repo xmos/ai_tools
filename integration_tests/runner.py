@@ -264,10 +264,22 @@ def get_input_tensors(runner: AbstractRefRunner, parent_dir: Path) -> list:
 
 # Run the model on Larq/TFLite interpreter,
 # compare the output with xformed model on XCore TFLM
-def test_model(request: FixtureRequest, filename: str) -> None:
+def test_model(
+    request: FixtureRequest,
+    filename: str,
+    thread_count: int = None,
+    bnn: bool = None,
+    compiled: bool = None,
+) -> None:
     # for attaching a debugger
     flags = ["bnn", "device", "compiled", "s", "tc"]
     opt_dict = {i: request.config.getoption(i) for i in flags}
+    if thread_count is not None:
+        opt_dict["tc"] = thread_count
+    if bnn is not None:
+        opt_dict["bnn"] = bnn
+    if compiled is not None:
+        opt_dict["compiled"] = compiled
     if opt_dict["s"]:
         time.sleep(5)
 

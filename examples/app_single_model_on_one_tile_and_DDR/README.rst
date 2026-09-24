@@ -26,6 +26,8 @@ Run the following commands in the current directory.
     # run
     xrun --xscope bin/app_single_model_on_one_tile_and_ddr.xe
 
+The CMake configure step runs ``export.py`` to generate the model sources.
+
 
 Output
 ------

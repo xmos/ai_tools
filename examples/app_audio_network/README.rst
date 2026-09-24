@@ -18,8 +18,7 @@ Run the following commands in the current directory.
 .. code-block:: console
 
     # generate model sources
-    xcore-opt denoise_16x8.tflite -o model_audioi16.tflite --xcore-thread-count=5
-    mv model_audioi16.tflite.cpp model_audioi16.tflite.h src
+    python export.py
 
     # build
     # For XS3 (XCORE.AI)
@@ -37,16 +36,16 @@ Generated Files
 The model generation step optimises the ``denoise_16x8.tflite`` model for
 xcore and produces these files::
 
-  model_audioi16.tflite
-  model_audioi16.tflite.cpp
-  model_audioi16.tflite.h
+  src/model_audioi16.tflite
+  src/model_audioi16.tflite.cpp
+  src/model_audioi16.tflite.h
 
 The first file contains the optimised model, the second file contains the
 generated source code, and the third file contains the header for the source
 code.
 
-The ``mv`` step places the generated source code and header into the source
-directory, where they are consumed by the CMake build.
+The export script places the generated source code and header directly into the
+source directory, where they are consumed by the CMake build.
 
 Output
 ------

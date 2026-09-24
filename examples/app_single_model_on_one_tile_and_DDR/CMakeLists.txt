@@ -12,7 +12,7 @@ set(APP_XSCOPE_SRCS src/config.xscope)
 
 # export model and sources
 execute_process(
-  COMMAND python generate_optimized_cpp_for_xcore.py
+  COMMAND python export.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
 )
 set(APP_INCLUDES 

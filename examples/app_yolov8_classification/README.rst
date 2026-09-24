@@ -28,7 +28,7 @@ Build and run
 Generate the model sources, configure the xcommon-cmake build, build the
 application, flash the model data, and run the application::
 
-  python obtain_and_optimize_yolov8_cls.py
+  python export.py
   # For XS3 (XCORE.AI)
   cmake -G "Unix Makefiles" -B build
   # For VX4 (XCORE-400), use this configure command instead

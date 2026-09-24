@@ -5,7 +5,7 @@ Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 
 In order to compile and run this example follow these steps::
 
-  python generate_optimized_cpp_for_xcore.py
+  python export.py
   # For XS3 (XCORE.AI)
   cmake -G "Unix Makefiles" -B build
   # For VX4 (XCORE-400), use this configure command instead

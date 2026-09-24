@@ -141,39 +141,24 @@ def runTests(String platform, Closure body) {
 }
 
 def generateExampleSources() {
-  dir('examples/app_no_flash') {
-    sh 'python export.py'
-  }
-
-  dir('examples/app_flash_single_model') {
-    sh 'python export.py'
-  }
-
-  ['app_flash_two_models', 'app_flash_two_models_one_arena'].each { example ->
+  [
+    'app_audio_network',
+    'app_flash_single_model',
+    'app_flash_two_models',
+    'app_flash_two_models_one_arena',
+    'app_mobilenetv2',
+    'app_no_flash',
+    'app_profiling',
+    'app_single_model_on_one_tile_and_DDR',
+    'app_single_model_on_two_tiles',
+    'app_yolov8_classification',
+  ].each { example ->
     dir("examples/${example}") {
+      if (example == 'app_yolov8_classification') {
+        sh 'python -m pip install -r requirements.txt'
+      }
       sh 'python export.py'
     }
-  }
-
-  dir('examples/app_profiling') {
-    sh 'python export.py'
-  }
-
-  dir('examples/app_single_model_on_two_tiles') {
-    sh 'python export.py'
-  }
-
-  dir('examples/app_mobilenetv2') {
-    sh 'python export.py'
-  }
-
-  dir('examples/app_audio_network') {
-    sh 'python export.py'
-  }
-
-  dir('examples/app_yolov8_classification') {
-    sh 'python -m pip install -r requirements.txt'
-    sh 'python export.py'
   }
 }
 

@@ -17,6 +17,7 @@ Run the following commands in the current directory.
 
 .. code-block:: console
 
+    python export.py
     # build
     # For XS3 (XCORE.AI)
     cmake -G "Unix Makefiles" -B build
@@ -25,8 +26,6 @@ Run the following commands in the current directory.
     xmake -C build
     # run
     xrun --xscope bin/app_single_model_on_one_tile_and_ddr.xe
-
-The CMake configure step runs ``export.py`` to generate the model sources.
 
 
 Output

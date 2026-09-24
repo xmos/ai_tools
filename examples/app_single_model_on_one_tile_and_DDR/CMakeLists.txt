@@ -10,11 +10,6 @@ if(NOT DEFINED APP_HW_TARGET)
 endif()
 set(APP_XSCOPE_SRCS src/config.xscope)
 
-# export model and sources
-execute_process(
-  COMMAND python export.py
-  WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-)
 set(APP_INCLUDES 
   src
 )

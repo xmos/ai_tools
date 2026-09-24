@@ -135,8 +135,8 @@ try-import %workspace%/.bazelrc.user
 build:ci_linux --//:disable_version_check
 build:ci_linux --verbose_failures
 build:ci_linux --linkopt=-lrt
-build:ci_linux --jobs=8
 test:ci_linux  --test_output=errors
+# build:ci_linux --jobs=8
 
 build:ci_macos --//:disable_version_check
 build:ci_macos --copt=-fvisibility=hidden

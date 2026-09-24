@@ -3,7 +3,8 @@ xmos ai_tools change log
 
 UNRELEASED
 ----------
-
+  
+  * CHANGED: lib_nn built as a static library and linked accordingly.
   * CHANGED: Updated examples to use the xcommon cmake build system.
   * REMOVED: The app_flash_4 and app_no_flash_with_ioserver examples.
 

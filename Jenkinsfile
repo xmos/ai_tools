@@ -138,28 +138,6 @@ def runTests(String platform, Closure body) {
   }
 }
 
-def generateExampleSources() {
-  [
-    'app_audio_network',
-    'app_flash_single_model',
-    'app_flash_two_models',
-    'app_flash_two_models_one_arena',
-    'app_mobilenetv2',
-    'app_no_flash',
-    'app_profiling',
-    'app_single_model_on_one_tile_and_DDR',
-    'app_single_model_on_two_tiles',
-    'app_yolov8_classification',
-  ].each { example ->
-    dir("examples/${example}") {
-      if (example == 'app_yolov8_classification') {
-        sh 'python -m pip install -r requirements.txt'
-      }
-      sh 'python export.py'
-    }
-  }
-}
-
 def buildExamples() {
   setupRepo()
   createVenv(reqFile: 'requirements.txt')
@@ -168,8 +146,6 @@ def buildExamples() {
       unstash 'linux_wheel'
       sh 'python -m pip install dist/*'
     }
-    sh 'rm -rf ../lib_xud'
-    generateExampleSources()
     dir('examples') {
       xcoreBuild()
     }

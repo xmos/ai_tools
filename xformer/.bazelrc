@@ -145,5 +145,6 @@ build:ci_macos --linkopt=-mmacosx-version-min=10.15
 build:ci_macos --linkopt=-dead_strip
 
 build:ci_windows --//:disable_version_check
-# build:ci_windows --jobs=6
-# build:ci_windows --local_ram_resources=8192
+# Note: On Windows, exceeding this resource usage can break installation.
+build:ci_windows --jobs=6
+build:ci_windows --local_ram_resources=8192

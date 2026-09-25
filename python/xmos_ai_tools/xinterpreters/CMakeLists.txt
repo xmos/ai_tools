@@ -54,7 +54,7 @@ target_compile_features(host_xtflitemicro PUBLIC cxx_std_17)
 target_sources(host_xtflitemicro
     PRIVATE ${TFLM_KERNEL_SOURCES}
     PRIVATE ${TFLITE_SOURCES}
-    PRIVATE ${NN_SOURCES}
+  PRIVATE $<TARGET_OBJECTS:lib_nn>
     PRIVATE ${XTFLIB_KERNEL_SOURCES}
 )
 

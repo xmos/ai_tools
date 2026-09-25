@@ -2,7 +2,6 @@
 set(LIB_NAME ai_tools)
 set(LIB_VERSION 1.4.3.dev40)
 set(LIB_INCLUDES "")
-set(LIB_DEPENDENT_MODULES "lib_nn(develop)")
 XMOS_REGISTER_MODULE()
 
 # link library

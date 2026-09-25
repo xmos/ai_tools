@@ -55,12 +55,12 @@ def extractDeviceZipAndHeaders() {
   }
 }
 
-def dailyDeviceTest = {
+def dailyDeviceTest = { ->
   sh 'pytest integration_tests/test_runner.py -k daily_device --device -n 1 --junitxml=integration_tests/integration_device_junit.xml'
 }
 
-def dailyHostTest = { platform ->
-  sh 'pytest integration_tests/test_runner.py -k daily_host -n 2 --junitxml=integration_tests/integration_host_junit.xml'
+def dailyHostTest = { ->
+  sh 'pytest integration_tests/test_runner.py -k daily_host -n auto --junitxml=integration_tests/integration_host_junit.xml'
 }
 
 def runTests(String platform, Closure body) {
@@ -83,10 +83,10 @@ def runTests(String platform, Closure body) {
       sh "cd ${WORKSPACE} && git clone https://github0.xmos.com/xmos-int/xtagctl.git"
       sh "pip install -e ${WORKSPACE}/xtagctl"
       withTools(params.TOOLS_VERSION) {
-        body(platform)
+        body()
       }
     } else if (platform == 'linux' | platform == 'mac' | platform == 'windows') {
-      body(platform)
+      body()
     }
     junit '**/*_junit.xml'
   }

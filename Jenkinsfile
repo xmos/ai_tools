@@ -79,10 +79,6 @@ def runTests(String platform, Closure body) {
       }
       sh 'pip install dist/*'
     }
-    script {
-      XMOS_AITOOLSLIB_PATH = sh(script: 'python -c \"import xmos_ai_tools.runtime as rt; import os; print(os.path.dirname(rt.__file__))\"', returnStdout: true).trim()
-      env.XMOS_AITOOLSLIB_PATH = XMOS_AITOOLSLIB_PATH
-    }
     if (platform == 'device') {
       sh "cd ${WORKSPACE} && git clone https://github0.xmos.com/xmos-int/xtagctl.git"
       sh "pip install -e ${WORKSPACE}/xtagctl"

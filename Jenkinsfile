@@ -24,18 +24,11 @@ def setupRepo() {
 
 def createDeviceZip() {
   dir('third_party/lib_tflite_micro') {
-
     // build device runtime (vx4)
-    withTools(params.TOOLS_VX4_VERSION) {
-      sh 'make build_vx4'
-    }
-    withTools(params.TOOLS_VERSION) {
-      sh 'make build_xs3'
-    }
+    withTools(params.TOOLS_VX4_VERSION) {sh 'make build_vx4'}
+    withTools(params.TOOLS_VERSION) {sh 'make build_xs3'}
     // Stage headers and package both device libraries using the XS3 toolchain.
-    withTools(params.TOOLS_VERSION) {
-      sh 'make build_install'
-    }
+    withTools(params.TOOLS_VERSION) {sh 'make build_install'}
     // Native build is a host-side compile check, not part of the device archive.
     sh 'make build'
   }
@@ -137,6 +130,7 @@ pipeline {
       when { anyOf { branch pattern: 'PR-.*', comparator: 'REGEXP'; expression { env.job_type == 'beta_release' || env.job_type == 'official_release' } } }
       agent { label 'linux && x86_64 && !noAVX2' }
       stages {
+
         stage('Build device runtime') {
           steps {
             setupRepo()
@@ -150,6 +144,7 @@ pipeline {
             unsuccessful { xcoreCleanSandbox() }
           }
         }
+        
         stage('Build host wheels') {
           parallel {
             stage('Build linux runtime') {
@@ -313,48 +308,46 @@ pipeline {
           when {
             expression { env.job_type != 'beta_release' && env.job_type != 'official_release' }
           }
+
           parallel {
-            stage('Linux Test') { steps { script {
-                  runTests('linux', dailyHostTest)
-                  withVenv {
-                    sh 'pip install pytest nbmake'
-                    sh 'pytest --nbmake ./docs/notebooks/*.ipynb'
-                  }
-      } } }
+
+            stage('Linux Test') {
+              steps { script {
+                runTests('linux', dailyHostTest)
+                withVenv {
+                sh 'pip install pytest nbmake'
+                sh 'pytest --nbmake ./docs/notebooks/*.ipynb'
+              }}}
+            } // stage('Linux Test')
+
             stage('Mac arm64 Test') {
               agent { label 'macos && arm64 && !macos_10_14' }
-              steps { script {
-                  runTests('mac', dailyHostTest)
-        } }
+              steps { script {runTests('mac', dailyHostTest)}}
               post { cleanup { xcoreCleanSandbox() } }
-            }
-            // TODO Too old MacOS version
-            // stage("Mac x86_64 Test") {
-            //   agent { label "macos && x86_64" }
-            //   steps { script {
-            //     runTests("mac", dailyHostTest)
-            //   } }
-            //   post { cleanup {xcoreCleanSandbox() } }
-            // }
+            } // stage('Mac arm64 Test')
+
             stage('Windows Test') {
               agent { label 'ai && windows10' }
-              steps { script {
-                  runTests('windows', dailyHostTest)
-        } }
+              steps { script {runTests('windows', dailyHostTest)}}
               post { cleanup { xcoreCleanSandbox() } }
-            }
+            } // stage('Windows Test')
+
             stage('Device Test') {
-              agent { label 'xcore.ai-explorer && lpddr && !macos' }
-              steps { script { runTests('device', dailyDeviceTest) } }
+              agent {label 'xcore.ai-explorer && lpddr && !macos'}
+              steps {script {dir('sandbox/ai_tools') {runTests('device', dailyDeviceTest)}}}
               post {
                 always {
-                  archiveArtifacts artifacts: 'examples/app_mobilenetv2/arena_sizes.csv', allowEmptyArchive: true
+                  archiveArtifacts artifacts: 'sandbox/ai_tools/examples/app_mobilenetv2/arena_sizes.csv', allowEmptyArchive: true
                 }
-                cleanup { xcoreCleanSandbox() }
+                cleanup {
+                  xcoreCleanSandbox()
+                }
               }
-            }
+            } // stage('Device Test')
+
           }
         }
+
         stage('Publish') {
           when {
             expression { env.job_type == 'beta_release' || env.job_type == 'official_release' }
@@ -367,7 +360,11 @@ pipeline {
                 unstash 'windows_wheel'
                 archiveArtifacts artifacts: 'dist/*', allowEmptyArchive: true
                 withVenv {
-                  withCredentials([usernamePassword(credentialsId: '__CREDID__', usernameVariable: 'TWINE_USERNAME', passwordVariable: 'TWINE_PASSWORD')]) {
+                  withCredentials([usernamePassword(
+                    credentialsId: '__CREDID__', 
+                    usernameVariable: 'TWINE_USERNAME', 
+                    passwordVariable: 'TWINE_PASSWORD')]) 
+                  {
                     sh 'pip install twine'
                     sh 'twine upload dist/*'
                   }

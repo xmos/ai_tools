@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 3.21)
 include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
 project(app_mobilenetv2)
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+execute_process(
+  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_LIST_DIR}/export.py"
+  WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
+  COMMAND_ERROR_IS_FATAL ANY
+)
+
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../..)
 
 # target

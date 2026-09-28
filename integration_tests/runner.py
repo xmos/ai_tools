@@ -29,8 +29,8 @@ LOGGER = logging.getLogger(__name__)
 FILE_PATH = Path(__file__).resolve()
 ROOT_DIR = FILE_PATH.parents[1]
 MAIN_CPP_PATH = FILE_PATH.parents[0] / "compile_test.cpp"
-LIB_XUD_PATH = ROOT_DIR / "third_party" / "lib_xud"
 DEVICE_TEST_PATH = FILE_PATH.parents[0] / "device_test"
+BUILD_PATH = str(DEVICE_TEST_PATH / "build")
 LIB_TFLM_DIR_PATH = ROOT_DIR / "third_party" / "lib_tflite_micro"
 LIB_NN_INCLUDE_PATH = ROOT_DIR / "third_party" / "lib_nn"
 TFLM_SUBMODULES_PATH = LIB_TFLM_DIR_PATH / "lib_tflite_micro" / "submodules"
@@ -183,15 +183,11 @@ class XFHostRuntime(AbstractXFRunner):
 class XFDeviceRuntime(AbstractXFRunner):
     def __init__(self, model_content, thread_count):
         super().__init__(model_content, thread_count)
-        # compile model, two dirs because xmake
-        dst_dir = self._dir_path / "device_test"
-        # dst_dir = DEVICE_TEST_PATH
-        shutil.copytree(LIB_XUD_PATH, self._dir_path / "lib_xud")
-        shutil.copytree(DEVICE_TEST_PATH, dst_dir)
-        shutil.copy(self._dir_path / "model.tflite.h", dst_dir / "src/")
-        shutil.copy(self._dir_path / "model.tflite.cpp", dst_dir / "src/")
-        run_cmd(["xmake", "-j4"], working_dir=dst_dir)
-        xe_path = dst_dir / "bin" / next((dst_dir / "bin").glob("*.xe")).name
+        shutil.copy(self._dir_path / "model.tflite.h", DEVICE_TEST_PATH / "src/")
+        shutil.copy(self._dir_path / "model.tflite.cpp", DEVICE_TEST_PATH / "src/")
+        run_cmd(["cmake", "--fresh", "-S", str(DEVICE_TEST_PATH), "-B", BUILD_PATH])
+        run_cmd(["cmake", "--build", BUILD_PATH, "-j8"])
+        xe_path = DEVICE_TEST_PATH / "bin" / next((DEVICE_TEST_PATH / "bin").glob("*.xe")).name
         # overwriting _interpreter from super()
         dont_throw(self, "_interpreter", "close")
         subprocess.run(["xrun", "--id", "0", xe_path])
@@ -264,10 +260,22 @@ def get_input_tensors(runner: AbstractRefRunner, parent_dir: Path) -> list:
 
 # Run the model on Larq/TFLite interpreter,
 # compare the output with xformed model on XCore TFLM
-def test_model(request: FixtureRequest, filename: str) -> None:
+def test_model(
+    request: FixtureRequest,
+    filename: str,
+    thread_count: int = None,
+    bnn: bool = None,
+    compiled: bool = None,
+) -> None:
     # for attaching a debugger
     flags = ["bnn", "device", "compiled", "s", "tc"]
     opt_dict = {i: request.config.getoption(i) for i in flags}
+    if thread_count is not None:
+        opt_dict["tc"] = thread_count
+    if bnn is not None:
+        opt_dict["bnn"] = bnn
+    if compiled is not None:
+        opt_dict["compiled"] = compiled
     if opt_dict["s"]:
         time.sleep(5)
 

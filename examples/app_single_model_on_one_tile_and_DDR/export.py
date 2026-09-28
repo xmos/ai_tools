@@ -1,15 +1,12 @@
-from xmos_ai_tools import xformer
+from pathlib import Path
 
-TFLITE_MODEL_PATH = "mobilenetv2.tflite"
-OPTIMIZED_MODEL_PATH = "src/model.tflite"
+from xmos_ai_tools import xformer as xf
 
-OPTIMIZED_MODEL_PATH = "src/model.tflite"
-WEIGHT_PARAMS_PATH = "src/model_weights"
-print("Generating app cpp files for model...")
-xformer.convert(
-    TFLITE_MODEL_PATH,
-    OPTIMIZED_MODEL_PATH,
-    [
+cwd = Path(__file__).parent
+model_in = cwd / "mobilenetv2.tflite"
+model_out = cwd / "src/model.tflite"
+params_file = cwd / "src/model_weights"
+params = [
         ("xcore-thread-count", "5"),
         # set conv err threshold
         ("xcore-conv-err-threshold", "3"),
@@ -27,9 +24,10 @@ xformer.convert(
         # and so it is a tradeoff
         ("xcore-load-externally-if-larger", "1500"),
         # move weights to this file
-        ("xcore-weights-file", WEIGHT_PARAMS_PATH),
-    ],
-)
-xformer.print_optimization_report()
+        ("xcore-weights-file", params_file),
+]
+print("Generating app cpp files for model...")
+xf.convert(model_in, model_out, params)
+xf.print_optimization_report()
 
 print("Done!")

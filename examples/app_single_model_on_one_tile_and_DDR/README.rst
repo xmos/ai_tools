@@ -17,6 +17,7 @@ Run the following commands in the current directory.
 
 .. code-block:: console
 
+    python export.py
     # build
     # For XS3 (XCORE.AI)
     cmake -G "Unix Makefiles" -B build

@@ -5,8 +5,7 @@ Please consult `here <../../docs/rst/flow.rst>`_ on how to install the tools.
 
 In order to compile and run this example follow these steps::
 
-  xcore-opt vww_quant.tflite -o model.tflite
-  mv model.tflite.cpp model.tflite.h src
+  python export.py
   # For XS3 (XCORE.AI)
   cmake -G "Unix Makefiles" -B build
   # For VX4 (XCORE-400), use this configure command instead
@@ -22,15 +21,13 @@ When run, the program should print something similar to::
 The first step optimises the ``vww_quant.tflite`` model for xcore;
 it produces three files::
 
-  model.tflite
-  model.tflite.cpp
-  model.tflite.h
+  src/model.tflite
+  src/model.tflite.cpp
+  src/model.tflite.h
 
 The first file contains the optimised model,
 the second file contains the generated source code, and
 the third file contains the header for the source code.
-
-The second step places the generated source code into the source directory.
 
 The configure and build steps build the project.
 

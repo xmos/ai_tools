@@ -2,6 +2,8 @@ import glob
 import pathlib
 import sys
 
+import pytest
+
 # workaround to get debug logs when using xdist
 sys.stdout = sys.stderr
 
@@ -26,8 +28,10 @@ def pytest_addoption(parser):
         "--models_path",
         action="store",
         type=pathlib.Path,
-        required=True,
         help="path to the directory containing the models to be tested",
+    )
+    parser.addoption(
+        "--skip-version-check", action="store_true", help="skip the lib_nn version check"
     )
     parser.addoption(
         "--tc",
@@ -39,6 +43,17 @@ def pytest_addoption(parser):
 
 
 def pytest_generate_tests(metafunc):
+    if "filename" not in metafunc.fixturenames:
+        return
     models_path = metafunc.config.getoption("models_path")
+    if models_path is None:
+        raise pytest.UsageError("--models_path is required for model tests")
     filelist = glob.glob(str(models_path) + "/**/*.tflite", recursive=True)
     metafunc.parametrize("filename", filelist)
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--skip-version-check"):
+        for item in items:
+            if item.path.name == "test_version_check.py":
+                item.add_marker(pytest.mark.skip(reason="lib_nn version check disabled"))

@@ -25,12 +25,13 @@ except ImportError as exc:
     from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 
 HEIGHT, WIDTH = 160, 160
-TFLITE_MODEL_PATH = "yolov8n-cls_saved_model/yolov8n-cls_full_integer_quant.tflite"
-OPT_MODEL_PATH = "src/model.tflite"
-OPT_PARAMS_PATH = "src/model_flash.params"
+CWD = Path(__file__).parent
+TFLITE_MODEL_PATH = CWD / "yolov8n-cls_saved_model/yolov8n-cls_full_integer_quant.tflite"
+OPT_MODEL_PATH = CWD / "src/model.tflite"
+OPT_PARAMS_PATH = CWD / "src/model_flash.params"
 NAMING_PREFIX = "model_"
-SAMPLE_IMAGE_PATH = "lion.bin"
-ONNX2TF_TEST_DATA_PATH = "calibration_image_sample_data_20x128x128x3_float32.npy"
+SAMPLE_IMAGE_PATH = CWD / "lion.bin"
+ONNX2TF_TEST_DATA_PATH = CWD / "calibration_image_sample_data_20x128x128x3_float32.npy"
 
 
 def _check_installed_dependencies():
@@ -114,7 +115,7 @@ def _write_onnx2tf_test_data():
 def _convert_onnx_to_int8_tflite(onnx_model_path):
     import onnx2tf
 
-    output_folder = Path(TFLITE_MODEL_PATH).parent
+    output_folder = TFLITE_MODEL_PATH.parent
     output_folder.mkdir(parents=True, exist_ok=True)
 
     with tempfile.NamedTemporaryFile(suffix=".npy", delete=False) as calibration_data_file:
@@ -140,8 +141,8 @@ def _convert_onnx_to_int8_tflite(onnx_model_path):
             onnx2tf.convert(**convert_kwargs)
         finally:
             Path(calibration_data_path).unlink(missing_ok=True)
-            Path(ONNX2TF_TEST_DATA_PATH).unlink(missing_ok=True)
-    if not Path(TFLITE_MODEL_PATH).is_file() or Path(TFLITE_MODEL_PATH).stat().st_size == 0:
+            ONNX2TF_TEST_DATA_PATH.unlink(missing_ok=True)
+    if not TFLITE_MODEL_PATH.is_file() or TFLITE_MODEL_PATH.stat().st_size == 0:
         raise RuntimeError(f"Expected full-int8 TFLite model was not generated: {TFLITE_MODEL_PATH}")
 
 ###############################################
@@ -173,7 +174,7 @@ xformer.convert(
 
 # Generate flash binary
 xformer.generate_flash(
-    output_file="xcore_flash_binary.out",
+    output_file=CWD / "xcore_flash_binary.out",
     model_files=[OPT_MODEL_PATH],
     param_files=[OPT_PARAMS_PATH],
 )

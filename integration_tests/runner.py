@@ -185,7 +185,7 @@ class XFDeviceRuntime(AbstractXFRunner):
         super().__init__(model_content, thread_count)
         shutil.copy(self._dir_path / "model.tflite.h", DEVICE_TEST_PATH / "src/")
         shutil.copy(self._dir_path / "model.tflite.cpp", DEVICE_TEST_PATH / "src/")
-        run_cmd(["cmake", "--fresh", "-S", str(DEVICE_TEST_PATH), "-B", BUILD_PATH])
+        run_cmd(["cmake", "-S", str(DEVICE_TEST_PATH), "-B", BUILD_PATH])
         run_cmd(["cmake", "--build", BUILD_PATH, "-j8"])
         xe_path = DEVICE_TEST_PATH / "bin" / next((DEVICE_TEST_PATH / "bin").glob("*.xe")).name
         # overwriting _interpreter from super()

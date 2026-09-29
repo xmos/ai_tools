@@ -5,8 +5,7 @@
 #include "Transforms/Options.h"
 #include "Utils/Diagnostics.h"
 extern "C" {
-#include "lib_nn/api/output_transform_fn_int16.h"
-#include "lib_nn/api/output_transform_fn_int16_kernel_transform.h"
+#include "lib_nn/api/nn_layers.h"
 }
 
 #include "tensorflow/core/framework/kernel_shape_util.h"

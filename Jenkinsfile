@@ -1,22 +1,16 @@
+// This file relates to internal XMOS infrastructure and should be ignored by external users
+
 @Library('xmos_jenkins_shared_library@v0.46.0') _
 
 if (env.job_type != 'beta_release' && env.job_type != 'official_release') {
   getApproval()
 }
 
-def sh_bat(cmd) {
-  if (isUnix()) {
-    sh cmd
-  } else {
-    bat cmd
-  }
-}
-
 def setupRepo() {
   println "Stage running on: ${env.NODE_NAME}"
   checkout scm
-  sh_bat 'git submodule update --init --recursive --jobs 4'
-  sh_bat 'make -C third_party/lib_tflite_micro patch'
+  sh 'git submodule update --init --recursive --jobs 4'
+  sh 'make -C third_party/lib_tflite_micro patch'
 }
 
 def createDeviceZip() {
@@ -32,15 +26,15 @@ def createDeviceZip() {
 
 def buildXinterpreterAndHostLib() {
   dir('python/xmos_ai_tools/xinterpreters') {
-    sh_bat 'cmake -S . -B build'
-    sh_bat 'cmake --build build --target install --parallel 8 --config Release'
+    sh 'cmake -S . -B build'
+    sh 'cmake --build build --target install --parallel 8 --config Release'
   }
 }
 
 def extractDeviceZipAndHeaders() {
   dir('python/xmos_ai_tools/runtime') {
     unstash 'release_archive'
-    sh_bat 'unzip -o release_archive.zip'
+    sh 'unzip -o release_archive.zip'
   }
 }
 
@@ -56,8 +50,8 @@ def runTests(String platform, Closure body) {
   setupRepo()
   createVenv(reqFile:'requirements.txt')
   withVenv {
-    sh_bat 'pip install -r integration_tests/requirements.txt'
-    sh_bat 'python -m pytest -q integration_tests/test_version_check.py'
+    sh 'pip install -r integration_tests/requirements.txt'
+    sh 'python -m pytest -q integration_tests/test_version_check.py'
     dir('python') {
       if (platform == 'linux' | platform == 'device') {
         unstash 'linux_wheel'
@@ -234,10 +228,10 @@ pipeline {
                     sh 'chmod +x bazelisk-darwin-arm64'
                     // mac arm64
                     sh './bazelisk-darwin-arm64 build //:xcore-opt --config=ci_macos --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION} --cpu=darwin_arm64'
-                    sh 'mv bazel-bin/xcore-opt xcore-opt-darwin_arm64'
+                    sh 'mv bazel-bin/xcore-opt xcore-opt-arm64'
                     // mac intel
                     sh './bazelisk-darwin-arm64 build //:xcore-opt --config=ci_macos --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION} --cpu=darwin_x86_64'
-                    sh 'mv bazel-bin/xcore-opt xcore-opt-darwin_x86_64'
+                    sh 'mv bazel-bin/xcore-opt xcore-opt-x86_64'
                     // create fat binary
                     sh 'lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt'
                   } 

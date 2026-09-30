@@ -147,60 +147,41 @@ pipeline {
         
         stage('Build host wheels') {
           parallel {
+
             stage('Build linux runtime') {
               steps {
                 extractDeviceZipAndHeaders()
-                script {
-                  def customImage = docker.build("tensorflow-image-with-updated-pip:${env.BUILD_ID}")
-                  USER_ID = sh(script: 'id -u', returnStdout: true).trim()
-                  withEnv(['USER=' + USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
-                    customImage.inside() {
-                      sh 'git describe --tags'
-                      withEnv(['CC=/dt9/usr/bin/gcc', 'CXX=/dt9/usr/bin/g++']) {
-                        buildXinterpreterAndHostLib()
-                      }
-                      dir('xformer') {
-                        sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64'
-                        sh 'chmod +x bazelisk-linux-amd64'
-                        sh """
-                        rm -rf /var/tmp/_bazel_jenkins/install/*
-                        ./bazelisk-linux-amd64 build //:xcore-opt \\
-                          --config=ci_linux \\
-                          --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
-                          --define SETUPTOOLS_SCM_VERSION=\$(python -m setuptools_scm -c ../python/pyproject.toml)
-                      """
-                        sh '''
-                        rm -rf /var/tmp/_bazel_jenkins/install/*
-                        ./bazelisk-linux-amd64 test //Test:all \\
-                          --config=ci_linux \\
-                          --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain"
-                      '''
-                      }
-                      dir('python') {
-                        script {
-                          if (env.job_type == 'official_release') {
-                            withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
-                              sh 'python setup.py bdist_wheel'
-                            }
-                        } else {
-                            sh 'python setup.py bdist_wheel'
-                          }
-                        }
-                      }
-                    }
-                  }
-                  withVenv { dir('python') {
-                      sh 'pip install patchelf auditwheel==5.2.0 --no-cache-dir'
-                      sh 'auditwheel repair --plat manylinux2014_x86_64 dist/*.whl'
-                      sh 'rm dist/*.whl'
-                      sh 'mv wheelhouse/*.whl dist/'
+                buildXinterpreterAndHostLib()
+                createVenv('python/requirements_build.txt')
+                withVenv {
+                  script {
+                    dir('xformer') {
+                      sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64'
+                      sh 'chmod +x bazelisk-linux-amd64'
+                      sh './bazelisk-linux-amd64 build //:xcore-opt --config=ci_linux --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION}'
+                      sh './bazelisk-linux-amd64 test //Test:all --config=ci_linux'
+                    } // dir xformer
+                    dir('python') {
+                      sh 'python setup.py bdist_wheel'
+                      sh 'pip install patchelf auditwheel --no-cache-dir'
+                      sh 'auditwheel repair --plat manylinux_2_31_x86_64 dist/*.whl'
+                      sh 'rm dist/*.whl && mv wheelhouse/*.whl dist/'
                       stash name: 'linux_wheel', includes: 'dist/*'
                       archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
-                } }
+                    } // dir python
+                  } // script
+                } // withVenv
+              } // steps
+              post {
+                unsuccessful { xcoreCleanSandbox() }
+                cleanup {
+                  dir('xformer') {
+                    sh './bazelisk-linux-amd64 clean --expunge'
+                  }
                 }
               }
-              post { unsuccessful { xcoreCleanSandbox() } }
-            }
+            } // stage('Build linux runtime')
+
             stage('Build Windows runtime') {
               agent { label 'ai && windows10' }
               steps {
@@ -208,27 +189,18 @@ pipeline {
                   setupRepo()
                   extractDeviceZipAndHeaders()
                   buildXinterpreterAndHostLib()
-                  createVenv('requirements.txt')
+                  createVenv('python/requirements_build.txt')
                   withVenv {
-                    bat 'pip install wheel setuptools setuptools-scm numpy six --no-cache-dir'
                     dir('xformer') {
-                      bat 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe'
                       script {
-                        bat 'bazelisk-windows-amd64.exe clean --expunge'
-                        PYTHON_BIN_PATH = bat(script: '@where python.exe', returnStdout: true).split()[0].trim()
-                        bat "for /f %%i in ('python -m setuptools_scm -c ..\\python\\pyproject.toml') do bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --config=ci_windows --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\" --define SETUPTOOLS_SCM_VERSION=%%i"
+                        sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe'
+                        sh 'bazelisk-windows-amd64.exe build //:xcore-opt --config=ci_windows --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION}'
+                        sh 'bazelisk-windows-amd64.exe test //Test:all --config=ci_windows'
                       }
                     }
-
                     dir('python') {
                       script {
-                        if (env.job_type == 'official_release') {
-                          withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
-                            bat 'python setup.py bdist_wheel'
-                          }
-                      } else {
-                          bat 'python setup.py bdist_wheel'
-                        }
+                        sh 'python setup.py bdist_wheel'
                       }
                       stash name: 'windows_wheel', includes: 'dist/*'
                       archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
@@ -236,17 +208,21 @@ pipeline {
                   }
                 }
               }
-              post { cleanup {
+              post { 
+                cleanup {
                   dir('xformer') {
-                    bat 'bazelisk-windows-amd64.exe clean --expunge'
-                    bat 'bazelisk-windows-amd64.exe shutdown'
+                    sh 'bazelisk-windows-amd64.exe clean --expunge'
+                    sh 'bazelisk-windows-amd64.exe shutdown'
                     script {
                       HANGING_BAZEL_EMBEDDED_JAVA_PID = bat(script: '@ps -W | grep _bzl | tr -s \" \" | cut -d \" \" -f 5', returnStdout: true).split()[0].trim()
-                      bat "taskkill /F /PID \"${HANGING_BAZEL_EMBEDDED_JAVA_PID}\""
+                      sh "taskkill /F /PID \"${HANGING_BAZEL_EMBEDDED_JAVA_PID}\""
                     }
                   }
-                  xcoreCleanSandbox() } }
-            }
+                  xcoreCleanSandbox() 
+                } 
+              }
+            } // stage('Build Windows runtime')
+
             stage('Build Mac runtime') {
               agent { label 'macos && arm64 && xcode' }
               steps {

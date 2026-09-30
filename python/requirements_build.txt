@@ -1,0 +1,9 @@
+-r ../requirements.txt
+
+# Build-only dependencies
+cmake
+ninja
+setuptools
+wheel
+patchelf
+auditwheel

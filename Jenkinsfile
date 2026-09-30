@@ -133,7 +133,7 @@ pipeline {
           post {
             unsuccessful { xcoreCleanSandbox() }
           }
-        }
+        } // stage('Build device runtime')
         
         stage('Build host wheels') {
           parallel {
@@ -253,8 +253,8 @@ pipeline {
                 } // cleanup
               } // post
             } // stage('Build Mac runtime')
-
-        } // Parallel
+          } // Parallel
+        } // Build host wheels
 
         stage('Build examples') {
           when {
@@ -264,7 +264,8 @@ pipeline {
             script { buildExamples() }
           }
           post { unsuccessful { xcoreCleanSandbox() } }
-        }
+        } // stage('Build examples')
+
         stage('Test') {
           when {
             expression { env.job_type != 'beta_release' && env.job_type != 'official_release' }
@@ -307,7 +308,7 @@ pipeline {
             } // stage('Device Test')
 
           }
-        }
+        } // stage('Test')
 
         stage('Publish') {
           when {
@@ -333,7 +334,7 @@ pipeline {
               }
             }
           }
-        }
+        } // stage('Publish')
       }
       post { cleanup { xcoreCleanSandbox() } }
   } }

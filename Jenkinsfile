@@ -222,31 +222,37 @@ pipeline {
                 // TODO: Fix this, use a rule for the fat binary instead of manually combining
                 createVenv(reqFile: 'python/requirements_build.txt')
                 withVenv {
-                dir('xformer') { 
                   script {
-                    sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64'
-                    sh 'chmod +x bazelisk-darwin-arm64'
-                    // mac arm64
-                    sh './bazelisk-darwin-arm64 build //:xcore-opt --config=ci_macos --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION} --cpu=darwin_arm64'
-                    sh 'mv bazel-bin/xcore-opt xcore-opt-arm64'
-                    // mac intel
-                    sh './bazelisk-darwin-arm64 build //:xcore-opt --config=ci_macos --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION} --cpu=darwin_x86_64'
-                    sh 'mv bazel-bin/xcore-opt xcore-opt-x86_64'
-                    // create fat binary
-                    sh 'lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt'
-                  } 
-                }
-                dir('python') { 
-                    script{
-                      sh 'python setup.py bdist_wheel --plat macosx_10_15_universal2'
-                    }
-                    stash name: 'mac_wheel', includes: 'dist/*'
-                    archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
-                }
-              }
-            }
-            post { cleanup { xcoreCleanSandbox() } }
-          } // stage('Build Mac runtime')
+                    dir('xformer') { 
+                        script {
+                          sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64'
+                          sh 'chmod +x bazelisk-darwin-arm64'
+                          // mac arm64
+                          sh './bazelisk-darwin-arm64 build //:xcore-opt --config=ci_macos --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION} --cpu=darwin_arm64'
+                          sh 'mv bazel-bin/xcore-opt xcore-opt-arm64'
+                          // mac intel
+                          sh './bazelisk-darwin-arm64 build //:xcore-opt --config=ci_macos --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION} --cpu=darwin_x86_64'
+                          sh 'mv bazel-bin/xcore-opt xcore-opt-x86_64'
+                          // create fat binary
+                          sh 'lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt'
+                        }
+                    } // dir('xformer')
+                    dir('python') { 
+                        script{
+                          sh 'python setup.py bdist_wheel --plat macosx_10_15_universal2'
+                        }
+                        stash name: 'mac_wheel', includes: 'dist/*'
+                        archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
+                    } // dir('python')
+                  } // script
+                } // withVenv 
+              } // steps
+              post {
+                cleanup {
+                  xcoreCleanSandbox() 
+                } // cleanup
+              } // post
+            } // stage('Build Mac runtime')
 
         } // Parallel
 

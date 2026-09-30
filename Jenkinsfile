@@ -153,7 +153,6 @@ pipeline {
                     } // dir xformer
                     dir('python') {
                       sh 'python setup.py bdist_wheel'
-                      sh 'pip install patchelf auditwheel --no-cache-dir'
                       sh 'auditwheel repair --plat manylinux_2_31_x86_64 dist/*.whl'
                       sh 'rm dist/*.whl && mv wheelhouse/*.whl dist/'
                       stash name: 'linux_wheel', includes: 'dist/*'
@@ -163,11 +162,11 @@ pipeline {
                 } // withVenv
               } // steps
               post {
-                unsuccessful { xcoreCleanSandbox() }
                 cleanup {
                   dir('xformer') {
                     sh './bazelisk-linux-amd64 clean --expunge'
                   }
+                  xcoreCleanSandbox()
                 }
               }
             } // stage('Build linux runtime')
@@ -249,6 +248,9 @@ pipeline {
               } // steps
               post {
                 cleanup {
+                  dir('xformer') { 
+                    sh './bazelisk-linux-amd64 clean --expunge'
+                  }
                   xcoreCleanSandbox() 
                 } // cleanup
               } // post

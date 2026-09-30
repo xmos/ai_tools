@@ -1,6 +1,3 @@
-// Things to optimise if this is too slow:
-// -build device runtime in parallel with host runtimes, use mutex before combining into wheel
-
 @Library('xmos_jenkins_shared_library@v0.46.0') _
 
 if (env.job_type != 'beta_release' && env.job_type != 'official_release') {
@@ -24,11 +21,10 @@ def setupRepo() {
 
 def createDeviceZip() {
   dir('third_party/lib_tflite_micro') {
-    // build device runtime (vx4)
+    // build device runtime (vx4), (xs3), and install lib (xs3 is used)
     withTools(params.TOOLS_VX4_VERSION) {sh 'make build_vx4'}
-    withTools(params.TOOLS_VERSION) {sh 'make build_xs3'}
-    // Stage headers and package both device libraries using the XS3 toolchain.
-    withTools(params.TOOLS_VERSION) {sh 'make build_install'}
+    withTools(params.TOOLS_VERSION)     {sh 'make build_xs3'}
+    withTools(params.TOOLS_VERSION)     {sh 'make build_install'}
     // Native build is a host-side compile check, not part of the device archive.
     sh 'make build'
   }
@@ -152,7 +148,7 @@ pipeline {
               steps {
                 extractDeviceZipAndHeaders()
                 buildXinterpreterAndHostLib()
-                createVenv('python/requirements_build.txt')
+                createVenv(reqFile: 'python/requirements_build.txt')
                 withVenv {
                   script {
                     dir('xformer') {
@@ -189,7 +185,7 @@ pipeline {
                   setupRepo()
                   extractDeviceZipAndHeaders()
                   buildXinterpreterAndHostLib()
-                  createVenv('python/requirements_build.txt')
+                  createVenv(reqFile: 'python/requirements_build.txt')
                   withVenv {
                     dir('xformer') {
                       script {
@@ -230,47 +226,36 @@ pipeline {
                 extractDeviceZipAndHeaders()
                 buildXinterpreterAndHostLib()
                 // TODO: Fix this, use a rule for the fat binary instead of manually combining
-                createVenv('requirements.txt')
-                dir('xformer') { withVenv {
-                    sh 'pip install wheel setuptools setuptools-scm numpy six --no-cache-dir'
+                createVenv(reqFile: 'python/requirements_build.txt')
+                withVenv {
+                dir('xformer') { 
+                  script {
                     sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64'
                     sh 'chmod +x bazelisk-darwin-arm64'
-                    script {
-                      def compileAndRename = { arch ->
-                        def cpuFlag = arch == 'arm64' ? 'darwin_arm64' : 'darwin_x86_64'
-                        def outputName = "xcore-opt-${arch}"
-                        sh """
-                        rm -rf /var/tmp/_bazel_jenkins/install/*
-                        ./bazelisk-darwin-arm64 build //:xcore-opt \\
-                        --config=ci_macos \\
-                        --cpu=${cpuFlag} \\
-                        --define SETUPTOOLS_SCM_VERSION=\$(python -m setuptools_scm -c ../python/pyproject.toml)
-                      mv bazel-bin/xcore-opt ${outputName}
-                    """
-                      }
-                      compileAndRename('arm64')
-                      compileAndRename('x86_64')
-                    }
+                    // mac arm64
+                    sh './bazelisk-darwin-arm64 build //:xcore-opt --config=ci_macos --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION} --cpu=darwin_arm64'
+                    sh 'mv bazel-bin/xcore-opt xcore-opt-darwin_arm64'
+                    // mac intel
+                    sh './bazelisk-darwin-arm64 build //:xcore-opt --config=ci_macos --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION} --cpu=darwin_x86_64'
+                    sh 'mv bazel-bin/xcore-opt xcore-opt-darwin_x86_64'
+                    // create fat binary
                     sh 'lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt'
-                } }
-                dir('python') { withVenv {
-                    script {
-                      if (env.job_type == 'official_release') {
-                        withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
-                          sh 'python setup.py bdist_wheel --plat macosx_10_15_universal2'
-                        }
-                    } else {
-                        sh 'python setup.py bdist_wheel --plat macosx_10_15_universal2'
-                      }
+                  } 
+                }
+                dir('python') { 
+                    script{
+                      sh 'python setup.py bdist_wheel --plat macosx_10_15_universal2'
                     }
                     stash name: 'mac_wheel', includes: 'dist/*'
                     archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
-                } }
+                }
               }
-              post { cleanup { xcoreCleanSandbox() } }
             }
-          }
-        }
+            post { cleanup { xcoreCleanSandbox() } }
+          } // stage('Build Mac runtime')
+
+        } // Parallel
+
         stage('Build examples') {
           when {
             expression { env.job_type != 'beta_release' && env.job_type != 'official_release' }

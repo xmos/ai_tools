@@ -38,39 +38,32 @@ def extractDeviceZipAndHeaders() {
   }
 }
 
-def dailyDeviceTest = { ->
-  sh 'pytest integration_tests/test_runner.py -k daily_device --device -n 1 --junitxml=integration_tests/integration_device_junit.xml'
-}
+def runTests(Map options) {
+  def testTarget = options.device ? 'device' : 'host'
+  def testArgs = options.device ? '--device -n 1' : '-n auto'
+  def runDailyTests = { ->
+    sh "pytest integration_tests/test_runner.py -k daily_${testTarget} ${testArgs} --junitxml=integration_tests/integration_${testTarget}_junit.xml"
+  }
 
-def dailyHostTest = { ->
-  sh 'pytest integration_tests/test_runner.py -k daily_host -n auto --junitxml=integration_tests/integration_host_junit.xml'
-}
-
-def runTests(String platform, Closure body) {
   setupRepo()
-  createVenv(reqFile:'requirements.txt')
+  createVenv(reqFile: 'requirements.txt')
   withVenv {
     sh 'pip install -r integration_tests/requirements.txt'
     sh 'python -m pytest -q integration_tests/test_version_check.py'
     dir('python') {
-      if (platform == 'linux' | platform == 'device') {
-        unstash 'linux_wheel'
-      } else if (platform == 'mac') {
-        unstash 'mac_wheel'
-      } else if (platform == 'windows') {
-        unstash 'windows_wheel'
-      }
+      unstash options.wheelStash
       sh 'pip install dist/*'
     }
-    if (platform == 'device') {
-      sh "cd ${WORKSPACE} && git clone https://github0.xmos.com/xmos-int/xtagctl.git"
+    if (options.device) {
+      sh "git clone https://github0.xmos.com/xmos-int/xtagctl.git ${WORKSPACE}/xtagctl"
       sh "pip install -e ${WORKSPACE}/xtagctl"
       withTools(params.TOOLS_VERSION) {
-        body()
+        runDailyTests()
       }
-    } else if (platform == 'linux' | platform == 'mac' | platform == 'windows') {
-      body()
+    } else {
+      runDailyTests()
     }
+
     junit '**/*_junit.xml'
   }
 }
@@ -100,7 +93,9 @@ def buildXformer(Map options) {
     sh "curl -fL ${env.BAZELISK_RELEASE_URL}/${bazelBin} -o ${bazelBin}"
     if (options.executable) {sh "chmod +x ${bazelBin}"}
     sh "./${bazelBin} build //:xcore-opt ${commonArgs}${buildArgs}"
-    sh "./${bazelBin} test //Test:all --config=${bazelConfig} ${extraArgs}${buildArgs}"
+    if (options.runTests != false) {
+      sh "./${bazelBin} test //Test:all --config=${bazelConfig} ${extraArgs}${buildArgs}"
+    }
   }
 }
 
@@ -210,7 +205,8 @@ pipeline {
                     buildXformer(
                       bazelBin: 'bazelisk-windows-amd64.exe',
                       bazelConfig: 'ci_windows',
-                      extraArgs: ['--action_env=BAZEL_VC']
+                      extraArgs: ['--action_env=BAZEL_VC'],
+                      runTests: false
                     )
                     buildPyWheel('windows')
                   }
@@ -284,7 +280,7 @@ pipeline {
 
             stage('Linux Test') {
               steps { script {
-                runTests('linux', dailyHostTest)
+                runTests(wheelStash: 'linux_wheel')
                 withVenv {
                 sh 'pip install pytest nbmake'
                 sh 'pytest --nbmake ./docs/notebooks/*.ipynb'
@@ -293,19 +289,21 @@ pipeline {
 
             stage('Mac arm64 Test') {
               agent { label 'macos && arm64 && !macos_10_14' }
-              steps { script {runTests('mac', dailyHostTest)}}
+              steps { script {runTests(wheelStash: 'mac_wheel')}}
               post { cleanup { xcoreCleanSandbox() } }
             } // stage('Mac arm64 Test')
 
             stage('Windows Test') {
               agent { label 'ai && windows10' }
-              steps { script {runTests('windows', dailyHostTest)}}
+              steps { script {runTests(wheelStash: 'windows_wheel')}}
               post { cleanup { xcoreCleanSandbox() } }
             } // stage('Windows Test')
 
             stage('Device Test') {
               agent {label 'xcore.ai-explorer && lpddr && !macos'}
-              steps {script {dir('sandbox/ai_tools') {runTests('device', dailyDeviceTest)}}}
+              steps {script {dir('sandbox/ai_tools') {
+                runTests(wheelStash: 'linux_wheel', device: true)
+              }}}
               post {
                 always {
                   archiveArtifacts artifacts: 'sandbox/ai_tools/examples/app_mobilenetv2/arena_sizes.csv', allowEmptyArchive: true

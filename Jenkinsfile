@@ -249,7 +249,7 @@ pipeline {
               post {
                 cleanup {
                   dir('xformer') { 
-                    sh './bazelisk-linux-amd64 clean --expunge'
+                    sh './bazelisk-darwin-arm64 clean --expunge'
                   }
                   xcoreCleanSandbox() 
                 } // cleanup

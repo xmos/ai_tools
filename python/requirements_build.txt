@@ -6,5 +6,5 @@ cmake
 ninja
 setuptools
 wheel
-patchelf
-auditwheel
+patchelf; sys_platform == "linux"
+auditwheel; sys_platform == "linux"

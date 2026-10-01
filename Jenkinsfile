@@ -14,13 +14,13 @@ def setupRepo() {
 }
 
 def createDeviceZip() {
-  dir('third_party/lib_tflite_micro') {
-    // build device runtime (vx4), (xs3), and install lib (xs3 is used)
+  // build device runtime (vx4), (xs3), and install lib (xs3 is used)
+  // Native build is a host-side compile check, not part of the device archive.
+  dir('third_party/lib_tflite_micro') {  
+    sh 'make build'
     withTools(params.TOOLS_VX4_VERSION) {sh 'make build_vx4'}
     withTools(params.TOOLS_VERSION)     {sh 'make build_xs3'}
     withTools(params.TOOLS_VERSION)     {sh 'make build_install'}
-    // Native build is a host-side compile check, not part of the device archive.
-    sh 'make build'
   }
 }
 
@@ -89,11 +89,47 @@ def buildExamples() {
   }
 }
 
+def buildXformer(Map options) {
+  def bazelBin = options.bazelBin
+  def bazelConfig = options.bazelConfig
+  def extraArgs = (options.extraArgs ?: []).join(' ')
+  def buildArgs = options.buildArgs ? " ${options.buildArgs}" : ''
+  def commonArgs = "--config=${bazelConfig} --define SETUPTOOLS_SCM_VERSION=${env.SETUPTOOLS_SCM_PRETEND_VERSION} ${extraArgs}"
+
+  dir('xformer') {
+    sh "curl -fL ${env.BAZELISK_RELEASE_URL}/${bazelBin} -o ${bazelBin}"
+    if (options.executable) {sh "chmod +x ${bazelBin}"}
+    sh "./${bazelBin} build //:xcore-opt ${commonArgs}${buildArgs}"
+    sh "./${bazelBin} test //Test:all --config=${bazelConfig} ${extraArgs}${buildArgs}"
+  }
+}
+
+def buildPyWheel(String platform) {
+  def extra = (platform == 'mac') ? '--plat macosx_10_15_universal2' : ''
+  dir('python') {
+    sh "python setup.py bdist_wheel ${extra}"
+    if (platform == 'linux') {
+      sh 'auditwheel repair --plat manylinux_2_31_x86_64 dist/*.whl'
+      sh 'rm dist/*.whl && mv wheelhouse/*.whl dist/'
+    }
+    stash name: "${platform}_wheel", includes: 'dist/*'
+    archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
+  }
+}
+
+def cleanXformer(String bazelBin) {
+  dir('xformer') {
+    sh "./${bazelBin} clean --expunge"
+    sh "./${bazelBin} shutdown"
+  }
+}
+
 pipeline {
   agent none
   environment {
     REPO = 'ai_tools'
-    BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
+    BAZELISK_RELEASE_URL = 'https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0'
+    BAZEL_VC = 'C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC'
     SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev40"
   }
 
@@ -145,27 +181,18 @@ pipeline {
                 createVenv(reqFile: 'python/requirements_build.txt')
                 withVenv {
                   script {
-                    dir('xformer') {
-                      sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64'
-                      sh 'chmod +x bazelisk-linux-amd64'
-                      sh './bazelisk-linux-amd64 build //:xcore-opt --config=ci_linux --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION}'
-                      sh './bazelisk-linux-amd64 test //Test:all --config=ci_linux'
-                    } // dir xformer
-                    dir('python') {
-                      sh 'python setup.py bdist_wheel'
-                      sh 'auditwheel repair --plat manylinux_2_31_x86_64 dist/*.whl'
-                      sh 'rm dist/*.whl && mv wheelhouse/*.whl dist/'
-                      stash name: 'linux_wheel', includes: 'dist/*'
-                      archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
-                    } // dir python
+                    buildXformer(
+                      bazelBin: 'bazelisk-linux-amd64',
+                      bazelConfig: 'ci_linux',
+                      executable: true
+                    )
+                    buildPyWheel('linux')
                   } // script
                 } // withVenv
               } // steps
               post {
                 cleanup {
-                  dir('xformer') {
-                    sh './bazelisk-linux-amd64 clean --expunge'
-                  }
+                  cleanXformer('bazelisk-linux-amd64')
                   xcoreCleanSandbox()
                 }
               }
@@ -180,29 +207,18 @@ pipeline {
                   buildXinterpreterAndHostLib()
                   createVenv(reqFile: 'python/requirements_build.txt')
                   withVenv {
-                    dir('xformer') {
-                      script {
-                        sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe'
-                        sh './bazelisk-windows-amd64.exe build //:xcore-opt --config=ci_windows --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION}'
-                        sh './bazelisk-windows-amd64.exe test //Test:all --config=ci_windows'
-                      }
-                    }
-                    dir('python') {
-                      script {
-                        sh 'python setup.py bdist_wheel'
-                      }
-                      stash name: 'windows_wheel', includes: 'dist/*'
-                      archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
-                    }
+                    buildXformer(
+                      bazelBin: 'bazelisk-windows-amd64.exe',
+                      bazelConfig: 'ci_windows',
+                      extraArgs: ['--action_env=BAZEL_VC']
+                    )
+                    buildPyWheel('windows')
                   }
                 }
               }
               post { 
                 cleanup {
-                  dir('xformer') {
-                    sh './bazelisk-windows-amd64.exe clean --expunge'
-                    sh './bazelisk-windows-amd64.exe shutdown'
-                  }
+                  cleanXformer('bazelisk-windows-amd64.exe')
                   xcoreCleanSandbox() 
                 } 
               }
@@ -214,39 +230,34 @@ pipeline {
                 setupRepo()
                 extractDeviceZipAndHeaders()
                 buildXinterpreterAndHostLib()
-                // TODO: Fix this, use a rule for the fat binary instead of manually combining
                 createVenv(reqFile: 'python/requirements_build.txt')
                 withVenv {
                   script {
-                    dir('xformer') { 
-                        script {
-                          sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64'
-                          sh 'chmod +x bazelisk-darwin-arm64'
-                          // mac arm64
-                          sh './bazelisk-darwin-arm64 build //:xcore-opt --config=ci_macos --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION} --cpu=darwin_arm64'
-                          sh 'mv bazel-bin/xcore-opt xcore-opt-arm64'
-                          // mac intel
-                          sh './bazelisk-darwin-arm64 build //:xcore-opt --config=ci_macos --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION} --cpu=darwin_x86_64'
-                          sh 'mv bazel-bin/xcore-opt xcore-opt-x86_64'
-                          // create fat binary
-                          sh 'lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt'
-                        }
-                    } // dir('xformer')
-                    dir('python') { 
-                        script{
-                          sh 'python setup.py bdist_wheel --plat macosx_10_15_universal2'
-                        }
-                        stash name: 'mac_wheel', includes: 'dist/*'
-                        archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
-                    } // dir('python')
+                    buildXformer(
+                      bazelBin: 'bazelisk-darwin-arm64',
+                      bazelConfig: 'ci_macos',
+                      executable: true,
+                      buildArgs: '--cpu=darwin_arm64'
+                    )
+                    dir('xformer') {
+                      sh 'mv bazel-bin/xcore-opt xcore-opt-arm64'
+                    }
+                    buildXformer(
+                      bazelBin: 'bazelisk-darwin-arm64',
+                      bazelConfig: 'ci_macos',
+                      buildArgs: '--cpu=darwin_x86_64'
+                    )
+                    dir('xformer') {
+                      sh 'mv bazel-bin/xcore-opt xcore-opt-x86_64'
+                      sh 'lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt'
+                    }
+                    buildPyWheel('mac')
                   } // script
                 } // withVenv 
               } // steps
               post {
                 cleanup {
-                  dir('xformer') { 
-                    sh './bazelisk-darwin-arm64 clean --expunge'
-                  }
+                  cleanXformer('bazelisk-darwin-arm64')
                   xcoreCleanSandbox() 
                 } // cleanup
               } // post

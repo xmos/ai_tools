@@ -183,8 +183,8 @@ pipeline {
                     dir('xformer') {
                       script {
                         sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe'
-                        sh 'bazelisk-windows-amd64.exe build //:xcore-opt --config=ci_windows --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION}'
-                        sh 'bazelisk-windows-amd64.exe test //Test:all --config=ci_windows'
+                        sh './bazelisk-windows-amd64.exe build //:xcore-opt --config=ci_windows --define SETUPTOOLS_SCM_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION}'
+                        sh './bazelisk-windows-amd64.exe test //Test:all --config=ci_windows'
                       }
                     }
                     dir('python') {
@@ -200,12 +200,8 @@ pipeline {
               post { 
                 cleanup {
                   dir('xformer') {
-                    sh 'bazelisk-windows-amd64.exe clean --expunge'
-                    sh 'bazelisk-windows-amd64.exe shutdown'
-                    script {
-                      HANGING_BAZEL_EMBEDDED_JAVA_PID = bat(script: '@ps -W | grep _bzl | tr -s \" \" | cut -d \" \" -f 5', returnStdout: true).split()[0].trim()
-                      sh "taskkill /F /PID \"${HANGING_BAZEL_EMBEDDED_JAVA_PID}\""
-                    }
+                    sh './bazelisk-windows-amd64.exe clean --expunge'
+                    sh './bazelisk-windows-amd64.exe shutdown'
                   }
                   xcoreCleanSandbox() 
                 } 

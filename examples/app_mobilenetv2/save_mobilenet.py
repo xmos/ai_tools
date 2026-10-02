@@ -1,12 +1,15 @@
 import tensorflow as tf
+from pathlib import Path
 
+cwd = Path(__file__).parent
+file_pattern = str(cwd / "image_samples/*.jpg")
 
 def save_quantized_mobilenet(model: tf.keras.Model, model_path: str, size: tuple):
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
     # Use a representative dataset generator for accurate activation quantization
-    rep_ds = tf.data.Dataset.list_files("image_samples/*.jpg")
+    rep_ds = tf.data.Dataset.list_files(file_pattern)
 
     def representative_dataset_gen():
         for image_path in rep_ds:

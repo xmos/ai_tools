@@ -21,7 +21,7 @@ XCOREOPT_BINARY: Union[pathlib.Path, str] = pathlib.Path.joinpath(
 XCOREOPT_BINARY = str(XCOREOPT_BINARY) + exe_suffix
 
 # Get the long description from the README file
-LONG_README = (here / "README.md").read_text(encoding="utf-8")
+LONG_README = (here / "README.rst").read_text(encoding="utf-8")
 
 
 # Fix link in Readme to current commit hash
@@ -41,9 +41,11 @@ XTFLM_INTERPRETER_LIBS = [
 ]
 
 # xtflm_interpreter requires numpy
+# ioserver requires pyusb
 REQUIRED_PACKAGES = [
     "numpy<2.0",
     "tflite>=2.4.0",
+    "pyusb>=1.2.1",
 ]
 
 # Force platform specific wheel.

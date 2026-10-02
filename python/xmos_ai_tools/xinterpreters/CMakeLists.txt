@@ -26,9 +26,9 @@ if(DEFINED ENV{CMAKE_ENABLE_DARWIN_TARGET_ARM64})
   set(BUILD_FLAGS ${BUILD_FLAGS} "-target" "arm64-apple-macos11")
 endif()
 
-set(TOP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../third_party/lib_tflite_micro")
+set(TOP_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../third_party/lib_tflite_micro")
 
-include(${TOP_DIR}/cmakefiles/xtflm.cmake)
+include(${TOP_DIR}/lib_tflite_micro/sources.cmake)
 
 if(MSVC)
   target_compile_options(lib_nn PRIVATE /Zi /UNDEBUG /MP6)

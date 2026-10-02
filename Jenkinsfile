@@ -9,8 +9,7 @@ if (env.job_type != 'beta_release' && env.job_type != 'official_release') {
 def setupRepo() {
   println "Stage running on: ${env.NODE_NAME}"
   checkout scm
-  sh 'git submodule update --init --recursive --jobs 4'
-  sh 'make -C third_party/lib_tflite_micro patch'
+  sh 'git submodule update --init --recursive --jobs 8'
 }
 
 def createDeviceZip() {
@@ -55,8 +54,7 @@ def runTests(Map options) {
       sh 'pip install --force-reinstall dist/*'
     }
     if (options.device) {
-      sh "git clone https://github0.xmos.com/xmos-int/xtagctl.git ${WORKSPACE}/xtagctl"
-      sh "pip install -e ${WORKSPACE}/xtagctl"
+      sh 'pip install git+https://github0.xmos.com/xmos-int/xtagctl.git'
       withTools(params.TOOLS_VERSION) {
         runDailyTests()
       }
@@ -84,16 +82,15 @@ def buildExamples() {
 def buildXformer(Map options) {
   def bazelBin = options.bazelBin
   def bazelConfig = options.bazelConfig
-  def extraArgs = (options.extraArgs ?: []).join(' ')
   def buildArgs = options.buildArgs ? " ${options.buildArgs}" : ''
-  def commonArgs = "--config=${bazelConfig} --define SETUPTOOLS_SCM_VERSION=${env.SETUPTOOLS_SCM_PRETEND_VERSION} ${extraArgs}"
+  def commonArgs = "--config=${bazelConfig} --define SETUPTOOLS_SCM_VERSION=${env.SETUPTOOLS_SCM_PRETEND_VERSION}"
 
   dir('xformer') {
     sh "curl -fL ${env.BAZELISK_RELEASE_URL}/${bazelBin} -o ${bazelBin}"
     if (options.executable) {sh "chmod +x ${bazelBin}"}
     sh "./${bazelBin} build //:xcore-opt ${commonArgs}${buildArgs}"
     if (options.runTests != false) {
-      sh "./${bazelBin} test //Test:all --config=${bazelConfig} ${extraArgs}${buildArgs}"
+      sh "./${bazelBin} test //Test:all --config=${bazelConfig} ${buildArgs}"
     }
   }
 }
@@ -123,7 +120,6 @@ pipeline {
   environment {
     REPO = 'ai_tools'
     BAZELISK_RELEASE_URL = 'https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0'
-    BAZEL_VC = 'C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC'
     SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev40"
   }
 
@@ -201,7 +197,6 @@ pipeline {
                     buildXformer(
                       bazelBin: 'bazelisk-windows-amd64.exe',
                       bazelConfig: 'ci_windows',
-                      extraArgs: ['--action_env=BAZEL_VC'],
                       runTests: false
                     )
                     buildPyWheel('windows')

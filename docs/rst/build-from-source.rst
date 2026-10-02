@@ -18,9 +18,13 @@ Requirements:
     python -m venv ./venv
     . ./venv/bin/activate 
 
-* Install the necessary python packages using ``pip``  inside the environment::
+* Install the necessary Python packages using ``pip`` inside the environment::
 
     pip install -r ./requirements.txt
+
+* To run the integration tests, install the additional test requirements::
+
+    pip install -r ./integration_tests/requirements.txt
 
 Building:
 ---------

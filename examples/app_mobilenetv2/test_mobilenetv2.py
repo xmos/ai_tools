@@ -3,7 +3,7 @@ import shutil
 import subprocess
 
 from pathlib import Path
-from obtain_and_optimize_mobilenetv2 import get_mobilenetv2, optimize_mobilenetv2
+from export import get_mobilenetv2, optimize_mobilenetv2
 
 CWD = Path(__file__).parent
 TEST_DIR = CWD

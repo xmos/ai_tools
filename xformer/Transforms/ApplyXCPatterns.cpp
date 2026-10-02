@@ -7,12 +7,9 @@
 
 #include "Transforms/Options.h"
 #include "larq_compute_engine/mlir/ir/lce_ops.h"
-#include "lib_nn/api/add_int16_transform.h"
-#include "lib_nn/api/dequantize_int16_transform.h"
-#include "lib_nn/api/multiply_int16_transform.h"
+
 #include "lib_nn/api/nn_layers.h"
-#include "lib_nn/api/quadratic_approximation.h"
-#include "lib_nn/api/quantize_int16_transform.h"
+
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"

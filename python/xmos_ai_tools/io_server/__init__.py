@@ -1,6 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import usb
+import time
 from typing import Tuple
 import numpy as np
 
@@ -103,11 +104,18 @@ class IOServer:
         self._dev.clear_halt(self._out_ep)
         self._dev.clear_halt(self._in_ep)
 
-    def connect(self):
+    def connect(self, timeout=None):
         self._dev = None
+        deadline = None if timeout is None else time.monotonic() + timeout
         while self._dev is None:
-            # TODO - more checks that we have the right device..
-            self._dev = usb.core.find(idVendor=0x20B1, product="xAISRV")
+            self._dev = usb.core.find(idVendor=0x20B1, idProduct=0xA15E)
+            if self._dev is None and deadline is not None:
+                if time.monotonic() >= deadline:
+                    raise IOServerError(
+                        "Could not find XCORE_IO_SERVER USB device "
+                        "with vendor ID 0x20b1 and product ID 0xa15e"
+                    )
+                time.sleep(0.1)
 
         # set the active configuration. With no arguments, the first
         # configuration will be the active one

@@ -145,7 +145,7 @@ create_zip() {
 
 build_xinterpreter() {
   cd "$SCRIPT_DIR"
-  make -C python/xmos_ai_tools/xinterpreters install "-j$NUM_PROCS"
+  make -C python/xmos_ai_tools/xinterpreters xinterpreters "-j$NUM_PROCS"
 }
 
 xformer_integration_test() {

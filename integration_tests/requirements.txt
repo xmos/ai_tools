@@ -1,0 +1,7 @@
+# python_version 3.11
+# pip_version 25.*
+
+pytest
+pytest-xdist
+pytest-rerunfailures
+PyYAML==6.0

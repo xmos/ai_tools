@@ -17,16 +17,17 @@ def createDeviceZip() {
   // build device runtime (vx4), (xs3), and install lib (xs3 is used)
   // Native build is a host-side compile check, not part of the device archive.
   dir('third_party/lib_tflite_micro') {  
-    sh 'make build'
     withTools(params.TOOLS_VX4_VERSION) {sh 'make build_vx4'}
     withTools(params.TOOLS_VERSION)     {sh 'make build_xs3'}
     withTools(params.TOOLS_VERSION)     {sh 'make build_install'}
+    sh 'make build'
+    stash name: 'release_archive', includes: 'build_xs3/release_archive.zip'
   }
 }
 
 def buildXinterpreterAndHostLib() {
   dir('python/xmos_ai_tools/xinterpreters') {
-    sh 'cmake -S . -B build'
+    sh 'cmake -B build'
     sh 'cmake --build build --target install --parallel 8 --config Release'
   }
 }
@@ -34,7 +35,7 @@ def buildXinterpreterAndHostLib() {
 def extractDeviceZipAndHeaders() {
   dir('python/xmos_ai_tools/runtime') {
     unstash 'release_archive'
-    sh 'unzip -o release_archive.zip'
+    sh 'unzip -o build_xs3/release_archive.zip'
   }
 }
 
@@ -46,13 +47,12 @@ def runTests(Map options) {
   }
 
   setupRepo()
-  createVenv(reqFile: 'requirements.txt')
+  createVenv(reqFile: 'integration_tests/requirements.txt')
   withVenv {
-    sh 'pip install -r integration_tests/requirements.txt'
     sh 'python -m pytest -q integration_tests/test_version_check.py'
     dir('python') {
       unstash options.wheelStash
-      sh 'pip install dist/*'
+      sh 'pip install --force-reinstall dist/*'
     }
     if (options.device) {
       sh "git clone https://github0.xmos.com/xmos-int/xtagctl.git ${WORKSPACE}/xtagctl"
@@ -63,7 +63,6 @@ def runTests(Map options) {
     } else {
       runDailyTests()
     }
-
     junit '**/*_junit.xml'
   }
 }
@@ -74,7 +73,7 @@ def buildExamples() {
   withVenv {
     dir('python') {
       unstash 'linux_wheel'
-      sh 'python -m pip install dist/*'
+      sh 'pip --force-reinstall install dist/*'
     }
     dir('examples') {
       xcoreBuild()
@@ -157,9 +156,6 @@ pipeline {
             setupRepo()
             createVenv(reqFile: 'requirements.txt')
             withVenv { createDeviceZip() }
-            dir('third_party/lib_tflite_micro/build_xs3/') {
-              stash name: 'release_archive', includes: 'release_archive.zip'
-            }
           }
           post {
             unsuccessful { xcoreCleanSandbox() }
@@ -194,7 +190,7 @@ pipeline {
             } // stage('Build linux runtime')
 
             stage('Build Windows runtime') {
-              agent { label 'ai && windows10' }
+              agent { label 'windows10 && ai' }
               steps {
                 withVS() {
                   setupRepo()

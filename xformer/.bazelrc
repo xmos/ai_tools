@@ -63,8 +63,6 @@ build:windows --copt=/Zc:preprocessor
 build:windows --host_copt=/Zc:preprocessor
 
 # Misc build options we need for windows.
-build:windows --linkopt=/DEBUG
-build:windows --host_linkopt=/DEBUG
 build:windows --linkopt=/OPT:REF
 build:windows --host_linkopt=/OPT:REF
 build:windows --linkopt=/OPT:ICF
@@ -147,4 +145,4 @@ build:ci_macos --linkopt=-dead_strip
 build:ci_windows --//:disable_version_check
 # Note: On Windows, exceeding this resource usage can break installation.
 build:ci_windows --jobs=6
-build:ci_windows --local_ram_resources=8192
+build:ci_windows --local_ram_resources=6144

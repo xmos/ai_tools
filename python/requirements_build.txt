@@ -2,9 +2,10 @@
 # pip_version 25.*
 
 # Build-only dependencies
-cmake
-ninja
-setuptools
-wheel
-patchelf; sys_platform == "linux"
-auditwheel; sys_platform == "linux"
+cmake>=3.23
+ninja>=1.11.1
+setuptools>=61
+setuptools_scm>=8.0.0
+wheel>=0.41.2
+patchelf>=0.17.2.0; sys_platform == "linux"
+auditwheel>=6.0.0; sys_platform == "linux"

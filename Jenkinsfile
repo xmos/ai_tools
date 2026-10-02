@@ -88,9 +88,9 @@ def buildXformer(Map options) {
   dir('xformer') {
     sh "curl -fL ${env.BAZELISK_RELEASE_URL}/${bazelBin} -o ${bazelBin}"
     if (options.executable) {sh "chmod +x ${bazelBin}"}
-    sh "./${bazelBin} build //:xcore-opt ${commonArgs}${buildArgs}"
+    sh "./${bazelBin} build //:xcore-opt ${commonArgs} ${buildArgs}"
     if (options.runTests != false) {
-      sh "./${bazelBin} test //Test:all --config=${bazelConfig} ${buildArgs}"
+      sh "./${bazelBin} test //Test:all ${commonArgs} ${buildArgs}"
     }
   }
 }

@@ -31,7 +31,7 @@ set(TOP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../third_party/lib_tflite_micro")
 include(${TOP_DIR}/cmakefiles/xtflm.cmake)
 
 if(MSVC)
-  target_compile_options(lib_nn PRIVATE /Zi /UNDEBUG)
+  target_compile_options(lib_nn PRIVATE /Zi /UNDEBUG /MP6)
 else()
   target_compile_options(lib_nn PRIVATE -g -UNDEBUG)
 endif()
@@ -63,6 +63,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set_target_properties(lib_nn PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 target_compile_options(host_xtflitemicro PRIVATE ${BUILD_FLAGS})
+if(MSVC)
+  target_compile_options(host_xtflitemicro PRIVATE /MP6)
+endif()
 
 target_link_options(host_xtflitemicro PRIVATE ${BUILD_FLAGS})
 target_compile_definitions(host_xtflitemicro PUBLIC
@@ -98,6 +101,9 @@ set(DEFINTIONS
 target_compile_definitions(xtflm_python PUBLIC ${DEFINTIONS})
 target_compile_features(xtflm_python PUBLIC cxx_std_17)
 target_compile_options(xtflm_python PRIVATE ${BUILD_FLAGS})
+if(MSVC)
+  target_compile_options(xtflm_python PRIVATE /MP6)
+endif()
 target_link_options(xtflm_python PRIVATE ${BUILD_FLAGS})
 
 target_sources(xtflm_python

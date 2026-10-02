@@ -73,7 +73,7 @@ def buildExamples() {
   withVenv {
     dir('python') {
       unstash 'linux_wheel'
-      sh 'pip --force-reinstall install dist/*'
+      sh 'pip install --force-reinstall dist/*'
     }
     dir('examples') {
       xcoreBuild()

@@ -107,12 +107,6 @@ build_xformer() {
   cd "$SCRIPT_DIR"
 }
 
-version_check() {
-  cd xformer
-  ./version_check.sh
-  cd "$SCRIPT_DIR"
-}
-
 submodule_update() {
   git submodule update --init --recursive --jobs "$NUM_PROCS"
 }
@@ -151,7 +145,7 @@ create_zip() {
 
 build_xinterpreter() {
   cd "$SCRIPT_DIR"
-  make -C python/xmos_ai_tools/xinterpreters install "-j$NUM_PROCS"
+  make -C python/xmos_ai_tools/xinterpreters xinterpreters "-j$NUM_PROCS"
 }
 
 xformer_integration_test() {
@@ -188,7 +182,6 @@ xformer)
 xinterpreter)
   case $ACTION in
   --build)
-    version_check
     # create_zip "xcore"
     clean_runtime
     create_zip "x86"
@@ -210,7 +203,6 @@ xinterpreter)
 xinterpreter-nozip)
   case $ACTION in
   --build)
-    version_check
     build_xinterpreter
     ;;
   --clean)
@@ -224,7 +216,6 @@ xinterpreter-nozip)
 all)
   case $ACTION in
   --build)
-    version_check
     build_xformer
     create_zip "xcore"
     build_xinterpreter

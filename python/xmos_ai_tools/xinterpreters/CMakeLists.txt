@@ -28,7 +28,7 @@ endif()
 
 set(TOP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../third_party/lib_tflite_micro")
 
-include(${TOP_DIR}/cmakefiles/xtflm.cmake)
+include(${TOP_DIR}/lib_tflite_micro/sources.cmake)
 
 if(MSVC)
   target_compile_options(lib_nn PRIVATE /Zi /UNDEBUG)

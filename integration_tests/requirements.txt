@@ -1,6 +1,8 @@
 # python_version 3.11
 # pip_version 25.*
 
+-r ../requirements.txt
+
 pytest
 pytest-xdist
 pytest-rerunfailures

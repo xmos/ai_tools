@@ -104,7 +104,7 @@ pipeline {
   environment {
     REPO = 'ai_tools'
     BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
-    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev40"
+    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev50"
   }
 
   parameters {

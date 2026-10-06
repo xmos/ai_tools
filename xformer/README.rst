@@ -9,7 +9,7 @@ mentioned [here](https://github.com/xmos/ai_tools#readme) and
 have followed all steps including installing the necessary Python 
 packages from the top-level `requirements.txt`.
 
-Also note that submodules need to be cloned and tflite-micro needs to be patched before building `xformer`.
+Also note that submodules need to be cloned before building `xformer`.
 The following command should be run from this repo's root:
 
     ./build.sh -T init

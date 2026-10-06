@@ -29,7 +29,7 @@ Requirements:
 Building:
 ---------
 
-* Clone submodules and apply patch to ``tflite-micro``::
+* Clone submodules::
 
     ./build.sh -T init
 

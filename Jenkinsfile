@@ -1,5 +1,4 @@
-// Things to optimise if this is too slow:
-// -build device runtime in parallel with host runtimes, use mutex before combining into wheel
+// This file relates to internal XMOS infrastructure and should be ignored by external users
 
 @Library('xmos_jenkins_shared_library@v0.46.0') _
 
@@ -7,79 +6,71 @@ if (env.job_type != 'beta_release' && env.job_type != 'official_release') {
   getApproval()
 }
 
-def sh_bat(cmd) {
-  if (isUnix()) {
-    sh cmd
-  } else {
-    bat cmd
-  }
-}
-
 def setupRepo() {
   println "Stage running on: ${env.NODE_NAME}"
   checkout scm
-  sh_bat 'git submodule update --init --recursive --jobs 4'
-  sh_bat 'make -C third_party/lib_tflite_micro patch'
+  sh 'git submodule update --init --recursive --jobs 8'
+}
+
+def doVersionCheck() {
+  createVenv()
+  withVenv {
+    sh 'python -m pip install pytest'
+    sh 'python -m pytest -q integration_tests/test_version_check.py'
+  }
 }
 
 def createDeviceZip() {
-  dir('third_party/lib_tflite_micro') {
-    // build device runtime (vx4)
+  // build device runtime (vx4), (xs3), and install lib (xs3 is used)
+  // Native build is a host-side compile check, not part of the device archive.
+  dir('third_party/lib_tflite_micro') {  
     withTools(params.TOOLS_VX4_VERSION) {sh 'make build_vx4'}
-    withTools(params.TOOLS_VERSION) {sh 'make build_xs3'}
-    // Stage headers and package both device libraries using the XS3 toolchain.
-    withTools(params.TOOLS_VERSION) {sh 'make build_install'}
-    // Native build is a host-side compile check, not part of the device archive.
+    withTools(params.TOOLS_VERSION)     {sh 'make build_xs3'}
+    withTools(params.TOOLS_VERSION)     {sh 'make build_install'}
     sh 'make build'
+    stash name: 'release_archive', includes: 'build_xs3/release_archive.zip'
   }
 }
 
 def buildXinterpreterAndHostLib() {
   dir('python/xmos_ai_tools/xinterpreters') {
-    sh_bat 'cmake -S . -B build'
-    sh_bat 'cmake --build build --target install --parallel 8 --config Release'
+    sh 'cmake -B build'
+    sh 'cmake --build build --target install --parallel 8 --config Release'
   }
 }
 
 def extractDeviceZipAndHeaders() {
   dir('python/xmos_ai_tools/runtime') {
     unstash 'release_archive'
-    sh_bat 'unzip -o release_archive.zip'
+    sh 'unzip -o build_xs3/release_archive.zip'
   }
 }
 
-def dailyDeviceTest = { ->
-  sh 'pytest integration_tests/test_runner.py -k daily_device --device -n 1 --junitxml=integration_tests/integration_device_junit.xml'
+def installWheel(String wheelStash) {
+  dir('python') {
+    unstash wheelStash
+    sh 'pip install --force-reinstall dist/*'
+  }
 }
 
-def dailyHostTest = { ->
-  sh 'pytest integration_tests/test_runner.py -k daily_host -n auto --junitxml=integration_tests/integration_host_junit.xml'
-}
-
-def runTests(String platform, Closure body) {
+def runTestsHost(Map options) {
   setupRepo()
-  createVenv(reqFile:'requirements.txt')
+  createVenv(reqFile: 'integration_tests/requirements.txt')
   withVenv {
-    sh_bat 'pip install -r integration_tests/requirements.txt'
-    sh_bat 'python -m pytest -q integration_tests/test_version_check.py'
-    dir('python') {
-      if (platform == 'linux' | platform == 'device') {
-        unstash 'linux_wheel'
-      } else if (platform == 'mac') {
-        unstash 'mac_wheel'
-      } else if (platform == 'windows') {
-        unstash 'windows_wheel'
-      }
-      sh 'pip install dist/*'
-    }
-    if (platform == 'device') {
-      sh "cd ${WORKSPACE} && git clone https://github0.xmos.com/xmos-int/xtagctl.git"
-      sh "pip install -e ${WORKSPACE}/xtagctl"
-      withTools(params.TOOLS_VERSION) {
-        body()
-      }
-    } else if (platform == 'linux' | platform == 'mac' | platform == 'windows') {
-      body()
+    installWheel(options.wheelStash)
+    sh 'pytest integration_tests/test_runner.py -k daily_host -n auto --junitxml=integration_tests/integration_host_junit.xml'
+    junit '**/*_junit.xml'
+  }
+}
+
+def runTestsDevice(Map options) {
+  setupRepo()
+  createVenv(reqFile: 'integration_tests/requirements.txt')
+  withVenv {
+    installWheel(options.wheelStash)
+    sh 'pip install git+https://github0.xmos.com/xmos-int/xtagctl.git'
+    withTools(params.TOOLS_VERSION) {
+      sh 'pytest integration_tests/test_runner.py -k daily_device --device -n 1 --junitxml=integration_tests/integration_device_junit.xml'
     }
     junit '**/*_junit.xml'
   }
@@ -89,13 +80,46 @@ def buildExamples() {
   setupRepo()
   createVenv(reqFile: 'requirements.txt')
   withVenv {
-    dir('python') {
-      unstash 'linux_wheel'
-      sh 'python -m pip install dist/*'
-    }
+    installWheel('linux_wheel')
     dir('examples') {
       xcoreBuild()
     }
+  }
+}
+
+def buildXformer(Map options) {
+  def bazelBin = options.bazelBin
+  def bazelConfig = options.bazelConfig
+  def buildArgs = options.buildArgs ? " ${options.buildArgs}" : ''
+  def commonArgs = "--config=${bazelConfig} --define SETUPTOOLS_SCM_VERSION=${env.SETUPTOOLS_SCM_PRETEND_VERSION}"
+
+  dir('xformer') {
+    sh "curl -fL ${env.BAZELISK_RELEASE_URL}/${bazelBin} -o ${bazelBin}"
+    if (options.executable) {sh "chmod +x ${bazelBin}"}
+    sh "./${bazelBin} build //:xcore-opt ${commonArgs} ${buildArgs}"
+    if (options.runTests != false) {
+      sh "./${bazelBin} test //Test:all ${commonArgs} ${buildArgs}"
+    }
+  }
+}
+
+def buildPyWheel(String platform) {
+  def extra = (platform == 'mac') ? '--plat macosx_10_15_universal2' : ''
+  dir('python') {
+    sh "python setup.py bdist_wheel ${extra}"
+    if (platform == 'linux') {
+      sh 'auditwheel repair --plat manylinux_2_31_x86_64 dist/*.whl'
+      sh 'rm dist/*.whl && mv wheelhouse/*.whl dist/'
+    }
+    stash name: "${platform}_wheel", includes: 'dist/*'
+    archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
+  }
+}
+
+def cleanXformer(String bazelBin) {
+  dir('xformer') {
+    sh "./${bazelBin} clean --expunge"
+    sh "./${bazelBin} shutdown"
   }
 }
 
@@ -103,8 +127,8 @@ pipeline {
   agent none
   environment {
     REPO = 'ai_tools'
-    BAZEL_USER_ROOT = "${WORKSPACE}/.bazel/"
-    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev50"
+    BAZELISK_RELEASE_URL = 'https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0'
+    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev40"
   }
 
   parameters {
@@ -134,167 +158,109 @@ pipeline {
         stage('Build device runtime') {
           steps {
             setupRepo()
+            doVersionCheck()
             createVenv(reqFile: 'requirements.txt')
             withVenv { createDeviceZip() }
-            dir('third_party/lib_tflite_micro/build_xs3/') {
-              stash name: 'release_archive', includes: 'release_archive.zip'
-            }
           }
           post {
             unsuccessful { xcoreCleanSandbox() }
           }
-        }
+        } // stage('Build device runtime')
         
         stage('Build host wheels') {
           parallel {
+
             stage('Build linux runtime') {
               steps {
                 extractDeviceZipAndHeaders()
-                script {
-                  def customImage = docker.build("tensorflow-image-with-updated-pip:${env.BUILD_ID}")
-                  USER_ID = sh(script: 'id -u', returnStdout: true).trim()
-                  withEnv(['USER=' + USER_ID, "XDG_CACHE_HOME=${env.WORKSPACE}/.cache", "TEST_TMPDIR=${env.WORKSPACE}/.cache", "TMPDIR=${env.WORKSPACE}/.cache"]) {
-                    customImage.inside() {
-                      sh 'git describe --tags'
-                      withEnv(['CC=/dt9/usr/bin/gcc', 'CXX=/dt9/usr/bin/g++']) {
-                        buildXinterpreterAndHostLib()
-                      }
-                      dir('xformer') {
-                        sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64'
-                        sh 'chmod +x bazelisk-linux-amd64'
-                        sh """
-                        rm -rf /var/tmp/_bazel_jenkins/install/*
-                        ./bazelisk-linux-amd64 build //:xcore-opt \\
-                          --config=ci_linux \\
-                          --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain" \\
-                          --define SETUPTOOLS_SCM_VERSION=\$(python -m setuptools_scm -c ../python/pyproject.toml)
-                      """
-                        sh '''
-                        rm -rf /var/tmp/_bazel_jenkins/install/*
-                        ./bazelisk-linux-amd64 test //Test:all \\
-                          --config=ci_linux \\
-                          --crosstool_top="@sigbuild-r2.14-clang_config_cuda//crosstool:toolchain"
-                      '''
-                      }
-                      dir('python') {
-                        script {
-                          if (env.job_type == 'official_release') {
-                            withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
-                              sh 'python setup.py bdist_wheel'
-                            }
-                        } else {
-                            sh 'python setup.py bdist_wheel'
-                          }
-                        }
-                      }
-                    }
-                  }
-                  withVenv { dir('python') {
-                      sh 'pip install patchelf auditwheel==5.2.0 --no-cache-dir'
-                      sh 'auditwheel repair --plat manylinux2014_x86_64 dist/*.whl'
-                      sh 'rm dist/*.whl'
-                      sh 'mv wheelhouse/*.whl dist/'
-                      stash name: 'linux_wheel', includes: 'dist/*'
-                      archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
-                } }
+                buildXinterpreterAndHostLib()
+                createVenv(reqFile: 'python/requirements_build.txt')
+                withVenv {
+                  script {
+                    buildXformer(
+                      bazelBin: 'bazelisk-linux-amd64',
+                      bazelConfig: 'ci_linux',
+                      executable: true
+                    )
+                    buildPyWheel('linux')
+                  } // script
+                } // withVenv
+              } // steps
+              post {
+                cleanup {
+                  cleanXformer('bazelisk-linux-amd64')
+                  xcoreCleanSandbox()
                 }
               }
-              post { unsuccessful { xcoreCleanSandbox() } }
-            }
+            } // stage('Build linux runtime')
+
             stage('Build Windows runtime') {
-              agent { label 'ai && windows10' }
+              agent { label 'windows10 && ai' }
               steps {
                 withVS() {
                   setupRepo()
                   extractDeviceZipAndHeaders()
                   buildXinterpreterAndHostLib()
-                  createVenv('requirements.txt')
+                  createVenv(reqFile: 'python/requirements_build.txt')
                   withVenv {
-                    bat 'pip install wheel setuptools setuptools-scm numpy six --no-cache-dir'
-                    dir('xformer') {
-                      bat 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-windows-amd64.exe'
-                      script {
-                        bat 'bazelisk-windows-amd64.exe clean --expunge'
-                        PYTHON_BIN_PATH = bat(script: '@where python.exe', returnStdout: true).split()[0].trim()
-                        bat "for /f %%i in ('python -m setuptools_scm -c ..\\python\\pyproject.toml') do bazelisk-windows-amd64.exe --output_user_root c:\\jenkins\\_bzl build //:xcore-opt --config=ci_windows --action_env PYTHON_BIN_PATH=\"${PYTHON_BIN_PATH}\" --action_env BAZEL_VC=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\" --define SETUPTOOLS_SCM_VERSION=%%i"
-                      }
-                    }
-
-                    dir('python') {
-                      script {
-                        if (env.job_type == 'official_release') {
-                          withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
-                            bat 'python setup.py bdist_wheel'
-                          }
-                      } else {
-                          bat 'python setup.py bdist_wheel'
-                        }
-                      }
-                      stash name: 'windows_wheel', includes: 'dist/*'
-                      archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
-                    }
+                    buildXformer(
+                      bazelBin: 'bazelisk-windows-amd64.exe',
+                      bazelConfig: 'ci_windows',
+                      runTests: false
+                    )
+                    buildPyWheel('windows')
                   }
                 }
               }
-              post { cleanup {
-                  dir('xformer') {
-                    bat 'bazelisk-windows-amd64.exe clean --expunge'
-                    bat 'bazelisk-windows-amd64.exe shutdown'
-                    script {
-                      HANGING_BAZEL_EMBEDDED_JAVA_PID = bat(script: '@ps -W | grep _bzl | tr -s \" \" | cut -d \" \" -f 5', returnStdout: true).split()[0].trim()
-                      bat "taskkill /F /PID \"${HANGING_BAZEL_EMBEDDED_JAVA_PID}\""
-                    }
-                  }
-                  xcoreCleanSandbox() } }
-            }
+              post { 
+                cleanup {
+                  cleanXformer('bazelisk-windows-amd64.exe')
+                  xcoreCleanSandbox() 
+                } 
+              }
+            } // stage('Build Windows runtime')
+
             stage('Build Mac runtime') {
               agent { label 'macos && arm64 && xcode' }
               steps {
                 setupRepo()
                 extractDeviceZipAndHeaders()
                 buildXinterpreterAndHostLib()
-                // TODO: Fix this, use a rule for the fat binary instead of manually combining
-                createVenv('requirements.txt')
-                dir('xformer') { withVenv {
-                    sh 'pip install wheel setuptools setuptools-scm numpy six --no-cache-dir'
-                    sh 'curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-darwin-arm64'
-                    sh 'chmod +x bazelisk-darwin-arm64'
-                    script {
-                      def compileAndRename = { arch ->
-                        def cpuFlag = arch == 'arm64' ? 'darwin_arm64' : 'darwin_x86_64'
-                        def outputName = "xcore-opt-${arch}"
-                        sh """
-                        rm -rf /var/tmp/_bazel_jenkins/install/*
-                        ./bazelisk-darwin-arm64 build //:xcore-opt \\
-                        --config=ci_macos \\
-                        --cpu=${cpuFlag} \\
-                        --define SETUPTOOLS_SCM_VERSION=\$(python -m setuptools_scm -c ../python/pyproject.toml)
-                      mv bazel-bin/xcore-opt ${outputName}
-                    """
-                      }
-                      compileAndRename('arm64')
-                      compileAndRename('x86_64')
+                createVenv(reqFile: 'python/requirements_build.txt')
+                withVenv {
+                  script {
+                    buildXformer(
+                      bazelBin: 'bazelisk-darwin-arm64',
+                      bazelConfig: 'ci_macos',
+                      executable: true,
+                      buildArgs: '--cpu=darwin_arm64'
+                    )
+                    dir('xformer') {
+                      sh 'mv bazel-bin/xcore-opt xcore-opt-arm64'
                     }
-                    sh 'lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt'
-                } }
-                dir('python') { withVenv {
-                    script {
-                      if (env.job_type == 'official_release') {
-                        withEnv(["SETUPTOOLS_SCM_PRETEND_VERSION=${env.TAG_VERSION}"]) {
-                          sh 'python setup.py bdist_wheel --plat macosx_10_15_universal2'
-                        }
-                    } else {
-                        sh 'python setup.py bdist_wheel --plat macosx_10_15_universal2'
-                      }
+                    buildXformer(
+                      bazelBin: 'bazelisk-darwin-arm64',
+                      bazelConfig: 'ci_macos',
+                      buildArgs: '--cpu=darwin_x86_64'
+                    )
+                    dir('xformer') {
+                      sh 'mv bazel-bin/xcore-opt xcore-opt-x86_64'
+                      sh 'lipo -create xcore-opt-arm64 xcore-opt-x86_64 -output bazel-bin/xcore-opt'
                     }
-                    stash name: 'mac_wheel', includes: 'dist/*'
-                    archiveArtifacts artifacts: 'dist/*.whl', fingerprint: true
-                } }
-              }
-              post { cleanup { xcoreCleanSandbox() } }
-            }
-          }
-        }
+                    buildPyWheel('mac')
+                  } // script
+                } // withVenv 
+              } // steps
+              post {
+                cleanup {
+                  cleanXformer('bazelisk-darwin-arm64')
+                  xcoreCleanSandbox() 
+                } // cleanup
+              } // post
+            } // stage('Build Mac runtime')
+          } // Parallel
+        } // Build host wheels
+
         stage('Build examples') {
           when {
             expression { env.job_type != 'beta_release' && env.job_type != 'official_release' }
@@ -303,7 +269,8 @@ pipeline {
             script { buildExamples() }
           }
           post { unsuccessful { xcoreCleanSandbox() } }
-        }
+        } // stage('Build examples')
+
         stage('Test') {
           when {
             expression { env.job_type != 'beta_release' && env.job_type != 'official_release' }
@@ -313,7 +280,7 @@ pipeline {
 
             stage('Linux Test') {
               steps { script {
-                runTests('linux', dailyHostTest)
+                runTestsHost(wheelStash: 'linux_wheel')
                 withVenv {
                 sh 'pip install pytest nbmake'
                 sh 'pytest --nbmake ./docs/notebooks/*.ipynb'
@@ -322,19 +289,21 @@ pipeline {
 
             stage('Mac arm64 Test') {
               agent { label 'macos && arm64 && !macos_10_14' }
-              steps { script {runTests('mac', dailyHostTest)}}
+              steps { script {runTestsHost(wheelStash: 'mac_wheel')}}
               post { cleanup { xcoreCleanSandbox() } }
             } // stage('Mac arm64 Test')
 
             stage('Windows Test') {
               agent { label 'ai && windows10' }
-              steps { script {runTests('windows', dailyHostTest)}}
+              steps { script {runTestsHost(wheelStash: 'windows_wheel')}}
               post { cleanup { xcoreCleanSandbox() } }
             } // stage('Windows Test')
 
             stage('Device Test') {
               agent {label 'xcore.ai-explorer && lpddr && !macos'}
-              steps {script {dir('sandbox/ai_tools') {runTests('device', dailyDeviceTest)}}}
+              steps {script {dir('sandbox/ai_tools') {
+                runTestsDevice(wheelStash: 'linux_wheel')
+              }}}
               post {
                 always {
                   archiveArtifacts artifacts: 'sandbox/ai_tools/examples/app_mobilenetv2/arena_sizes.csv', allowEmptyArchive: true
@@ -346,7 +315,7 @@ pipeline {
             } // stage('Device Test')
 
           }
-        }
+        } // stage('Test')
 
         stage('Publish') {
           when {
@@ -372,7 +341,7 @@ pipeline {
               }
             }
           }
-        }
+        } // stage('Publish')
       }
       post { cleanup { xcoreCleanSandbox() } }
   } }

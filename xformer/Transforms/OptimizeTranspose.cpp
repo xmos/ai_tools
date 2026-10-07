@@ -608,14 +608,17 @@ struct MoveTransposeForwardOverSliceOpPattern
     if (!matchPattern(sliceOp.getSize(), m_Constant(&sizeAttr)))
       return failure();
 
+    // Get slice output shape
+    auto sliceOutputType = sliceOp.getResult().getType().dyn_cast<RankedTensorType>();
+
     SmallVector<int32_t, 4> newBeginVec(beginAttr.size());
     SmallVector<int32_t, 4> newSizeVec(sizeAttr.size());
-    SmallVector<int64_t, 4> newSliceShapeVec(sizeAttr.size());
+    SmallVector<int64_t, 4> newSliceShapeVec(sliceOutputType.rank());
     int64_t index = 0;
     for (auto dim: permAttr.getValues<int32_t>()) {
       newBeginVec[dim] = beginAttr.getValues<int32_t>()[index];
       newSizeVec[dim] = sizeAttr.getValues<int32_t>()[index];
-      newSliceShapeVec[dim] = sizeAttr.getValues<int32_t>()[index];
+      newSliceShapeVec[dim] = sliceOutputType.sizes()[dim];
       index += 1;
     }
 

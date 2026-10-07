@@ -128,7 +128,7 @@ pipeline {
   environment {
     REPO = 'ai_tools'
     BAZELISK_RELEASE_URL = 'https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0'
-    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev40"
+    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev50"
   }
 
   parameters {

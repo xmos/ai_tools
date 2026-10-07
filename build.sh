@@ -39,7 +39,7 @@ help() {
   echo "  -d                Enable debug"
   echo "  -j [NUM_PROCS]    Set number of jobs (default: nproc)"
   echo "  -T [TARGET]       Set target:"
-  echo "       init         Initialise repository (update submodules and patch ltflm)"
+  echo "       init         Initialise repository (update submodules)"
   echo "       all          Build everything"
   echo "       xinterpreter Build interpreter only"
   echo "       xformer      Build compiler only"
@@ -111,10 +111,6 @@ submodule_update() {
   git submodule update --init --recursive --jobs "$NUM_PROCS"
 }
 
-patch() {
-  make -C third_party/lib_tflite_micro patch
-}
-
 unsupported_action() {
   echo "Action $ACTION not supported for target $TARGET"
   exit 1
@@ -174,7 +170,6 @@ cd "$SCRIPT_DIR"
 case $TARGET in
 init)
   submodule_update
-  patch
   ;;
 xformer)
   build_xformer

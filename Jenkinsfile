@@ -12,6 +12,14 @@ def setupRepo() {
   sh 'git submodule update --init --recursive --jobs 8'
 }
 
+def doVersionCheck() {
+  createVenv()
+  withVenv {
+    sh 'python -m pip install pytest'
+    sh 'python -m pytest -q integration_tests/test_version_check.py'
+  }
+}
+
 def createDeviceZip() {
   // build device runtime (vx4), (xs3), and install lib (xs3 is used)
   // Native build is a host-side compile check, not part of the device archive.
@@ -38,28 +46,31 @@ def extractDeviceZipAndHeaders() {
   }
 }
 
-def runTests(Map options) {
-  def testTarget = options.device ? 'device' : 'host'
-  def testArgs = options.device ? '--device -n 1' : '-n auto'
-  def runDailyTests = { ->
-    sh "pytest integration_tests/test_runner.py -k daily_${testTarget} ${testArgs} --junitxml=integration_tests/integration_${testTarget}_junit.xml"
+def installWheel(String wheelStash) {
+  dir('python') {
+    unstash wheelStash
+    sh 'pip install --force-reinstall dist/*'
   }
+}
 
+def runTestsHost(Map options) {
   setupRepo()
   createVenv(reqFile: 'integration_tests/requirements.txt')
   withVenv {
-    sh 'python -m pytest -q integration_tests/test_version_check.py'
-    dir('python') {
-      unstash options.wheelStash
-      sh 'pip install --force-reinstall dist/*'
-    }
-    if (options.device) {
-      sh 'pip install git+https://github0.xmos.com/xmos-int/xtagctl.git'
-      withTools(params.TOOLS_VERSION) {
-        runDailyTests()
-      }
-    } else {
-      runDailyTests()
+    installWheel(options.wheelStash)
+    sh 'pytest integration_tests/test_runner.py -k daily_host -n auto --junitxml=integration_tests/integration_host_junit.xml'
+    junit '**/*_junit.xml'
+  }
+}
+
+def runTestsDevice(Map options) {
+  setupRepo()
+  createVenv(reqFile: 'integration_tests/requirements.txt')
+  withVenv {
+    installWheel(options.wheelStash)
+    sh 'pip install git+https://github0.xmos.com/xmos-int/xtagctl.git'
+    withTools(params.TOOLS_VERSION) {
+      sh 'pytest integration_tests/test_runner.py -k daily_device --device -n 1 --junitxml=integration_tests/integration_device_junit.xml'
     }
     junit '**/*_junit.xml'
   }
@@ -69,10 +80,7 @@ def buildExamples() {
   setupRepo()
   createVenv(reqFile: 'requirements.txt')
   withVenv {
-    dir('python') {
-      unstash 'linux_wheel'
-      sh 'pip install --force-reinstall dist/*'
-    }
+    installWheel('linux_wheel')
     dir('examples') {
       xcoreBuild()
     }
@@ -150,6 +158,7 @@ pipeline {
         stage('Build device runtime') {
           steps {
             setupRepo()
+            doVersionCheck()
             createVenv(reqFile: 'requirements.txt')
             withVenv { createDeviceZip() }
           }
@@ -271,7 +280,7 @@ pipeline {
 
             stage('Linux Test') {
               steps { script {
-                runTests(wheelStash: 'linux_wheel')
+                runTestsHost(wheelStash: 'linux_wheel')
                 withVenv {
                 sh 'pip install pytest nbmake'
                 sh 'pytest --nbmake ./docs/notebooks/*.ipynb'
@@ -280,20 +289,20 @@ pipeline {
 
             stage('Mac arm64 Test') {
               agent { label 'macos && arm64 && !macos_10_14' }
-              steps { script {runTests(wheelStash: 'mac_wheel')}}
+              steps { script {runTestsHost(wheelStash: 'mac_wheel')}}
               post { cleanup { xcoreCleanSandbox() } }
             } // stage('Mac arm64 Test')
 
             stage('Windows Test') {
               agent { label 'ai && windows10' }
-              steps { script {runTests(wheelStash: 'windows_wheel')}}
+              steps { script {runTestsHost(wheelStash: 'windows_wheel')}}
               post { cleanup { xcoreCleanSandbox() } }
             } // stage('Windows Test')
 
             stage('Device Test') {
               agent {label 'xcore.ai-explorer && lpddr && !macos'}
               steps {script {dir('sandbox/ai_tools') {
-                runTests(wheelStash: 'linux_wheel', device: true)
+                runTestsDevice(wheelStash: 'linux_wheel')
               }}}
               post {
                 always {

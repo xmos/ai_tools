@@ -331,7 +331,7 @@ pipeline {
                 createVenv()
                 withVenv {
                   withCredentials([usernamePassword(
-                    credentialsId: '__CREDID__', 
+                    credentialsId: 'PYPI_AITOOLS_TOKEN', 
                     usernameVariable: 'TWINE_USERNAME', 
                     passwordVariable: 'TWINE_PASSWORD')]) 
                   {

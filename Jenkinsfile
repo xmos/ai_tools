@@ -78,16 +78,17 @@ def runTestsDevice(Map options) {
 
 def runTestsDeviceXsim(Map options) {
   def test_path = 'integration_tests/device_test_sim/test_device_sim.py'
+  def junit_options = '-o junit_logging=all -o junit_log_passing_tests=true'
   setupRepo()
   createVenv(reqFile: 'integration_tests/requirements.txt')
   withVenv {
     installWheel(options.wheelStash)
     try {
       withTools(params.TOOLS_VERSION) {
-        runPytest("${test_path} --hw-target XK-EVK-XU316 --junit-prefix=xsim_xs3a")
+        runPytest("${test_path} --hw-target XK-EVK-XU316 --junit-prefix=xsim_xs3a ${junit_options}")
       }
       withTools(params.TOOLS_VX4_VERSION) {
-        runPytest("${test_path} --hw-target XK-EVK-XU416 --junit-prefix=xsim_vx4")
+        runPytest("${test_path} --hw-target XK-EVK-XU416 --junit-prefix=xsim_vx4 ${junit_options}")
       }
     } 
     finally {

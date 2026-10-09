@@ -1,0 +1,142 @@
+import os
+import subprocess
+import tempfile
+from pathlib import Path
+
+import numpy as np
+import pytest
+import yaml
+from xmos_ai_tools import xformer
+from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
+
+THREAD_COUNT = 1
+RTOL = 1
+ATOL = 1
+RANDOM_SEED = 42
+
+cwd = Path(__file__).resolve().parent
+MODEL_FOLDER = cwd.parent / "models"
+with (cwd / "models.yaml").open() as model_list:
+    MODEL_FILES = [
+        model for pattern in yaml.safe_load(model_list)
+        for model in sorted(MODEL_FOLDER.rglob(pattern))
+    ]
+
+
+def compile_custom_model(model_path, cfg_name, hw_target="XK-EVK-XU316"):
+    model_source = os.path.relpath(Path(model_path).resolve(), cwd)
+    build_dir = cwd / "build" / cfg_name
+    compiler_flags = "-O3;-g"
+    if hw_target != "XK-EVK-XU416":
+        compiler_flags += ";-mcmodel=large"
+    subprocess.run(
+        [
+            "cmake", "--fresh", "-G", "Ninja",
+            "-S", str(cwd), "-B", str(build_dir),
+            f"-DAPP_HW_TARGET={hw_target}",
+            f"-DAPP_CXX_SRCS=src/main.cpp;{model_source}",
+            f"-DAPP_INCLUDES={Path(model_path).resolve().parent}",
+            f"-DAPP_COMPILER_FLAGS_{cfg_name}={compiler_flags}",
+        ],
+        cwd=cwd,
+        check=True,
+    )
+    subprocess.run(
+        ["cmake", "--build", str(build_dir), "--target", cfg_name],
+        cwd=cwd,
+        check=True,
+    )
+
+
+def generate_input_random(shape, dtype, seed=RANDOM_SEED):
+    dtype = np.dtype(dtype)
+    rng = np.random.default_rng(seed)
+    if np.issubdtype(dtype, np.bool_):
+        return rng.integers(0, 2, size=shape, dtype=np.uint8).astype(dtype)
+    if np.issubdtype(dtype, np.floating):
+        return rng.random(shape).astype(dtype)
+    limits = np.iinfo(dtype)
+    return rng.integers(limits.min, limits.max, size=shape, dtype=dtype, endpoint=True)
+
+
+def run_custom_model_host(model_path, input_name, output_name):
+    interpreter = TFLMHostInterpreter()
+    try:
+        interpreter.set_model(model_path=str(model_path))
+        input_details = interpreter.get_input_details()[0]
+        output_details = interpreter.get_output_details()[0]
+        inputs = generate_input_random(input_details["shape"], input_details["dtype"])
+        inputs.tofile(input_name)
+        interpreter.set_tensor(0, inputs)
+        interpreter.invoke()
+        outputs = interpreter.get_tensor(output_details["index"]).copy()
+        outputs.tofile(output_name)
+        return inputs, outputs
+    finally:
+        interpreter.close()
+
+
+def run_custom_model_device(cfg_name, work_dir):
+    binary_path = cwd / "bin" / cfg_name / f"app_no_flash_{cfg_name}.xe"
+    subprocess.run(
+        ["xsim", str(binary_path)],
+        cwd=work_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=True,
+    )
+
+
+def pipeline_model(model_path: Path, hw_target="XK-EVK-XU316"):
+    with tempfile.TemporaryDirectory(prefix="device_sim_") as temp_dir:
+        work_dir = Path(temp_dir)
+        cfg_name = work_dir.name
+        exported_model = work_dir / "model.tflite"
+        exported_model_cpp = str(exported_model) + ".cpp"
+        compiler_options = [("xcore-thread-count", THREAD_COUNT)]
+        if hw_target == "XK-EVK-XU416":
+            compiler_options.append(("xcore-target-arch", "VX4A"))
+        xformer.convert(model_path, exported_model, compiler_options)
+
+        input_file = work_dir / "input.bin"
+        host_file = work_dir / "host_output.bin"
+        sim_file = work_dir / "sim_output.bin"
+        
+        inputs, host_outputs = run_custom_model_host(exported_model, input_file, host_file)
+        compile_custom_model(exported_model_cpp, cfg_name, hw_target)
+        run_custom_model_device(cfg_name, work_dir)
+        sim_outputs = np.fromfile(sim_file, dtype=host_outputs.dtype).reshape(host_outputs.shape)
+        return host_outputs, sim_outputs
+
+
+@pytest.mark.parametrize(
+    "model_file", 
+    MODEL_FILES, 
+    ids=lambda model: str(model.relative_to(MODEL_FOLDER)),
+)
+def test_pipeline(model_file, request):
+    hw_target = request.config.getoption("hw_target")
+    request.node.user_properties.append(("model", str(model_file.relative_to(MODEL_FOLDER))))
+    request.node.user_properties.append(("hw_target", hw_target))
+    host_outputs, sim_outputs = pipeline_model(model_file, hw_target)
+    host_values = host_outputs.astype(np.float64)
+    sim_values = sim_outputs.astype(np.float64)
+    differences = np.abs(sim_values - host_values)
+    matches = np.isclose(sim_values, host_values, rtol=RTOL, atol=ATOL, equal_nan=True)
+    request.node.user_properties.extend([
+        ("max_abs_diff", float(differences.max(initial=0))),
+        ("mean_abs_diff", float(differences.mean()) if differences.size else 0),
+        ("values_outside_tolerance", int(np.count_nonzero(~matches))),
+        ("total_values", int(differences.size)),
+        ("rtol", RTOL),
+        ("atol", ATOL),
+    ])
+    np.testing.assert_allclose(sim_outputs, host_outputs, rtol=RTOL, atol=ATOL)
+
+
+if __name__ == "__main__":
+    model_path = MODEL_FOLDER / "8x8/test_add/test_add_0.tflite"
+    host_outputs, sim_outputs = pipeline_model(model_path)
+    np.testing.assert_allclose(sim_outputs, host_outputs, rtol=RTOL, atol=ATOL)
+    print(f"PASS: {model_path.name}")

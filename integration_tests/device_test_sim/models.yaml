@@ -1,0 +1,21 @@
+# Base dir: integration_tests/models
+- 16x8/test_conv2d/test_conv2d_0.tflite
+- 16x8/test_transpose/test_transpose_0.tflite
+- 8x8/test_add/test_add_0.tflite
+- 8x8/test_avgpool2d/test_avgpool2d_0.tflite
+- 8x8/test_conv2d/test_conv2d_0.tflite
+- 8x8/test_conv2d_1x1/test_conv2d_1x1_0.tflite
+- 8x8/test_depthwise_conv2d/test_depthwise_conv2d_0.tflite
+- 8x8/test_fully_connected/test_fully_connected_0.tflite
+- 8x8/test_maxpool2d/test_maxpool2d_0.tflite
+- 8x8/test_mean/test_mean_0.tflite
+- 8x8/test_relu/test_relu_0.tflite
+- 8x8/test_sigmoid/test_sigmoid_0.tflite
+- 8x8/test_softmax/test_softmax_0.tflite
+- 8x8/test_sub/test_sub_0.tflite
+- 8x8/test_tanh/test_tanh_0.tflite
+- bnns/test_bconv2d_int8/test_bconv2d_int8_0.tflite
+- custom_models/kws_model.tflite
+- custom_models/vnr_model.tflite
+- float32/test_pad/test_pad_21.tflite
+- float32/test_slice/test_slice_13.tflite

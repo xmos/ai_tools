@@ -59,11 +59,17 @@ def compile_custom_model(model_path, cfg_name, hw_target="XK-EVK-XU316"):
             f"-DAPP_COMPILER_FLAGS_{cfg_name}={flags}",
         ],
         cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
         check=True,
     )
     subprocess.run(
         ["cmake", "--build", str(build_dir), "--target", cfg_name],
         cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
         check=True,
     )
 
@@ -104,7 +110,7 @@ def run_custom_model_host(model_path, input_name, output_name):
 
 def run_custom_model_device(cfg_name, work_dir):
     binary_path = cwd / "bin" / cfg_name / f"app_no_flash_{cfg_name}.xe"
-    subprocess.run(
+    result = subprocess.run(
         ["xsim", str(binary_path)],
         cwd=work_dir,
         stdout=subprocess.PIPE,
@@ -112,6 +118,7 @@ def run_custom_model_device(cfg_name, work_dir):
         text=True,
         check=True,
     )
+    print(result.stdout, end="")
 
 
 def pipeline_model(model_path: Path, hw_target="XK-EVK-XU316"):
@@ -156,15 +163,24 @@ def test_pipeline(model_file, request):
     sim_values = sim_outputs.astype(np.float64)
     differences = np.abs(sim_values - host_values)
     matches = np.isclose(sim_values, host_values, rtol=rtol, atol=atol, equal_nan=True)
+    max_diff = float(differences.max(initial=0))
+    mean_diff = float(differences.mean()) if differences.size else 0
+    outside_tolerance = int(np.count_nonzero(~matches))
     request.node.user_properties.extend(
         [
-            ("max_abs_diff", float(differences.max(initial=0))),
-            ("mean_abs_diff", float(differences.mean()) if differences.size else 0),
-            ("values_outside_tolerance", int(np.count_nonzero(~matches))),
+            ("max_abs_diff", max_diff),
+            ("mean_abs_diff", mean_diff),
+            ("values_outside_tolerance", outside_tolerance),
             ("total_values", int(differences.size)),
             ("rtol", rtol),
             ("atol", atol),
         ]
+    )
+    print(f"Model: {model_file.relative_to(MODEL_FOLDER)}; target: {hw_target}")
+    print(f"Output dtype: {host_outputs.dtype}; shape: {host_outputs.shape}")
+    print(
+        f"max_diff={max_diff} mean_diff={mean_diff} "
+        f"outside_tol={outside_tolerance}/{differences.size} rtol={rtol} atol={atol}"
     )
     np.testing.assert_allclose(sim_values, host_values, rtol=rtol, atol=atol)
 

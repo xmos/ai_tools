@@ -328,7 +328,7 @@ pipeline {
                 unstash 'mac_wheel'
                 unstash 'windows_wheel'
                 archiveArtifacts artifacts: 'dist/*', allowEmptyArchive: true
-                createVenv(reqFile: "requirements_build.txt")
+                createVenv()
                 withVenv {
                   withCredentials([usernamePassword(
                     credentialsId: '__CREDID__', 
@@ -336,7 +336,7 @@ pipeline {
                     passwordVariable: 'TWINE_PASSWORD')]) 
                   {
                     sh 'pip install twine'
-                    sh 'twine upload dist/*'
+                    sh 'twine upload --verbose dist/*'
                   }
                 }
               }

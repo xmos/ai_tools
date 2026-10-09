@@ -45,23 +45,20 @@ def pytest_runtest_makereport(call):
 
 
 def pytest_runtest_logreport(report):
-    if "::test_pipeline[" not in report.nodeid:
-        return
-    if report.when != "call" and not report.failed:
-        return
-
     properties = dict(report.user_properties)
     row = results.setdefault(report.nodeid, {})
     row.update(properties)
     row.setdefault("model", report.nodeid)
     row.setdefault("status", report.outcome)
+    if report.when == "call" or report.failed:
+        row["status"] = report.outcome
     if report.failed:
-        row["status"] = "failed"
         row["error"] = properties.get("error") or str(report.longrepr).splitlines()[-1]
 
 
 def pytest_sessionfinish(session, exitstatus):
-    if hasattr(session.config, "workerinput") or not results:
+    # Only the main pytest process writes the combined report.
+    if hasattr(session.config, "workerinput"):
         return
     hw_target = session.config.getoption("hw_target")
     report_path = REPORT_DIR / f"model_errors_{hw_target}.csv"

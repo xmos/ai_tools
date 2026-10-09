@@ -8,11 +8,12 @@ REPORT_DIR = Path(__file__).resolve().parent
 FIELDS = (
     "model",
     "hw_target",
+    "input_mode",
     "status",
     "max_abs_diff",
     "mean_abs_diff",
     "values_outside_tolerance",
-    "total_values",
+    "output_elements",
     "rtol",
     "atol",
     "error",
@@ -65,7 +66,7 @@ def pytest_sessionfinish(session, exitstatus):
     with report_path.open("w", newline="") as report_file:
         writer = csv.DictWriter(report_file, fieldnames=FIELDS, extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(sorted(results.values(), key=lambda row: row["model"]))
+        writer.writerows(sorted(results.values(), key=lambda row: (row["model"], row.get("input_mode", ""))))
     terminal = session.config.pluginmanager.get_plugin("terminalreporter")
     if terminal:
         terminal.write_sep("-", "Model differences")

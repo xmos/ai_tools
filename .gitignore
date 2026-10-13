@@ -40,6 +40,7 @@ bazelisk-linux-amd64
 # Test cruft
 **/.pytest_cache/*
 **/*_junit.xml
+/integration_tests/device_test_sim/model_errors*.csv
 
 # macOS cruft
 .DS_Store

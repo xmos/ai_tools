@@ -1,6 +1,12 @@
 xmos ai_tools change log
 ========================
 
+UNRELEASED
+----------
+
+* ADDED: Initial support for integration simulation testing of vx4 and xs3 against reference.
+* FIXED: The ``mat_mul_generic_binary`` layer on vx4.
+
 1.4.3.dev50
 -----------
 

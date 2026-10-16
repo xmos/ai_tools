@@ -49,7 +49,7 @@ def get_model_files():
     return models
 
 
-def should_skip_test(hw_target, model_file, input_mode):
+def should_xfail_test(hw_target, model_file, input_mode):
     model_name = str(model_file.relative_to(MODEL_FOLDER))
     with (cwd / "skip.yaml").open() as skip_list:
         return any(
@@ -153,7 +153,7 @@ def run_model_reference(model, work_dir, host_id, host_od):
 
 
 def run_model_device(cfg_name, work_dir):
-    binary_path = cwd / "bin" / cfg_name / f"app_no_flash_{cfg_name}.xe"
+    binary_path = cwd / "bin" / cfg_name / f"test_sim_{cfg_name}.xe"
     result = subprocess.run(
         ["xsim", str(binary_path)],
         cwd=work_dir,
@@ -221,8 +221,8 @@ def pipeline_model(model_path: Path, hw_target="XK-EVK-XU316", input_mode="rando
 def test_pipeline(model_file, input_mode, request):
     hw_target = request.config.getoption("hw_target")
     model_name = str(model_file.relative_to(MODEL_FOLDER))
-    if should_skip_test(hw_target, model_file, input_mode):
-        pytest.skip()
+    if should_xfail_test(hw_target, model_file, input_mode):
+        request.node.add_marker(pytest.mark.xfail(strict=True))
     request.node.user_properties.append(("model", model_name))
     request.node.user_properties.append(("hw_target", hw_target))
     request.node.user_properties.append(("input_mode", input_mode))

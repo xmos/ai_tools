@@ -26,7 +26,10 @@ def pytest_addoption(parser):
     parser.addoption(
         "--hw-target",
         default="XK-EVK-XU316",
-        help="Simulator target, or REF-XS3/REF-VX4 for Linux TensorFlow Lite",
+        help=(
+            "Simulator target, or REF-XS3/REF-VX4 for Linux TensorFlow Lite; "
+            "REF-VX4-CLANG and XK-EVK-XU416-CLANG use VX4 behavior with distinct reports"
+        ),
     )
 
 

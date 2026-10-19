@@ -1,0 +1,67 @@
+<XSystem xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="XSystem.xsd">
+  <System>
+    <Nodes>
+      <Node number="32770" jtagId="0x7633" userId="0x00000000" processorMhz="600" interconnectMhz="600" referenceMhz="100">
+        <Switch sLinks="4"/>
+        <Processor number="0" numThreads="8" numTimers="10" numLocks="4" numSyncs="7" numChanEnds="32" numClkBlks="6" codeReference="tile[0]">
+          <MemoryController>
+            <Ram base="0x80000000" size="0x80000"/>
+            <ExtMem base="0x90000000" size="0x10000000"/>
+            <SwMem base="0xC0000000" size="0x20000000"/>
+          </MemoryController>
+        </Processor>
+      </Node>
+    </Nodes>
+    <Connections>
+      <PLink width="9" pLink="32770,0,0" outBufferBytes="4" inBufferBytes="5"/>
+      <PLink width="9" pLink="32770,0,1" outBufferBytes="4" inBufferBytes="5"/>
+      <PLink width="9" pLink="32770,0,2" outBufferBytes="4" inBufferBytes="5"/>
+      <PLink width="9" pLink="32770,0,3" outBufferBytes="4" inBufferBytes="5"/>
+    </Connections>
+    <JtagChain>
+      <Node id="32770"/>
+    </JtagChain>
+    <Pins>
+      <Pin name="0:X0D08"><XLink bitNum="4" dir="out" node="32770" number="3"/></Pin>
+      <Pin name="0:X0D13"><XLink bitNum="4" dir="in" node="32770" number="0"/></Pin>
+      <Pin name="0:X0D14"><XLink bitNum="3" dir="in" node="32770" number="0"/></Pin>
+      <Pin name="0:X0D15"><XLink bitNum="2" dir="in" node="32770" number="0"/></Pin>
+      <Pin name="0:X0D16"><XLink bitNum="1" dir="in" node="32770" number="0"/></Pin>
+      <Pin name="0:X0D17"><XLink bitNum="0" dir="in" node="32770" number="0"/></Pin>
+      <Pin name="0:X0D18"><XLink bitNum="0" dir="out" node="32770" number="0"/></Pin>
+      <Pin name="0:X0D19"><XLink bitNum="1" dir="out" node="32770" number="0"/></Pin>
+      <Pin name="0:X0D20"><XLink bitNum="2" dir="out" node="32770" number="0"/></Pin>
+      <Pin name="0:X0D21"><XLink bitNum="3" dir="out" node="32770" number="0"/></Pin>
+      <Pin name="0:X0D22"><XLink bitNum="4" dir="out" node="32770" number="0"/></Pin>
+      <Pin name="0:X0D23"><XLink bitNum="4" dir="in" node="32770" number="1"/></Pin>
+      <Pin name="0:X0D36"><XLink bitNum="3" dir="in" node="32770" number="1"/></Pin>
+      <Pin name="0:X0D37"><XLink bitNum="2" dir="in" node="32770" number="1"/></Pin>
+      <Pin name="0:X0D38"><XLink bitNum="1" dir="in" node="32770" number="1"/></Pin>
+      <Pin name="0:X0D39"><XLink bitNum="0" dir="in" node="32770" number="1"/></Pin>
+      <Pin name="0:X0D40"><XLink bitNum="0" dir="out" node="32770" number="2"/></Pin>
+      <Pin name="0:X0D41"><XLink bitNum="1" dir="out" node="32770" number="2"/></Pin>
+      <Pin name="0:X0D42"><XLink bitNum="2" dir="out" node="32770" number="2"/></Pin>
+      <Pin name="0:X0D43"><XLink bitNum="3" dir="out" node="32770" number="2"/></Pin>
+      <Pin name="0:X0D49"><XLink bitNum="4" dir="out" node="32770" number="2"/></Pin>
+      <Pin name="0:X0D50"><XLink bitNum="4" dir="in" node="32770" number="2"/></Pin>
+      <Pin name="0:X0D51"><XLink bitNum="3" dir="in" node="32770" number="2"/></Pin>
+      <Pin name="0:X0D52"><XLink bitNum="2" dir="in" node="32770" number="2"/></Pin>
+      <Pin name="0:X0D53"><XLink bitNum="1" dir="in" node="32770" number="2"/></Pin>
+      <Pin name="0:X0D54"><XLink bitNum="0" dir="in" node="32770" number="2"/></Pin>
+      <Pin name="0:X0D55"><XLink bitNum="0" dir="out" node="32770" number="1"/></Pin>
+      <Pin name="0:X0D56"><XLink bitNum="1" dir="out" node="32770" number="1"/></Pin>
+      <Pin name="0:X0D57"><XLink bitNum="2" dir="out" node="32770" number="1"/></Pin>
+      <Pin name="0:X0D58"><XLink bitNum="3" dir="out" node="32770" number="1"/></Pin>
+      <Pin name="0:X0D61"><XLink bitNum="4" dir="out" node="32770" number="1"/></Pin>
+      <Pin name="0:X0D62"><XLink bitNum="4" dir="in" node="32770" number="3"/></Pin>
+      <Pin name="0:X0D63"><XLink bitNum="3" dir="in" node="32770" number="3"/></Pin>
+      <Pin name="0:X0D64"><XLink bitNum="2" dir="in" node="32770" number="3"/></Pin>
+      <Pin name="0:X0D65"><XLink bitNum="1" dir="in" node="32770" number="3"/></Pin>
+      <Pin name="0:X0D66"><XLink bitNum="0" dir="in" node="32770" number="3"/></Pin>
+      <Pin name="0:X0D67"><XLink bitNum="0" dir="out" node="32770" number="3"/></Pin>
+      <Pin name="0:X0D68"><XLink bitNum="1" dir="out" node="32770" number="3"/></Pin>
+      <Pin name="0:X0D69"><XLink bitNum="2" dir="out" node="32770" number="3"/></Pin>
+      <Pin name="0:X0D70"><XLink bitNum="3" dir="out" node="32770" number="3"/></Pin>
+    </Pins>
+  </System>
+</XSystem>

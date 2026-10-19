@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,12 @@ FLOAT_RTOL = 1e-5
 FLOAT_ATOL = 1e-6
 RANDOM_SEED = 42
 MODEL_FOLDER = cwd.parent / "models"
+XSIM_BIN = shutil.which("xjet") or "xsim"
+
+target_aliases = {
+    "REF-VX4-CLANG": "REF-VX4",
+    "XK-EVK-XU416-CLANG": "XK-EVK-XU416",
+}
 
 reference_targets = {
     "REF-XS3": "XK-EVK-XU316",
@@ -50,6 +57,7 @@ def get_model_files():
 
 
 def should_xfail_test(hw_target, model_file, input_mode):
+    hw_target = target_aliases.get(hw_target, hw_target)
     model_name = str(model_file.relative_to(MODEL_FOLDER))
     with (cwd / "skip.yaml").open() as skip_list:
         return any(
@@ -155,7 +163,7 @@ def run_model_reference(model, work_dir, host_id, host_od):
 def run_model_device(cfg_name, work_dir):
     binary_path = cwd / "bin" / cfg_name / f"test_sim_{cfg_name}.xe"
     result = subprocess.run(
-        ["xsim", str(binary_path)],
+        [XSIM_BIN, str(binary_path)],
         cwd=work_dir,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -177,6 +185,7 @@ def get_compile_options(model_path: Path, hw_target):
 
 
 def pipeline_model(model_path: Path, hw_target="XK-EVK-XU316", input_mode="random"):
+    hw_target = target_aliases.get(hw_target, hw_target)
     build_dir = cwd / "build"
     build_dir.mkdir(parents=True, exist_ok=True)
     work_dir = Path(tempfile.mkdtemp(prefix="device_sim_", dir=build_dir))

@@ -46,11 +46,14 @@ set(XMOS_AITOOLSLIB_LINK_OPTIONS "")
 
 # Set static library path based on architecture
 set(lib_path "${XMOS_AITOOLSLIB_PATH}/lib")
-if(APP_BUILD_ARCH STREQUAL "xs3a" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL XCORE_XS3A)
+if(APP_BUILD_ARCH STREQUAL "xs3a" OR CMAKE_SYSTEM_PROCESSOR STREQUAL XCORE_XS3A)
     set(XMOS_AITOOLSLIB_LIBRARIES "${lib_path}/libxtflitemicro_xs3a.a")
-elseif(APP_BUILD_ARCH STREQUAL "vx4b" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL XCORE_VX4 OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL XCORE_VX4B)
+elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL riscv32)
+    set(XMOS_AITOOLSLIB_LIBRARIES "${lib_path}/libxtflitemicro_rvx4b.a")
+    set(XMOS_AITOOLSLIB_COMPILE_OPTIONS -Wfptrgroup -ffunction-sections -fdata-sections -Os)
+    set(XMOS_AITOOLSLIB_LINK_OPTIONS -Wl,--gc-sections)
+elseif(APP_BUILD_ARCH STREQUAL "vx4b" OR CMAKE_SYSTEM_PROCESSOR STREQUAL XCORE_VX4)
     set(XMOS_AITOOLSLIB_LIBRARIES "${lib_path}/libxtflitemicro_vx4b.a")
-    list(APPEND XMOS_AITOOLSLIB_DEFINITIONS "__VX4A__") # TODO legacy code
     set(XMOS_AITOOLSLIB_COMPILE_OPTIONS -Wfptrgroup -ffunction-sections -fdata-sections -Os)
     set(XMOS_AITOOLSLIB_LINK_OPTIONS -lxc -Wl,--gc-sections)
 else()

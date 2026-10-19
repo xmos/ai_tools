@@ -25,6 +25,7 @@ def createDeviceZip() {
   // Native build is a host-side compile check, not part of the device archive.
   dir('third_party/lib_tflite_micro') {  
     withTools(params.TOOLS_VX4_VERSION) {sh 'make build_vx4'}
+    withTools(params.TOOLS_RVX4_VERSION){sh 'make build_rvx4'}
     withTools(params.TOOLS_VERSION)     {sh 'make build_xs3'}
     withTools(params.TOOLS_VERSION)     {sh 'make build_install'}
     sh 'make build'
@@ -76,28 +77,31 @@ def runTestsDevice(Map options) {
   }
 }
 
+def runPytestWithFailureHandling(String args) {
+  catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
+    runPytest(args)
+  }
+}
+
 def runTestsDeviceXsim(Map options) {
-  def test_path = 'integration_tests/device_test_sim/test_device_sim.py'
   def junit_options = '-o junit_logging=all -o junit_log_passing_tests=true'
   setupRepo()
   createVenv(reqFile: 'integration_tests/requirements.txt')
   withVenv {
     installWheel(options.wheelStash)
     try {
-      withTools(params.TOOLS_VERSION) {
-        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
-          runPytest("${test_path} --hw-target REF-XS3 --junit-prefix=REF-XS3 ${junit_options}")
+      dir('integration_tests/device_test_sim') {
+        withTools(params.TOOLS_VERSION) {
+          runPytestWithFailureHandling("test_device_sim.py --hw-target REF-XS3 --junit-prefix=REF-XS3 ${junit_options}")
+          runPytestWithFailureHandling("test_device_sim.py --hw-target XK-EVK-XU316 --junit-prefix=xsim_xs3a ${junit_options}")
         }
-        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
-          runPytest("${test_path} --hw-target XK-EVK-XU316 --junit-prefix=xsim_xs3a ${junit_options}")
+        withTools(params.TOOLS_VX4_VERSION) {
+          runPytestWithFailureHandling("test_device_sim.py --hw-target REF-VX4 --junit-prefix=REF-VX4 ${junit_options}")
+          runPytestWithFailureHandling("test_device_sim.py --hw-target XK-EVK-XU416 --junit-prefix=xsim_vx4 ${junit_options}")
         }
-      }
-      withTools(params.TOOLS_VX4_VERSION) {
-        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
-          runPytest("${test_path} --hw-target REF-VX4 --junit-prefix=REF-VX4 ${junit_options}")
-        }
-        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
-          runPytest("${test_path} --hw-target XK-EVK-XU416 --junit-prefix=xsim_vx4 ${junit_options}")
+        withTools(params.TOOLS_RVX4_VERSION){
+          runPytestWithFailureHandling("test_device_sim.py --hw-target REF-VX4-CLANG --junit-prefix=REF-VX4-CLANG ${junit_options}")
+          runPytestWithFailureHandling("test_device_sim.py --hw-target XK-EVK-XU416-CLANG --junit-prefix=xsim_vx4_clang ${junit_options}")
         }
       }
     } 
@@ -170,7 +174,12 @@ pipeline {
     )
     string(
       name: 'TOOLS_VX4_VERSION',
-      defaultValue: '-j --repo arch_vx_slipgate -b develop -a XTC 1184',
+      defaultValue: 'slipgate@develop',
+      description: 'The XTC Slipgate tools version'
+    )
+    string(
+      name: 'TOOLS_RVX4_VERSION',
+      defaultValue: 'bob@develop',
       description: 'The XTC Slipgate tools version'
     )
   }

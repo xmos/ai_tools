@@ -261,7 +261,7 @@ pipeline {
             } // stage('Build Windows runtime')
 
             stage('Build Mac runtime') {
-              agent { label 'macos && arm64 && xcode' }
+              agent { label 'macos && arm64' }
               steps {
                 setupRepo()
                 extractDeviceZipAndHeaders()

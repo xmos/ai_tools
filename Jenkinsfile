@@ -170,7 +170,7 @@ pipeline {
     )
     string(
       name: 'TOOLS_VX4_VERSION',
-      defaultValue: '-j --repo arch_vx_slipgate -b develop -a XTC 1184',
+      defaultValue: 'slipgate@develop',
       description: 'The XTC Slipgate tools version'
     )
   }
@@ -252,7 +252,7 @@ pipeline {
             } // stage('Build Windows runtime')
 
             stage('Build Mac runtime') {
-              agent { label 'macos && arm64 && xcode' }
+              agent { label 'macos && arm64' }
               steps {
                 setupRepo()
                 extractDeviceZipAndHeaders()

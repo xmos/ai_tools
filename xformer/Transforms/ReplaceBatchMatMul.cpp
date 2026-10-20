@@ -12,6 +12,8 @@ extern "C" {
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "tensorflow/compiler/mlir/lite/utils/validators.h"
 
+#include <limits>
+
 namespace mlir::xcore {
 
 namespace {
@@ -73,6 +75,13 @@ struct ReplaceBatchMatMulPattern : public OpRewritePattern<TFL::BatchMatMulOp> {
     int64_t N = XShape[1];
     int64_t M = YShape[1];
     int64_t K = YShape[2];
+
+    const int64_t maxComputeDimension = std::numeric_limits<int32_t>::max();
+    if (B < 0 || B > maxComputeDimension || N < 0 ||
+        N > maxComputeDimension || M < 0 || M > maxComputeDimension ||
+        K < 0 || K > maxComputeDimension) {
+      return failure();
+    }
 
     auto XConstOp = dyn_cast_or_null<TFL::QConstOp>(X.getDefiningOp());
     auto YConstOp = dyn_cast_or_null<TFL::QConstOp>(Y.getDefiningOp());
@@ -137,7 +146,8 @@ struct ReplaceBatchMatMulPattern : public OpRewritePattern<TFL::BatchMatMulOp> {
     float yScale = static_cast<float>(yQType.getScale());
     float outScale = static_cast<float>(outputQType.getScale());
 
-    int32_t computeShape[4] = {B, N, M, K};  // batch, lhs row size, channel_size, rhs col size
+    int32_t computeShape[4] = {static_cast<int32_t>(B), static_cast<int32_t>(N),
+                               static_cast<int32_t>(M), static_cast<int32_t>(K)};
 
     auto xcBatchMatMulOp = rewriter.create<BatchMatMulOp>(
         batchMatMulOp.getLoc(), batchMatMulOp.getType(), X, Y,

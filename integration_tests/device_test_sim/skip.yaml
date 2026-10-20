@@ -1,0 +1,11 @@
+- {target: REF-XS3, model: bnns/test_bconv2d_int8/test_bconv2d_int8_0.tflite, input_mode: random}
+- {target: REF-XS3, model: bnns/test_bconv2d_int8/test_bconv2d_int8_0.tflite, input_mode: min}
+- {target: REF-XS3, model: bnns/test_bconv2d_int8/test_bconv2d_int8_0.tflite, input_mode: max}
+- {target: REF-XS3, model: bnns/test_bconv2d_int8/test_bconv2d_int8_0.tflite, input_mode: zero}
+- {target: REF-VX4, model: bnns/test_bconv2d_int8/test_bconv2d_int8_0.tflite, input_mode: random}
+- {target: REF-VX4, model: bnns/test_bconv2d_int8/test_bconv2d_int8_0.tflite, input_mode: min}
+- {target: REF-VX4, model: bnns/test_bconv2d_int8/test_bconv2d_int8_0.tflite, input_mode: max}
+- {target: REF-VX4, model: bnns/test_bconv2d_int8/test_bconv2d_int8_0.tflite, input_mode: zero}
+- {target: REF-XS3, model: custom_models/kws_model.tflite, input_mode: min}
+- {target: REF-XS3, model: custom_models/kws_model.tflite, input_mode: max}
+- {target: REF-VX4, model: custom_models/kws_model.tflite, input_mode: min}

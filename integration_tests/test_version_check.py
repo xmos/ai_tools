@@ -10,7 +10,7 @@ from string import Template
 
 REPO = Path(__file__).resolve().parents[1]
 LIB_NN = REPO / "third_party" / "lib_nn"
-DEPS_FILE = REPO / "third_party/lib_tflite_micro/cmakefiles/deps.cmake"
+DEPS_FILE = REPO / "third_party/lib_tflite_micro/lib_tflite_micro/deps.cmake"
 GIT_REV_PARSE = ("git", "rev-parse")
 DEPENDENCY_REF = Template("origin/${tag}^{commit}")
 

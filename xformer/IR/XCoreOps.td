@@ -527,4 +527,17 @@ def XC_Bsign8Op : XC_Op<"bsign_8", [Pure]> {
   let results = (outs TensorOf<[I32]>:$output);
 }
 
+def XC_BatchMatMulOp : XC_Op<"batch_matmul", [Pure]> {
+  let summary = "Batch MatMul op";
+
+  let description = [{Batch MatMul op.}];
+
+  let arguments = (ins TensorOf<[QI8]>:$input1, TensorOf<[QI8]>:$input2,
+      I32ArrayAttr:$compute_shape,
+      F32Attr:$lhs_zero_point, F32Attr:$rhs_zero_point, F32Attr:$out_zero_point,
+      F32Attr:$scale);
+
+  let results = (outs TensorOf<[QI8]>:$output);
+}
+
 #endif // XCORE_DIALECT

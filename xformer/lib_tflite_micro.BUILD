@@ -55,5 +55,6 @@ filegroup(
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_beta_transposeconvf32.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/xcore_beta_fcf32.cc",
         "lib_tflite_micro/src/tflite-xcore-kernels/conv2d_float.c",
+        "lib_tflite_micro/src/tflite-xcore-kernels/xcore_batch_matmul.cc",
     ],
 )

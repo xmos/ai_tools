@@ -252,7 +252,7 @@ pipeline {
             } // stage('Build Windows runtime')
 
             stage('Build Mac runtime') {
-              agent { label 'macos && arm64' }
+              agent { label 'macos && arm64 && !usb_audio'}
               steps {
                 setupRepo()
                 extractDeviceZipAndHeaders()

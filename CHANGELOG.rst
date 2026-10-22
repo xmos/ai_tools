@@ -4,6 +4,7 @@ xmos ai_tools change log
 UNRELEASED
 ----------
 
+* ADDED: Added batched matrix multiplication support.
 * ADDED: Initial support for integration simulation testing of vx4 and xs3 against reference.
 * FIXED: The ``mat_mul_generic_binary`` layer on vx4.
 

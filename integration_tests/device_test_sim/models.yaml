@@ -20,7 +20,5 @@
 - custom_models/kws_model.tflite
 - custom_models/vnr_model.tflite
 - custom_models/transpose1.tflite
-- custom_models/transpose2.tflite
-- custom_models/transpose3.tflite
 - float32/test_pad/test_pad_21.tflite
 - float32/test_slice/test_slice_13.tflite

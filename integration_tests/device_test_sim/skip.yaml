@@ -9,3 +9,12 @@
 - {target: REF-XS3, model: custom_models/kws_model.tflite, input_mode: min}
 - {target: REF-XS3, model: custom_models/kws_model.tflite, input_mode: max}
 - {target: REF-VX4, model: custom_models/kws_model.tflite, input_mode: min}
+# Reference runtimes fail on transpose1 when a Conv2D model has a multi-batch input.
+- {target: REF-XS3, model: custom_models/transpose1.tflite, input_mode: random}
+- {target: REF-XS3, model: custom_models/transpose1.tflite, input_mode: min}
+- {target: REF-XS3, model: custom_models/transpose1.tflite, input_mode: max}
+- {target: REF-XS3, model: custom_models/transpose1.tflite, input_mode: zero}
+- {target: REF-VX4, model: custom_models/transpose1.tflite, input_mode: random}
+- {target: REF-VX4, model: custom_models/transpose1.tflite, input_mode: min}
+- {target: REF-VX4, model: custom_models/transpose1.tflite, input_mode: max}
+- {target: REF-VX4, model: custom_models/transpose1.tflite, input_mode: zero}

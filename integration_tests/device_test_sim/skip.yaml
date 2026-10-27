@@ -9,7 +9,8 @@
 - {target: REF-XS3, model: custom_models/kws_model.tflite, input_mode: min}
 - {target: REF-XS3, model: custom_models/kws_model.tflite, input_mode: max}
 - {target: REF-VX4, model: custom_models/kws_model.tflite, input_mode: min}
-# Reference runtimes fail on transpose1 when a Conv2D model has a multi-batch input.
+# transpose1 has a multi-batch Conv2D input: xcore-opt rejects it (xcore_conv2d_v2 requires batch 1),
+# so export fails on every target.
 - {target: REF-XS3, model: custom_models/transpose1.tflite, input_mode: random}
 - {target: REF-XS3, model: custom_models/transpose1.tflite, input_mode: min}
 - {target: REF-XS3, model: custom_models/transpose1.tflite, input_mode: max}
@@ -18,3 +19,11 @@
 - {target: REF-VX4, model: custom_models/transpose1.tflite, input_mode: min}
 - {target: REF-VX4, model: custom_models/transpose1.tflite, input_mode: max}
 - {target: REF-VX4, model: custom_models/transpose1.tflite, input_mode: zero}
+- {target: XK-EVK-XU316, model: custom_models/transpose1.tflite, input_mode: random}
+- {target: XK-EVK-XU316, model: custom_models/transpose1.tflite, input_mode: min}
+- {target: XK-EVK-XU316, model: custom_models/transpose1.tflite, input_mode: max}
+- {target: XK-EVK-XU316, model: custom_models/transpose1.tflite, input_mode: zero}
+- {target: XK-EVK-XU416, model: custom_models/transpose1.tflite, input_mode: random}
+- {target: XK-EVK-XU416, model: custom_models/transpose1.tflite, input_mode: min}
+- {target: XK-EVK-XU416, model: custom_models/transpose1.tflite, input_mode: max}
+- {target: XK-EVK-XU416, model: custom_models/transpose1.tflite, input_mode: zero}

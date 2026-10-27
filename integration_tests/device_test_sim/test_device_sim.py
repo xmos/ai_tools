@@ -193,7 +193,9 @@ def pipeline_model(model_path: Path, hw_target="XK-EVK-XU316", input_mode="rando
     print(f"Export options: {compiler_options}")
 
     # export
-    xf.convert(model_path, exported_model, compiler_options)
+    # xf.convert swallows xcore-opt failures and returns None
+    if xf.convert(model_path, exported_model, compiler_options) != 0:
+        raise RuntimeError(f"xcore-opt failed to export {model_path.name}")
 
     # build device
     if hw_target not in reference_targets:

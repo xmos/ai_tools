@@ -1,6 +1,11 @@
 xmos ai_tools change log
 ========================
 
+UNRELEASED
+----------
+
+* ADDED: export checks if operations are unoptimised.
+
 1.4.4
 -----
 

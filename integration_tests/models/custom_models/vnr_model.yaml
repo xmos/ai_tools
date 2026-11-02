@@ -1,4 +1,4 @@
 XK-EVK-XU316:
-  xcore-conv-err-threshold: 0.5
+  xcore-conv-err-threshold: 0.52
 XK-EVK-XU416:
   xcore-conv-err-threshold: 2

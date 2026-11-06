@@ -1,6 +1,12 @@
 xmos ai_tools change log
 ========================
 
+1.4.5
+-----
+
+* FIXED: Improved bias and float conversion in Output Transformation for more accurate results.
+* ADDED: Export checks in tests if operations are unoptimised, preventing invalid exports.
+
 1.4.4
 -----
 

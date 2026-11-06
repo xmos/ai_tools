@@ -1,6 +1,6 @@
 // This file relates to internal XMOS infrastructure and should be ignored by external users
 
-@Library('xmos_jenkins_shared_library@v0.46.0') _
+@Library('xmos_jenkins_shared_library@v0.56.0') _
 
 if (env.job_type != 'beta_release' && env.job_type != 'official_release') {
   getApproval()
@@ -252,7 +252,7 @@ pipeline {
             } // stage('Build Windows runtime')
 
             stage('Build Mac runtime') {
-              agent { label 'macos && arm64 && !usb_audio'}
+              agent { label 'sw-uni-mac0'}
               steps {
                 setupRepo()
                 extractDeviceZipAndHeaders()
@@ -319,7 +319,7 @@ pipeline {
             } // stage('Linux Test')
 
             stage('Mac arm64 Test') {
-              agent { label 'macos && arm64 && !macos_10_14' }
+              agent { label 'sw-uni-mac0' }
               steps { script {runTestsHost(wheelStash: 'mac_wheel')}}
               post { cleanup { xcoreCleanSandbox() } }
             } // stage('Mac arm64 Test')

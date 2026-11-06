@@ -1,6 +1,6 @@
 # xcommon cmake
 set(LIB_NAME ai_tools)
-set(LIB_VERSION 1.4.4)
+set(LIB_VERSION 1.4.5)
 set(LIB_INCLUDES "")
 XMOS_REGISTER_MODULE()
 

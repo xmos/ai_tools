@@ -51,11 +51,11 @@ def get_model_files():
 
 def should_xfail_test(hw_target, model_file, input_mode):
     model_name = str(model_file.relative_to(MODEL_FOLDER))
-    with (cwd / "skip.yaml").open() as skip_list:
+    with (cwd / "xfail.yaml").open() as xfail_list:
         return any(
             (case["target"], case["model"], case["input_mode"])
             == (hw_target, model_name, input_mode)
-            for case in yaml.safe_load(skip_list) or []
+            for case in yaml.safe_load(xfail_list) or []
         )
 
 
@@ -75,17 +75,11 @@ def compile_model_device(model_path, cfg_name, hw_target="XK-EVK-XU316"):
             f"-DAPP_COMPILER_FLAGS_{cfg_name}={flags}",
         ],
         cwd=cwd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
         check=True,
     )
     subprocess.run(
         ["cmake", "--build", str(build_dir), "--target", cfg_name],
         cwd=cwd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
         check=True,
     )
 
@@ -196,7 +190,12 @@ def pipeline_model(model_path: Path, hw_target="XK-EVK-XU316", input_mode="rando
     # xf.convert swallows xcore-opt failures and returns None
     if xf.convert(model_path, exported_model, compiler_options) != 0:
         raise RuntimeError(f"xcore-opt failed to export {model_path.name}")
-
+    
+    if "unoptimized" in str(xf.__compilation_stderr).lower():
+        print(xf.__compilation_stderr)
+        print(xf.__compilation_stdout)
+        raise RuntimeError(f"Error exporting the model")
+    
     # build device
     if hw_target not in reference_targets:
         compile_model_device(exported_model_cpp, cfg_name, hw_target)

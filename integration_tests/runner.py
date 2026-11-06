@@ -15,6 +15,7 @@ from xmos_ai_tools.xinterpreters import TFLMHostInterpreter
 from xmos_ai_tools import xformer
 import xmos_ai_tools.runtime as rt
 from xmos_ai_tools.io_server import IOServer
+import usb.core
 import yaml
 from abc import ABC, abstractmethod, abstractproperty
 
@@ -191,9 +192,20 @@ class XFDeviceRuntime(AbstractXFRunner):
         # overwriting _interpreter from super()
         dont_throw(self, "_interpreter", "close")
         subprocess.run(["xrun", "--id", "0", xe_path])
-        time.sleep(0.5)
-        self._interpreter = IOServer(output_details=self._dets)
-        self._interpreter.connect()
+        self._interpreter = self._connect_io_server()
+
+    def _connect_io_server(self, attempts=10, delay=0.5):
+        """Connect to the device, retrying while it re-enumerates after xrun/reset."""
+        for attempt in range(attempts):
+            time.sleep(delay)
+            interpreter = IOServer(output_details=self._dets)
+            try:
+                interpreter.connect(timeout=10)
+                return interpreter
+            except usb.core.USBError as e:
+                if attempt == attempts - 1:
+                    raise
+                LOGGER.warning(f"IOServer connect failed ({e}), retrying")
 
     def predict(self, inputs):
         self._interpreter.reset()

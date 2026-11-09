@@ -59,21 +59,27 @@ struct ReplaceFCWithConv2DPattern
     auto inputType = fcOp.getInput().getType().cast<ShapedType>();
     int spatialInDim = inputType.getRank() - 2;
     int channelInDim = inputType.getRank() - 1;
+    int64_t spatialInShapeSize = 1;
+    int64_t spatialInConstSize = 1;
+    for (int r = 0; r < inputType.getRank() - 1; ++r) {
+        spatialInShapeSize *= inputType.isDynamicDim(r)
+            ? 1
+            : inputType.getShape()[r];
+        spatialInConstSize *= inputType.isDynamicDim(r)
+            ? 1
+            : inputType.getDimSize(r);
+    }
 
     std::vector<int64_t> expandedInputShapeVector = {
         1LL, 1LL,
-        inputType.isDynamicDim(spatialInDim)
-            ? 1
-            : inputType.getShape()[spatialInDim],
+        spatialInShapeSize,
         inputType.getShape()[channelInDim]};
     auto expandedInputResultType = RankedTensorType::get(
         expandedInputShapeVector, inputType.getElementType());
 
     std::vector<int32_t> expandedReshapeConstantVector = {
         1, 1,
-        static_cast<int>(inputType.isDynamicDim(spatialInDim)
-                             ? 1
-                             : inputType.getDimSize(spatialInDim)),
+        static_cast<int>(spatialInConstSize),
         static_cast<int>(inputType.getDimSize(channelInDim))};
     RankedTensorType expandedShapeType =
         RankedTensorType::get({4}, rewriter.getI32Type());
@@ -101,11 +107,19 @@ struct ReplaceFCWithConv2DPattern
     auto result0Type = fcOp.getResult(0).getType().cast<ShapedType>();
     int spatialOutDim = result0Type.getRank() - 2;
     int channelOutDim = result0Type.getRank() - 1;
+    int64_t spatialOutShapeSize = 1;
+    int64_t spatialOutConstSize = 1;
+    for (int r = 0; r < result0Type.getRank() - 1; ++r) {
+        spatialOutShapeSize *= result0Type.isDynamicDim(r)
+            ? 1
+            : result0Type.getShape()[r];
+        spatialOutConstSize *= result0Type.isDynamicDim(r)
+            ? 1
+            : result0Type.getDimSize(r);
+    }
     std::vector<int64_t> expandedResultVector = {
         1, 1,
-        result0Type.isDynamicDim(spatialOutDim)
-            ? 1
-            : result0Type.getShape()[spatialOutDim],
+        spatialOutShapeSize,
         result0Type.getShape()[channelOutDim]};
     auto expandedResultType = RankedTensorType::get(
         expandedResultVector, result0Type.getElementType());
@@ -132,14 +146,17 @@ struct ReplaceFCWithConv2DPattern
           static_cast<int>(newConv2DOutputType.getDimSize(3))};
       squeezedShapeType = RankedTensorType::get({3}, rewriter.getI32Type());
     } else {
-      squeezedOutputShapeVector = {result0Type.getShape()[spatialOutDim],
-                                   result0Type.getShape()[channelOutDim]};
-      squeezedReshapeConstantVector = {
-          static_cast<int>(newConv2DOutputType.isDynamicDim(2)
-                               ? 1
-                               : newConv2DOutputType.getDimSize(2)),
-          static_cast<int>(newConv2DOutputType.getDimSize(3))};
-      squeezedShapeType = RankedTensorType::get({2}, rewriter.getI32Type());
+      for (int r = 0; r < result0Type.getRank() - 1; ++r) {
+        squeezedOutputShapeVector.push_back(result0Type.getShape()[r]);
+        squeezedReshapeConstantVector.push_back(
+          static_cast<int>(
+            result0Type.isDynamicDim(r)
+              ? 1
+              : result0Type.getDimSize(r)));
+      }
+      squeezedOutputShapeVector.push_back(result0Type.getShape()[channelOutDim]);
+      squeezedReshapeConstantVector.push_back(result0Type.getDimSize(channelOutDim));
+      squeezedShapeType = RankedTensorType::get({result0Type.getRank()}, rewriter.getI32Type());
     }
 
     auto squeezedOutputResultType = RankedTensorType::get(

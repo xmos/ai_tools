@@ -21,12 +21,13 @@ def doVersionCheck() {
 }
 
 def createDeviceZip() {
-  // build device runtime (vx4), (xs3), and install lib (xs3 is used)
+  // build device runtime (vx4 xcc), (vx4 clang), (xs3), and install lib (xs3 is used)
   // Native build is a host-side compile check, not part of the device archive.
   dir('third_party/lib_tflite_micro') {  
-    withTools(params.TOOLS_VX4_VERSION) {sh 'make build_vx4'}
-    withTools(params.TOOLS_VERSION)     {sh 'make build_xs3'}
-    withTools(params.TOOLS_VERSION)     {sh 'make build_install'}
+    withTools(params.TOOLS_VERSION_VX_XCC) {sh 'make build_vx4'}
+    withTools(params.TOOLS_VERSION_VX)     {sh 'make build_rvx4'}
+    withTools(params.TOOLS_VERSION_XS)     {sh 'make build_xs3'}
+    withTools(params.TOOLS_VERSION_XS)     {sh 'make build_install'}
     sh 'make build'
     stash name: 'release_archive', includes: 'build_xs3/release_archive.zip'
   }
@@ -69,7 +70,7 @@ def runTestsDevice(Map options) {
   withVenv {
     installWheel(options.wheelStash)
     sh 'pip install git+https://github0.xmos.com/xmos-int/xtagctl.git'
-    withTools(params.TOOLS_VERSION) {
+    withTools(params.TOOLS_VERSION_XS) {
       sh 'pytest integration_tests/test_runner.py -k daily_device --device -n 1 --junitxml=integration_tests/integration_device_junit.xml'
     }
     junit '**/*_junit.xml'
@@ -84,7 +85,7 @@ def runTestsDeviceXsim(Map options) {
   withVenv {
     installWheel(options.wheelStash)
     try {
-      withTools(params.TOOLS_VERSION) {
+      withTools(params.TOOLS_VERSION_XS) {
         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
           runPytest("${test_path} --hw-target REF-XS3 --junit-prefix=REF-XS3 ${junit_options}")
         }
@@ -92,7 +93,7 @@ def runTestsDeviceXsim(Map options) {
           runPytest("${test_path} --hw-target XK-EVK-XU316 --junit-prefix=xsim_xs3a ${junit_options}")
         }
       }
-      withTools(params.TOOLS_VX4_VERSION) {
+      withTools(params.TOOLS_VERSION_VX_XCC) {
         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
           runPytest("${test_path} --hw-target REF-VX4 --junit-prefix=REF-VX4 ${junit_options}")
         }
@@ -164,14 +165,19 @@ pipeline {
 
   parameters {
     string(
-      name: 'TOOLS_VERSION',
+      name: 'TOOLS_VERSION_XS',
       defaultValue: '15.3.1',
-      description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
+      description: 'XTC tools version'
     )
     string(
-      name: 'TOOLS_VX4_VERSION',
-      defaultValue: 'slipgate@develop',
-      description: 'The XTC Slipgate tools version'
+      name: 'TOOLS_VERSION_VX',
+      defaultValue: 'bob@develop',
+      description: 'VX tools version'
+    )
+    string(
+      name: 'TOOLS_VERSION_VX_XCC',
+      defaultValue: 'slipgate@master:143',
+      description: 'VX (XTC) tools version'
     )
   }
 

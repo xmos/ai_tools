@@ -134,7 +134,11 @@ def run_model_host(model_path, work_dir, input_mode="random"):
 
 def run_model_reference(model, work_dir, host_id, host_od):
     import tensorflow as tf
-    interp = tf.lite.Interpreter(model_path=str(model))
+    # Use TFLite's builtin kernels: the default XNNPACK delegate gives different int8 results.
+    interp = tf.lite.Interpreter(
+        model_path=str(model),
+        experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES,
+    )
     interp.allocate_tensors()
     id = interp.get_input_details()[0]
     od = interp.get_output_details()[0]

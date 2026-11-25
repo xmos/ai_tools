@@ -1,11 +1,18 @@
 xmos ai_tools change log
 ========================
 
-UNRELEASED
-----------
+1.4.5
+-----
 
-* ADDED: Initial support for integration simulation testing of vx4 and xs3 against reference.
-* FIXED: The ``mat_mul_generic_binary`` layer on vx4.
+* FIXED: Improved bias and float conversion in Output Transformation for more accurate results.
+* ADDED: Export checks in tests if operations are unoptimised, preventing invalid exports.
+
+1.4.4
+-----
+
+* ADDED: Added batched matrix multiplication support.
+* ADDED: Integration simulation testing of vx4 and xs3 against reference.
+* FIXED: Layer ``mat_mul_generic_binary`` on vx4 platform.
 
 1.4.3.dev50
 -----------

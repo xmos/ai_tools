@@ -1,6 +1,6 @@
 // This file relates to internal XMOS infrastructure and should be ignored by external users
 
-@Library('xmos_jenkins_shared_library@v0.46.0') _
+@Library('xmos_jenkins_shared_library@v0.56.0') _
 
 if (env.job_type != 'beta_release' && env.job_type != 'official_release') {
   getApproval()
@@ -159,7 +159,7 @@ pipeline {
   environment {
     REPO = 'ai_tools'
     BAZELISK_RELEASE_URL = 'https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0'
-    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev50"
+    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.5"
   }
 
   parameters {
@@ -170,7 +170,7 @@ pipeline {
     )
     string(
       name: 'TOOLS_VX4_VERSION',
-      defaultValue: '-j --repo arch_vx_slipgate -b develop -a XTC 1184',
+      defaultValue: 'slipgate@develop',
       description: 'The XTC Slipgate tools version'
     )
   }
@@ -252,7 +252,7 @@ pipeline {
             } // stage('Build Windows runtime')
 
             stage('Build Mac runtime') {
-              agent { label 'macos && arm64 && xcode' }
+              agent { label 'sw-uni-mac0'}
               steps {
                 setupRepo()
                 extractDeviceZipAndHeaders()
@@ -319,7 +319,7 @@ pipeline {
             } // stage('Linux Test')
 
             stage('Mac arm64 Test') {
-              agent { label 'macos && arm64 && !macos_10_14' }
+              agent { label 'sw-uni-mac0' }
               steps { script {runTestsHost(wheelStash: 'mac_wheel')}}
               post { cleanup { xcoreCleanSandbox() } }
             } // stage('Mac arm64 Test')

@@ -618,7 +618,7 @@ struct MoveTransposeForwardOverSliceOpPattern
     for (auto dim: permAttr.getValues<int32_t>()) {
       newBeginVec[dim] = beginAttr.getValues<int32_t>()[index];
       newSizeVec[dim] = sizeAttr.getValues<int32_t>()[index];
-      newSliceShapeVec[dim] = sliceOutputShape.getShape()[dim];
+      newSliceShapeVec[dim] = sliceOutputShape.getShape()[index];
       index += 1;
     }
 

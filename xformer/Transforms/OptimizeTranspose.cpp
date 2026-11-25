@@ -222,7 +222,8 @@ struct EraseDoubleTransposePattern : public OpRewritePattern<TFL::TransposeOp> {
         correspondingDim += 1;
       }
 
-      if (userIsInverseTranspose) {
+      if (userIsInverseTranspose &&
+          userTransposeOp.getResult().getType() == transposeOp.getInput().getType()) {
         // Can bypass this transpose -> inverse transpose pair
         rewriter.replaceAllUsesWith(userTransposeOp.getResult(), transposeOp.getInput());
         // And erase the inverse transpose ops

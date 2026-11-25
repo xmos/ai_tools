@@ -6,6 +6,7 @@ import pytest
 
 
 REPORT_DIR = Path(__file__).resolve().parent
+HW_TARGETS = ("XK-EVK-XU316", "XK-EVK-XU416", "REF-XS3", "REF-VX4")
 FIELDS = (
     "model",
     "hw_target",
@@ -26,6 +27,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--hw-target",
         default="XK-EVK-XU316",
+        choices=HW_TARGETS,
         help="Simulator target, or REF-XS3/REF-VX4 for Linux TensorFlow Lite",
     )
 

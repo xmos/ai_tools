@@ -1,6 +1,6 @@
 // This file relates to internal XMOS infrastructure and should be ignored by external users
 
-@Library('xmos_jenkins_shared_library@v0.46.0') _
+@Library('xmos_jenkins_shared_library@v0.56.0') _
 
 if (env.job_type != 'beta_release' && env.job_type != 'official_release') {
   getApproval()
@@ -76,6 +76,37 @@ def runTestsDevice(Map options) {
   }
 }
 
+def runTestsDeviceXsim(Map options) {
+  def test_path = 'integration_tests/device_test_sim/test_device_sim.py'
+  def junit_options = '-o junit_logging=all -o junit_log_passing_tests=true'
+  setupRepo()
+  createVenv(reqFile: 'integration_tests/requirements.txt')
+  withVenv {
+    installWheel(options.wheelStash)
+    try {
+      withTools(params.TOOLS_VERSION) {
+        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
+          runPytest("${test_path} --hw-target REF-XS3 --junit-prefix=REF-XS3 ${junit_options}")
+        }
+        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
+          runPytest("${test_path} --hw-target XK-EVK-XU316 --junit-prefix=xsim_xs3a ${junit_options}")
+        }
+      }
+      withTools(params.TOOLS_VX4_VERSION) {
+        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
+          runPytest("${test_path} --hw-target REF-VX4 --junit-prefix=REF-VX4 ${junit_options}")
+        }
+        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
+          runPytest("${test_path} --hw-target XK-EVK-XU416 --junit-prefix=xsim_vx4 ${junit_options}")
+        }
+      }
+    } 
+    finally {
+      archiveArtifacts artifacts: 'integration_tests/device_test_sim/model_errors_*.csv', allowEmptyArchive: true
+    }
+  }
+}
+
 def buildExamples() {
   setupRepo()
   createVenv(reqFile: 'requirements.txt')
@@ -128,7 +159,7 @@ pipeline {
   environment {
     REPO = 'ai_tools'
     BAZELISK_RELEASE_URL = 'https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0'
-    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.3.dev50"
+    SETUPTOOLS_SCM_PRETEND_VERSION = "1.4.5"
   }
 
   parameters {
@@ -139,7 +170,7 @@ pipeline {
     )
     string(
       name: 'TOOLS_VX4_VERSION',
-      defaultValue: '-j --repo arch_vx_slipgate -b develop -a XTC 1184',
+      defaultValue: 'slipgate@develop',
       description: 'The XTC Slipgate tools version'
     )
   }
@@ -221,7 +252,7 @@ pipeline {
             } // stage('Build Windows runtime')
 
             stage('Build Mac runtime') {
-              agent { label 'macos && arm64 && xcode' }
+              agent { label 'sw-uni-mac0'}
               steps {
                 setupRepo()
                 extractDeviceZipAndHeaders()
@@ -288,7 +319,7 @@ pipeline {
             } // stage('Linux Test')
 
             stage('Mac arm64 Test') {
-              agent { label 'macos && arm64 && !macos_10_14' }
+              agent { label 'sw-uni-mac0' }
               steps { script {runTestsHost(wheelStash: 'mac_wheel')}}
               post { cleanup { xcoreCleanSandbox() } }
             } // stage('Mac arm64 Test')
@@ -302,6 +333,7 @@ pipeline {
             stage('Device Test') {
               agent {label 'xcore.ai-explorer && lpddr && !macos'}
               steps {script {dir('sandbox/ai_tools') {
+                runTestsDeviceXsim(wheelStash: 'linux_wheel')
                 runTestsDevice(wheelStash: 'linux_wheel')
               }}}
               post {
@@ -328,14 +360,15 @@ pipeline {
                 unstash 'mac_wheel'
                 unstash 'windows_wheel'
                 archiveArtifacts artifacts: 'dist/*', allowEmptyArchive: true
+                createVenv()
                 withVenv {
                   withCredentials([usernamePassword(
-                    credentialsId: '__CREDID__', 
+                    credentialsId: 'PYPI_AITOOLS_TOKEN', 
                     usernameVariable: 'TWINE_USERNAME', 
                     passwordVariable: 'TWINE_PASSWORD')]) 
                   {
                     sh 'pip install twine'
-                    sh 'twine upload dist/*'
+                    sh 'twine upload --verbose dist/*'
                   }
                 }
               }

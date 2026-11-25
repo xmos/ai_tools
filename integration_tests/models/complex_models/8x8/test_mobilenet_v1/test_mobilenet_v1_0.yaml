@@ -1,0 +1,12 @@
+XK-EVK-XU316:
+  xcore-conv-err-threshold: 1.46
+  xcore-op-split-tensor-arena: "True"
+  xcore-op-split-top-op: "0"
+  xcore-op-split-bottom-op: "4"
+  xcore-op-split-num-splits: "12"
+XK-EVK-XU416:
+  xcore-conv-err-threshold: 1.60
+  xcore-op-split-tensor-arena: "True"
+  xcore-op-split-top-op: "0"
+  xcore-op-split-bottom-op: "4"
+  xcore-op-split-num-splits: "12"

@@ -281,6 +281,24 @@ std::vector<uint8_t> MaxPool2DOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> BatchMatMulOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  auto rootMap = fbb.StartMap();
+  auto computeShapeVec = fbb.StartVector("compute_shape");
+  auto computeShape = getComputeShape().cast<ArrayAttr>();
+  for (int i = 0; i < 4; ++i) {
+    fbb.Int(computeShape[i].cast<IntegerAttr>().getInt());
+  }
+  fbb.EndVector(computeShapeVec, false, false);
+  fbb.IndirectFloat("lhs_zp", getLhsZeroPoint().convertToFloat());
+  fbb.IndirectFloat("rhs_zp", getRhsZeroPoint().convertToFloat());
+  fbb.IndirectFloat("out_zp", getOutZeroPoint().convertToFloat());
+  fbb.IndirectFloat("scale", getScale().convertToFloat());
+  fbb.EndMap(rootMap);
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 namespace {
 /// This pass translates XCore ops to TFLite custom ops.
 struct TranslateToCustomOp
@@ -330,6 +348,7 @@ void TranslateToCustomOp::runOnOperation() {
   patterns.insert<RewriteToCustomOp<MulOp>>(ctx);
   patterns.insert<RewriteToCustomOp<MeanOp>>(ctx);
   patterns.insert<RewriteToCustomOp<MeanI16Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<BatchMatMulOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Pad3To4Op>>(ctx);
   patterns.insert<RewriteToCustomOp<Pad1To4Op>>(ctx);
   patterns.insert<RewriteToCustomOp<SliceOp>>(ctx);

@@ -10,7 +10,7 @@
 
 extern "C" {
 #include "lib_nn/api/nn_layers.h"
-#include "lib_nn/api/vpu_memset.h"
+#include "lib_nn/api/vpu_mem.h"
 }
 
 namespace mlir::xcore {

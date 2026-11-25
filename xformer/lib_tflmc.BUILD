@@ -67,6 +67,7 @@ filegroup(
         "@tflite_micro//tensorflow/lite/micro/kernels:slice.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:arg_min_max.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:batch_to_space_nd.cc",
+        "@tflite_micro//tensorflow/lite/micro/kernels:batch_matmul.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:broadcast_args.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:broadcast_to.cc",
         "@tflite_micro//tensorflow/lite/micro/kernels:cast.cc",

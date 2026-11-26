@@ -134,30 +134,17 @@ struct ReplaceFCWithConv2DPattern
     std::vector<int64_t> squeezedOutputShapeVector;
     std::vector<int32_t> squeezedReshapeConstantVector;
     RankedTensorType squeezedShapeType;
-    // If three output dimensions for the fully connected
-    if (result0Type.getRank() == 3) {
-      squeezedOutputShapeVector = {1, result0Type.getShape()[spatialOutDim],
-                                   result0Type.getShape()[channelOutDim]};
-      squeezedReshapeConstantVector = {
-          1,
-          static_cast<int>(newConv2DOutputType.isDynamicDim(2)
-                               ? 1
-                               : newConv2DOutputType.getDimSize(2)),
-          static_cast<int>(newConv2DOutputType.getDimSize(3))};
-      squeezedShapeType = RankedTensorType::get({3}, rewriter.getI32Type());
-    } else {
-      for (int r = 0; r < result0Type.getRank() - 1; ++r) {
-        squeezedOutputShapeVector.push_back(result0Type.getShape()[r]);
-        squeezedReshapeConstantVector.push_back(
-          static_cast<int>(
-            result0Type.isDynamicDim(r)
-              ? 1
-              : result0Type.getDimSize(r)));
-      }
-      squeezedOutputShapeVector.push_back(result0Type.getShape()[channelOutDim]);
-      squeezedReshapeConstantVector.push_back(result0Type.getDimSize(channelOutDim));
-      squeezedShapeType = RankedTensorType::get({result0Type.getRank()}, rewriter.getI32Type());
+    for (int r = 0; r < result0Type.getRank() - 1; ++r) {
+    squeezedOutputShapeVector.push_back(result0Type.getShape()[r]);
+    squeezedReshapeConstantVector.push_back(
+        static_cast<int>(
+        result0Type.isDynamicDim(r)
+            ? 1
+            : result0Type.getDimSize(r)));
     }
+    squeezedOutputShapeVector.push_back(result0Type.getShape()[channelOutDim]);
+    squeezedReshapeConstantVector.push_back(result0Type.getDimSize(channelOutDim));
+    squeezedShapeType = RankedTensorType::get({result0Type.getRank()}, rewriter.getI32Type());
 
     auto squeezedOutputResultType = RankedTensorType::get(
         squeezedOutputShapeVector, newConv2DOutputType.getElementType());

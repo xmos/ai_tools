@@ -37,3 +37,18 @@ func.func @merge_consecutive_transposes(%arg0: tensor<?x45x80x16x!quant.uniform<
   %19 = "tfl.transpose"(%18, %11) : (tensor<?x16x80x45x!quant.uniform<i8:f32, 0.13334976136684418:-128>>, tensor<4xi32>) -> tensor<?x80x45x16x!quant.uniform<i8:f32, 0.13334976136684418:-128>>
   return %19 : tensor<?x80x45x16x!quant.uniform<i8:f32, 0.13334976136684418:-128>>
 }
+
+// CHECK-LABEL: move_transpose_over_slice
+func.func @move_transpose_over_slice(%arg0: tensor<?x45x80x16x!quant.uniform<i8:f32, 0.13334976136684418:-128>>) -> (tensor<?x40x7x4x!quant.uniform<i8:f32, 0.13334976136684418:-128>>) {
+  // CHECK-NOT: transpose
+  // CHECK: slice
+  // CHECK-NOT: transpose
+  %10 = "tfl.pseudo_const"() {value = dense<[0, 2, 3, 1]> : tensor<4xi32>} : () -> tensor<4xi32>
+  %11 = "tfl.pseudo_const"() {value = dense<[0, 3, 1, 2]> : tensor<4xi32>} : () -> tensor<4xi32>
+  %12 = "tfl.pseudo_const"() {value = dense<0> : tensor<4xi32>} : () -> tensor<4xi32>
+  %13 = "tfl.pseudo_const"() {value = dense<[-1, 7, 4, 40]> : tensor<4xi32>} : () -> tensor<4xi32>
+  %18 = "tfl.transpose"(%arg0, %10) : (tensor<?x45x80x16x!quant.uniform<i8:f32, 0.13334976136684418:-128>>, tensor<4xi32>) -> tensor<?x80x16x45x!quant.uniform<i8:f32, 0.13334976136684418:-128>>
+  %19 = "tfl.slice"(%18, %12, %13) : (tensor<?x80x16x45x!quant.uniform<i8:f32, 0.13334976136684418:-128>>, tensor<4xi32>, tensor<4xi32>) -> tensor<?x7x4x40x!quant.uniform<i8:f32, 0.13334976136684418:-128>>
+  %20 = "tfl.transpose"(%19, %11) : (tensor<?x7x4x40x!quant.uniform<i8:f32, 0.13334976136684418:-128>>, tensor<4xi32>) -> tensor<?x40x7x4x!quant.uniform<i8:f32, 0.13334976136684418:-128>>
+  return %20 : tensor<?x40x7x4x!quant.uniform<i8:f32, 0.13334976136684418:-128>>
+}

@@ -10,7 +10,6 @@ from setuptools import setup, find_namespace_packages
 from setuptools.command.install import install
 import pathlib
 import os
-import subprocess
 
 # Find path to xcore-opt binary
 here = pathlib.Path(__file__).parent.resolve()
@@ -20,16 +19,8 @@ XCOREOPT_BINARY: Union[pathlib.Path, str] = pathlib.Path.joinpath(
 )
 XCOREOPT_BINARY = str(XCOREOPT_BINARY) + exe_suffix
 
-# Get the long description from the README file
-LONG_README = (here / "README.rst").read_text(encoding="utf-8")
-
-
-# Fix link in Readme to current commit hash
-def get_git_revision_hash() -> str:
-    return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
-
-
-LONG_README = LONG_README.replace("!!COMMIT_HASH!!", get_git_revision_hash())
+# Use the top-level README as the PyPI long description
+LONG_README = (here.parent / "README.rst").read_text(encoding="utf-8")
 
 # xtflm_interpreter path and libs from lib_tflite_micro
 XTFLM_INTERPRETER_LIBS = [
@@ -93,7 +84,7 @@ setup(
     license="LICENSE.txt",
     description="XMOS AI Tools",
     long_description=LONG_README,
-    long_description_content_type="text/markdown",
+    long_description_content_type="text/x-rst",
     url="https://github.com/xmos/ai_tools",
     classifiers=[
         "License :: Other/Proprietary License",

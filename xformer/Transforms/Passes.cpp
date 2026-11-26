@@ -40,6 +40,7 @@ void buildXCoreRemainingPassPipeline(OpPassManager &pm) {
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(createApplyTFLPatternsPass());
   pm.addPass(createReplaceStridedSlicePass());
+  pm.addPass(createOptimizeUnaryFloatOpPass());
   // Run canonicalization, which includes combining Reshapes
   pm.addPass(mlir::createCanonicalizerPass());
 
